@@ -71,12 +71,13 @@ export default function Modal({ isOpen, onClose, title, subtitle, icon, children
 
   return createPortal(
     <div 
-      style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(44,19,22,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(20,10,12,0.75)', backdropFilter: 'blur(0px)', WebkitBackdropFilter: 'blur(0px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div 
         ref={modalRef}
-        className="bg-card rounded-[22px] border-[1.5px] border-stroke shadow-[0_24px_64px_rgba(44,19,22,0.22)] w-full max-w-[560px] max-h-[90vh] overflow-y-auto relative transform transition-transform duration-350"
+        style={{ background: '#FFF7E2', isolation: 'isolate', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+        className="rounded-[22px] border-[1.5px] border-stroke shadow-[0_24px_64px_rgba(44,19,22,0.35)] w-full max-w-[560px] max-h-[90vh] overflow-y-auto relative transform transition-transform duration-350"
         onClick={(e) => e.stopPropagation()}
       >
         <button 
