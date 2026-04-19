@@ -14,7 +14,7 @@ const WHY_CARDS = [
     delay: 0,
   },
   {
-    icon:  '/give.svg',
+    icon:  '/gift.svg',
     title: 'GIVEAWAY RUTIN',
     texts: [
       'Beneran gratis, beneran fair. NEGOXIA rutin ngadain giveaway, bisa jasa gratis, voucher diskon, atau hadiah spesial lainnya.',
