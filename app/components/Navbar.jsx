@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 export default function Navbar() {
@@ -9,6 +10,9 @@ export default function Navbar() {
   const [activeSection, setActive]   = useState('hero');
   const menuRef  = useRef(null);
   const btnRef   = useRef(null);
+  const pathname = usePathname();
+  const router   = useRouter();
+  const isHome   = pathname === '/';
 
   /* ── Scroll: progress bar + nav style + active link ── */
   useEffect(() => {
@@ -51,9 +55,15 @@ export default function Navbar() {
 
   function smoothTo(id) {
     setMenuOpen(false);
-    setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
+    if (isHome) {
+      // Sudah di halaman utama, langsung scroll
+      setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    } else {
+      // Di halaman lain, navigate ke home dulu lalu scroll ke section
+      router.push(`/#${id}`);
+    }
   }
 
   const links = [
@@ -76,7 +86,7 @@ export default function Navbar() {
       >
         {/* Logo */}
         <a
-          href="#hero"
+          href="/#hero"
           onClick={(e) => { e.preventDefault(); smoothTo('hero'); }}
           className="flex items-center gap-2.5 font-bold text-[17px] no-underline text-brand
             logo-icon-wobble group"
@@ -96,11 +106,11 @@ export default function Navbar() {
           {links.map((l) => (
             <li key={l.id}>
               <a
-                href={`#${l.id}`}
+                href={isHome ? `#${l.id}` : `/#${l.id}`}
                 onClick={(e) => { e.preventDefault(); smoothTo(l.id); }}
                 className={`nav-link-item no-underline text-brand text-sm font-medium
                   hover:text-accent2 transition-colors duration-200
-                  ${activeSection === l.id ? 'active text-accent2' : ''}`}
+                  ${isHome && activeSection === l.id ? 'active text-accent2' : ''}`}
               >
                 {l.label}
               </a>
@@ -134,7 +144,7 @@ export default function Navbar() {
         {links.map((l) => (
           <a
             key={l.id}
-            href={`#${l.id}`}
+            href={isHome ? `#${l.id}` : `/#${l.id}`}
             onClick={(e) => { e.preventDefault(); smoothTo(l.id); }}
             className="flex items-center text-[15px] font-semibold text-brand no-underline
               px-5 py-3 rounded-xl hover:bg-[rgba(247,193,81,0.15)] hover:text-accent2

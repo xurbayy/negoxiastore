@@ -14,6 +14,11 @@ const inter = Inter({
 export const metadata = {
   title: 'NEGOXIA STORE',
   description: 'Jasa Digital Terpercaya – Discord, Design, Roblox',
+  icons: {
+    icon: '/negoxia.png',
+    shortcut: '/negoxia.png',
+    apple: '/negoxia.png',
+  },
 };
 
 export default function RootLayout({ children }) {
