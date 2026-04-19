@@ -1,11 +1,10 @@
 import Image from 'next/image';
-import Roblox from "../../public/roblox.svg";
 
 const SOCIAL = [
-  { href: 'https://discord.gg/nbHfMmcTch',                                              icon: '/discord.svg', label: 'Discord' },
-  { href: 'https://www.tiktok.com/@negoxia?_r=1&_t=ZS-94NnSLUwuPf',                    icon: '/tiktok.svg',          label: 'TikTok' },
-  { href: 'https://www.instagram.com/negoxiastore?igsh=MTVhc2xqaWZpcmNnbA==',           icon: '/instagram.svg',       label: 'Instagram' },
-  { href: 'https://www.roblox.com/share/g/272882894',                                    icon: 'roblox.svg',   label: 'Roblox' },
+  { href: 'https://discord.gg/nbHfMmcTch',                                            icon: '/discord.svg',    label: 'Discord' },
+  { href: 'https://www.tiktok.com/@negoxia?_r=1&_t=ZS-94NnSLUwuPf',                  icon: '/tiktok.svg',     label: 'TikTok' },
+  { href: 'https://www.instagram.com/negoxiastore?igsh=MTVhc2xqaWZpcmNnbA==',         icon: '/instagram.svg',  label: 'Instagram' },
+  { href: 'https://www.roblox.com/share/g/272882894',                                  icon: '/roblox.svg',     label: 'Roblox' },
 ];
 
 const COL_LAYANAN = [
@@ -16,9 +15,9 @@ const COL_LAYANAN = [
 ];
 
 const COL_TOKO = [
-  { label: 'Beranda',     href: '#hero' },
-  { label: 'Produk',      href: '#services' },
-  { label: 'Tentang Kami', href: '#whyus' },
+  { label: 'Beranda',      href: '/#hero' },
+  { label: 'Produk',       href: '/#services' },
+  { label: 'Tentang Kami', href: '/#whyus' },
 ];
 
 const COL_KONTAK = [
@@ -38,17 +37,20 @@ export default function Footer() {
 
           {/* Brand */}
           <div className="footer-brand">
-            <div className="footer-logo flex items-center gap-2.5 font-bold text-[17px] mb-0 group">
+            <a
+              href="/"
+              className="footer-logo flex items-center gap-2.5 font-bold text-[17px] mb-0 group no-underline text-brand"
+            >
               <Image
                 src="/negoxia.png"
-                alt="logo"
-                width={26}
-                height={26}
+                alt="Negoxia Store Logo"
+                width={30}
+                height={30}
                 className="transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]
                   group-hover:rotate-[-10deg] group-hover:scale-[1.15]"
               />
               <span><span className="text-accent2">NEGO</span>XIA STORE</span>
-            </div>
+            </a>
             <p className="text-[13px] font-inter leading-[1.8] mt-4 mb-6">
               Toko layanan digital terpercaya Anda.<br />Harga bisa nego, kualitas gak bisa kompromi.
             </p>
@@ -92,9 +94,17 @@ export default function Footer() {
                     <a
                       href={l.href}
                       className="no-underline text-[13px] text-brand font-inter
-                        hover:text-accent2 transition-colors duration-200"
+                        relative inline-flex items-center
+                        hover:text-accent2 transition-all duration-200
+                        hover:translate-x-1.5
+                        group"
                       {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                     >
+                      <span
+                        className="w-0 group-hover:w-1.5 h-1.5 mr-0 group-hover:mr-1.5
+                          rounded-full bg-accent2 flex-shrink-0
+                          transition-all duration-200 opacity-0 group-hover:opacity-100"
+                      />
                       {l.label}
                     </a>
                   </li>
@@ -106,7 +116,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t-[1.5px] border-brand/10 py-[22px] text-center text-[13px] font-inter text-brand/55">
-          © 2021 NEGOXIA STORE – All Rights Reserved
+          © 2023 NEGOXIA STORE – All Rights Reserved
         </div>
       </div>
     </footer>
