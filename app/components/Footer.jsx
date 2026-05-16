@@ -21,7 +21,7 @@ const COL_TOKO = [
 ];
 
 const COL_KONTAK = [
-  { label: 'Discord',   href: 'https://discord.gg/nbHfMmcTch' },
+  { label: 'Discord',   href: 'https://discord.gg/7t9qxvqXyV' },
   { label: 'Instagram', href: 'https://www.instagram.com/negoxiastore?igsh=MTVhc2xqaWZpcmNnbA==' },
   { label: 'TikTok',    href: 'https://www.tiktok.com/@negoxia?_r=1&_t=ZS-94NnSLUwuPf' },
   { label: 'Roblox',    href: 'https://www.roblox.com/share/g/1102629455' },
