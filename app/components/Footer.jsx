@@ -4,7 +4,7 @@ const SOCIAL = [
   { href: 'https://discord.gg/nbHfMmcTch',                                            icon: '/discord.svg',    label: 'Discord' },
   { href: 'https://www.tiktok.com/@negoxia?_r=1&_t=ZS-94NnSLUwuPf',                  icon: '/tiktok.svg',     label: 'TikTok' },
   { href: 'https://www.instagram.com/negoxiastore?igsh=MTVhc2xqaWZpcmNnbA==',         icon: '/instagram.svg',  label: 'Instagram' },
-  { href: 'https://www.roblox.com/share/g/272882894',                                  icon: '/roblox.svg',     label: 'Roblox' },
+  { href: 'https://www.roblox.com/share/g/1102629455',                                  icon: '/roblox.svg',     label: 'Roblox' },
 ];
 
 const COL_LAYANAN = [
