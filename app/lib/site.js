@@ -1,6 +1,6 @@
 // Pusat konstanta SEO + branding. Ganti SITE_URL lewat env saat deploy.
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://nexo-web.vercel.app'
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://nexogamess.vercel.app'
 ).replace(/\/+$/, '');
 
 export const BOT_INVITE =
