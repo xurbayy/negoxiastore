@@ -1,0 +1,146 @@
+import { getDb, schemaReady } from './db';
+
+// Aturan spec: SEMUA halaman harus tetap render walau bot/database sedang
+// tidak bisa dihubungi. Jadi error Turso (timeout, dns, dsb) ditelan + cache
+// snapshot terakhir yang sukses dipakai sementara.
+let _lastGood = null; // { snap, series, at }
+
+async function safeQuery(fn) {
+  // Blip jaringan ke Turso (ConnectTimeout) sering cuma sekali lewat ->
+  // retry 1x dengan jeda pendek sebelum nyerah ke cache.
+  for (let i = 0; i < 2; i++) {
+    try {
+      return await fn();
+    } catch {
+      if (i === 0) await new Promise((res) => setTimeout(res, 250));
+    }
+  }
+  return null;
+}
+
+// Snapshot monitor terbaru dari bot (null kalau belum pernah push / DB mati).
+export async function getLatestSnapshot() {
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute('SELECT ts, data FROM monitor_snapshots ORDER BY ts DESC LIMIT 1');
+    if (!res.rows.length) return null;
+    return JSON.parse(res.rows[0].data);
+  });
+  if (r) {
+    _lastGood = _lastGood ? { ..._lastGood, snap: r } : { snap: r, series: null, at: Date.now() };
+    return r;
+  }
+  // DB error: pakai cache proses (maks 5 menit) supaya halaman tetap hidup.
+  if (_lastGood?.snap && Date.now() - _lastGood.at < 5 * 60_000) return _lastGood.snap;
+  return null;
+}
+
+// Series snapshot untuk grafik admin (7 hari terakhir).
+// HEMAT (audit E1): dulu query ini narik SEMUA baris (±10.000 payload penuh
+// 20-60KB = ratusan MB + parse JSON segunanya tiap poll 5 detik). Sekarang:
+// sampling 1 titik per jam (maks 168 titik) + json_extract agregat di DB,
+// payload penuh tidak pernah keluar dari Turso.
+export async function getSnapshotSeries(days = 7) {
+  const since = Date.now() - days * 86400000;
+  const rows = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute({
+      sql: `SELECT ts,
+                   json_extract(data, '$.monitor.gamesToday')  AS gamesToday,
+                   json_extract(data, '$.monitor.totalMoney')  AS totalMoney,
+                   json_extract(data, '$.monitor.totalUsers')  AS totalUsers
+            FROM monitor_snapshots
+            WHERE id IN (SELECT MAX(id) FROM monitor_snapshots WHERE ts >= ? GROUP BY ts / 3600000)
+            ORDER BY ts ASC`,
+      args: [since],
+    });
+    return res.rows;
+  });
+  let series = null;
+  if (rows) {
+    series = rows.map((r) => ({
+      ts: Number(r.ts),
+      gamesToday: r.gamesToday == null ? null : Number(r.gamesToday),
+      totalMoney: r.totalMoney == null ? null : Number(r.totalMoney),
+      totalUsers: r.totalUsers == null ? null : Number(r.totalUsers),
+    }));
+    _lastGood = _lastGood ? { ..._lastGood, series, at: Date.now() } : { snap: null, series, at: Date.now() };
+    return series;
+  }
+  if (_lastGood?.series && Date.now() - _lastGood.at < 5 * 60_000) return _lastGood.series;
+  return [];
+}
+
+// Format angka gaya id-ID (1.234.567)
+export function fmt(n) {
+  if (n === null || n === undefined) return '-';
+  return Number(n).toLocaleString('id-ID');
+}
+
+// Waktu relatif "x lalu"
+export function timeAgo(ts) {
+  if (!ts) return 'belum pernah';
+  const diff = Date.now() - ts;
+  if (diff < 0) return 'baru saja';
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s} detik lalu`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  return `${Math.floor(h / 24)} hari lalu`;
+}
+
+// Uptime detik -> "3h 12m"
+export function fmtUptime(sec) {
+  if (!sec && sec !== 0) return '-';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// Nama game dari gameType (history/missions)
+export function gameName(key) {
+  const NAMES = {
+    coinflip: 'Coinflip', guess: 'Guess Number', hangman: 'Hangman', math: 'Math Challenge',
+    memory: 'Memory', riddle: 'Riddle', rpg: 'RPG Dungeon', slot: 'Slot Machine',
+    trivia: 'Trivia', word: 'Word Game', autochess: 'Autochess', blackjack: 'Blackjack',
+    guildwar: 'Guild War', monopoly: 'Monopoly', musicalchairs: 'Musical Chairs',
+    numwar: 'Number War', quickdraw: 'Quickdraw', racing: 'Racing', rps: 'Rock Paper Scissors',
+    russianroulette: 'Russian Roulette', snakeladder: 'Snake & Ladder', bombsquad: 'Bomb Squad',
+    bossraid: 'Boss Raid', dungeoncrawler: 'Dungeon Crawler', heist: 'Heist',
+    zombiesurvival: 'Zombie Survival',
+  };
+  return NAMES[key] || key || '-';
+}
+
+// Buang token emoji Discord (<:name:id> / <a:name:id>) dari string (nama guild dll).
+export function stripEmojiToken(str) {
+  return String(str || '').replace(/<a?:[A-Za-z0-9_]+:\d+>/g, '').trim();
+}
+
+// Apakah user ini sedang premium? Sumber: premiumMembers di snapshot bot
+// terakhir (segar tiap 60 detik dari push). Aman kalau DB error -> false.
+export async function userHasPremium(discordId) {
+  if (!discordId) return false;
+  const snap = await getLatestSnapshot();
+  return (snap?.premiumMembers || []).some((m) => String(m.userId) === String(discordId));
+}
+
+export async function isUserBanned(discordId) {
+  if (!discordId) return null;
+  const snap = await getLatestSnapshot();
+  // Payload bot mengirim user_id / timeout_until (snake_case, hasil SELECT mentah).
+  // userId ikut dicek untuk jaga-jaga kalau format payload berubah.
+  const banInfo = (snap?.monitor?.bannedUsers || []).find(
+    (b) => String(b.user_id ?? b.userId) === String(discordId)
+  );
+  if (!banInfo) return null;
+  // Timeout yang sudah lewat masa berlaku = bebas (bot baru membersihkan barisnya
+  // saat dicek in-game; web tidak boleh membanned user yang sudah pulih).
+  const until = Number(banInfo.timeout_until ?? banInfo.timeoutUntil) || 0;
+  if (until > 0 && Date.now() > until) return null;
+  return banInfo;
+}

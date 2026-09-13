@@ -1,136 +1,99 @@
-'use client';
+import Link from 'next/link';
+import { InviteButton, GamepadIcon } from './ui';
+import { emojiSrc } from '../lib/emojis';
 
-import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
-import Badge from "./Badge";
-
-function useRipple() {
-  function createRipple(btn, cx, cy) {
-    const r    = btn.getBoundingClientRect();
-    const size = Math.max(r.width, r.height) * 1.8;
-    const el   = document.createElement('span');
-    el.classList.add('ripple');
-    el.style.cssText = `width:${size}px;height:${size}px;left:${cx - r.left - size / 2}px;top:${cy - r.top - size / 2}px`;
-    btn.appendChild(el);
-    setTimeout(() => el.remove(), 650);
-  }
-  return createRipple;
-}
-
-export default function Hero() {
-  const createRipple = useRipple();
-  const primaryRef   = useRef(null);
-  const outlineRef   = useRef(null);
-  // animKey forces React to re-mount animated elements on every navigation (including browser back)
-  const [animKey, setAnimKey] = useState(0);
-
-  useEffect(() => {
-    // Re-trigger animations every time this component mounts (including browser back/forward)
-    setAnimKey(k => k + 1);
-  }, []);
-
-  useEffect(() => {
-    [primaryRef, outlineRef].forEach((ref) => {
-      const btn = ref.current;
-      if (!btn) return;
-      const onClick  = (e) => createRipple(btn, e.clientX, e.clientY);
-      const onTouch  = (e) => { const t = e.touches[0]; createRipple(btn, t.clientX, t.clientY); };
-      btn.addEventListener('click',      onClick);
-      btn.addEventListener('touchstart', onTouch, { passive: true });
-      return () => {
-        btn.removeEventListener('click',      onClick);
-        btn.removeEventListener('touchstart', onTouch);
-      };
-    });
-  }, []);
-
+// Split hero sesuai design system: kiri (badge + judul 2 baris bertitik +
+// underline oranye + paragraf), kanan (kartu dark ala Discord berisi
+// contoh embed game). Copy menyesuaikan status login:
+// - belum login: ajakan invite bot (onboarding)
+// - sudah login: ajakan kembali main + tombol ke profil
+export default function Hero({ loggedIn = false }) {
   return (
-    <section id="hero" className="relative overflow-hidden min-h-screen flex flex-col justify-center">
-      <div key={animKey} className="flex items-center gap-[60px] px-16 pt-[120px] pb-20 max-w-[1280px] mx-auto w-full relative z-[1]
-        max-md:flex-col max-md:px-6 max-md:pt-[100px] max-md:pb-[60px] max-md:gap-6">
+    <section className="relative overflow-hidden pb-16 pt-32 md:pb-24 md:pt-40">
+      <div className="bg-grid absolute inset-0" aria-hidden="true" />
 
-        {/* ── Left ── */}
-        <div className="flex-[1.4] max-md:order-2 max-md:w-full">
-          {/* Chips */}
-          <div className="flex gap-2.5 flex-wrap mb-8">
-            {['Discord Services', 'Visual Design', 'Roblox Development'].map((chip, i) => (
-              <Badge key={chip} text={chip} />
-            ))}
-          </div>
-
-          {/* Title */}
-          <h1
-            className="hero-title-anim text-[40px] font-extrabold leading-[1.3] mb-10
-              max-md:text-2xl max-[480px]:text-xl"
-            style={{ animationDelay: '0.3s' }}
-          >
-            Jasa Digital Terpercaya<br />
-            harga fleksibel, kualitas maksimal<br />
-            Discord • Design • Roblox<br />
-            semua dalam satu tempat.
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2">
+        {/* Kiri: copy */}
+        <div className="text-center lg:text-left">
+          <h1 className="anim-in delay-2 mt-6 font-display text-4xl leading-[1.15] text-ink sm:text-5xl">
+            {loggedIn ? 'Selamat Main Lagi.' : '25+ Game Seru.'}
           </h1>
+          <h2 className="anim-in delay-2 font-display text-4xl leading-[1.15] text-ink sm:text-5xl">
+            {loggedIn ? 'Progresmu Menanti.' : 'Satu Bot Discord.'}
+          </h2>
 
-          {/* Buttons */}
-          <div
-            className="hero-btn-anim flex gap-4 flex-wrap max-md:flex-col max-md:gap-3"
-            style={{ animationDelay: '0.5s' }}
-          >
-            {/* Primary */}
-            <button
-              ref={primaryRef}
-              onClick={() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })}
-              className="btn-ripple bg-[var(--orange)] text-soft border-none rounded-xl px-8 py-[15px]
-                font-inter text-sm text-white font-semibold cursor-pointer flex items-center gap-[9px]
-                transition-all duration-[250ms] cubic-bezier-smooth
-                hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-[0_8px_28px_rgba(247,193,81,0.5)]
-                active:scale-[0.97]
-                max-md:w-full max-md:justify-center"
-            >
-              Lihat Produk
-            </button>
+          {/* accent underline */}
+          <div className="accent-bar anim-in delay-2 mt-5 mx-auto lg:mx-0" aria-hidden="true" />
 
-            {/* Outline */}
-            <a
-              ref={outlineRef}
-              href="https://discord.gg/7t9qxvqXyV"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ripple bg-transparent text-accent2 text-[var(--orange)] border-2 border-accent2 border-[var(--orange)] rounded-xl px-8 py-[13px]
-                font-inter text-sm font-semibold cursor-pointer flex items-center gap-[9px]
-                transition-all duration-[250ms]
-                hover:-translate-y-0.5 hover:scale-[1.03] hover:bg-[rgba(247,193,81,0.08)]
-                active:scale-[0.97]
-                max-md:w-full max-md:justify-center"
-            >
-              <Image
-                src='/discord-orange.svg'
-                alt='discord'
-                width={32}
-                height={32}
-                className="icon-wobble w-8 h-8 object-contain "
-              />
-              Pesan Sekarang
-            </a>
+          <p className="anim-in delay-3 mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink-muted md:text-lg lg:mx-0">
+            {loggedIn ? (
+              <>
+                Akun kamu sudah tertaut. Cek <strong className="text-ink">poin</strong>,{' '}
+                <strong className="text-ink">misi harian</strong>, dan{' '}
+                <strong className="text-ink">riwayat game</strong> di halaman profil,
+                atau lanjut main di Discord dengan perintah np, nb, dan nc.
+              </>
+            ) : (
+              <>
+                <strong className="text-ink">NEXO Games</strong> menghadirkan 25+ mini-game:
+                solo, PvP betting, co-op raid, sampai autochess, plus ekonomi poin, bank,
+                guild war, shop, dan leaderboard. Semuanya gratis, langsung di Discord.
+              </>
+            )}
+          </p>
+
+          <div className="anim-in delay-4 mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
+            {loggedIn ? (
+              <>
+                <Link href="/me" className="btn-primary cursor-pointer">Buka Profil</Link>
+                <Link href="/leaderboard" className="btn-ghost cursor-pointer">
+                  {emojiSrc('trophy') ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={emojiSrc('trophy')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                  ) : null}
+                  Cek Peringkat
+                </Link>
+              </>
+            ) : (
+              <>
+                <InviteButton />
+                <Link href="/#games" className="btn-primary !bg-card-dark !px-[1.6rem] !py-[0.7rem] !text-[16px] text-card-cream transition hover:bg-card-dark-2 cursor-pointer">
+                  <GamepadIcon className="h-5 w-5" />
+                  Lihat Semua Game
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
-        {/* ── Right (Mascot) ── */}
-        <div className="mascot-anim flex-[0_0_360px] flex justify-center items-center
-          relative min-h-[360px]
-          max-md:order-1 max-md:flex-none max-md:w-full max-md:min-h-[200px]
-          max-[480px]:min-h-[170px]"
-          style={{ animationDelay: '0.2s' }}
-        >
-          <Image
-            src="/maskot-nobg.png"
-            alt="Maskot NEGOXIA"
-            width={300}
-            height={300}
-            className="mascot-float relative z-[1] object-contain
-              [filter:drop-shadow(0_12px_28px_rgba(44,19,22,0.12))]
-              max-md:w-[200px] max-[480px]:w-[160px]"
-            onError={(e) => { e.currentTarget.src = '/maskot.png'; }}
-          />
+        {/* Kanan: 2 screenshot asli embed game (Blackjack + Russian Roulette),
+            ditumpuk rapi dengan sedikit kemiringan berlawanan */}
+        <div className="anim-in delay-3 relative mx-auto h-[420px] w-full max-w-md select-none sm:h-[460px]">
+          {/* kartu belakang: Russian Roulette */}
+          <div className="nx-dark absolute right-0 top-0 w-[74%] rotate-[3deg] overflow-hidden shadow-[0_18px_44px_rgba(43,33,24,0.28)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/preview-roulette.png"
+              alt="Contoh game Russian Roulette di NEXO Games: ronde, total hadiah, dan papan pelatuk"
+              width={777}
+              height={783}
+              className="h-auto w-full"
+              loading="eager"
+            />
+          </div>
+
+          {/* kartu depan: Blackjack */}
+          <div className="nx-dark absolute bottom-0 left-0 w-[72%] -rotate-[2deg] overflow-hidden shadow-[0_24px_54px_rgba(43,33,24,0.35)] ring-4 ring-bg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/preview-blackjack.png"
+              alt="Contoh game Blackjack di NEXO Games: pot taruhan, papan kartu, dan tombol aksi Hit/Stand"
+              width={660}
+              height={626}
+              className="h-auto w-full"
+              loading="eager"
+            />
+          </div>
         </div>
       </div>
     </section>

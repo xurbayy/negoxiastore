@@ -1,7 +1,23 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 export default function ScrollProgress() {
-  // The scroll bar element is controlled via vanilla JS in Navbar.jsx
-  // This component just renders the fixed bar element
-  return <div id="scroll-bar" />;
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, []);
+
+  return <div id="scroll-bar" style={{ width: `${progress}%` }} aria-hidden="true" />;
 }

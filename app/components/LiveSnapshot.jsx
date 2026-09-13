@@ -1,0 +1,68 @@
+import { getLatestSnapshot } from '../lib/snapshot';
+
+// LiveSnapshot: strip statistik nyata dari snapshot bot terakhir.
+// Kalau bot belum pernah push / offline -> tampil strip "menunggu data".
+export default async function LiveSnapshot() {
+  const snap = await getLatestSnapshot();
+
+  if (!snap) {
+    return (
+      <div className="relative mx-auto mt-14 max-w-6xl px-5">
+        <div className="nx-card flex flex-wrap items-center justify-center gap-3 px-6 py-5 text-center text-sm text-ink-muted">
+          <span className="pulse-dot" aria-hidden="true" />
+          Menunggu data live dari bot… Statistik akan muncul otomatis dalam ±1 menit setelah bot online.
+        </div>
+      </div>
+    );
+  }
+
+  const m = snap.monitor || {};
+  const live = m.live || {};
+  const liveTotal = (live.playing || 0) + (live.lobby || 0) + (live.mp || 0) + (live.solo || 0);
+  const stale = computeStale(snap.ts);
+
+  const stats = [
+    { label: 'Player Terdaftar', value: m.totalUsers, emoji: 'people' },
+    { label: 'Poin Beredar', value: m.totalMoney, emoji: 'goldcoin' },
+    { label: 'Member NEXO Pass', value: m.premiumCount, emoji: 'crown' },
+    { label: 'Game Hari Ini', value: m.gamesToday, emoji: 'dice' },
+    { label: 'Sesi LIVE', value: liveTotal, emoji: 'sparkles' },
+  ];
+
+  return (
+    <div className="relative mx-auto mt-14 max-w-6xl px-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
+        {stats.map((s) => (
+          <div key={s.label} className="nx-card px-4 py-4 text-center">
+            {typeof s.value === 'number' && (
+              <div className="font-display text-2xl text-ink">{Number(s.value).toLocaleString('id-ID')}</div>
+            )}
+            <div className="mt-1 text-xs text-ink-muted">{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-center text-xs text-ink-muted">
+        {stale ? (
+          <span className="text-danger">⚠ Bot terakhir terlihat lebih dari 3 menit lalu.</span>
+        ) : (
+          <span className="pulse-dot" aria-hidden="true" />
+        )}
+        {' '}Diperbarui {timeAgoClient(snap.ts)} · data diperbarui tiap 1 menit
+      </p>
+    </div>
+  );
+}
+
+function computeStale(ts) {
+  return Date.now() - ts > 3 * 60_000;
+}
+
+function timeAgoClient(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 0) return 'baru saja';
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return `${s} detik lalu`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} menit lalu`;
+  return `${Math.floor(m / 60)} jam lalu`;
+}

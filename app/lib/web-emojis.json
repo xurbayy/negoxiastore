@@ -1,0 +1,1079 @@
+{
+  "_comment": "Daftar emoji custom NEXO bot untuk website. Setiap emoji punya field usage yang menjelaskan fungsinya di bot (game apa / fitur apa). Regenerated 2026-09-12 dari scan penuh kode bot. usage:premium = emoji premium resmi. 1 ID bisa punya beberapa nama alias (server punya 2 nama untuk 1 emoji).",
+  "count": 126,
+  "emojis": [
+    {
+      "name": "download3",
+      "aliases": [],
+      "id": "1548184905018507306",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1548184905018507306.png?size=64&quality=lossless",
+      "usage": "premium"
+    },
+    {
+      "name": "Verified",
+      "aliases": [],
+      "id": "1469177508078293145",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469177508078293145.gif?size=64&quality=lossless",
+      "usage": "Verified / server resmi"
+    },
+    {
+      "name": "Team",
+      "aliases": [],
+      "id": "1469188300274405487",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1469188300274405487.png?size=64&quality=lossless",
+      "usage": "Team"
+    },
+    {
+      "name": "notification",
+      "aliases": [],
+      "id": "1469192792243699797",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469192792243699797.gif?size=64&quality=lossless",
+      "usage": "Notifikasi"
+    },
+    {
+      "name": "loading",
+      "aliases": [
+        "unready"
+      ],
+      "id": "1469193479338070159",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469193479338070159.gif?size=64&quality=lossless",
+      "usage": "Belum siap (lobby)"
+    },
+    {
+      "name": "dice",
+      "aliases": [
+        "gift"
+      ],
+      "id": "1469193552256041043",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469193552256041043.gif?size=64&quality=lossless",
+      "usage": "Gift / hadiah"
+    },
+    {
+      "name": "rocket",
+      "aliases": [],
+      "id": "1469193741846974617",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469193741846974617.gif?size=64&quality=lossless",
+      "usage": "Rocket / mulai cepat"
+    },
+    {
+      "name": "nexo_play",
+      "aliases": [
+        "ready"
+      ],
+      "id": "1469194502408245308",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469194502408245308.gif?size=64&quality=lossless",
+      "usage": "Siap / ready (lobby)"
+    },
+    {
+      "name": "exit",
+      "aliases": [],
+      "id": "1469194764539789419",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469194764539789419.gif?size=64&quality=lossless",
+      "usage": "Batal / exit"
+    },
+    {
+      "name": "redeem",
+      "aliases": [],
+      "id": "1469194944412647536",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469194944412647536.gif?size=64&quality=lossless",
+      "usage": "Redeem code"
+    },
+    {
+      "name": "keranjang",
+      "aliases": [],
+      "id": "1469194960392945799",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469194960392945799.gif?size=64&quality=lossless",
+      "usage": "Keranjang / toko"
+    },
+    {
+      "name": "sparkles",
+      "aliases": [],
+      "id": "1469212392675082431",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469212392675082431.gif?size=64&quality=lossless",
+      "usage": "Sparkles / bonus"
+    },
+    {
+      "name": "UC_invalid",
+      "aliases": [],
+      "id": "1469213473157152937",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469213473157152937.gif?size=64&quality=lossless",
+      "usage": "Error / invalid"
+    },
+    {
+      "name": "UC_Checkmark",
+      "aliases": [
+        "aktif",
+        "ceklis"
+      ],
+      "id": "1469213532246511668",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469213532246511668.gif?size=64&quality=lossless",
+      "usage": "Berhasil / ceklis"
+    },
+    {
+      "name": "nexo_rules",
+      "aliases": [
+        "pin"
+      ],
+      "id": "1469214655271669833",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469214655271669833.gif?size=64&quality=lossless",
+      "usage": "Pin / laporan"
+    },
+    {
+      "name": "fire",
+      "aliases": [],
+      "id": "1516065781861847132",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516065781861847132.gif?size=64&quality=lossless",
+      "usage": "Api / ultimate"
+    },
+    {
+      "name": "gear",
+      "aliases": [
+        "manage"
+      ],
+      "id": "1516065921758793789",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516065921758793789.gif?size=64&quality=lossless",
+      "usage": "Gear / panel admin"
+    },
+    {
+      "name": "bank",
+      "aliases": [],
+      "id": "1516066460680589352",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516066460680589352.gif?size=64&quality=lossless",
+      "usage": "Bank"
+    },
+    {
+      "name": "mp",
+      "aliases": [
+        "nexo_eco",
+        "swords"
+      ],
+      "id": "1516067016115490940",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516067016115490940.gif?size=64&quality=lossless",
+      "usage": "Mulai game multiplayer"
+    },
+    {
+      "name": "box",
+      "aliases": [],
+      "id": "1516364943228932156",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516364943228932156.gif?size=64&quality=lossless",
+      "usage": "Box / stok item"
+    },
+    {
+      "name": "verified_developer",
+      "aliases": [],
+      "id": "1516370554582601738",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516370554582601738.gif?size=64&quality=lossless",
+      "usage": "Verified Developer / badge dev"
+    },
+    {
+      "name": "controller",
+      "aliases": [
+        "game",
+        "nexo_guide",
+        "solo"
+      ],
+      "id": "1516370819692101783",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516370819692101783.png?size=64&quality=lossless",
+      "usage": "Controller / menu game & akses beta"
+    },
+    {
+      "name": "people",
+      "aliases": [],
+      "id": "1516376356202745947",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516376356202745947.png?size=64&quality=lossless",
+      "usage": "Pemain / profil"
+    },
+    {
+      "name": "book",
+      "aliases": [],
+      "id": "1516379457366134804",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516379457366134804.gif?size=64&quality=lossless",
+      "usage": "Buku / panduan"
+    },
+    {
+      "name": "keyboard",
+      "aliases": [
+        "nexo_guide"
+      ],
+      "id": "1516379982765494393",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516379982765494393.gif?size=64&quality=lossless",
+      "usage": "Keyboard / daftar perintah"
+    },
+    {
+      "name": "group",
+      "aliases": [],
+      "id": "1516381292986634300",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516381292986634300.png?size=64&quality=lossless",
+      "usage": "Daftar pemain"
+    },
+    {
+      "name": "medal",
+      "aliases": [
+        "tropi"
+      ],
+      "id": "1516381655089283203",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516381655089283203.gif?size=64&quality=lossless",
+      "usage": "Menyerah"
+    },
+    {
+      "name": "trophy",
+      "aliases": [],
+      "id": "1516381982961959072",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516381982961959072.gif?size=64&quality=lossless",
+      "usage": "Trophy / kemenangan & leaderboard"
+    },
+    {
+      "name": "sun58",
+      "aliases": [
+        "sunny"
+      ],
+      "id": "1516386653365866597",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516386653365866597.gif?size=64&quality=lossless",
+      "usage": "Limit harian / Daily Boost"
+    },
+    {
+      "name": "goldcoin",
+      "aliases": [
+        "nexo_eco",
+        "uang"
+      ],
+      "id": "1516390096419684422",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516390096419684422.png?size=64&quality=lossless",
+      "usage": "Poin / mata uang NEXO - semua saldo & hadiah"
+    },
+    {
+      "name": "globe",
+      "aliases": [],
+      "id": "1516390212672946288",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516390212672946288.gif?size=64&quality=lossless",
+      "usage": "Global leaderboard"
+    },
+    {
+      "name": "castle",
+      "aliases": [
+        "house"
+      ],
+      "id": "1516391485367386183",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516391485367386183.png?size=64&quality=lossless",
+      "usage": "Guild / castle"
+    },
+    {
+      "name": "mag",
+      "aliases": [],
+      "id": "1516393080024993902",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516393080024993902.png?size=64&quality=lossless",
+      "usage": "Mag / matchmaking"
+    },
+    {
+      "name": "shield",
+      "aliases": [],
+      "id": "1516394055641075783",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516394055641075783.png?size=64&quality=lossless",
+      "usage": "Shield"
+    },
+    {
+      "name": "syringe",
+      "aliases": [],
+      "id": "1516394120569032805",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516394120569032805.gif?size=64&quality=lossless",
+      "usage": "Syringe / heal"
+    },
+    {
+      "name": "brain",
+      "aliases": [],
+      "id": "1516396687159988325",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516396687159988325.gif?size=64&quality=lossless",
+      "usage": "Game: Math Quiz"
+    },
+    {
+      "name": "loudspeaker",
+      "aliases": [],
+      "id": "1516409923272052946",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516409923272052946.gif?size=64&quality=lossless",
+      "usage": "Pengumuman / broadcast"
+    },
+    {
+      "name": "angka",
+      "aliases": [],
+      "id": "1516413169981984768",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516413169981984768.png?size=64&quality=lossless",
+      "usage": "Angka"
+    },
+    {
+      "name": "envelope",
+      "aliases": [
+        "nexo_play"
+      ],
+      "id": "1516449478759157790",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516449478759157790.gif?size=64&quality=lossless",
+      "usage": "Envelope / undangan & laporan"
+    },
+    {
+      "name": "negoxiaremovebgpreview",
+      "aliases": [],
+      "id": "1516450592204128287",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516450592204128287.png?size=64&quality=lossless",
+      "usage": "Logo studio"
+    },
+    {
+      "name": "user",
+      "aliases": [],
+      "id": "1516456258222428170",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516456258222428170.png?size=64&quality=lossless",
+      "usage": "Baris pemain lobby"
+    },
+    {
+      "name": "jatuhtempo",
+      "aliases": [
+        "stopwatch",
+        "warning"
+      ],
+      "id": "1516457120055164988",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516457120055164988.gif?size=64&quality=lossless",
+      "usage": "Stopwatch / waktu reset"
+    },
+    {
+      "name": "lock",
+      "aliases": [],
+      "id": "1516460875706273914",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516460875706273914.gif?size=64&quality=lossless",
+      "usage": "Lock / terkunci"
+    },
+    {
+      "name": "267042fire",
+      "aliases": [
+        "streak"
+      ],
+      "id": "1516612517210751126",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516612517210751126.gif?size=64&quality=lossless",
+      "usage": "Streak harian"
+    },
+    {
+      "name": "PE_PandaBackPack",
+      "aliases": [
+        "backpack"
+      ],
+      "id": "1517006909385871511",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517006909385871511.png?size=64&quality=lossless",
+      "usage": "Inventori / item (backpack)"
+    },
+    {
+      "name": "chart",
+      "aliases": [],
+      "id": "1517007751002460330",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1517007751002460330.gif?size=64&quality=lossless",
+      "usage": "Statistik"
+    },
+    {
+      "name": "coop",
+      "aliases": [
+        "nexo_game"
+      ],
+      "id": "1517174489794740254",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517174489794740254.png?size=64&quality=lossless",
+      "usage": "Mode Co-op"
+    },
+    {
+      "name": "chemistry",
+      "aliases": [],
+      "id": "1517177922459402330",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1517177922459402330.gif?size=64&quality=lossless",
+      "usage": "Chemistry / partner"
+    },
+    {
+      "name": "proposal",
+      "aliases": [],
+      "id": "1517177942839398452",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1517177942839398452.gif?size=64&quality=lossless",
+      "usage": "Lamaran partner"
+    },
+    {
+      "name": "sitaan",
+      "aliases": [],
+      "id": "1517538717877928066",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517538717877928066.png?size=64&quality=lossless",
+      "usage": "Sitaan bank (hutang overdue)"
+    },
+    {
+      "name": "kick",
+      "aliases": [],
+      "id": "1519545368512168036",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1519545368512168036.png?size=64&quality=lossless",
+      "usage": "Kick pemain (lobby)"
+    },
+    {
+      "name": "winstreak",
+      "aliases": [],
+      "id": "1519588035992354816",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1519588035992354816.gif?size=64&quality=lossless",
+      "usage": "Winstreak multiplayer"
+    },
+    {
+      "name": "misi",
+      "aliases": [
+        "tasks"
+      ],
+      "id": "1547111992433840208",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1547111992433840208.png?size=64&quality=lossless",
+      "usage": "Misi Harian"
+    },
+    {
+      "name": "rpg",
+      "aliases": [
+        "swords"
+      ],
+      "id": "1516394026507571280",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516394026507571280.png?size=64&quality=lossless",
+      "usage": "Game: RPG Battle"
+    },
+    {
+      "name": "question",
+      "aliases": [],
+      "id": "1516397091524706444",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516397091524706444.gif?size=64&quality=lossless",
+      "usage": "Game: Trivia Challenge"
+    },
+    {
+      "name": "knot",
+      "aliases": [],
+      "id": "1516398208799084646",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516398208799084646.gif?size=64&quality=lossless",
+      "usage": "Game: Hangman"
+    },
+    {
+      "name": "puzzle",
+      "aliases": [],
+      "id": "1516398727105871882",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516398727105871882.gif?size=64&quality=lossless",
+      "usage": "Game: Fun Riddle"
+    },
+    {
+      "name": "word",
+      "aliases": [],
+      "id": "1516399387163492352",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516399387163492352.gif?size=64&quality=lossless",
+      "usage": "Game: Word Builder"
+    },
+    {
+      "name": "Nos_Rubikcube",
+      "aliases": [],
+      "id": "1516400532229718026",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516400532229718026.gif?size=64&quality=lossless",
+      "usage": "Game: Memory Match"
+    },
+    {
+      "name": "slot",
+      "aliases": [],
+      "id": "1516401321165590639",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516401321165590639.gif?size=64&quality=lossless",
+      "usage": "Game: Slot Machine"
+    },
+    {
+      "name": "coin",
+      "aliases": [],
+      "id": "1516401681066102835",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516401681066102835.gif?size=64&quality=lossless",
+      "usage": "Game: Coin Flip"
+    },
+    {
+      "name": "monopoly",
+      "aliases": [],
+      "id": "1516402431271899287",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516402431271899287.png?size=64&quality=lossless",
+      "usage": "Game: Monopoly NEXO"
+    },
+    {
+      "name": "autochess",
+      "aliases": [],
+      "id": "1516402800022786240",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516402800022786240.png?size=64&quality=lossless",
+      "usage": "Game: Auto Chess"
+    },
+    {
+      "name": "racing",
+      "aliases": [],
+      "id": "1516404055692414986",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516404055692414986.png?size=64&quality=lossless",
+      "usage": "Game: Racing"
+    },
+    {
+      "name": "quickdraw",
+      "aliases": [],
+      "id": "1516404718212223069",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516404718212223069.gif?size=64&quality=lossless",
+      "usage": "Game: Quick Draw"
+    },
+    {
+      "name": "rps",
+      "aliases": [],
+      "id": "1516405345000357948",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516405345000357948.png?size=64&quality=lossless",
+      "usage": "Game: Rock Paper Scissors"
+    },
+    {
+      "name": "numwar",
+      "aliases": [
+        "tebak"
+      ],
+      "id": "1516405613507121153",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516405613507121153.png?size=64&quality=lossless",
+      "usage": "Game: Number Guess & Number War"
+    },
+    {
+      "name": "sl",
+      "aliases": [
+        "snake"
+      ],
+      "id": "1516462213731192943",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516462213731192943.gif?size=64&quality=lossless",
+      "usage": "Game: Snakes & Ladders"
+    },
+    {
+      "name": "bombsquad",
+      "aliases": [],
+      "id": "1517174856729493665",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517174856729493665.png?size=64&quality=lossless",
+      "usage": "Game: Bomb Squad"
+    },
+    {
+      "name": "bossraid",
+      "aliases": [],
+      "id": "1517175047477788845",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517175047477788845.png?size=64&quality=lossless",
+      "usage": "Game: Boss Raid"
+    },
+    {
+      "name": "heist",
+      "aliases": [],
+      "id": "1517175515914436830",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517175515914436830.png?size=64&quality=lossless",
+      "usage": "Game: Bank Heist"
+    },
+    {
+      "name": "zombie",
+      "aliases": [],
+      "id": "1517175779207807116",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517175779207807116.png?size=64&quality=lossless",
+      "usage": "Game: Zombie Survival"
+    },
+    {
+      "name": "rr",
+      "aliases": [],
+      "id": "1519568573083811982",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1519568573083811982.png?size=64&quality=lossless",
+      "usage": "Game: Russian Roulette"
+    },
+    {
+      "name": "chair",
+      "aliases": [],
+      "id": "1519576885418393600",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1519576885418393600.png?size=64&quality=lossless",
+      "usage": "Game: Musical Chairs"
+    },
+    {
+      "name": "blackjack",
+      "aliases": [],
+      "id": "1519659727318024193",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1519659727318024193.png?size=64&quality=lossless",
+      "usage": "Game: Blackjack"
+    },
+    {
+      "name": "dungeon",
+      "aliases": [],
+      "id": "1519954384169996451",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1519954384169996451.png?size=64&quality=lossless",
+      "usage": "Game: Dungeon Crawler"
+    },
+    {
+      "name": "afk",
+      "aliases": [],
+      "id": "1469174714470760689",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469174714470760689.gif?size=64&quality=lossless",
+      "usage": "game-multiplayer; ui:bet; ui:coop; ui:help"
+    },
+    {
+      "name": "diamond",
+      "aliases": [],
+      "id": "1469177335877210112",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469177335877210112.gif?size=64&quality=lossless",
+      "usage": "ui:profile; ui:shop; util:database"
+    },
+    {
+      "name": "ava",
+      "aliases": [
+        "avatar"
+      ],
+      "id": "1469193987729653823",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469193987729653823.gif?size=64&quality=lossless",
+      "usage": "ui:coop; ui:shop"
+    },
+    {
+      "name": "gif",
+      "aliases": [
+        "left_hand"
+      ],
+      "id": "1469194581303103634",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469194581303103634.gif?size=64&quality=lossless",
+      "usage": "ui:coop; ui:help"
+    },
+    {
+      "name": "lighting",
+      "aliases": [],
+      "id": "1469212696791613480",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469212696791613480.gif?size=64&quality=lossless",
+      "usage": "game-solo; ui:guild; ui:help; util:guildDatabase"
+    },
+    {
+      "name": "silang",
+      "aliases": [
+        "timeout",
+        "wrong"
+      ],
+      "id": "1469214728004829248",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469214728004829248.gif?size=64&quality=lossless",
+      "usage": "core; game-coop; game-multiplayer; game-solo"
+    },
+    {
+      "name": "infinity",
+      "aliases": [],
+      "id": "1469238992452194432",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1469238992452194432.gif?size=64&quality=lossless",
+      "usage": "ui:bet; ui:help"
+    },
+    {
+      "name": "bomb",
+      "aliases": [],
+      "id": "1516066104097902663",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516066104097902663.gif?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "VORTEX",
+      "aliases": [],
+      "id": "1516339809121996850",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516339809121996850.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "CELESTIAL",
+      "aliases": [],
+      "id": "1516340915206361179",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516340915206361179.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "ECLIPSE",
+      "aliases": [],
+      "id": "1516342447569899632",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516342447569899632.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "REAPER",
+      "aliases": [],
+      "id": "1516344110481674240",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516344110481674240.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "OBLIVION",
+      "aliases": [],
+      "id": "1516346158967164938",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516346158967164938.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "PHANTOM",
+      "aliases": [],
+      "id": "1516346963199656006",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516346963199656006.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "TITAN",
+      "aliases": [],
+      "id": "1516348075629744209",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516348075629744209.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "OVERLORD",
+      "aliases": [],
+      "id": "1516348643656077433",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516348643656077433.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "ASCENDED",
+      "aliases": [],
+      "id": "1516349236915077190",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516349236915077190.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "GODLIKE",
+      "aliases": [],
+      "id": "1516349876105908265",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516349876105908265.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "SUPREME",
+      "aliases": [],
+      "id": "1516350790225104937",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516350790225104937.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "SHOGUN",
+      "aliases": [],
+      "id": "1516351558927909025",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516351558927909025.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "IMMORTAL",
+      "aliases": [],
+      "id": "1516352058708590672",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516352058708590672.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "VOID",
+      "aliases": [],
+      "id": "1516353446456987678",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516353446456987678.png?size=64&quality=lossless",
+      "usage": "util:database"
+    },
+    {
+      "name": "atk",
+      "aliases": [],
+      "id": "1516363858430656603",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516363858430656603.gif?size=64&quality=lossless",
+      "usage": "game-multiplayer; ui:shop; ui:utility"
+    },
+    {
+      "name": "tag",
+      "aliases": [
+        "titles"
+      ],
+      "id": "1516365054134583306",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516365054134583306.gif?size=64&quality=lossless",
+      "usage": "ui:admin; ui:help; ui:profile; ui:shop"
+    },
+    {
+      "name": "all",
+      "aliases": [],
+      "id": "1516367105216217108",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516367105216217108.gif?size=64&quality=lossless",
+      "usage": "ui:leaderboard"
+    },
+    {
+      "name": "cerai",
+      "aliases": [
+        "key"
+      ],
+      "id": "1516373191126286368",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516373191126286368.png?size=64&quality=lossless",
+      "usage": "ui:help; ui:profile; ui:shop; util:database"
+    },
+    {
+      "name": "lightbulb",
+      "aliases": [
+        "loading"
+      ],
+      "id": "1516373872289779844",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516373872289779844.gif?size=64&quality=lossless",
+      "usage": "game-solo; ui:bet; ui:coop; ui:help; util:backup"
+    },
+    {
+      "name": "swords",
+      "aliases": [],
+      "id": "1516375357031321730",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516375357031321730.gif?size=64&quality=lossless",
+      "usage": "game-multiplayer; ui:guild; ui:help; ui:leaderboard; ui:profile; util:guildDatabase"
+    },
+    {
+      "name": "wrench",
+      "aliases": [],
+      "id": "1516378374350835722",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516378374350835722.gif?size=64&quality=lossless",
+      "usage": "ui:help"
+    },
+    {
+      "name": "crown",
+      "aliases": [],
+      "id": "1516383025531846816",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516383025531846816.gif?size=64&quality=lossless",
+      "usage": "ui:admin; ui:guild; ui:help; ui:profile; ui:promo; util:guildDatabase"
+    },
+    {
+      "name": "mobile",
+      "aliases": [],
+      "id": "1516390928003235840",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516390928003235840.png?size=64&quality=lossless",
+      "usage": "game-solo; ui:help"
+    },
+    {
+      "name": "dart",
+      "aliases": [],
+      "id": "1516396278353756331",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516396278353756331.png?size=64&quality=lossless",
+      "usage": "game-solo; util:monopolyLogic"
+    },
+    {
+      "name": "dice",
+      "aliases": [],
+      "id": "1516403301665738832",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516403301665738832.gif?size=64&quality=lossless",
+      "usage": "util:monopolyLogic"
+    },
+    {
+      "name": "gambar",
+      "aliases": [],
+      "id": "1516412511371530240",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516412511371530240.gif?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "mudah",
+      "aliases": [],
+      "id": "1516413771134926858",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516413771134926858.gif?size=64&quality=lossless",
+      "usage": "game-coop; game-solo"
+    },
+    {
+      "name": "sedang",
+      "aliases": [],
+      "id": "1516413801975644190",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516413801975644190.gif?size=64&quality=lossless",
+      "usage": "game-coop; game-solo"
+    },
+    {
+      "name": "sulit",
+      "aliases": [],
+      "id": "1516413841565814814",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516413841565814814.gif?size=64&quality=lossless",
+      "usage": "game-coop; game-solo; ui:coop; ui:help"
+    },
+    {
+      "name": "heart",
+      "aliases": [],
+      "id": "1516416093655404715",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516416093655404715.gif?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "party",
+      "aliases": [
+        "server"
+      ],
+      "id": "1516446871785046149",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516446871785046149.gif?size=64&quality=lossless",
+      "usage": "game-multiplayer; ui:help; ui:leaderboard; ui:profile"
+    },
+    {
+      "name": "house",
+      "aliases": [],
+      "id": "1516453589239730197",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1516453589239730197.png?size=64&quality=lossless",
+      "usage": "ui:shop"
+    },
+    {
+      "name": "question",
+      "aliases": [],
+      "id": "1516459673383997632",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1516459673383997632.gif?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "admin",
+      "aliases": [],
+      "id": "1517019924097404948",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1517019924097404948.gif?size=64&quality=lossless",
+      "usage": "ui:guild; ui:help; ui:profile"
+    },
+    {
+      "name": "member",
+      "aliases": [],
+      "id": "1517021034069491883",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1517021034069491883.png?size=64&quality=lossless",
+      "usage": "ui:guild; ui:help; ui:profile"
+    },
+    {
+      "name": "mainlagi",
+      "aliases": [],
+      "id": "1519646521623314554",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1519646521623314554.gif?size=64&quality=lossless",
+      "usage": "game-multiplayer; ui:bet; ui:coop; ui:help"
+    },
+    {
+      "name": "slot2",
+      "aliases": [],
+      "id": "1522446754614870159",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1522446754614870159.png?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "slot1",
+      "aliases": [],
+      "id": "1522446866917101678",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1522446866917101678.png?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "slot3",
+      "aliases": [],
+      "id": "1522446951235457235",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1522446951235457235.png?size=64&quality=lossless",
+      "usage": "game-solo"
+    },
+    {
+      "name": "siren",
+      "aliases": [],
+      "id": "1542155328009801869",
+      "animated": true,
+      "url": "https://cdn.discordapp.com/emojis/1542155328009801869.gif?size=64&quality=lossless",
+      "usage": "ui:bank"
+    },
+    {
+      "name": "panda_cop",
+      "aliases": [],
+      "id": "1542155353393987666",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1542155353393987666.png?size=64&quality=lossless",
+      "usage": "ui:help"
+    },
+    {
+      "name": "Liste",
+      "aliases": [],
+      "id": "1542155576086233213",
+      "animated": false,
+      "url": "https://cdn.discordapp.com/emojis/1542155576086233213.png?size=64&quality=lossless",
+      "usage": "ui:bank; ui:help"
+    }
+  ]
+}

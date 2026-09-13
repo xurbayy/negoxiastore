@@ -1,167 +1,232 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { NexoLogo, DiscordIcon } from './ui';
+import Notifications from './Notifications';
+import FeedbackButton from './FeedbackButton';
 
-export default function Navbar() {
-  const [scrolled, setScrolled]     = useState(false);
-  const [menuOpen, setMenuOpen]      = useState(false);
-  const [activeSection, setActive]   = useState('hero');
-  const menuRef  = useRef(null);
-  const btnRef   = useRef(null);
-  const pathname = usePathname();
-  const router   = useRouter();
-  const isHome   = pathname === '/';
+const LINKS_GUEST = [
+  { href: '/#games', label: 'Game' },
+  { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/#cara-main', label: 'Cara Main' },
+];
+const LINKS_MEMBER = [
+  { href: '/#games', label: 'Game' },
+  { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/shop', label: 'Shop' },
+  { href: '/#cara-main', label: 'Cara Main' },
+  { href: '/redeem', label: 'Redeem' },
+];
+// Legal digabung ke dropdown "Info" (desktop) / daftar biasa (mobile).
+const LEGAL = [
+  { href: '/privacy-policy', label: 'Kebijakan Privasi' },
+  { href: '/terms-of-service', label: 'Ketentuan Layanan' },
+];
 
-  /* ── Scroll: progress bar + nav style + active link ── */
+// Navbar dinamis: belum login = tombol Login; member = avatar+username.
+// Link Admin muncul hanya untuk member di NEXT_PUBLIC_ADMIN_IDS.
+export default function Navbar({ session, premiumActive = false }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  // Status premium LIVE (poling /api/me seperti bel notif) supaya pill hijau
+  // ngayal sendiri setelah grant masuk, tanpa nunggu refresh manual.
+  const [livePremium, setLivePremium] = useState(null);
+  const discordId = session?.discordId || null;
+
   useEffect(() => {
-    const bar      = document.getElementById('scroll-bar');
-    const sections = document.querySelectorAll('section[id]');
-
-    function onScroll() {
-      const max = document.body.scrollHeight - window.innerHeight;
-      if (bar) bar.style.width = max > 0 ? `${(window.scrollY / max) * 100}%` : '0%';
-
-      setScrolled(window.scrollY > 40);
-
-      let cur = 'hero';
-      sections.forEach((s) => {
-        if (window.scrollY >= s.offsetTop - 140) cur = s.id;
-      });
-      setActive(cur);
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  /* ── Close menu on outside click ── */
+  // Sinkron ulang ke nilai server setiap router.refresh() (mis. revoke terdeteksi).
   useEffect(() => {
-    function handleClick(e) {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target) &&
-        btnRef.current &&
-        !btnRef.current.contains(e.target)
-      ) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
+    const t = setTimeout(() => setLivePremium(null), 0);
+    return () => clearTimeout(t);
+  }, [premiumActive, discordId]);
 
-  function smoothTo(id) {
-    setMenuOpen(false);
-    if (isHome) {
-      // Sudah di halaman utama, langsung scroll
-      setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
-    } else {
-      // Di halaman lain, navigate ke home dulu lalu scroll ke section
-      router.push(`/#${id}`);
+  useEffect(() => {
+    if (!discordId) return undefined;
+    let stop = false;
+    async function check() {
+      try {
+        const res = await fetch('/api/me', { cache: 'no-store' });
+        const d = await res.json();
+        if (stop || !d?.authenticated) return;
+        setLivePremium(Boolean(d?.profile?.profile?.premium));
+      } catch {}
     }
-  }
+    const t = setTimeout(check, 0);
+    const iv = setInterval(check, 15000);
+    function onFocus() { check(); }
+    window.addEventListener('focus', onFocus);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+      clearInterval(iv);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [discordId]);
 
-  const links = [
-    { label: 'Beranda',     id: 'hero' },
-    { label: 'Produk',      id: 'services' },
-    { label: 'Tentang Kami',id: 'whyus' },
-  ];
+  const showPremium = livePremium ?? premiumActive;
+
+  const LINKS = session ? LINKS_MEMBER : LINKS_GUEST;
 
   return (
-    <nav className="fixed top-4 left-0 right-0 z-[100] flex justify-center px-10">
-      {/* ── Desktop nav inner ── */}
-      <div
-        className={`w-4/5 rounded-2xl px-9 py-4 flex items-center justify-between border border-stroke
-          shadow-[0_4px_24px_rgba(44,19,22,0.09)]
-          transition-all duration-300
-          ${scrolled
-            ? 'bg-[rgba(255,247,226,0.88)] backdrop-blur-2xl shadow-[0_8px_32px_rgba(44,19,22,0.13)]'
-            : 'bg-card'
-          }`}
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'border-b border-border-soft bg-bg/90 py-2.5 backdrop-blur-xl'
+          : 'bg-transparent py-4'
+      }`}
+    >
+      <nav
+        className="mx-auto flex max-w-6xl items-center justify-between px-5"
+        aria-label="Navigasi utama"
       >
-        {/* Logo */}
-        <a
-          href="/#hero"
-          onClick={(e) => { e.preventDefault(); smoothTo('hero'); }}
-          className="flex items-center gap-2.5 font-bold text-[17px] no-underline text-brand
-            logo-icon-wobble group"
-        >
-          <Image
-            src="/negoxia.png"
-            alt="logo"
-            width={28}
-            height={28}
-            className="icon-wobble"
-          />
-          <span><span className="text-accent2">NEGO</span>XIA STORE</span>
-        </a>
+        <Link href="/" className="flex items-center gap-2.5 leading-none cursor-pointer" aria-label="NEXO Games - Beranda">
+          <span className="flex shrink-0 items-center"><NexoLogo size={36} /></span>
+          <span className="hidden font-display text-lg font-bold tracking-tight text-ink lg:inline">
+            NEXO Games
+          </span>
+        </Link>
 
-        {/* Desktop links */}
-        <ul className="hidden md:flex gap-9 list-none">
-          {links.map((l) => (
-            <li key={l.id}>
-              <a
-                href={isHome ? `#${l.id}` : `/#${l.id}`}
-                onClick={(e) => { e.preventDefault(); smoothTo(l.id); }}
-                className={`nav-link-item no-underline text-brand text-sm font-medium
-                  hover:text-accent2 transition-colors duration-200
-                  ${isHome && activeSection === l.id ? 'active text-accent2' : ''}`}
+        <ul className="hidden items-center gap-5 md:flex lg:gap-7">
+          {LINKS.map((l) => (
+            <li key={l.href}>
+              <Link
+                href={l.href}
+                className="text-sm font-medium text-ink-muted transition-colors duration-200 hover:text-ink cursor-pointer"
               >
                 {l.label}
-              </a>
+              </Link>
             </li>
           ))}
+          <li className="relative">
+            <details className="group">
+              <summary className="list-none cursor-pointer rounded-md px-1 py-1 text-sm font-medium text-ink-muted transition-colors duration-200 hover:text-ink">
+                Info
+              </summary>
+              <div className="invisible absolute right-0 top-full z-50 w-48 rounded-xl border border-border-soft bg-card-cream p-1.5 opacity-0 shadow-[0_12px_32px_rgba(43,33,24,0.14)] transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
+                {LEGAL.map((l) => (
+                  <Link key={l.href} href={l.href} className="block rounded-lg px-3 py-2 text-sm text-ink-muted transition hover:bg-bg-soft hover:text-ink cursor-pointer">
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          </li>
+          {session && (
+            <li>
+              <Link
+                href="/premium"
+                className={showPremium
+                  ? 'inline-flex items-center gap-1.5 rounded-lg border border-success/50 bg-white px-3.5 py-1.5 text-sm font-semibold text-success shadow-sm transition hover:-translate-y-px hover:bg-success hover:text-white active:translate-y-0 active:shadow-none cursor-pointer'
+                  : 'inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer'}
+              >
+                {showPremium ? '✓ Premium Aktif' : '✦ Premium'}
+              </Link>
+            </li>
+          )}
         </ul>
 
-        {/* Hamburger */}
-        <button
-          ref={btnRef}
-          aria-label="Menu"
-          onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o); }}
-          className={`hamburger md:hidden flex flex-col justify-center gap-[5px]
-            w-9 h-9 cursor-pointer bg-transparent border-none p-1 z-[200]
-            ${menuOpen ? 'open' : ''}`}
-        >
-          <span /><span /><span />
-        </button>
-      </div>
-
-      {/* ── Mobile popup menu ── */}
-      <div
-        ref={menuRef}
-        className={`mobile-menu fixed top-20 right-6 z-[150]
-          bg-[rgba(255,247,226,0.97)] backdrop-blur-2xl
-          rounded-[20px] border-[1.5px] border-stroke
-          shadow-[0_16px_48px_rgba(44,19,22,0.18),0_4px_16px_rgba(44,19,22,0.10)]
-          py-3 px-2 min-w-[200px] flex flex-col gap-1
-          ${menuOpen ? 'open' : ''}`}
-      >
-        {links.map((l) => (
-          <a
-            key={l.id}
-            href={isHome ? `#${l.id}` : `/#${l.id}`}
-            onClick={(e) => { e.preventDefault(); smoothTo(l.id); }}
-            className="flex items-center text-[15px] font-semibold text-brand no-underline
-              px-5 py-3 rounded-xl hover:bg-[rgba(247,193,81,0.15)] hover:text-accent2
-              transition-colors duration-200"
+        {/* Cluster kanan: lonceng + feedback tampil DI SEMUA ukuran (dulu
+            tersembunyi di mobile karena nempel di <ul hidden md:flex>). */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {session && (
+            <>
+              <Notifications />
+              <FeedbackButton />
+              <Link href="/me" className="hidden items-center gap-2 md:flex cursor-pointer">
+                {session.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.avatar} alt="" width={32} height={32} className="h-8 w-8 rounded-full border border-border-soft" />
+                ) : (
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover">
+                    {(session.username || '?').slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+                <span className="hidden max-w-[110px] truncate text-sm font-semibold text-ink xl:inline">{session.username}</span>
+              </Link>
+            </>
+          )}
+          {!session && (
+            <Link href="/login" className="btn-primary hidden !px-5 !py-2 text-sm md:inline-flex cursor-pointer">
+              <DiscordIcon className="h-4 w-4" />
+              Login
+            </Link>
+          )}
+          <button
+            type="button"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-soft text-ink md:hidden cursor-pointer"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-label={open ? 'Tutup menu' : 'Buka menu'}
           >
-            {l.label}
-          </a>
-        ))}
-      </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
+        </div>
+      </nav>
 
-      {/* Backdrop */}
-      {menuOpen && (
-        <div
-          className="fixed inset-0 z-[140]"
-          onClick={() => setMenuOpen(false)}
-        />
+      {open && (
+        <div className="border-t border-border-soft bg-bg/95 backdrop-blur-xl md:hidden">
+          <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-4">
+            {LINKS.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted transition-colors hover:bg-bg-soft hover:text-ink cursor-pointer"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            {LEGAL.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted transition-colors hover:bg-bg-soft hover:text-ink cursor-pointer"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+            {session && (
+              <li>
+                <Link href="/premium" onClick={() => setOpen(false)} className={showPremium ? 'block rounded-lg border border-success/50 bg-white px-3 py-2.5 text-sm font-semibold text-success shadow-sm cursor-pointer' : 'block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer'}>
+                  {showPremium ? '✓ Premium Aktif' : '✦ Premium'}
+                </Link>
+              </li>
+            )}
+            <li className="mt-2">
+              {session ? (
+                <Link href="/me" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg border border-border-soft px-3 py-2.5 cursor-pointer">
+                  {session.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={session.avatar} alt="" width={28} height={28} className="h-7 w-7 rounded-full border border-border-soft" />
+                  ) : (
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover">
+                      {(session.username || '?').slice(0, 2).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="text-sm font-semibold text-ink">{session.username}</span>
+                </Link>
+              ) : (
+                <Link href="/login" onClick={() => setOpen(false)} className="btn-primary w-full text-sm cursor-pointer">
+                  <DiscordIcon className="h-4 w-4" />
+                  Login
+                </Link>
+              )}
+            </li>
+          </ul>
+        </div>
       )}
-    </nav>
+    </header>
   );
 }

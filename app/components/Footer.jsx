@@ -1,122 +1,92 @@
-import Image from 'next/image';
+import Link from 'next/link';
+import { getSession } from '../lib/session';
+import { NexoLogo } from './ui';
+import { SUPPORT_INVITE } from '../lib/site';
 
-const SOCIAL = [
-  { href: 'https://discord.gg/nbHfMmcTch',                                            icon: '/discord.svg',    label: 'Discord' },
-  { href: 'https://www.tiktok.com/@negoxia?_r=1&_t=ZS-94NnSLUwuPf',                  icon: '/tiktok.svg',     label: 'TikTok' },
-  { href: 'https://www.instagram.com/negoxiastore?igsh=MTVhc2xqaWZpcmNnbA==',         icon: '/instagram.svg',  label: 'Instagram' },
-  { href: 'https://www.roblox.com/share/g/1102629455',                                  icon: '/roblox.svg',     label: 'Roblox' },
+// Jelajahi (belum login) vs Akun (sudah login) - footer menyesuaikan status.
+const NAV_GUEST = [
+  { href: '/#games', label: 'Game' },
+  { href: '/#fitur', label: 'Fitur' },
+  { href: '/#cara-main', label: 'Cara Main' },
+  { href: '/#premium', label: 'Premium' },
+  { href: '/#faq', label: 'FAQ' },
+];
+const NAV_MEMBER = [
+  { href: '/me', label: 'Profil Saya' },
+  { href: '/shop', label: 'Shop' },
+  { href: '/redeem', label: 'Redeem' },
+  { href: '/premium', label: 'NEXO Pass' },
+];
+const NAV_LEGAL = [
+  { href: '/privacy-policy', label: 'Kebijakan Privasi' },
+  { href: '/terms-of-service', label: 'Ketentuan Layanan' },
+  { href: SUPPORT_INVITE, label: 'Server Discord', external: true },
 ];
 
-const COL_LAYANAN = [
-  { label: 'Discord Server Setup',  href: '/discord-server-setup' },
-  { label: 'Custom Discord Bot',    href: '/custom-discord-bot' },
-  { label: 'Visual Design',         href: '/visual-design' },
-  { label: 'Roblox Development',    href: '/roblox-development' },
-];
-
-const COL_TOKO = [
-  { label: 'Beranda',      href: '/#hero' },
-  { label: 'Produk',       href: '/#services' },
-  { label: 'Tentang Kami', href: '/#whyus' },
-];
-
-const COL_KONTAK = [
-  { label: 'Discord',   href: 'https://discord.gg/7t9qxvqXyV' },
-  { label: 'Instagram', href: 'https://www.instagram.com/negoxiastore?igsh=MTVhc2xqaWZpcmNnbA==' },
-  { label: 'TikTok',    href: 'https://www.tiktok.com/@negoxia?_r=1&_t=ZS-94NnSLUwuPf' },
-  { label: 'Roblox',    href: 'https://www.roblox.com/share/g/1102629455' },
-];
-
-export default function Footer() {
+export default async function Footer() {
+  const session = await getSession();
+  const NAV = [
+    ...(session ? NAV_MEMBER : NAV_GUEST),
+    ...NAV_LEGAL,
+  ];
   return (
-    <footer className="bg-transparent pt-20 relative z-[1]">
-      <div className="max-w-[1280px] mx-auto px-16 max-md:px-5">
-        {/* Grid */}
-        <div className="grid grid-cols-[2fr_1.2fr_1.2fr_1.2fr] gap-12 pb-14
-          max-md:grid-cols-1 max-md:gap-8">
-
-          {/* Brand */}
-          <div className="footer-brand">
-            <a
-              href="/"
-              className="footer-logo flex items-center gap-2.5 font-bold text-[17px] mb-0 group no-underline text-brand"
-            >
-              <Image
-                src="/negoxia.png"
-                alt="Negoxia Store Logo"
-                width={30}
-                height={30}
-                className="transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]
-                  group-hover:rotate-[-10deg] group-hover:scale-[1.15]"
-              />
-              <span><span className="text-accent2">NEGO</span>XIA STORE</span>
-            </a>
-            <p className="text-[13px] font-inter leading-[1.8] mt-4 mb-6">
-              Toko layanan digital terpercaya Anda.<br />Harga bisa nego, kualitas gak bisa kompromi.
+    <footer className="border-t border-border-soft/70 bg-bg py-12">
+      <div className="mx-auto max-w-6xl px-5">
+        <div className="flex flex-col items-start justify-between gap-10 md:flex-row">
+          <div className="max-w-sm">
+            <Link href="/" className="flex w-fit items-center gap-2.5 cursor-pointer" aria-label="NEXO Games - Beranda">
+              <NexoLogo size={32} />
+              <span className="font-display text-lg text-ink">
+                NEXO<span className="text-ink"> Games</span>
+              </span>
+            </Link>
+            <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+              Bot Discord gaming dengan 25+ game, ekonomi poin, guild war, dan leaderboard.
+              Dikembangkan oleh <strong className="text-ink">xurbaybase</strong> studio.
             </p>
-            <div className="flex gap-3">
-              {SOCIAL.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={s.label}
-                  className="icon-wobble-trigger w-[60px] h-[60px] bg-card border border-stroke rounded-xl
-                    flex items-center justify-center shadow-[0_2px_8px_rgba(44,19,22,0.07)]
-                    no-underline
-                    transition-all duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]
-                    hover:-translate-y-1 hover:scale-110 hover:shadow-[0_8px_20px_rgba(247,193,81,0.3)]"
-                >
-                  <Image
-                    src={s.icon}
-                    alt={s.label}
-                    width={32}
-                    height={32}
-                    className="icon-wobble w-8 h-8 object-contain"
-                  />
-                </a>
-              ))}
-            </div>
           </div>
 
-          {/* Columns */}
-          {[
-            { title: 'Melayani', links: COL_LAYANAN },
-            { title: 'Toko',     links: COL_TOKO },
-            { title: 'Kontak',   links: COL_KONTAK },
-          ].map((col) => (
-            <div key={col.title}>
-              <h4 className="text-sm font-bold mb-5">{col.title}</h4>
-              <ul className="list-none flex flex-col gap-3">
-                {col.links.map((l) => (
-                  <li key={l.label}>
+          <nav aria-label="Navigasi footer">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">{session ? 'Akun' : 'Jelajahi'}</h3>
+            <ul className="mt-4 space-y-2.5">
+              {NAV.map((l) => (
+                <li key={l.href}>
+                  {l.external ? (
                     <a
                       href={l.href}
-                      className="no-underline text-[13px] text-brand font-inter
-                        relative inline-flex items-center
-                        hover:text-accent2 transition-all duration-200
-                        hover:translate-x-1.5
-                        group"
-                      {...(l.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-ink-muted transition-colors hover:text-ink cursor-pointer"
                     >
-                      <span
-                        className="w-0 group-hover:w-1.5 h-1.5 mr-0 group-hover:mr-1.5
-                          rounded-full bg-accent2 flex-shrink-0
-                          transition-all duration-200 opacity-0 group-hover:opacity-100"
-                      />
                       {l.label}
                     </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                  ) : (
+                    <Link
+                      href={l.href}
+                      className="text-sm text-ink-muted transition-colors hover:text-ink cursor-pointer"
+                    >
+                      {l.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">Perintah Cepat</h3>
+            <ul className="mt-4 space-y-2.5 font-mono text-sm text-ink-muted">
+              <li><code className="text-ink">nxhelp</code>: panduan lengkap</li>
+              <li><code className="text-ink">nxdaily</code>: klaim poin harian</li>
+              <li><code className="text-ink">np slot</code>: main slot</li>
+              <li><code className="text-ink">nxlb</code>: leaderboard</li>
+            </ul>
+          </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t-[1.5px] border-brand/10 py-[22px] text-center text-[13px] font-inter text-brand/55">
-          © 2023 NEGOXIA STORE – All Rights Reserved
+        <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border-soft/60 pt-6 text-xs text-ink-muted md:flex-row md:items-center">
+          <p>© {new Date().getFullYear()} NEXO Games · oleh xurbaybase. Semua hak dilindungi.</p>
+          <p>Poin NEXO bersifat virtual dan tidak memiliki nilai uang asli.</p>
         </div>
       </div>
     </footer>
