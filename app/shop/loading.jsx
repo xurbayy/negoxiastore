@@ -1,6 +1,7 @@
 import PageSkeleton from '../components/PageSkeleton';
 
-// Skeleton shop: katalog kategori + grid kartu item.
+// Skeleton NEXO Shop - meniru UI asli: judul + pill kategori + grid kartu item
+// (emoji, nama, deskripsi, harga, stok). Lihat PageSkeleton varian 'shop'.
 export default function Loading() {
-  return <PageSkeleton maxWidth="max-w-5xl" cards={6} cardRows={3} />;
+  return <PageSkeleton variant="shop" />;
 }

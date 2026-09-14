@@ -1,7 +1,7 @@
 import PageSkeleton from '../components/PageSkeleton';
 
-// Skeleton panel admin: sidebar + dashboard. Panel paling berat karena
-// memuat snapshot + series + activity log sekaligus.
+// Skeleton Panel admin - meniru UI Dashboard: kartu metrik bersparkline, kartu
+// grafik tren, lalu dua panel Top Game / Top Server. Lihat varian 'admin'.
 export default function Loading() {
-  return <PageSkeleton maxWidth="max-w-6xl" stats table />;
+  return <PageSkeleton variant="admin" />;
 }

@@ -1,6 +1,8 @@
 import PageSkeleton from '../components/PageSkeleton';
 
-// Skeleton profil: header kartu + daftar statistik + inventori.
+// Skeleton Profil Saya - meniru UI asli: kartu header gelap (avatar, nama, bar
+// XP, statistik), banner status, lalu grid misi + riwayat + sidebar.
+// Lihat varian 'me'.
 export default function Loading() {
-  return <PageSkeleton maxWidth="max-w-3xl" table />;
+  return <PageSkeleton variant="me" />;
 }

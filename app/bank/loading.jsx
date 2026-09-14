@@ -1,6 +1,7 @@
 import PageSkeleton from '../components/PageSkeleton';
 
-// Skeleton bank: kotak statistik + tabel hutang terberat.
+// Skeleton Bank Watch - meniru UI asli: 3 kartu ringkasan (kartu terakhir
+// ber-border danger) + tabel 50 Hutang Terberat. Lihat varian 'bank'.
 export default function Loading() {
-  return <PageSkeleton maxWidth="max-w-4xl" stats table />;
+  return <PageSkeleton variant="bank" />;
 }

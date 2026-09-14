@@ -1,6 +1,7 @@
 import PageSkeleton from '../components/PageSkeleton';
 
-// Skeleton leaderboard: judul + tabel pemain + tabel guild.
+// Skeleton Leaderboard - meniru UI asli: tabel Top 10 Pemain + tabel Guild
+// Terkuat. Lihat komponen PageSkeleton varian 'leaderboard'.
 export default function Loading() {
-  return <PageSkeleton maxWidth="max-w-4xl" table />;
+  return <PageSkeleton variant="leaderboard" />;
 }
