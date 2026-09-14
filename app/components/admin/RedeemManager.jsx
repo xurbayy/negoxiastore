@@ -54,11 +54,12 @@ export default function RedeemManager({ send, data }) {
             <option value="points">points</option>
             <option value="item">item (itemKey)</option>
             <option value="title">title</option>
+            <option value="premium">NEXO Pass (jumlah hari)</option>
           </select>
         </div>
         <div>
           <label htmlFor="p-value" className="block text-xs uppercase tracking-wider text-ink-muted">Value</label>
-          <input id="p-value" value={form.rewardValue} onChange={(e) => setForm({ ...form, rewardValue: e.target.value })} placeholder="10000 / item_key" className="mt-1.5 w-40 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
+          <input id="p-value" value={form.rewardValue} onChange={(e) => setForm({ ...form, rewardValue: e.target.value })} placeholder={form.rewardType === 'premium' ? '30' : '10000 / item_key'} className="mt-1.5 w-40 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
         <div>
           <label htmlFor="p-quota" className="block text-xs uppercase tracking-wider text-ink-muted">Kuota</label>
@@ -97,7 +98,7 @@ export default function RedeemManager({ send, data }) {
                 <tr key={c.code} className="border-b border-border-soft/60 last:border-0">
                   <td className="px-4 py-3 font-mono font-bold text-ink">{c.code}</td>
                   <td className="px-4 py-3 text-ink">
-                    {c.rewardType === 'points' ? `${fmt(c.rewardValue)} pts` : `${c.rewardType}: ${c.rewardValue}`}
+                    {c.rewardType === 'points' ? `${fmt(c.rewardValue)} pts` : c.rewardType === 'premium' ? `NEXO Pass ${c.rewardValue} hari` : `${c.rewardType}: ${c.rewardValue}`}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

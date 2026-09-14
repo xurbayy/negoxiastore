@@ -79,14 +79,17 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                         )}
                         <span className="truncate">{p.username}</span>
                         {hasPass(p.userId) && (
+                          // Badge NEXO Pass: custom emoji :NEXOPASS: milik kita
+                          // (server xurbaybase, id 1548184905018507306) langsung
+                          // dari CDN Discord - bukan logo generik.
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src="/nexo-logo-128.png"
+                            src="https://cdn.discordapp.com/emojis/1548184905018507306.png?size=64&quality=lossless"
                             alt="Pemegang NEXO Pass"
                             title="Pemegang NEXO Pass"
                             width={18}
                             height={18}
-                            className="h-4.5 w-4.5 shrink-0 rounded-full ring-2 ring-accent"
+                            className="h-4.5 w-4.5 shrink-0"
                           />
                         )}
                         {isMe(p.userId) && (

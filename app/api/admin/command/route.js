@@ -151,11 +151,15 @@ function validatePayload(action, p) {
     case 'create_promo': {
       const code = String(p.code || '').toUpperCase().trim();
       if (!/^[A-Z0-9_]{3,24}$/.test(code)) return 'Kode harus 3-24 karakter (A-Z, 0-9, _).';
-      if (!['points', 'item', 'title'].includes(p.rewardType)) return 'Reward harus points/item/title.';
+      if (!['points', 'item', 'title', 'premium'].includes(p.rewardType)) return 'Reward harus points/item/title/premium.';
       if (p.rewardValue === undefined || p.rewardValue === null || String(p.rewardValue).length > 100) return 'Reward value tidak valid (maks 100 karakter).';
       if (p.rewardType === 'points') {
         const v = int(p.rewardValue);
         if (v === null || v <= 0) return 'Reward points harus angka > 0.';
+      }
+      if (p.rewardType === 'premium') {
+        const d = int(p.rewardValue);
+        if (d === null || d < 1 || d > 3650) return 'Reward NEXO Pass harus jumlah hari (1 - 3650).';
       }
       const q = int(p.quota);
       return q !== null && q >= 1 && q <= 100000 ? null : 'Kuota harus 1 - 100.000.';
