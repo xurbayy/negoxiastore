@@ -6,17 +6,18 @@ import { DiscordIcon } from './ui';
 // Tombol login + gerbang persetujuan: checkbox Ketentuan & Privasi wajib
 // dicentang sebelum tombol Discord aktif. (Persetujuan ini syarat UX/legal
 // di titik masuk - OAuth-nya sendiri tetap ditangani Discord.)
-export default function LoginConsent() {
+export default function LoginConsent({ returnTo = '/me' }) {
   const [agreed, setAgreed] = useState(false);
+  const target = returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/me';
 
   return (
     <div className="mt-7">
       <button
         type="button"
-        onClick={() => { if (agreed) window.location.href = '/api/auth/login?returnTo=/me'; }}
+        onClick={() => { if (agreed) window.location.href = '/api/auth/login?returnTo=' + encodeURIComponent(target); }}
         disabled={!agreed}
         aria-disabled={!agreed}
-        className="btn-primary w-full cursor-pointer !py-3.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+        className="btn-primary w-full cursor-pointer py-3.5! disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
       >
         <DiscordIcon />
         Login dengan Discord

@@ -10,9 +10,12 @@ export const metadata = {
   robots: { index: false },
 };
 
-export default async function LoginPage() {
-  // Sudah login member? langsung ke /me
+export default async function LoginPage({ searchParams }) {
+  // Sudah login member? langsung ke halaman tujuan (returnTo) atau /me
   const session = await getSession();
+  const sp = await searchParams; // Next 16: searchParams adalah Promise
+  const raw = typeof sp?.returnTo === 'string' ? sp.returnTo : '';
+  const returnTo = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/me';
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center px-5">
@@ -34,10 +37,10 @@ export default async function LoginPage() {
           {session ? (
             <div className="mt-7">
               <p className="text-sm text-success">Sudah login sebagai <strong>{session.username}</strong>.</p>
-              <Link href="/me" className="btn-primary mt-4 inline-flex cursor-pointer">Buka Profil</Link>
+              <Link href={returnTo} className="btn-primary mt-4 inline-flex cursor-pointer">{returnTo === '/premium' ? 'Beli NEXO Pass' : 'Buka Profil'}</Link>
             </div>
           ) : (
-            <LoginConsent />
+            <LoginConsent returnTo={returnTo} />
           )}
         </div>
 

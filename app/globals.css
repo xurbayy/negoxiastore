@@ -257,6 +257,45 @@ section, .nx-shell, main { position: relative; overflow-x: clip; }
   50% { opacity: 0.55; }
 }
 
+/* ── MASKOT ── */
+/* PC: naik-turun pelan elegan; shadow menyusut saat naik = terasa melayang. */
+.mascot-wrap { position: relative; display: inline-block; }
+.mascot-bob {
+  animation: mascotBob 3.2s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes mascotBob {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-18px) rotate(1.5deg); }
+}
+/* Mobile: goyang lebih lincah + miring bolak-balik biar lucu. */
+@media (max-width: 1023px) {
+  .mascot-bob { animation: mascotWiggle 1.6s ease-in-out infinite; }
+}
+@keyframes mascotWiggle {
+  0%, 100% { transform: translateY(0) rotate(2.5deg) scale(1); }
+  30% { transform: translateY(-10px) rotate(-2.5deg) scale(1.02); }
+  60% { transform: translateY(0) rotate(2deg) scale(1); }
+}
+.mascot-shadow {
+  position: absolute; left: 50%; bottom: -6px;
+  width: 62%; height: 26px; border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(43, 33, 24, 0.22), transparent 70%);
+  transform: translateX(-50%);
+  animation: mascotShadow 3.2s ease-in-out infinite;
+}
+@keyframes mascotShadow {
+  0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 1; }
+  50% { transform: translateX(-50%) scaleX(0.8); opacity: 0.55; }
+}
+/* Bubble ucapan ikut melayang, jeda bergantian biar tidak serempak. */
+.mascot-float-a { animation: bubbleFloat 2.6s ease-in-out infinite; }
+.mascot-float-b { animation: bubbleFloat 2.6s ease-in-out 1.3s infinite; }
+@keyframes bubbleFloat {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -8px; }
+}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
@@ -343,7 +382,11 @@ section, .nx-shell, main { position: relative; overflow-x: clip; }
   .anim-in,
   .pulse-dot::before,
   .skeleton,
-  .shimmer::after {
+  .shimmer::after,
+  .mascot-bob,
+  .mascot-shadow,
+  .mascot-float-a,
+  .mascot-float-b {
     animation: none !important;
   }
   .anim-in {

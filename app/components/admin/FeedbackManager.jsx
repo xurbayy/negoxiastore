@@ -31,7 +31,7 @@ export default function FeedbackManager({ send, data }) {
     switch (String(kind || '').toLowerCase()) {
       case 'bug': return 'bg-danger text-white';
       case 'laporan': return 'bg-warning text-black';
-      default: return 'bg-accent !text-ink';
+      default: return 'bg-accent text-ink!';
     }
   };
 

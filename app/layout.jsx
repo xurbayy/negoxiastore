@@ -115,6 +115,7 @@ const jsonLd = {
 
 import { getSession } from './lib/session';
 import { isUserBanned } from './lib/snapshot';
+import CookieConsent from './components/CookieConsent';
 
 export default async function RootLayout({ children }) {
   const session = await getSession();
@@ -161,6 +162,7 @@ export default async function RootLayout({ children }) {
             </div>
           </main>
         ) : children}
+        <CookieConsent />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}

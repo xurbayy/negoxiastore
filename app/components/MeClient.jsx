@@ -263,7 +263,7 @@ export default function MeClient({ betaGames = null }) {
             </p>
           </div>
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
-            Website ini mencerminkan profilmu di Discord — dan kita belum pernah ketemu.
+            Website ini mencerminkan profilmu di Discord, dan kita belum pernah ketemu.
             Daftar 10 detik, balik lagi.
           </p>
 
@@ -283,7 +283,7 @@ export default function MeClient({ betaGames = null }) {
           </ol>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <a href={BOT_INVITE_URL} target="_blank" rel="noopener noreferrer" className={unknown ? 'btn-primary cursor-pointer' : 'btn-ghost !px-4 !py-2 text-sm cursor-pointer'}>
+            <a href={BOT_INVITE_URL} target="_blank" rel="noopener noreferrer" className={unknown ? 'btn-primary cursor-pointer' : 'btn-ghost px-4! py-2! text-sm cursor-pointer'}>
               Invite NEXO ke Server Kamu
             </a>
           </div>
@@ -319,16 +319,16 @@ export default function MeClient({ betaGames = null }) {
     <div className="space-y-5">
       {/* ═══ HEADER: kartu dark ala Discord ═══ */}
       <div className="nx-dark overflow-hidden">
-        <div className="nx-dark-header flex items-center justify-between gap-3 px-6 py-3">
-          <span className="font-mono text-xs uppercase tracking-wider text-[#A99C8E]">profil pemain</span>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-border-soft bg-white px-3.5 py-1.5 text-xs font-semibold text-ink-muted shadow-sm" title="Data tersinkron otomatis - tidak perlu refresh manual">
+        <div className="nx-dark-header flex items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6">
+          <span className="hidden truncate font-mono text-xs uppercase tracking-wider text-[#A99C8E] sm:inline">profil pemain</span>
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border-soft bg-white px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-ink-muted shadow-sm sm:px-3.5 sm:text-xs" title="Data tersinkron otomatis - tidak perlu refresh manual">
               <span className="pulse-dot" aria-hidden="true" />
               Auto-sync
             </span>
             <a
               href="/api/auth/logout"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-3.5 py-1.5 text-xs font-semibold text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer sm:px-3.5 sm:text-xs"
             >
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
               Logout
@@ -426,7 +426,7 @@ export default function MeClient({ betaGames = null }) {
               </div>
               <div className="mt-1.5 h-3 overflow-hidden rounded-full bg-card-dark-2">
                 <div
-                  className="shimmer h-full rounded-full bg-gradient-to-r from-accent to-accent-hover"
+                  className="shimmer h-full rounded-full bg-linear-to-r from-accent to-accent-hover"
                   style={{ width: `${Math.min(100, Math.round((Number(p.xp) / Math.max(1, Number(p.xpNext))) * 100))}%` }}
                 />
               </div>
@@ -542,7 +542,7 @@ export default function MeClient({ betaGames = null }) {
                             <span className="flex items-center gap-2 text-ink">
                               {m.emojiUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={m.emojiUrl} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
+                                <img src={m.emojiUrl} alt="" width={18} height={18} className="h-4.5 w-4.5 shrink-0" />
                               ) : (
                                 <span aria-hidden="true">{m.icon}</span>
                               )}
@@ -656,7 +656,7 @@ export default function MeClient({ betaGames = null }) {
                       <span className="flex min-w-0 items-center gap-2 text-ink">
                         {it.emojiUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={it.emojiUrl} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
+                          <img src={it.emojiUrl} alt="" width={18} height={18} className="h-4.5 w-4.5 shrink-0" />
                         ) : it.emoji ? (
                           <span aria-hidden="true">{it.emoji}</span>
                         ) : null}

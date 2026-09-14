@@ -170,7 +170,7 @@ export default function Notifications() {
                       </button>
                     )}
                     {n.type === 'token' && n.code && (
-                      <Link href={`/redeem?code=${n.code}`} onClick={() => setOpen(false)} className="btn-primary !px-3 !py-1.5 text-xs cursor-pointer">
+                      <Link href={`/redeem?code=${n.code}`} onClick={() => setOpen(false)} className="btn-primary px-3! py-1.5! text-xs cursor-pointer">
                         Klaim
                       </Link>
                     )}

@@ -146,7 +146,16 @@ export async function userHasPremium(discordId) {
       const filledAt = Number(res.rows[0].filled_at || 0);
       if (!filledAt || Date.now() - filledAt > 5 * 60_000) return null;
       const parsed = JSON.parse(res.rows[0].data);
-      return parsed?.profile?.premium === true; // true atau false (boolean)
+      // Bot mengirim premium sebagai OBJEK ({tier, expiresAt, lifetime, ...})
+      // atau boolean. Strict `=== true` bikin user premium selalu kebaca false
+      // selama cache profilnya segar (<5 mnt) -> tombol premium jadi tidak
+      // konsisten (bug "disuruh beli lagi" padahal sudah premium).
+      const p = parsed?.profile?.premium;
+      if (p && typeof p === 'object') {
+        if (!p.lifetime && Number(p.expiresAt) && Number(p.expiresAt) <= Date.now()) return false;
+        return true;
+      }
+      return Boolean(p);
     });
     if (r !== null) return r; // Jika ada data segar, langsung gunakan itu! (bisa true atau false)
   } catch {}

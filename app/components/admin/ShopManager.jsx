@@ -51,7 +51,7 @@ export default function ShopManager({ send, data }) {
         <button
           type="button"
           onClick={() => setConfirm({ action: 'restock_all', payload: {} })}
-          className="btn-ghost !px-4 !py-2 text-sm cursor-pointer"
+          className="btn-ghost px-4! py-2! text-sm cursor-pointer"
         >
           Restock Semua
         </button>
@@ -164,7 +164,7 @@ function NumRow({ placeholder, onSubmit, busy, optional }) {
   return (
     <div className="flex gap-1.5">
       <input value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} className="w-40 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
-      <button type="button" disabled={busy || (!optional && !v)} onClick={() => { onSubmit(v ? parseInt(v, 10) : null); setV(''); }} className="rounded-lg bg-accent !text-ink px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
+      <button type="button" disabled={busy || (!optional && !v)} onClick={() => { onSubmit(v ? parseInt(v, 10) : null); setV(''); }} className="rounded-lg bg-accent text-ink! px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
     </div>
   );
 }
@@ -176,7 +176,7 @@ function DiscountRow({ onSubmit, busy }) {
     <div className="flex gap-1.5">
       <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="harga diskon" className="w-28 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
       <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="jam (1-720)" className="w-24 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
-      <button type="button" disabled={busy || !price || !hours} onClick={() => { onSubmit(parseInt(price, 10), parseInt(hours, 10)); setPrice(''); setHours(''); }} className="rounded-lg bg-accent !text-ink px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
+      <button type="button" disabled={busy || !price || !hours} onClick={() => { onSubmit(parseInt(price, 10), parseInt(hours, 10)); setPrice(''); setHours(''); }} className="rounded-lg bg-accent text-ink! px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
     </div>
   );
 }

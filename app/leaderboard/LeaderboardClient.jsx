@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
 import PlayerProfileCard from '../components/PlayerProfileCard';
+import ShareCardButton from '../components/ShareCardButton';
 
 // Klien leaderboard: baris pemain jadi TOMBOL yang membuka kartu profil mini
 // (dengan avatar fresh). Data dari snapshot bot - avatarUrl dikirim tiap push
 // (60 dtk), ganti PP di Discord otomatis kebaca <=60 dtk tanpa request tambahan.
+// Share (wajib login): tiap baris punya tombol yang merender kartu peringkat
+// 4:5 di canvas lalu dibagikan via Web Share API (HP) / unduh (desktop).
 // `children` = bagian Guild Terkuat (server component).
-export default function LeaderboardClient({ players, myId, children }) {
+export default function LeaderboardClient({ players, myId, loggedIn, children }) {
   const [selected, setSelected] = useState(null);
   const isMe = (id) => myId && String(id) === String(myId);
   const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
@@ -57,25 +60,28 @@ export default function LeaderboardClient({ players, myId, children }) {
                     {p.rank}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => openCard(p, 'top')}
-                      className="group inline-flex items-center gap-2.5 text-left font-semibold text-ink transition hover:text-accent-hover cursor-pointer"
-                      aria-label={`Lihat profil ${p.username}`}
-                    >
-                      {p.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.avatarUrl} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full border border-border-soft group-hover:border-accent" />
-                      ) : (
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[0.65rem] font-bold text-accent-hover">
-                          {String(p.username || '?').slice(0, 2).toUpperCase()}
-                        </span>
-                      )}
-                      <span className="truncate">{p.username}</span>
-                      {isMe(p.userId) && (
-                        <span className="rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Kamu</span>
-                      )}
-                    </button>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openCard(p, 'top')}
+                        className="group inline-flex min-w-0 flex-1 items-center gap-2.5 text-left font-semibold text-ink transition hover:text-accent-hover cursor-pointer"
+                        aria-label={`Lihat profil ${p.username}`}
+                      >
+                        {p.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.avatarUrl} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full border border-border-soft group-hover:border-accent" />
+                        ) : (
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[0.65rem] font-bold text-accent-hover">
+                            {String(p.username || '?').slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="truncate">{p.username}</span>
+                        {isMe(p.userId) && (
+                          <span className="rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Kamu</span>
+                        )}
+                      </button>
+                      <ShareCardButton player={p} loggedIn={loggedIn} />
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className="inline-flex items-center gap-1.5">

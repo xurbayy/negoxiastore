@@ -21,7 +21,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { senderName, receiptBase64 } = body;
+  const { senderName, receiptBase64, receiptName } = body;
   if (!senderName || senderName.length < 3 || senderName.length > 50) {
     return NextResponse.json({ ok: false, error: 'Nama pengirim harus diisi (3-50 karakter).' }, { status: 400 });
   }
@@ -41,6 +41,8 @@ export async function POST(request) {
   // The commands will queue up in bot_commands and be processed when the bot is back online
 
   const isPremium = await userHasPremium(session.discordId);
+  // Satu pembelian per bulan: yang masih premium tidak bisa beli lagi
+  // (tombol bayar baru muncul setelah pass dilepas admin / jatuh tempo).
   if (isPremium) {
     return NextResponse.json({ ok: false, error: 'premium_active' }, { status: 409 });
   }
@@ -56,7 +58,8 @@ export async function POST(request) {
 
   const created = Date.now();
   // Simpan JSON ke gateway_ref
-  const gatewayRef = JSON.stringify({ senderName, receiptBase64 });
+  const safeReceiptName = String(receiptName || 'bukti-transfer.png').replace(/[^\w.\-]+/g, '_').slice(0, 60);
+  const gatewayRef = JSON.stringify({ senderName, receiptBase64, receiptName: safeReceiptName });
 
   const res = await db.execute({
     sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, 'nexo_pass_monthly', ?, 'manual', 'pending', ?, ?)",
@@ -65,11 +68,11 @@ export async function POST(request) {
 
   const orderId = Number(res.lastInsertRowid);
 
-  // Kirim command ke bot untuk DM admin (jika bot support command ini)
-  const dmMsg = `Ada pembayaran NEXO Pass baru! (Order #${orderId})\nUser: <@${session.discordId}>\nPengirim: **${senderName}**\n\nSegera cek dan setujui di Admin Panel Web!`;
+  // Kirim command ke bot untuk DM admin (termasuk lampiran bukti transfer)
+  const dmMsg = `Ada pembayaran NEXO Pass baru! (Order #${orderId})\nUser: <@${session.discordId}> (ID: ${session.discordId})\nPengirim: **${senderName}**\n\nSegera cek dan setujui di Admin Panel Web!`;
   await db.execute({
     sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('dm_admin', ?, 'web', 'pending', ?)",
-    args: [JSON.stringify({ adminId: '836383639439671366', message: dmMsg }), created],
+    args: [JSON.stringify({ adminId: '836383639439671366', message: dmMsg, fileName: safeReceiptName, fileBase64: receiptBase64 }), created],
   });
 
   await touchActivity();

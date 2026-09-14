@@ -32,9 +32,9 @@ export default async function WelcomeBack({ username }) {
           )}
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/me" className="btn-primary !px-5 !py-2.5 text-sm cursor-pointer">Profil Saya</Link>
-          <Link href="/redeem" className="btn-ghost !px-5 !py-2.5 text-sm cursor-pointer">Redeem Kode</Link>
-          <Link href="/shop" className="btn-ghost !px-5 !py-2.5 text-sm cursor-pointer">Shop</Link>
+          <Link href="/me" className="btn-primary px-5! py-2.5! text-sm cursor-pointer">Profil Saya</Link>
+          <Link href="/redeem" className="btn-ghost px-5! py-2.5! text-sm cursor-pointer">Redeem Kode</Link>
+          <Link href="/shop" className="btn-ghost px-5! py-2.5! text-sm cursor-pointer">Shop</Link>
         </div>
       </div>
     </div>

@@ -41,7 +41,7 @@ export default function ActivityLog({ data }) {
               type="button"
               onClick={() => changeFilter(f)}
               className={`rounded-lg border px-3 py-1.5 text-xs font-semibold capitalize shadow-sm transition cursor-pointer ${
-                filter === f ? 'border-transparent bg-accent !text-ink text-white' : 'border-border-soft bg-white text-ink-muted hover:border-accent/50 hover:text-ink'
+                filter === f ? 'border-transparent bg-accent text-ink! text-white' : 'border-border-soft bg-white text-ink-muted hover:border-accent/50 hover:text-ink'
               }`}
             >
               {f}

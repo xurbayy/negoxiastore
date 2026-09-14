@@ -14,11 +14,15 @@ export default async function AdminPage() {
   // 1. Punya session admin -> langsung buka panel kelola.
   const admin = await getAdminSession();
   if (admin) {
+    // Sticky footer: konten pendek (mis. tab QRIS tanpa data) tetap mendorong
+    // footer ke dasar layar, tidak "naik" di tengah halaman.
     return (
-      <>
-        <AdminShell username={admin.adminUsername} avatar={admin.adminAvatar} />
+      <div className="flex min-h-screen flex-col">
+        <div className="flex-1">
+          <AdminShell username={admin.adminUsername} avatar={admin.adminAvatar} />
+        </div>
         <AdminFooter />
-      </>
+      </div>
     );
   }
 

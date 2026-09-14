@@ -67,7 +67,7 @@ export default async function PremiumPage({ searchParams }) {
             <span className="pb-2 text-ink-muted">/bulan</span>
           </div>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-ink-muted">
-            NEXO Pass, satu paket tanpa tingkatan. Bayar dengan scan QRIS menggunakan aplikasi e-wallet (GoPay, OVO, DANA, ShopeePay) atau m-banking. Proses verifikasi dilakukan secara manual oleh Admin dengan cepat.
+            NEXO Pass, satu paket tanpa tingkatan. Bayar dengan scan QRIS menggunakan aplikasi e-wallet seperti GoPay, OVO, DANA, ShopeePay, atau m-banking. Proses verifikasi dilakukan secara manual oleh Admin dengan cepat.
           </p>
 
         <PremiumClient 
@@ -75,6 +75,7 @@ export default async function PremiumPage({ searchParams }) {
           botOnline={botOnline} 
           initialPremiumActive={premiumActive}
           initialOrder={initialOrder}
+          discordId={session ? session.discordId : null}
         />
         </div>
       </main>

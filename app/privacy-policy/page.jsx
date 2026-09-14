@@ -12,29 +12,37 @@ const SECTIONS = [
   {
     title: 'Ringkasan singkat',
     body: [
-      'Kalau tidak mau membaca semuanya, ini intinya: kami hanya menyimpan ID Discord, username, dan progres game kamu (poin, level, item, guild). Tidak ada email, tidak ada isi chat, dan datamu tidak pernah dibagikan ke siapa pun.',
+      'Kalau tidak mau membaca semuanya, ini intinya. Kami hanya menyimpan ID Discord, username, dan progres game kamu seperti poin, level, item, dan guild. Tidak ada email, tidak ada isi chat, dan datamu tidak pernah dibagikan ke siapa pun.',
     ],
   },
   {
     title: 'Data apa yang kami simpan, dan untuk apa?',
     body: [
-      'Supaya game berjalan, bot perlu tahu siapa kamu di Discord. Ini daftar lengkapnya:',
+      'Supaya game berjalan, bot perlu tahu siapa kamu di Discord. Ini daftar lengkapnya.',
     ],
     table: [
       ['Data', 'Kenapa disimpan', 'Contohnya'],
       ['Discord User ID', 'Mengenali akunmu supaya poin, item, dan progres tidak tertukar dengan pemain lain', 'Angka panjang unik seperti 8363...'],
       ['Discord Username', 'Menampilkan nama kamu di leaderboard, lobby game, dan papan peringkat', 'Nama tampilan Discord kamu'],
-      ['Progres game', 'Menyimpan poin, menang/kalah, streak, level/XP, progres misi, dan keanggotaan guild', '2.500 poin, streak 7 hari, level 12'],
+      ['Progres game', 'Menyimpan poin, menang kalah, streak, level, progres misi, dan keanggotaan guild', '2.500 poin, streak 7 hari, level 12'],
       ['Aktivitas ekonomi', 'Mencatat saldo, pembelian item di shop, pinjaman bank, dan transfer antar pemain', 'Beli item 50.000 poin'],
-      ['ID server (guild)', 'Membuat leaderboard dan pengumuman berlaku per server', 'ID server tempat bot aktif'],
+      ['ID server', 'Membuat leaderboard dan pengumuman berlaku per server', 'ID server tempat bot aktif'],
     ],
-    after: 'Yang TIDAK pernah kami simpan: email, nomor telepon, nama asli, alamat IP untuk pelacakan, isi pesan chat biasa, dan percakapan DM.',
+    after: 'Yang tidak pernah kami simpan adalah email, nomor telepon, nama asli, alamat IP untuk pelacakan, isi pesan chat biasa, dan percakapan DM.',
   },
   {
     title: 'Apakah bot membaca chat kami?',
     body: [
-      'Tidak membaca obrolan biasa. Bot hanya bereaksi pada pesan yang diawali perintahnya: nx, np, nb, nc, atau nxadmin.',
-      'Contoh: saat kamu mengetik "np slot", bot membaca dua kata itu untuk menjalankan game slot. Pesannya diproses sesaat di memori lalu dibuang. Kalau kamu mengetik "makan siang yuk", bot sama sekali tidak memprosesnya.',
+      'Tidak membaca obrolan biasa. Bot hanya bereaksi pada pesan yang diawali perintahnya, seperti nx, np, nb, nc, atau nxadmin.',
+      'Contohnya saat kamu mengetik "np slot", bot membaca dua kata itu untuk menjalankan game slot. Pesannya diproses sesaat di memori lalu dibuang. Kalau kamu mengetik "makan siang yuk", bot sama sekali tidak memprosesnya.',
+    ],
+  },
+  {
+    title: 'DM dari bot, kapan dan kenapa',
+    body: [
+      'Bot bisa mengirim pesan langsung ke Discord kamu, tapi hanya berupa notifikasi sistem searah, bukan percakapan. Isinya terbatas pada hal yang menyangkut akun kamu, contohnya status pembelian NEXO Pass, kode promo yang berhasil diklaim, atau pemberitahuan sanksi beserta alasannya.',
+      'Bot tidak pernah membaca atau menyimpan balasan DM kamu. Pesan yang dikirim bot juga tidak disimpan sebagai riwayat percakapan. Begitu terkirim, selesai.',
+      'DM hanya berisi informasi akun kamu sendiri, dan tidak pernah dibagikan ke member server atau pihak lain. Kalau kamu memilih menutup DM dari anggota server di pengaturan Discord, notifikasi sanksi tetap muncul saat kamu memakai bot di server.',
     ],
   },
   {
@@ -50,7 +58,7 @@ const SECTIONS = [
       'Menyimpan progres game kamu antar sesi main.',
       'Menghitung reward, menjalankan shop dan bank, menampilkan leaderboard.',
       'Mengelola guild dan misi harian.',
-      'Saat kamu login di web ini: menampilkan profil, riwayat game, dan status premium kamu.',
+      'Menampilkan profil, riwayat game, dan status premium kamu saat login di web ini.',
     ],
     after: 'Kami tidak menjual, menyewakan, atau membagikan data kamu ke siapa pun. Data kamu juga tidak dipakai untuk melatih model AI atau machine learning.',
   },
@@ -59,13 +67,13 @@ const SECTIONS = [
     list: [
       'Data progres disimpan selama bot aktif di server kamu dan kamu masih memainkannya, supaya poin, level, dan item tidak hilang saat bot restart.',
       'Pemilik server bisa mengeluarkan bot dari servernya kapan saja.',
-      'Kalau kamu pengen berhenti main dan mau semua data game kamu dihapus dari sistem kami, nggak masalah! Tinggal kirimkan pesan lewat tombol "Laporan & Saran" (Feedback) di ujung kanan atas website ini. Jangan lupa cantumkan Discord ID kamu dan alasan singkat kenapa mau dihapus. Data kamu bakal kami reset secara total secepatnya.',
+      'Kalau kamu ingin berhenti main dan menghapus semua data game kamu dari sistem kami, tinggal kirim pesan lewat tombol Laporan dan Saran di pojok kanan atas website. Cantumkan Discord ID dan alasan singkatnya, data kamu akan kami reset total secepat mungkin.',
     ],
   },
   {
     title: 'Bagaimana dengan anak-anak?',
     body: [
-      'Bot boleh dipakai siapa saja di Discord, tapi sesuai Ketentuan Layanan Discord, pengguna harus berusia minimal 13 tahun (atau usia minimum yang diwajibkan negaramu).',
+      'Bot boleh dipakai siapa saja di Discord, tapi sesuai Ketentuan Layanan Discord, pengguna harus berusia minimal 13 tahun atau usia minimum yang diwajibkan negaramu.',
     ],
   },
   {
@@ -90,7 +98,7 @@ export default async function PrivacyPolicyPage() {
             Kebijakan Privasi NEXO Games.
           </h1>
           <div className="accent-bar mt-4" aria-hidden="true" />
-          <p className="mt-4 text-sm text-ink-muted">Terakhir diperbarui: 12 September 2026</p>
+          <p className="mt-4 text-sm text-ink-muted">Terakhir diperbarui 14 September 2026</p>
           <p className="mt-6 leading-relaxed text-ink-muted">
             <strong className="text-ink">NEXO Games</strong> adalah bot game Discord yang
             menyediakan mini-game, ekonomi poin virtual, dan fitur komunitas di dalam server

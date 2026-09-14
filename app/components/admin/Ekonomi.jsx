@@ -126,7 +126,7 @@ function AmountAction({ label, hint, danger, disabled, onSubmit }) {
           type="button"
           disabled={disabled || !val}
           onClick={() => { onSubmit(parseInt(val, 10)); setVal(''); }}
-          className="shrink-0 rounded-lg bg-accent !text-ink px-4 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer"
+          className="shrink-0 rounded-lg bg-accent text-ink! px-4 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer"
         >
           Kirim
         </button>

@@ -1,36 +1,54 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { NexoLogo, DiscordIcon } from '../../components/ui';
 import BackButton from '../../components/BackButton';
+import Turnstile from '../../components/Turnstile';
+
+// Turnstile aktif hanya kalau site-key diset (sama seperti halaman Redeem).
+const HAS_TS_KEY = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
 // /admin/login - akses panel. Utama: login Discord KHUSUS pemilik akun admin
 // (ADMIN_DISCORD_IDS). Siapa pun selain itu -> /no-access. Username+password
 // sengaja jadi cadangan kecil di bawah (fallback kalau Discord error/DM down).
+// Jalur password + captcha, lalu dilanjut kode Google Authenticator (2FA).
 export default function AdminLoginPage() {
   const [showForm, setShowForm] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [cfToken, setCfToken] = useState(null);
+  const [tsNonce, setTsNonce] = useState(0); // token sekali-pakai -> remount saat reset
+  const [tsOn, setTsOn] = useState(false);
+
+  useEffect(() => {
+    if (HAS_TS_KEY) setTsOn(true);
+  }, []);
 
   async function submit(e) {
     e.preventDefault();
     if (loading) return;
+    if (tsOn && !cfToken) {
+      setError('Selesaikan captcha dulu.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, cfToken }),
       });
       const data = await res.json();
       if (data.ok) {
-        window.location.href = '/admin';
+        window.location.href = data.needs2fa ? '/admin/verify' : '/admin';
       } else {
         setError(data.error || 'Username atau password salah.');
+        if (data.turnstile) { setTsNonce((n) => n + 1); setCfToken(null); }
       }
     } catch {
       setError('Gagal menghubungi server.');
@@ -59,7 +77,7 @@ export default function AdminLoginPage() {
 
           <a
             href="/api/auth/login?returnTo=%40admin"
-            className="btn-primary mt-7 flex w-full items-center justify-center gap-2.5 !px-6 !py-3.5 cursor-pointer"
+            className="btn-primary mt-7 flex w-full items-center justify-center gap-2.5 px-6! py-3.5! cursor-pointer"
           >
             <DiscordIcon className="h-5 w-5" />
             Masuk dengan Discord
@@ -82,15 +100,40 @@ export default function AdminLoginPage() {
               </div>
               <div>
                 <label htmlFor="admin-pass" className="text-sm font-semibold text-ink">Password</label>
-                <input
-                  id="admin-pass"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  className="mt-1.5 w-full rounded-xl border border-border-soft bg-card-cream px-4 py-3 text-ink focus:border-accent focus:outline-none"
-                />
+                <div className="relative mt-1.5">
+                  <input
+                    id="admin-pass"
+                    type={showPass ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    className="w-full rounded-xl border border-border-soft bg-card-cream px-4 py-3 pr-12 text-ink focus:border-accent focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass((v) => !v)}
+                    aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'}
+                    aria-pressed={showPass}
+                    className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-ink-muted transition-colors hover:text-ink cursor-pointer"
+                  >
+                    {showPass ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
+
+              {tsOn && <Turnstile key={tsNonce} onToken={setCfToken} />}
 
               {error && (
                 <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -98,7 +141,7 @@ export default function AdminLoginPage() {
                 </p>
               )}
 
-              <button type="submit" disabled={loading || !username || !password} className="btn-primary !bg-card-dark w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="submit" disabled={loading || !username || !password} className="btn-primary bg-card-dark! w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
                 {loading ? 'Memeriksa…' : 'Masuk via Password'}
               </button>
             </form>

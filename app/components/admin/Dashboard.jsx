@@ -231,7 +231,7 @@ export default function Dashboard({ data }) {
                 type="button"
                 onClick={() => setRange(r)}
                 className={`rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition cursor-pointer ${
-                  range === r ? 'border-transparent bg-accent !text-ink text-white' : 'border-border-soft bg-white text-ink-muted hover:border-accent/50 hover:text-ink'
+                  range === r ? 'border-transparent bg-accent text-ink! text-white' : 'border-border-soft bg-white text-ink-muted hover:border-accent/50 hover:text-ink'
                 }`}
               >
                 {r === 1 ? '24 jam' : '7 hari'}
@@ -262,9 +262,9 @@ export default function Dashboard({ data }) {
                       <span className="flex items-center gap-2 text-ink">
                         {gd.icon ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={gd.icon} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
+                          <img src={gd.icon} alt="" width={18} height={18} className="h-4.5 w-4.5 shrink-0" />
                         ) : (
-                          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded bg-accent/15 text-[0.55rem] font-bold text-accent-hover">
+                          <span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-accent/15 text-[0.55rem] font-bold text-accent-hover">
                             {gd.name.slice(0, 2).toUpperCase()}
                           </span>
                         )}

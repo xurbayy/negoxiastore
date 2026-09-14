@@ -49,7 +49,7 @@ export default async function LeaderboardPage() {
 
           {/* Pemain -> Guild (client: baris pemain bisa diklik ->
               kartu profil + PP fresh; guild tetap server component) */}
-          <LeaderboardClient players={players} myId={myId}>
+          <LeaderboardClient players={players} myId={myId} loggedIn={Boolean(session)}>
 
           {/* Guild */}
           <section className="mt-12" aria-labelledby="lb-guild">

@@ -15,7 +15,6 @@ const LINKS_MEMBER = [
   { href: '/#games', label: 'Game' },
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/shop', label: 'Shop' },
-  { href: '/#cara-main', label: 'Cara Main' },
   { href: '/redeem', label: 'Redeem' },
 ];
 // Legal digabung ke dropdown "Info" (desktop) / daftar biasa (mobile).
@@ -55,7 +54,13 @@ export default function Navbar({ session, premiumActive = false }) {
         const res = await fetch('/api/me', { cache: 'no-store' });
         const d = await res.json();
         if (stop || !d?.authenticated) return;
-        setLivePremium(Boolean(d?.profile?.profile?.premium));
+        const p = d?.profile?.profile?.premium;
+        // Bot boleh mengirim premium sebagai boolean ATAU objek {expiresAt,
+        // lifetime}. Objek dengan expiry lampau = sudah lepas.
+        const active =
+          p === true ||
+          (p && typeof p === 'object' && (p.lifetime || Number(p.expiresAt) > Date.now()));
+        setLivePremium(Boolean(active));
       } catch {}
     }
     const t = setTimeout(check, 0);
@@ -153,10 +158,18 @@ export default function Navbar({ session, premiumActive = false }) {
             </>
           )}
           {!session && (
-            <Link href="/login" className="btn-primary hidden !px-5 !py-2 text-sm md:inline-flex cursor-pointer">
-              <DiscordIcon className="h-4 w-4" />
-              Login
-            </Link>
+            <>
+              <Link
+                href="/premium"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer"
+              >
+                ✦ Premium
+              </Link>
+              <Link href="/login" className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
+                <DiscordIcon className="h-4 w-4" />
+                Login
+              </Link>
+            </>
           )}
           <button
             type="button"
@@ -197,6 +210,13 @@ export default function Navbar({ session, premiumActive = false }) {
                 </Link>
               </li>
             ))}
+            {!session && (
+              <li>
+                <Link href="/premium" onClick={() => setOpen(false)} className="block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
+                  ✦ Premium
+                </Link>
+              </li>
+            )}
             {session && (
               <li>
                 <Link href="/premium" onClick={() => setOpen(false)} className={showPremium ? 'block rounded-lg border border-success/50 bg-white px-3 py-2.5 text-sm font-semibold text-success shadow-sm cursor-pointer' : 'block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer'}>

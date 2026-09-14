@@ -49,7 +49,7 @@ export default function Hero({ loggedIn = false }) {
                 <Link href="/leaderboard" className="btn-ghost cursor-pointer">
                   {emojiSrc('trophy') ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('trophy')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                    <img src={emojiSrc('trophy')} alt="" width={18} height={18} className="h-4.5 w-4.5" />
                   ) : null}
                   Cek Peringkat
                 </Link>
@@ -57,7 +57,7 @@ export default function Hero({ loggedIn = false }) {
             ) : (
               <>
                 <InviteButton />
-                <Link href="/#games" className="btn-primary !bg-card-dark !px-[1.6rem] !py-[0.7rem] !text-[16px] text-card-cream transition hover:bg-card-dark-2 cursor-pointer">
+                <Link href="/#games" className="btn-primary bg-card-dark! px-[1.6rem]! py-[0.7rem]! text-[16px]! text-card-cream transition hover:bg-card-dark-2 cursor-pointer">
                   <GamepadIcon className="h-5 w-5" />
                   Lihat Semua Game
                 </Link>
@@ -66,35 +66,60 @@ export default function Hero({ loggedIn = false }) {
           </div>
         </div>
 
-        {/* Kanan: 2 screenshot asli embed game (Blackjack + Russian Roulette),
-            ditumpuk rapi dengan sedikit kemiringan berlawanan */}
-        <div className="anim-in delay-3 relative mx-auto h-[420px] w-full max-w-md select-none sm:h-[460px]">
-          {/* kartu belakang: Russian Roulette */}
-          <div className="nx-dark absolute right-0 top-0 w-[74%] rotate-[3deg] overflow-hidden shadow-[0_18px_44px_rgba(43,33,24,0.28)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/preview-roulette.png"
-              alt="Contoh game Russian Roulette di NEXO Games: ronde, total hadiah, dan papan pelatuk"
-              width={777}
-              height={783}
-              className="h-auto w-full"
-              loading="eager"
-            />
+        {/* Kanan: sudah login = maskot melayang; belum login = 2 screenshot
+            embed game ditumpuk dengan kemiringan berlawanan */}
+        {loggedIn ? (
+          <div className="anim-in delay-3 relative mx-auto flex w-full max-w-md select-none items-center justify-center">
+            {/* siluet glowing di belakang maskot, selaras bg-grid */}
+            <div className="absolute inset-0 -z-10 rounded-full bg-accent/10 blur-3xl" aria-hidden="true" />
+            <div className="mascot-wrap px-4 py-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/mascot.png"
+                alt="Maskot NEXO Games, karakter naga oranye membawa kartu"
+                width={299}
+                height={356}
+                decoding="async"
+                className="mascot-bob h-auto w-[190px] drop-shadow-[0_18px_28px_rgba(43,33,24,0.25)] sm:w-[300px] lg:w-[360px]"
+              />
+              <span className="mascot-shadow" aria-hidden="true" />
+            </div>
+            <span className="mascot-float-a absolute right-0 top-4 -rotate-6 rounded-lg border border-border-soft bg-white px-2.5 py-1.5 text-[0.7rem] font-bold text-ink shadow-sm sm:text-xs lg:-right-1">
+              np slot? Gas!
+            </span>
+            <span className="mascot-float-b absolute bottom-14 left-0 rotate-3 rounded-lg border border-border-soft bg-white px-2.5 py-1.5 text-[0.7rem] font-bold text-accent-hover shadow-sm sm:text-xs lg:-left-2">
+              Streak aman
+            </span>
           </div>
+        ) : (
+          <div className="anim-in delay-3 relative mx-auto h-[420px] w-full max-w-md select-none sm:h-[460px]">
+            {/* kartu belakang: Russian Roulette */}
+            <div className="nx-dark absolute right-0 top-0 w-[74%] rotate-[3deg] overflow-hidden shadow-[0_18px_44px_rgba(43,33,24,0.28)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/preview-roulette.png"
+                alt="Contoh game Russian Roulette di NEXO Games: ronde, total hadiah, dan papan pelatuk"
+                width={777}
+                height={783}
+                className="h-auto w-full"
+                loading="eager"
+              />
+            </div>
 
-          {/* kartu depan: Blackjack */}
-          <div className="nx-dark absolute bottom-0 left-0 w-[72%] -rotate-[2deg] overflow-hidden shadow-[0_24px_54px_rgba(43,33,24,0.35)] ring-4 ring-bg">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/preview-blackjack.png"
-              alt="Contoh game Blackjack di NEXO Games: pot taruhan, papan kartu, dan tombol aksi Hit/Stand"
-              width={660}
-              height={626}
-              className="h-auto w-full"
-              loading="eager"
-            />
+            {/* kartu depan: Blackjack */}
+            <div className="nx-dark absolute bottom-0 left-0 w-[72%] -rotate-[2deg] overflow-hidden shadow-[0_24px_54px_rgba(43,33,24,0.35)] ring-4 ring-bg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/preview-blackjack.png"
+                alt="Contoh game Blackjack di NEXO Games: pot taruhan, papan kartu, dan tombol aksi Hit/Stand"
+                width={660}
+                height={626}
+                className="h-auto w-full"
+                loading="eager"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

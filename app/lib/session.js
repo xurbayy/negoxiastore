@@ -4,9 +4,11 @@ import { cookies } from 'next/headers';
 
 const MEMBER_COOKIE = 'nexo_session';
 const ADMIN_COOKIE = 'nexo_admin_session';
-// Member: session cookie (tanpa maxAge) → otomatis hilang saat browser ditutup.
-// JWT tetap punya expiry 24 jam sbg safety-net kalau browser restore session.
-const JWT_LIFETIME = 60 * 60 * 24; // 24 jam (hanya utk exp claim di JWT)
+// Member: 30 hari (JWT exp + cookie maxAge). Dulu session-cookie yang hilang
+// saat browser ditutup -> di HP user sering "keluar sendiri" dan status
+// premium ikut raib tiap pindah sesi. 30 hari = nyaman, tetap ada batas keras.
+const JWT_LIFETIME = 60 * 60 * 24 * 30; // 30 hari
+const MEMBER_MAX_AGE = 60 * 60 * 24 * 30;
 const ADMIN_MAX_AGE = 60 * 60 * 8; // admin 8 jam
 
 function secret() {
@@ -38,7 +40,7 @@ export async function createSession(user) {
     .sign(secret());
 
   const store = await cookies();
-  store.set(MEMBER_COOKIE, token, { ...cookieBase() }); // session cookie: tanpa maxAge → hapus saat browser ditutup
+  store.set(MEMBER_COOKIE, token, { ...cookieBase(), maxAge: MEMBER_MAX_AGE });
 }
 
 export async function getSession() {

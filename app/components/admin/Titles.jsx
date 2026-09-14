@@ -46,13 +46,13 @@ export default function Titles({ send, data }) {
           <h2 className="font-display text-ink">Beri Title</h2>
           <p className="mt-1 text-xs text-ink-muted">Title permanen dari daftar title resmi; langsung dipakai di nxprofile user.</p>
           <input value={tForm.userId} onChange={(e) => setTForm({ ...tForm, userId: e.target.value.replace(/\D/g, '') })} placeholder="Discord User ID"
-            className="mt-3 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm !text-ink focus:border-accent focus:outline-none" />
+            className="mt-3 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm text-ink! focus:border-accent focus:outline-none" />
           <select value={tForm.titleKey} onChange={(e) => setTForm({ ...tForm, titleKey: e.target.value })}
-            className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm !text-ink focus:border-accent focus:outline-none">
+            className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none">
             <option value="">- pilih title -</option>
             {titles.map((t) => <option key={t.key} value={t.key}>{t.label.replace(/<[^>]+>/g, '').trim()} ({t.key})</option>)}
           </select>
-          <button type="submit" disabled={busy || !tForm.userId || !tForm.titleKey} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold !text-ink transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Beri Title</button>
+          <button type="submit" disabled={busy || !tForm.userId || !tForm.titleKey} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Beri Title</button>
         </form>
 
         {/* Set admin title */}
@@ -63,10 +63,10 @@ export default function Titles({ send, data }) {
             emoji barunya lewat emoji_registry, dan kalau dicabut ikonnya ikut hilang dari mana pun ditampilkan.
           </p>
           <input value={aForm.userId} onChange={(e) => setAForm({ ...aForm, userId: e.target.value.replace(/\D/g, '') })} placeholder="Discord User ID"
-            className="mt-3 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm !text-ink focus:border-accent focus:outline-none" />
+            className="mt-3 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm text-ink! focus:border-accent focus:outline-none" />
           <textarea value={aForm.text} onChange={(e) => setAForm({ ...aForm, text: e.target.value.slice(0, 100) })} placeholder="Teks title (maks 100 karakter)" rows={2}
-            className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm !text-ink focus:border-accent focus:outline-none" />
-          <button type="submit" disabled={busy || !aForm.userId || !aForm.text.trim()} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold !text-ink transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Pasang</button>
+            className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none" />
+          <button type="submit" disabled={busy || !aForm.userId || !aForm.text.trim()} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Pasang</button>
         </form>
       </div>
 
@@ -82,7 +82,7 @@ export default function Titles({ send, data }) {
           <ul className="mt-3 space-y-2 text-sm">
             {holders.map((h) => (
               <li key={h.userId} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-soft bg-card-cream/60 px-4 py-2.5">
-                <span><b className="!text-ink">{h.username}</b> <span className="font-mono text-xs text-ink-muted">{h.userId}</span></span>
+                <span><b className="text-ink!">{h.username}</b> <span className="font-mono text-xs text-ink-muted">{h.userId}</span></span>
                 <span className="flex items-center gap-3">
                   <RichText text={h.adminTitle} />
                   <button type="button" disabled={busy} onClick={() => setConfirm({ userId: h.userId, username: h.username })}

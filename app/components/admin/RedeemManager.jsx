@@ -64,7 +64,7 @@ export default function RedeemManager({ send, data }) {
           <label htmlFor="p-quota" className="block text-xs uppercase tracking-wider text-ink-muted">Kuota</label>
           <input id="p-quota" type="number" value={form.quota} onChange={(e) => setForm({ ...form, quota: parseInt(e.target.value, 10) || 0 })} className="mt-1.5 w-24 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
-        <button type="submit" disabled={busy || !form.code || !form.rewardValue} className="rounded-lg bg-accent !text-ink px-5 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer">Buat Kode</button>
+        <button type="submit" disabled={busy || !form.code || !form.rewardValue} className="rounded-lg bg-accent text-ink! px-5 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer">Buat Kode</button>
       </form>
 
       {feedback && (
@@ -188,7 +188,7 @@ function NotifyForm({ codes, onSent }) {
             ))}
           </select>
         </div>
-        <button type="submit" disabled={busy || !form.code || (form.target === 'one' && !/^\d{5,25}$/.test(form.targetOne))} className="rounded-lg bg-accent !text-ink px-5 py-2 text-sm font-semibold transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Kirim</button>
+        <button type="submit" disabled={busy || !form.code || (form.target === 'one' && !/^\d{5,25}$/.test(form.targetOne))} className="rounded-lg bg-accent text-ink! px-5 py-2 text-sm font-semibold transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Kirim</button>
       </div>
       {msg && (
         <p className={`mt-3 rounded-xl border px-4 py-3 text-sm ${msg.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{msg.text}</p>

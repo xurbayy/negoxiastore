@@ -20,7 +20,11 @@ export const FAQS = [
     a: 'Pastikan bot punya izin membaca dan mengirim pesan di channel tersebut, dan pastikan pesan kamu diawali prefix (nx, np, nb, nc). Coba ketik nxhelp untuk mengecek bot aktif.',
   },
   {
+    q: 'Kenapa web ini memakai cookie?',
+    a: 'Hanya untuk cookie fungsional, bukan pelacak. Cookie menyimpan sesi login kamu supaya tidak perlu masuk Discord berulang kali, menjaga status NEXO Pass dan notifikasi tetap terbawa saat pindah halaman, serta mengunci keamanan 2FA panel admin. Tidak ada analitik, tidak ada iklan, tidak ada cookie pihak ketiga, dan keputusanmu pada banner cookie cukup disimpan sekali di perangkat.',
+  },
+  {
     q: 'Bagaimana jika saya ingin semua data game saya dihapus?',
-    a: 'Tentu bisa! Kamu cukup gunakan tombol "Laporan & Saran" (di pojok kanan atas web ini), berikan Discord ID kamu, dan sampaikan alasan kenapa ingin dihapus. Admin akan mereset seluruh data progres kamu secepatnya.',
+    a: 'Tentu bisa! Kamu cukup gunakan tombol "Laporan & Saran" di pojok kanan atas web ini, berikan Discord ID kamu, dan sampaikan alasan kenapa ingin dihapus. Admin akan mereset seluruh data progres kamu secepatnya.',
   },
 ];

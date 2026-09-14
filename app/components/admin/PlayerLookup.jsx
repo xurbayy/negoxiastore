@@ -58,7 +58,7 @@ export default function PlayerLookup() {
             className="w-full rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-ink placeholder:text-[#A99C8E] focus:border-accent focus:outline-none"
           />
           <button type="button" disabled={busy || id.length < 5} onClick={() => load(id)}
-            className="shrink-0 rounded-xl bg-accent px-5 py-2 text-sm font-semibold !text-ink transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">
+            className="shrink-0 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">
             {busy ? 'Memuat…' : 'Cari'}
           </button>
         </div>
@@ -66,7 +66,7 @@ export default function PlayerLookup() {
       </div>
 
       {data && data.refreshing && !p && (
-        <div className="nx-card px-5 py-4 text-sm text-ink-muted">⏳ Menyegarkan data dari bot… (cek ulang otomatis tiap 3 detik)</div>
+        <div className="nx-card px-5 py-4 text-sm text-ink-muted">Menyegarkan data dari bot… (cek ulang otomatis tiap 3 detik)</div>
       )}
 
       {data && !data.profile && !data.refreshing && (
@@ -89,7 +89,7 @@ export default function PlayerLookup() {
                   {p.username}{' '}
                   {p.titleInfo && <RichText text={p.titleInfo.label} />}{' '}
                   {premium && (
-                    <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 align-middle text-[0.65rem] font-bold uppercase tracking-wider !text-ink">
+                    <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 align-middle text-[0.65rem] font-bold uppercase tracking-wider text-ink!">
                       <RichText text="<:download3:1548184905018507306>" size={12} /> NEXO PASS
                     </span>
                   )}
@@ -178,7 +178,7 @@ export default function PlayerLookup() {
                 {data.commands.map((c) => (
                   <li key={c.id} className="flex flex-wrap items-baseline gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase ${c.status === 'done' ? 'bg-success/15 text-success' : c.status === 'failed' || c.status === 'rejected' ? 'bg-danger/15 text-danger' : 'bg-accent/15 text-ink-muted'}`}>{c.status}</span>
-                    <span className="font-mono text-xs !text-ink">{c.action}</span>
+                    <span className="font-mono text-xs text-ink!">{c.action}</span>
                     <span className="text-ink-muted">{c.result}</span>
                     <span className="ml-auto text-xs text-ink-muted">#{c.id} • {new Date(c.createdAt).toLocaleString('id-ID')}</span>
                   </li>
@@ -209,5 +209,5 @@ export default function PlayerLookup() {
 }
 
 function Stat({ label, value }) {
-  return <div className="rounded-xl border border-border-soft bg-card-cream/60 px-3 py-2"><p className="text-xs uppercase tracking-wider text-ink-muted">{label}</p><p className="mt-0.5 truncate font-semibold !text-ink">{value}</p></div>;
+  return <div className="rounded-xl border border-border-soft bg-card-cream/60 px-3 py-2"><p className="text-xs uppercase tracking-wider text-ink-muted">{label}</p><p className="mt-0.5 truncate font-semibold text-ink!">{value}</p></div>;
 }

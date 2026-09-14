@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { createAdminSession, destroyAdminSession } from '../../../lib/session';
 import { rateLimit, isLockedOut, recordFail, clearFails, lockoutRemaining, getClientIp } from '../../../lib/rate-limit';
+import { verifyTurnstile } from '../../../lib/turnstile';
+import { totpConfigured, createPending2fa, clearTrustedDevice, hasTrustedDevice } from '../../../lib/admin-2fa';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +11,8 @@ const MAX_FAIL = 5;
 const WINDOW_MS = 60_000;      // 5 percobaan / menit
 const LOCKOUT_MS = 10 * 60_000; // lockout 10 menit setelah 5 gagal
 
-// POST /api/admin/login { username, password } -> session admin terpisah.
+// POST /api/admin/login { username, password, cfToken } -> langkah 1.
+// Dengan 2FA aktif: hasil = pending cookie -> klien lanjut ke /admin/verify.
 export async function POST(request) {
   const ip = getClientIp(request);
 
@@ -32,6 +35,17 @@ export async function POST(request) {
   const username = String(body?.username || '');
   const password = String(body?.password || '');
 
+  // Captcha Turnstile (sama seperti halaman Redeem) - aktif kalau secret diset.
+  if (process.env.TURNSTILE_SECRET_KEY) {
+    const v = await verifyTurnstile(body?.cfToken, ip);
+    if (!v.ok) {
+      return NextResponse.json(
+        { ok: false, turnstile: true, error: v.netError ? 'Verifikasi captcha sedang terganggu, coba lagi.' : 'Selesaikan captcha dulu sebelum masuk.' },
+        { status: 400 }
+      );
+    }
+  }
+
   const expectedUser = process.env.ADMIN_USERNAME || '';
   const expectedHash = process.env.ADMIN_PASSWORD_HASH || '';
 
@@ -48,12 +62,23 @@ export async function POST(request) {
   }
 
   clearFails(ip);
-  await createAdminSession(expectedUser);
+  if (totpConfigured()) {
+    // Perangkat ini sudah tepercaya (pernah lulus TOTP + "ingat") -> masuk
+    // langsung, sama seperti jalur Discord. Jangan paksa kode terus.
+    if (await hasTrustedDevice()) {
+      await createAdminSession(username);
+      return NextResponse.json({ ok: true });
+    }
+    await createPending2fa(username);
+    return NextResponse.json({ ok: true, needs2fa: true });
+  }
+  await createAdminSession(username);
   return NextResponse.json({ ok: true });
 }
 
-// DELETE /api/admin/login - logout admin (hapus cookie).
+// DELETE /api/admin/login - logout admin (hapus cookie sesi + perangkat tepercaya).
 export async function DELETE() {
   await destroyAdminSession();
+  await clearTrustedDevice();
   return NextResponse.json({ ok: true });
 }

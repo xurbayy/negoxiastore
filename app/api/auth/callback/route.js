@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb, schemaReady } from '../../../lib/session-db';
 import { createSession, createAdminSession } from '../../../lib/session';
+import { totpConfigured, hasTrustedDevice, createPending2fa } from '../../../lib/admin-2fa';
 import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,22 @@ export async function GET(request) {
     if (adminMode) {
       const adminIds = (process.env.ADMIN_DISCORD_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
       if (!adminIds.includes(me.id)) {
+        // User biasa nyasar ke login admin: OAuth-nya sudah sah, jadi tetep
+        // buatin session member + simpan profilnya. Tombol "Buka Profil Gw
+        // Aja" di /no-access langsung masuk /me tanpa login ulang.
+        await schemaReady();
+        const dbN = getDb();
+        await dbN.execute({
+          sql: `INSERT INTO users (discord_id, username, avatar, is_admin, created_at)
+                VALUES (?, ?, ?, 0, ?)
+                ON CONFLICT(discord_id) DO UPDATE SET username = excluded.username, avatar = excluded.avatar`,
+          args: [me.id, me.username, me.avatar, Date.now()],
+        });
+        await createSession({
+          discordId: me.id,
+          username: me.username,
+          avatar: me.avatar ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64` : null,
+        });
         return NextResponse.redirect(new URL('/no-access', url.origin));
       }
       await schemaReady();
@@ -72,7 +89,14 @@ export async function GET(request) {
               ON CONFLICT(discord_id) DO UPDATE SET username = excluded.username, avatar = excluded.avatar, is_admin = 1`,
         args: [me.id, me.username, me.avatar, Date.now()],
       });
-      await createAdminSession(me.username, me.avatar ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64` : null);
+      const avatarUrl = me.avatar ? `https://cdn.discordapp.com/avatars/${me.id}/${me.avatar}.png?size=64` : null;
+      // 2FA admin: kalau perangkat ini belum tepercaya, minta kode TOTP dulu
+      // lewat /admin/verify sebelum sesi admin aktif.
+      if (totpConfigured() && !(await hasTrustedDevice())) {
+        await createPending2fa(me.username, avatarUrl);
+        return NextResponse.redirect(new URL('/admin/verify?from=discord', url.origin));
+      }
+      await createAdminSession(me.username, avatarUrl);
       return NextResponse.redirect(new URL('/admin', url.origin));
     }
 

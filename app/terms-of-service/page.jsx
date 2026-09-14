@@ -19,26 +19,28 @@ const SECTIONS = [
   {
     title: 'Poin itu virtual, bukan uang.',
     body: [
-      'Semua poin, item, dan gelar di NEXO Games murni dalam-game: tidak punya nilai uang asli, tidak bisa ditukar jadi rupiah, tidak bisa dibeli atau dijual ke pemain lain di luar mekanisme game. Transaksi apa pun di luar game yang mengatasnamakan poin NEXO bukan tanggung jawab kami.',
+      'Semua poin, item, dan gelar di NEXO Games murni dalam-game dan tidak punya nilai uang asli. Tidak bisa ditukar rupiah, tidak bisa diperjualbelikan di luar mekanisme game. Transaksi apa pun di luar game yang mengatasnamakan poin NEXO bukan tanggung jawab kami.',
     ],
   },
   {
-    title: 'Yang boleh dan tidak boleh (Aturan Sanksi).',
+    title: 'Aturan main dan sanksinya.',
     list: [
       'Satu orang, satu akun. Membuat akun ganda untuk farming hadiah, klaim promo berlipat, atau mengelabui matchmaking sangat dilarang.',
-      'Sanksi Timeout (Hukuman Sementara): Kamu akan di-timeout jika melakukan SPAM command secara brutal yang memberatkan bot, atau dengan sengaja mengganggu jalannya game pemain lain.',
-      'Sanksi Banned (Blokir Permanen): Kamu akan di-ban permanen jika terbukti melakukan penipuan (scamming) ke player lain, mengeksploitasi bug demi keuntungan pribadi tanpa melapor, atau melakukan toxic SARA/Doxing parah di ekosistem NEXO.',
-      'Sanksi Reset Data Total: Jika pelanggaranmu sangat merugikan ekonomi game (misal sengaja menduplikasi uang miliaran via eksploitasi/script otomatis/self-bot), maka seluruh progres, barang, dan hartamu akan direset menjadi nol seperti player baru.',
+      'Jangan main-main dengan NEXO Pass. Bukti transfer palsu, nominal dicekrik, atau spam pesanan tanpa benar-benar membayar adalah penipuan, dan sanksinya langsung berlaku tanpa peringatan.',
+      'Sanksi Timeout. Akun disetop sementara kalau kamu spam command secara brutal yang memberatkan bot, atau dengan sengaja mengganggu jalannya game pemain lain.',
+      'Sanksi Banned. Akun diblokir permanen kalau terbukti menipu pemain lain, mengeksploitasi bug demi untung pribadi tanpa melapor, atau melakukan toxic SARA dan doxing parah.',
+      'Sanksi Reset Data. Kalau pelanggaranmu sangat merugikan ekonomi game, misalnya sengaja menduplikasi uang lewat eksploitasi atau script otomatis, seluruh progres dan hartamu direset jadi nol seperti player baru.',
     ],
   },
   {
     title: 'NEXO Pass dan pembayaran manual.',
     body: [
-      'NEXO Pass adalah langganan opsional Rp 20.000/bulan untuk kenyamanan ekstra (inventori unlimited, kuota harian tambahan, akses beta). Pass tidak menjual kekuatan dalam game (no pay-to-win): hasil game tetap soal keberuntungan dan strategi.',
-      'Pembayaran dilakukan secara manual via QRIS (GoPay, OVO, Dana, m-Banking). Setelah kamu transfer dan meng-upload bukti pembayaran, admin akan memvalidasi mutasi dan mengaktifkan Pass-mu.',
-      'Jam Operasional proses pembayaran adalah pukul 08:00 - 22:00 WIB. Pembayaran di jam ini akan diproses dengan cepat. Jika kamu transfer di luar jam tersebut, pesanan kemungkinan akan diproses keesokan harinya.',
-      'Pastikan kamu melampirkan screenshot bukti transfer yang asli. Bukti transfer palsu atau tidak sesuai dengan mutasi e-wallet Admin akan otomatis ditolak.',
-      'Semua pembelian sifatnya final dan tidak ada pengembalian dana (no refund). KECUALI kalau ada murni kesalahan sistem (misal: uang sudah masuk ke mutasi tapi pass mati sebelum waktunya). Kalau terjadi kendala, langsung hubungi admin lewat Discord.',
+      'NEXO Pass adalah langganan opsional Rp 20.000 per bulan untuk kenyamanan ekstra, seperti inventori unlimited, kuota harian tambahan, dan akses beta. Pass tidak menjual kekuatan dalam game, hasil game tetap soal keberuntungan dan strategi.',
+      'Pembayarannya manual lewat QRIS dari e-wallet atau m-banking mana pun. Setelah kamu transfer dan mengunggah buktinya, admin memeriksa mutasi lalu mengaktifkan Pass-mu. Jam prosesnya pukul 08.00 sampai 22.00 WIB, transfer di luar jam itu tetap aman, hanya kemungkinan diproses esok hari.',
+      'Jujur adalah syarat utamanya. Bukti transfer palsu atau hasil suntingan, klaim sudah transfer padahal tidak ada uang masuk, bukti milik orang lain, dan spam pesanan demi memancing pass aktif tanpa bayar semuanya kami golongkan penipuan.',
+      'Sanksinya berjenjang. Pertama, pesanan ditolak dan akun di-timeout. Pelaku berulang atau yang terlanjur enak memakai pass hasil penipuan di-ban permanen dari bot dan web, pass dicabut saat itu juga, tanpa pengembalian akses maupun dana.',
+      'Pass hanya untuk akun Discord milikmu sendiri, sekali beli per bulan. Menyalahgunakan perk premium untuk botting, farming, atau merugikan pemain lain membuat pass dilepas sewaktu-waktu dan akunmu kena sanksi di atas.',
+      'Pembelian bersifat final tanpa pengembalian dana, kecuali murni kesalahan sistem, misalnya uang sudah masuk mutasi tapi pass mati sebelum waktunya. Kendala apa pun, langsung hubungi admin lewat Discord.',
     ],
   },
   {
@@ -56,7 +58,7 @@ const SECTIONS = [
   {
     title: 'Batas tanggung jawab.',
     body: [
-      'NEXO Games disediakan apa adanya. Kerugian tidak langsung akibat penggunaan bot (misal: sesi gaming terpotong karena Discord down) berada di luar tanggung jawab kami. Sengketa diselesaikan baik-baik lewat kanal support.',
+      'NEXO Games disediakan apa adanya. Kerugian tidak langsung akibat penggunaan bot, misalnya sesi gaming terpotong karena Discord down, berada di luar tanggung jawab kami. Sengketa diselesaikan baik-baik lewat kanal support.',
     ],
   },
   {
@@ -80,7 +82,7 @@ export default async function TermsPage() {
             Ketentuan Layanan NEXO Games.
           </h1>
           <div className="accent-bar mt-4" aria-hidden="true" />
-          <p className="mt-4 text-sm text-ink-muted">Berlaku sejak: 13 September 2026</p>
+          <p className="mt-4 text-sm text-ink-muted">Berlaku sejak 13 September 2026</p>
           <p className="mt-6 leading-relaxed text-ink-muted">
             Dengan memainkan NEXO Games di Discord atau memakai situs ini, kamu dianggap
             membaca dan menyetujui ketentuan di bawah. Bahasanya sengaja santai - kalau ada

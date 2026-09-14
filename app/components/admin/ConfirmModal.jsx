@@ -8,14 +8,14 @@ export default function ConfirmModal({ title, body, onCancel, onConfirm, busy })
         <h3 className="font-display text-lg text-danger">{title}</h3>
         <p className="mt-3 text-sm leading-relaxed text-ink-muted">{body}</p>
         <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onCancel} disabled={busy} className="btn-ghost !px-4 !py-2 text-sm cursor-pointer">
+          <button type="button" onClick={onCancel} disabled={busy} className="btn-ghost px-4! py-2! text-sm cursor-pointer">
             Batal
           </button>
           <button
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="rounded-xl bg-danger !text-white px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A83F32] disabled:opacity-50 cursor-pointer"
+            className="rounded-xl bg-danger text-white! px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A83F32] disabled:opacity-50 cursor-pointer"
           >
             {busy ? 'Mengirim…' : 'Ya, Lanjutkan'}
           </button>
