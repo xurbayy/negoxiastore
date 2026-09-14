@@ -61,7 +61,10 @@ function isTrulyPaid(st, row) {
   const tx = st.transaction_status;
   if (tx !== 'settlement' && tx !== 'capture') return false;
   if (st.fraud_status && st.fraud_status !== 'accept') return false;
-  if (String(st.gross_amount || '') !== String(Number(row.amount))) return false;
+  // FIX (2026-09-14): bandingkan NUMERIK - Midtrans kadang kirim "20000.00"
+  // (desimal) dan kadang "20000"; perbandingan string bikin pembayaran sah
+  // dianggap tidak cocok (order tidak pernah di-flip ke paid).
+  if (Number(st.gross_amount) !== Number(row.amount)) return false;
   if (st.transaction_id && String(st.order_id || '') !== midtransOrderId(row)) return false;
   return true;
 }

@@ -82,7 +82,11 @@ export async function POST(request) {
       args: [orderId],
     });
     const orow = order.rows[0];
-    if (orow && String(gross_amount) === String(Number(orow.amount))) {
+    // FIX (2026-09-14): bandingkan NUMERIK, bukan string. Midtrans kadang kirim
+    // "20000.00" (dengan desimal) dan kadang "20000" - perbandingan string
+    // bikin order berbayar TIDAK pernah di-flip ke paid (grant premium tidak
+    // pernah dikirim). Number("20000.00") === Number("20000") -> aman dua-duanya.
+    if (orow && Number(gross_amount) === Number(orow.amount)) {
       const flip = await db.execute({
         sql: "UPDATE orders SET status = 'paid', paid_at = ?, gateway_ref = ? WHERE id = ? AND status IN ('pending', 'canceled', 'expired')",
         args: [now, String(order_id), orderId],
