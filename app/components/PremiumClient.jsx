@@ -81,22 +81,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       return;
     }
     
-    setBuying(true);
-    setError(null);
-    try {
-      const meRes = await fetch('/api/me', { cache: 'no-store' });
-      const me = await meRes.json();
-      if (me.profile?.registered !== true || me.profile?.needsOnboarding === true) {
-        setError('Datamu belum terdaftar sebagai pemain. Daftar dulu di Discord: invite NEXO lalu ketik nxdaily. Setelah itu baru bisa beli NEXO Pass.');
-        setBuying(false);
-        return;
-      }
-    } catch {
-      setError('Gagal memeriksa status pemain. Coba lagi.');
-      setBuying(false);
-      return;
-    }
-    setBuying(false);
+    // Instantly show form, no need to check /api/me here which could hang
     setShowForm(true);
   }
 
@@ -178,7 +163,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       )}
 
       {showForm && !pending && !paid ? (
-        <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-surface-raised bg-surface-sunken p-6 shadow-xl relative text-left">
+        <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-[#E3D9C2] bg-white p-6 shadow-xl relative text-left">
           <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 text-ink-muted hover:text-ink">
             ✕
           </button>
@@ -192,7 +177,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
             <Image src="/images/qris.png" alt="QRIS Payment" width={200} height={200} className="rounded-lg" />
           </div>
 
-          <div className="mb-4 rounded-lg bg-surface-raised p-3 text-xs text-ink-muted">
+          <div className="mb-4 rounded-lg bg-[#FBF7EC] p-3 text-xs text-ink-muted">
             🕒 <strong>Jam Operasional: 08:00 - 22:00 WIB</strong><br/>
             Pembayaran di jam ini akan diproses cepat oleh Admin. Di luar jam ini, pesanan akan diproses besok.
           </div>
@@ -207,7 +192,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
                 placeholder="Cth: Budi Santoso"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                className="w-full rounded-lg border border-surface-raised bg-surface px-4 py-2 text-sm text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-[#E3D9C2] bg-white px-4 py-2 text-sm text-ink outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 disabled={buying}
               />
             </div>
@@ -221,7 +206,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
                 accept="image/*"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                className="w-full text-sm text-ink-muted file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20"
+                className="w-full text-sm text-ink-muted file:mr-4 file:rounded-full file:border-0 file:bg-[#FBF7EC] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#2B2118] hover:file:bg-[#EFE7D3]"
                 disabled={buying}
               />
               {fileError && <p className="mt-1 text-xs text-danger">{fileError}</p>}
@@ -254,9 +239,9 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
         <button
           onClick={startBuy}
           disabled={buying}
-          className="btn-primary !px-8 !py-4 text-base font-bold shadow-lg shadow-accent/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-full bg-[#FBF7EC] border border-[#E3D9C2] text-[#2B2118] hover:bg-[#F4EEDF] px-8 py-4 font-bold shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {buying ? 'Memproses...' : 'Bayar via QRIS'}
+          Bayar via QRIS
         </button>
       ) : null}
     </div>
