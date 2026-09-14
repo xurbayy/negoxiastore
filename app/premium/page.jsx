@@ -1,4 +1,3 @@
-import Script from 'next/script';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { getLatestSnapshot } from '../lib/snapshot';
@@ -19,9 +18,7 @@ export const metadata = {
   alternates: { canonical: '/premium' },
 };
 
-export default async function PremiumPage({ searchParams }) {
-  const sp = await searchParams; // Next 16: searchParams adalah Promise
-  const payment = typeof sp?.payment === 'string' ? sp.payment : '';
+export default async function PremiumPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
   const snap = await getLatestSnapshot();

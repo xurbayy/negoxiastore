@@ -10,11 +10,15 @@ export default function CookieConsent() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem('nexo_cookie_ok')) setShow(true);
-    } catch {
-      setShow(true);
-    }
+    // setTimeout(0): hindari setState sinkron di effect (cascade render).
+    const t = setTimeout(() => {
+      try {
+        if (!localStorage.getItem('nexo_cookie_ok')) setShow(true);
+      } catch {
+        setShow(true);
+      }
+    }, 0);
+    return () => clearTimeout(t);
   }, []);
 
   function accept() {
