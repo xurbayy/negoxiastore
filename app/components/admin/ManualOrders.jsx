@@ -37,7 +37,7 @@ export default function ManualOrders({ orders }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Manual Orders (QRIS)</h2>
+        <h2 className="text-2xl font-bold">Manual Orders</h2>
         <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
           {pendingOrders.length} Pending
         </div>
