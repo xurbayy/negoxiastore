@@ -18,7 +18,9 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
   const hasPass = (id) => premiumIds.includes(String(id));
   const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
 
-  const openCard = (row, board) => setSelected({ ...row, board });
+  // hasPass ikut dikirim ke kartu profil: pemegang NEXO Pass dapat sel
+  // tambahan (emoji + tulisan "NEXO Pass"), non-premium tetap 3 kolom.
+  const openCard = (row, board) => setSelected({ ...row, board, hasPass: hasPass(row.userId) });
 
   return (
     <>
