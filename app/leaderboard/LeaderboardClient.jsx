@@ -10,10 +10,12 @@ import ShareCardButton from '../components/ShareCardButton';
 // (60 dtk), ganti PP di Discord otomatis kebaca <=60 dtk tanpa request tambahan.
 // Share (wajib login): tiap baris punya tombol yang merender kartu peringkat
 // 4:5 di canvas lalu dibagikan via Web Share API (HP) / unduh (desktop).
+// Pemegang NEXO Pass (premiumIds dari snapshot bot) dapat badge logo kecil.
 // `children` = bagian Guild Terkuat (server component).
-export default function LeaderboardClient({ players, myId, loggedIn, children }) {
+export default function LeaderboardClient({ players, myId, loggedIn, premiumIds = [], children }) {
   const [selected, setSelected] = useState(null);
   const isMe = (id) => myId && String(id) === String(myId);
+  const hasPass = (id) => premiumIds.includes(String(id));
   const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
 
   const openCard = (row, board) => setSelected({ ...row, board });
@@ -76,6 +78,17 @@ export default function LeaderboardClient({ players, myId, loggedIn, children })
                           </span>
                         )}
                         <span className="truncate">{p.username}</span>
+                        {hasPass(p.userId) && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src="/nexo-logo-128.png"
+                            alt="Pemegang NEXO Pass"
+                            title="Pemegang NEXO Pass"
+                            width={18}
+                            height={18}
+                            className="h-4.5 w-4.5 shrink-0 rounded-full ring-2 ring-accent"
+                          />
+                        )}
                         {isMe(p.userId) && (
                           <span className="rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Kamu</span>
                         )}

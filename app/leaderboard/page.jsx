@@ -22,6 +22,9 @@ export default async function LeaderboardPage() {
   const snap = await getLatestSnapshot();
   const players = snap?.leaderboard || [];
   const guilds = snap?.guildBoard || [];
+  // Pemegang NEXO Pass aktif (dari premiumMembers snapshot bot) -> badge logo
+  // kecil di ujung nama pemain yang beli pass.
+  const premiumIds = (snap?.premiumMembers || []).map((m) => String(m.userId));
 
   // Highlight baris milik user yang sedang login (bandingkan via userId)
   // - logika isMe pindah ke LeaderboardClient (client component).
@@ -49,7 +52,7 @@ export default async function LeaderboardPage() {
 
           {/* Pemain -> Guild (client: baris pemain bisa diklik ->
               kartu profil + PP fresh; guild tetap server component) */}
-          <LeaderboardClient players={players} myId={myId} loggedIn={Boolean(session)}>
+          <LeaderboardClient players={players} myId={myId} loggedIn={Boolean(session)} premiumIds={premiumIds}>
 
           {/* Guild */}
           <section className="mt-12" aria-labelledby="lb-guild">
