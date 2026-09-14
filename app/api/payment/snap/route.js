@@ -153,6 +153,24 @@ export async function POST() {
     );
   }
 
+  // Guard ANTI-NUMPUK: kalau user masih punya order pending yang "hidup"
+  // (< 10 menit, token Snap masih berlaku), PAKAI ULANG token itu - jangan
+  // bikin order baru. Dulu tiap klik "Beli" bikin order baru -> riwayat penuh
+  // expired dan user bisa bayar token lama yang webhook-nya sudah tidak nyambung.
+  const pendingRow = await db.execute({
+    sql: "SELECT id, gateway_ref, created_at FROM orders WHERE discord_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1",
+    args: [session.discordId],
+  });
+  if (pendingRow.rows.length) {
+    const pr = pendingRow.rows[0];
+    const age = Date.now() - Number(pr.created_at);
+    const snapToken = pr.gateway_ref && !String(pr.gateway_ref).startsWith('snap error') ? String(pr.gateway_ref) : null;
+    if (snapToken && age < 10 * 60 * 1000) {
+      await touchActivity().catch(() => {});
+      return NextResponse.json({ ok: true, token: snapToken, clientKey: process.env.MIDTRANS_CLIENT_KEY || null, sandbox: !IS_PROD(), reused: true });
+    }
+  }
+
   const created = Date.now();
   const res = await db.execute({
     sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, created_at) VALUES (?, 'nexo_pass_monthly', ?, 'midtrans', 'pending', ?)",
