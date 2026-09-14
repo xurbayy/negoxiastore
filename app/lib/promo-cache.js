@@ -4,8 +4,13 @@
 import { getDb, schemaReady } from './db';
 
 // Panggil tiap snapshot bot masuk (POST /api/bot/stats).
-// reserved = MAX(reserved, claimed_bot) supaya klaim via Discord ikut terhitung,
-// exhausted = 1 kalau claimed >= quota. Kode hilang dari daftar bot -> exhausted.
+// reserved = MAX(reserved, claimed_bot) supaya klaim via Discord ikut terhitung.
+// exhausted SELALU dihitung ulang dari angka snapshot bot (claimed >= quota):
+// flag tidak boleh sticky. Dulu exhausted yang sudah 1 tidak pernah kembali 0
+// walau bot mengirim data baru bahwa kuota masih sisa -> kode hidup tampil
+// "HABIS" di panel dan ditolak /api/redeem (bug 2026-09-14). Bila bot memang
+// kehabisan stok, snapshot berikutnya tetap claimed >= quota -> flag menyala
+// lagi sendiri, jadi tidak ada risiko over-claim (bot tetap validator final).
 export async function syncPromoCache(db, promoCodes) {
   const codes = Array.isArray(promoCodes) ? promoCodes : [];
   const now = Date.now();
@@ -19,13 +24,12 @@ export async function syncPromoCache(db, promoCodes) {
     const claimed = Number(p.claimed) || 0;
 
     const cur = await db.execute({
-      sql: 'SELECT reserved, exhausted FROM web_promo_cache WHERE code = ?',
+      sql: 'SELECT reserved FROM web_promo_cache WHERE code = ?',
       args: [code],
     });
     const curReserved = cur.rows.length ? Number(cur.rows[0].reserved) : 0;
-    const curExhausted = cur.rows.length ? Number(cur.rows[0].exhausted) : 0;
     const reserved = Math.max(curReserved, Math.min(claimed, Math.max(quota, 0)));
-    const exhausted = quota > 0 && claimed >= quota ? 1 : curExhausted;
+    const exhausted = quota > 0 && claimed >= quota ? 1 : 0;
 
     if (cur.rows.length) {
       await db.execute({
