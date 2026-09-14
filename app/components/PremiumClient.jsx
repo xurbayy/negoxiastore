@@ -259,10 +259,10 @@ export default function PremiumClient({ loggedIn, botOnline, justPaid }) {
       ) : loggedIn ? (
         <button
           onClick={startBuy}
-          disabled={buying || !online}
+          disabled={buying}
           className="rounded-full bg-primary text-primary-content hover:bg-primary/90 px-8 py-4 font-bold shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Bayar via QRIS (Manual)
+          Bayar via QRIS
         </button>
       ) : null}
     </div>

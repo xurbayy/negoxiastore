@@ -37,10 +37,8 @@ export async function POST(request) {
   await schemaReady();
   const db = getDb();
 
-  const snap = await getLatestSnapshot();
-  if (!snap || Date.now() - Number(snap.ts) > 3 * 60 * 1000) {
-    return NextResponse.json({ ok: false, error: 'bot_offline' }, { status: 503 });
-  }
+  // Bot status check removed so users can still submit manual orders
+  // The commands will queue up in bot_commands and be processed when the bot is back online
 
   const isPremium = await userHasPremium(session.discordId);
   if (isPremium) {
