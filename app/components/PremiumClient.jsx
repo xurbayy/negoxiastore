@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
-import Image from 'next/image';
 
 const PERKS = [
   { emoji: 'gem', text: 'Badge Supporter Eksklusif (NEXO Pass) in-game & di profil web' },
@@ -173,8 +172,8 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
             Scan QRIS di bawah ini dengan aplikasi e-wallet atau m-banking kamu (GoPay, OVO, Dana, BCA, dll) sebesar <strong>Rp 20.000</strong>.
           </p>
           
-          <div className="bg-white p-2 rounded-xl border-4 border-primary/20 mx-auto w-fit mb-4">
-            <Image src="/images/qris.png" alt="QRIS Payment" width={200} height={200} className="rounded-lg" />
+          <div className="bg-white p-2 rounded-xl border-4 border-accent/20 mx-auto w-fit mb-4">
+            <img src="/images/qris.png" alt="QRIS Payment" width={200} height={200} className="rounded-lg object-contain" />
           </div>
 
           <div className="mb-4 rounded-lg bg-[#FBF7EC] p-3 text-xs text-ink-muted">
