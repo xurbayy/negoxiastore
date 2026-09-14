@@ -64,6 +64,12 @@ async function pruneNow(db, now) {
   // Webhook events >30 hari (tabel ini tanpa kolom id -> rowid).
   await deleteLimitedByRowid(db, 'webhook_events', 'processed_at < ?', [now - 30 * DAY]);
 
+  // Order pending TELANTAR: user buka popup Snap lalu pergi tanpa melanjutkan.
+  // Tanpa ini order menggantung 'pending' selamanya (dan bisa numpuk kalau user
+  // klik Beli lagi). 30 menit = token Snap sudah tidak relevan; order lama
+  // ditutup supaya user selalu mulai dari keadaan bersih.
+  await tryExec(db, "UPDATE orders SET status = 'expired' WHERE status = 'pending' AND created_at < ?", [now - 30 * 60_000]);
+
   // Emoji registry: yang sudah removed >90 hari.
   await deleteLimited(db, 'emoji_registry', 'removed_at IS NOT NULL AND removed_at < ?', [now - 90 * DAY]);
 }

@@ -156,10 +156,13 @@ export async function POST() {
     );
   }
 
-  // Guard ANTI-NUMPUK: kalau user masih punya order pending yang "hidup"
-  // (< 10 menit, token Snap masih berlaku), PAKAI ULANG token itu - jangan
-  // bikin order baru. Dulu tiap klik "Beli" bikin order baru -> riwayat penuh
-  // expired dan user bisa bayar token lama yang webhook-nya sudah tidak nyambung.
+  // Guard ANTI-NUMPUK: user hanya boleh punya SATU order pending.
+  //  - Order pending yang masih hidup (< 10 menit) -> pakai ulang tokennya.
+  //  - Order pending yang sudah lewat 10 menit (user tidak melanjutkan bayar)
+  //    -> di-EXPIRE dulu, baru boleh buat order baru.
+  // Dulu tiap klik "Beli" bikin order baru -> riwayat penuh expired dan user
+  // bisa bayar token lama yang webhook-nya sudah tidak nyambung. Sekarang
+  // TIDAK MUNGKIN ada 2 order pending numpuk untuk satu user.
   const pendingRow = await db.execute({
     sql: "SELECT id, gateway_ref, created_at FROM orders WHERE discord_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1",
     args: [session.discordId],
@@ -172,7 +175,19 @@ export async function POST() {
       await touchActivity().catch(() => {});
       return NextResponse.json({ ok: true, token: snapToken, clientKey: process.env.MIDTRANS_CLIENT_KEY || null, sandbox: !IS_PROD(), reused: true });
     }
+    // Lewat 10 menit / token tidak ada -> tutup order lama SEBELUM bikin baru.
+    await db.execute({
+      sql: "UPDATE orders SET status = 'expired' WHERE id = ? AND status = 'pending'",
+      args: [Number(pr.id)],
+    });
   }
+
+  // Bersihkan sisa pending lain (kalau ada dari versi lama yang numpuk) -
+  // jaminan: satu user maksimal SATU order pending.
+  await db.execute({
+    sql: "UPDATE orders SET status = 'expired' WHERE discord_id = ? AND status = 'pending'",
+    args: [session.discordId],
+  });
 
   const created = Date.now();
   const res = await db.execute({
