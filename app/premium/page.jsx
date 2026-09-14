@@ -27,6 +27,24 @@ export default async function PremiumPage({ searchParams }) {
   const snap = await getLatestSnapshot();
   const botOnline = isBotOnline(snap);
 
+  let initialOrder = null;
+  if (session) {
+    const { getDb, schemaReady } = await import('../lib/db');
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute({
+      sql: 'SELECT id, status, paid_at FROM orders WHERE discord_id = ? ORDER BY created_at DESC LIMIT 1',
+      args: [session.discordId],
+    });
+    if (res.rows.length) {
+      initialOrder = { 
+        id: Number(res.rows[0].id),
+        status: res.rows[0].status,
+        paidAt: res.rows[0].paid_at ? Number(res.rows[0].paid_at) : null
+      };
+    }
+  }
+
   return (
     <>
       <Navbar session={session} premiumActive={premiumActive} />
@@ -54,36 +72,14 @@ export default async function PremiumPage({ searchParams }) {
             pembayaran terkonfirmasi.
           </p>
 
-                {!botOnline && (
-          <p className="mx-auto mt-6 max-w-md rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
-            Bot sedang offline, pembelian sementara ditutup. Perk NEXO Pass hanya aktif
-            kalau bot hidup - uangnya tidak akan hilang, coba lagi nanti.
-          </p>
-        )}
-        {payment === 'done' && (
-          <p className="mx-auto mt-6 max-w-md rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
-            Pembayaran diterima! Menunggu konfirmasi terakhir dari penyedia - premium menyala otomatis begitu terkonfirmasi.
-          </p>
-        )}
-        {payment === 'pending' && (
-          <p className="mx-auto mt-6 max-w-md rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent-hover">
-            Pembayaran masih tertunda di sisi bank/e-wallet. Web mengecek otomatis tiap beberapa detik - begitu terkonfirmasi, premium nyala sendiri, tidak perlu bayar ulang.
-          </p>
-        )}
-        {payment === 'gagal' && (
-          <p className="mx-auto mt-6 max-w-md rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
-            Pembayaran belum selesai. Uang tidak terpotong - coba lagi, atau order lama akan kedetect otomatis.
-          </p>
-        )}
-        <PremiumClient loggedIn={Boolean(session)} botOnline={botOnline} justPaid={payment === 'done' || payment === 'pending'} />
+        <PremiumClient 
+          loggedIn={Boolean(session)} 
+          botOnline={botOnline} 
+          initialPremiumActive={premiumActive}
+          initialOrder={initialOrder}
+        />
         </div>
-            <Script
-        src={process.env.DUITKU_IS_PRODUCTION === 'true'
-          ? 'https://app.duitku.com/lib/js/duitku.js'
-          : 'https://app-sandbox.duitku.com/lib/js/duitku.js'}
-        strategy="lazyOnload"
-      />
-    </main>
+      </main>
       <Footer />
     </>
   );

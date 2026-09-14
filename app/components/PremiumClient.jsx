@@ -16,13 +16,13 @@ function nowMs() {
   return Date.now();
 }
 
-export default function PremiumClient({ loggedIn, botOnline, justPaid }) {
-  const [loading, setLoading] = useState(true);
+export default function PremiumClient({ loggedIn, botOnline, initialPremiumActive, initialOrder }) {
+  const [loading, setLoading] = useState(false); // No initial loading anymore!
   const [buying, setBuying] = useState(false);
   const [online, setOnline] = useState(botOnline);
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState(initialOrder || null);
   const [error, setError] = useState(null);
-  const [premiumActive, setPremiumActive] = useState(false);
+  const [premiumActive, setPremiumActive] = useState(initialPremiumActive || false);
   
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -46,26 +46,15 @@ export default function PremiumClient({ loggedIn, botOnline, justPaid }) {
         const m = await meRes.json();
         setPremiumActive(Boolean(m.profile?.exists && m.profile?.profile?.premium));
       }
-    } finally {
-      setLoading(false);
-    }
+    } catch {}
   }, []);
 
-  // Poll status untuk memantau approve admin
+  // Poll status untuk memantau approve admin secara background
   useEffect(() => {
-    if (!loggedIn || !justPaid) return;
+    if (!loggedIn || order?.status !== 'pending') return;
     const i1 = setInterval(loadStatus, 3000);
-    const i2 = setTimeout(() => {
-      clearInterval(i1);
-      setInterval(loadStatus, 15000);
-    }, 15000);
-    return () => { clearInterval(i1); clearTimeout(i2); };
-  }, [loggedIn, justPaid, loadStatus]);
-
-  useEffect(() => {
-    if (loggedIn) loadStatus();
-    else setLoading(false);
-  }, [loggedIn, loadStatus]);
+    return () => clearInterval(i1);
+  }, [loggedIn, order?.status, loadStatus]);
 
   const handleFileChange = (e) => {
     setFileError(null);
