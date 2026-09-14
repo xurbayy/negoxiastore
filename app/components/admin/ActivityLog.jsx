@@ -7,7 +7,7 @@ const STATUS_STYLE = {
   pending: 'bg-accent text-ink',
   done: 'bg-success text-white',
   failed: 'bg-danger text-white',
-  rejected: 'bg-card-dark-2 text-[#A99C8E]',
+  rejected: 'bg-card-dark-2 text-ink-faint',
 };
 
 const FILTERS = ['all', 'pending', 'done', 'failed', 'rejected'];

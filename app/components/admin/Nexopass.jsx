@@ -117,7 +117,7 @@ export default function Nexopass({ send, data }) {
                 <td className="px-4 py-3 font-mono text-xs">{o.discordId}</td>
                 <td className="px-4 py-3 text-right">Rp {fmt(o.amount)}</td>
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-wider ${o.status === 'paid' ? 'bg-success text-white' : o.status === 'pending' ? 'bg-accent text-ink' : 'bg-card-dark-2 text-[#A99C8E]'}`}>{o.status === 'pending' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current opacity-80" aria-hidden="true" />}{o.status}</span>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-wider ${o.status === 'paid' ? 'bg-success text-white' : o.status === 'pending' ? 'bg-accent text-ink' : 'bg-card-dark-2 text-ink-faint'}`}>{o.status === 'pending' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current opacity-80" aria-hidden="true" />}{o.status}</span>
                 </td>
                 <td className="px-4 py-3 text-xs text-ink-muted">{new Date(o.createdAt).toLocaleString('id-ID')}</td>
               </tr>

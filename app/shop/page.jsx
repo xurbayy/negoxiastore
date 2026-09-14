@@ -103,7 +103,7 @@ function TitleCard({ t }) {
             <img src={emojiSrc('goldcoin')} alt="poin" width={14} height={14} className="ml-1 inline h-3.5 w-3.5" />
           )}
         </div>
-        <code className="text-[0.65rem] text-[#A99C8E]">title_{String(t.key).toLowerCase()}</code>
+        <code className="text-[0.65rem] text-ink-faint">title_{String(t.key).toLowerCase()}</code>
       </div>
     </li>
   );

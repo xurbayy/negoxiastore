@@ -179,11 +179,39 @@ function validatePayload(action, p) {
       if (!t) return 'Teks admin title kosong.';
       return t.length <= 100 ? null : 'Teks admin title maks 100 karakter.';
     }
+    // --- Guard tambahan (audit): aksi yang butuh field wajib tapi dulu jatuh
+    // ke default. Tanpa ini, form yang mengirim field kosong lolos ke antrean
+    // lalu DITOLAK bot -> tampil sebagai "failed" di Activity Log (gagal senyap).
+    case 'delete_promo': {
+      const code = String(p.code || '').toUpperCase().trim();
+      return /^[A-Z0-9_]{3,24}$/.test(code) ? null : 'Kode promo tidak valid (3-24 karakter A-Z, 0-9, _).';
+    }
+    case 'remove_discount': {
+      return p.itemKey ? null : 'Item wajib dipilih untuk menghapus diskon.';
+    }
+    case 'clear_admin_title': {
+      return needId();
+    }
+    case 'reset_missions': {
+      // userId BUKAN wajib: kosong/null = re-roll misi SEMUA player (global).
+      if (p.userId === null || p.userId === undefined || p.userId === '') return null;
+      return needId();
+    }
+    case 'clear_lock': {
+      // userId BUKAN wajib: kosong/null = bersihkan SEMUA sesi nyangkut (global).
+      if (p.userId === null || p.userId === undefined || p.userId === '') return null;
+      return needId();
+    }
+    case 'set_announcement': {
+      if (p.channel !== 'global' && p.channel !== 'shop') return 'Channel pengumuman tidak valid (global / shop).';
+      // Text kosong = hapus pengumuman -> itu sah, bukan error.
+      const t = p.text === undefined || p.text === null ? '' : String(p.text);
+      return t.length <= 800 ? null : 'Teks pengumuman maks 800 karakter.';
+    }
     default:
       return null; // aksi lain divalidasi bot / tanpa range khusus
   }
 }
-
 // grant_premium: days > 3650 clamp ke 3650 (bot reject di atas itu).
 function clampDays(action, payload) {
   if (action !== 'grant_premium') return payload;

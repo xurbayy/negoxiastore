@@ -83,7 +83,7 @@ export default function PlayerProfileCard({ player, onClose }) {
             <div className="min-w-0">
               <p className="truncate font-display text-lg text-card-cream">{player.username}</p>
               {player.rank != null && (
-                <p className="mt-0.5 text-xs text-[#A99C8E]">
+                <p className="mt-0.5 text-xs text-ink-faint">
                   Peringkat #{player.rank} {player.board === 'richest' ? '· Terkaya' : '· Top Pemain'}
                 </p>
               )}
@@ -104,7 +104,7 @@ export default function PlayerProfileCard({ player, onClose }) {
         </div>
 
         <div className="border-t border-border-soft px-5 py-3">
-          <p className="text-center text-[0.7rem] text-[#A99C8E]">
+          <p className="text-center text-[0.7rem] text-ink-faint">
             Lihat profil lengkap & statistiknya in-game via <code className="font-mono">nxp</code> di Discord.
           </p>
         </div>

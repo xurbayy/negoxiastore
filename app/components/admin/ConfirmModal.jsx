@@ -15,7 +15,7 @@ export default function ConfirmModal({ title, body, onCancel, onConfirm, busy })
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="rounded-xl bg-danger text-white! px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A83F32] disabled:opacity-50 cursor-pointer"
+            className="rounded-xl bg-danger text-white! px-5 py-2 text-sm font-semibold text-white transition hover:bg-danger-hover disabled:opacity-50 cursor-pointer"
           >
             {busy ? 'Mengirim…' : 'Ya, Lanjutkan'}
           </button>

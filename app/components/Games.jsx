@@ -104,7 +104,7 @@ export default function Games() {
                       <div className="truncate text-sm font-semibold text-ink">{g.name}</div>
                       <div className="flex items-center gap-2">
                         <code className="font-mono text-xs text-accent-hover">{g.cmd}</code>
-                        {g.alias && <span className="truncate text-[0.65rem] text-[#A99C8E]">({g.alias})</span>}
+                        {g.alias && <span className="truncate text-[0.65rem] text-ink-faint">({g.alias})</span>}
                       </div>
                     </div>
                   </li>

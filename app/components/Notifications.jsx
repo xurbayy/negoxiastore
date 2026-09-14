@@ -57,21 +57,20 @@ export default function Notifications() {
 
   async function markRead(n) {
     try {
-      if (n.id.startsWith('d:')) {
-        // turunan: simpan penutupan permanen (DB) lalu buang dari daftar
-        await fetch('/api/me/notifications/read', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: n.id }),
-        });
-        setItems((arr) => arr.filter((x) => x.id !== n.id));
-        return;
-      }
+      // Satu endpoint menangani keduanya: id "p:<angka>" menandai read_at
+      // notifikasi personal, id "d:<key>" menyimpan penutupan turunan secara
+      // permanen di DB (web_notif_dismiss) - lihat api/me/notifications/read.
       await fetch('/api/me/notifications/read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: n.id }),
       });
+      if (n.id.startsWith('d:')) {
+        // Turunan: server menyimpannya sebagai dismiss permanen -> buang dari
+        // daftar lokal supaya langsung hilang tanpa menunggu poll berikutnya.
+        setItems((arr) => arr.filter((x) => x.id !== n.id));
+        return;
+      }
       setItems((arr) => arr.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
     } catch {}
   }
@@ -153,7 +152,7 @@ export default function Notifications() {
                       )}
                     </div>
                     {!n.read && (
-                      <button type="button" onClick={() => markRead(n)} aria-label="Tandai dibaca" className="shrink-0 text-[#A99C8E] transition hover:text-ink cursor-pointer">
+                      <button type="button" onClick={() => markRead(n)} aria-label="Tandai dibaca" className="shrink-0 text-ink-faint transition hover:text-ink cursor-pointer">
                         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
                       </button>
                     )}
@@ -183,7 +182,7 @@ export default function Notifications() {
                       <button
                         type="button"
                         onClick={() => markRead(n)}
-                        className="ml-auto text-[0.7rem] text-[#A99C8E] underline-offset-2 hover:underline cursor-pointer"
+                        className="ml-auto text-[0.7rem] text-ink-faint underline-offset-2 hover:underline cursor-pointer"
                       >
                         Tutup
                       </button>

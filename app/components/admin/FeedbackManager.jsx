@@ -1,10 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import ConfirmModal from './ConfirmModal';
 
 export default function FeedbackManager({ send, data }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  // Konfirmasi hapus pakai ConfirmModal (desain panel sendiri), BUKAN
+  // confirm() bawaan browser - aturan panel admin (lihat ConfirmModal).
+  const [pendingDelete, setPendingDelete] = useState(null); // { id } | null
+  const [deleting, setDeleting] = useState(false);
   const itemsPerPage = 10;
 
   if (!data?.feedback) return null;
@@ -21,10 +26,19 @@ export default function FeedbackManager({ send, data }) {
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const handleDelete = async (id) => {
-    if (!confirm('Yakin ingin menghapus feedback ini?')) return;
-    // Panggil action delete_feedback ke API admin
-    await send('delete_feedback', { id });
+  // Buka modal konfirmasi. Penghapusan sebenarnya baru jalan di confirmDelete.
+  const handleDelete = (id) => setPendingDelete({ id });
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      // Panggil action delete_feedback ke API admin
+      await send('delete_feedback', { id: pendingDelete.id });
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
   };
 
   const getKindColor = (kind) => {
@@ -105,6 +119,16 @@ export default function FeedbackManager({ send, data }) {
             Next &raquo;
           </button>
         </div>
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Hapus feedback ini?"
+          body="Feedback yang dihapus tidak bisa dikembalikan. Pesan tetap tersimpan di channel Discord jika sudah terkirim ke sana."
+          busy={deleting}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={confirmDelete}
+        />
       )}
     </div>
   );

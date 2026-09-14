@@ -28,6 +28,9 @@ export default function LoginConsent({ returnTo = '/me' }) {
           type="checkbox"
           checked={agreed}
           onChange={(e) => setAgreed(e.target.checked)}
+          // accent-[#F19A1A] = CSS property `accent-color` (warna checkbox
+          // native), bukan kelas warna tema. Nilainya sama dengan token accent,
+          // ditulis literal karena `accent-accent` bentrok dgn nama utilitasnya.
           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#F19A1A]"
         />
         <span className="text-xs leading-relaxed text-ink-muted">

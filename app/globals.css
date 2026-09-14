@@ -23,6 +23,12 @@
   --color-surface: #FBF7EC;
   --color-surface-raised: #EFE7D3;
   --color-surface-sunken: #F4EEDF;
+  /* Token tambahan (audit): nilai-nilai ini dulu ditulis hex mentah langsung di
+     komponen. Diberi nama supaya tidak ada lagi `[#hex]` di kelas Tailwind dan
+     konsisten kalau tema diubah. NILAI TIDAK DIUBAH - hanya diberi nama. */
+  --color-ink-faint: #A99C8E;
+  --color-danger-hover: #A83F32;
+  --color-ink-steel: #8EA2B9;
 }
 
 :root {

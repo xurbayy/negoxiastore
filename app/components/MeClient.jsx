@@ -239,7 +239,7 @@ export default function MeClient({ betaGames = null }) {
               )}
               <div>
                 <h1 className="font-display text-xl text-card-cream">{freshName}</h1>
-                <p className="text-sm text-[#A99C8E]">Login Discord berhasil</p>
+                <p className="text-sm text-ink-faint">Login Discord berhasil</p>
               </div>
             </div>
             <a href="/api/auth/logout" className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-3.5 py-1.5 text-sm font-semibold text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer">
@@ -257,8 +257,8 @@ export default function MeClient({ betaGames = null }) {
           <div className="nx-dark mx-auto mt-5 max-w-md px-5 py-4 text-left">
             <p className="text-sm leading-relaxed text-card-cream">
               <span className="font-bold text-accent">NEXO</span>{' '}
-              <span className="text-[#A99C8E]">&gt;</span>{' '}
-              <span className="text-[#8EA2B9]">&lt;@{freshName || 'kamu'}&gt;</span>{' '}
+              <span className="text-ink-faint">&gt;</span>{' '}
+              <span className="text-ink-steel">&lt;@{freshName || 'kamu'}&gt;</span>{' '}
               belum terdaftar di database-ku. Aku ini bot, bukan dukun. 🔮
             </p>
           </div>
@@ -291,7 +291,7 @@ export default function MeClient({ betaGames = null }) {
           {state.profile?.hint && (
             <p className="mx-auto mt-5 max-w-md text-xs italic text-ink-muted">{state.profile.hint}</p>
           )}
-          <p className="mx-auto mt-4 max-w-md text-[0.7rem] text-[#A99C8E]">
+          <p className="mx-auto mt-4 max-w-md text-[0.7rem] text-ink-faint">
             Halaman ini menyegarkan sendiri - data muncul otomatis begitu bot selesai memproses.
             Pastikan kamu login pakai akun Discord yang sama.
           </p>
@@ -301,8 +301,21 @@ export default function MeClient({ betaGames = null }) {
   }
 
   // ---------- PROFIL LENGKAP ----------
-  const isPremium = Boolean(p.premium);
-  const premiumActive = p.premium
+  // Normalisasi status premium: bot mengirim `premium` sebagai OBJEK
+  // ({tier, expiresAt, lifetime, daysLeft, betaAccess}) atau null. Boolean(obj)
+  // selalu true untuk objek apa pun - termasuk objek yang sudah KEDALUWARSA dari
+  // cache profil lama (<5 menit). Karena itu objeknya diperiksa isinya, sama
+  // seperti userHasPremium di lib/snapshot.js. Aturannya: lifetime = aktif;
+  // kalau tidak, expiresAt harus masih di depan now.
+  const isPremium = (() => {
+    const pr = p.premium;
+    if (pr === true) return true;
+    if (!pr || typeof pr !== 'object') return false;
+    if (pr.lifetime) return true;
+    const exp = Number(pr.expiresAt);
+    return Number.isFinite(exp) ? exp > nowMs() : false;
+  })();
+  const premiumActive = isPremium
     ? p.premium.lifetime
       ? 'LIFETIME'
       : `sisa ${p.premium.daysLeft ?? Math.max(0, Math.ceil((Number(p.premium.expiresAt) - nowMs()) / 86400000))} hari`
@@ -320,7 +333,7 @@ export default function MeClient({ betaGames = null }) {
       {/* ═══ HEADER: kartu dark ala Discord ═══ */}
       <div className="nx-dark overflow-hidden">
         <div className="nx-dark-header flex items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6">
-          <span className="truncate font-mono text-xs uppercase tracking-wider text-[#A99C8E]">profil pemain</span>
+          <span className="truncate font-mono text-xs uppercase tracking-wider text-ink-faint">profil pemain</span>
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             <a
               href="/api/auth/logout"
@@ -387,10 +400,10 @@ export default function MeClient({ betaGames = null }) {
                       NEXO Pass · {premiumActive}
                     </span>
                   ) : (
-                    <span className="nx-badge bg-card-dark-2 px-3 py-1 text-[#A99C8E]">NEXO Pass · Belum aktif</span>
+                    <span className="nx-badge bg-card-dark-2 px-3 py-1 text-ink-faint">NEXO Pass · Belum aktif</span>
                   )}
                 </div>
-                <p className="mt-1.5 text-sm text-[#A99C8E]">
+                <p className="mt-1.5 text-sm text-ink-faint">
                   {isPremium && p.usernameInGame && p.usernameInGame !== p.username && (
                     <span className="mr-2 text-xs">in-game: {p.usernameInGame}</span>
                   )}
@@ -409,14 +422,14 @@ export default function MeClient({ betaGames = null }) {
                 )}
                 {fmt(p.points)}
               </div>
-              <div className="text-xs font-medium uppercase tracking-wider text-[#A99C8E]">poin</div>
+              <div className="text-xs font-medium uppercase tracking-wider text-ink-faint">poin</div>
             </div>
           </div>
 
           {/* XP bar with shimmer */}
           {p.xpNext != null && (
             <div className="mt-5">
-              <div className="flex items-center justify-between text-xs text-[#A99C8E]">
+              <div className="flex items-center justify-between text-xs text-ink-faint">
                 <span className="font-semibold">Level {p.level}</span>
                 <span>{fmt(p.xp)} / {fmt(p.xpNext)} XP</span>
               </div>
@@ -436,7 +449,7 @@ export default function MeClient({ betaGames = null }) {
               ...(isPremium ? [['Total Won', p.totalWon], ['Total Bet', p.totalBet]] : []),
             ].map(([k, v]) => (
               <div key={k} className="stat-tile">
-                <dt className="flex items-center text-[0.65rem] uppercase tracking-wider text-[#A99C8E]">
+                <dt className="flex items-center text-[0.65rem] uppercase tracking-wider text-ink-faint">
                   {emojiSrc(STAT_ICONS[k]) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc(STAT_ICONS[k])} alt="" width={14} height={14} className="mr-1.5 inline h-3.5 w-3.5 shrink-0" />
@@ -447,8 +460,8 @@ export default function MeClient({ betaGames = null }) {
               </div>
             ))}
             {!isPremium && (
-              <div className="col-span-2 flex items-center justify-between gap-2 rounded-xl border border-dashed border-[#A99C8E]/30 px-4 py-3">
-                <span className="pl-1 flex items-center text-xs text-[#A99C8E]">
+              <div className="col-span-2 flex items-center justify-between gap-2 rounded-xl border border-dashed border-ink-faint/30 px-4 py-3">
+                <span className="pl-1 flex items-center text-xs text-ink-faint">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {emojiSrc('trophy') && <img src={emojiSrc('trophy')} alt="" width={13} height={13} className="mr-1 inline h-3 w-3" />} Total Won &amp;
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -469,7 +482,7 @@ export default function MeClient({ betaGames = null }) {
               Akun Premium · NEXO Pass
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-              {premiumActive === 'LIFETIME' ? 'Berlaku LIFETIME' : `Aktif sampai ${new Date(p.premium.expiresAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`}
+              {premiumActive === 'LIFETIME' ? 'Berlaku LIFETIME' : `Aktif sampai ${new Date(Number(p.premium.expiresAt)).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`}
               {p.premium.betaAccess && <span className="nx-badge bg-accent font-extrabold text-ink">Beta Access</span>}
             </p>
           </div>
@@ -505,7 +518,7 @@ export default function MeClient({ betaGames = null }) {
                   <Link href="/premium" className="btn-primary cursor-pointer">
                     Upgrade
                   </Link>
-                  <button type="button" onClick={hideUpsell} aria-label="Sembunyikan" className="text-[#A99C8E] transition hover:text-ink cursor-pointer">
+                  <button type="button" onClick={hideUpsell} aria-label="Sembunyikan" className="text-ink-faint transition hover:text-ink cursor-pointer">
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                   </button>
                 </div>
@@ -566,16 +579,16 @@ export default function MeClient({ betaGames = null }) {
           <div className="nx-dark overflow-hidden">
             <div className="nx-dark-header flex items-center justify-between px-6 py-3">
               <h3 className="font-display text-lg text-card-cream">Riwayat Game</h3>
-              {!isPremium && <span className="nx-badge bg-card-dark-2 text-[#A99C8E]">10 terakhir</span>}
+              {!isPremium && <span className="nx-badge bg-card-dark-2 text-ink-faint">10 terakhir</span>}
               {isPremium && historyPages > 1 && (
-                <span className="text-xs text-[#A99C8E]">
+                <span className="text-xs text-ink-faint">
                   halaman {safeHistoryPage + 1} dari {historyPages}
                 </span>
               )}
             </div>
             <div className="px-6 py-4">
               {(p.history || []).length === 0 ? (
-                <p className="py-3 text-sm text-[#A99C8E]">Belum ada game dimainkan.</p>
+                <p className="py-3 text-sm text-ink-faint">Belum ada game dimainkan.</p>
               ) : (
                 <ul className="divide-y divide-card-dark-2">
                   {historySlice.map((h, i) => (
@@ -585,7 +598,7 @@ export default function MeClient({ betaGames = null }) {
                         <span className={Number(h.points) >= 0 ? 'font-semibold text-success' : 'font-semibold text-danger'}>
                           {Number(h.points) >= 0 ? '+' : ''}{fmt(h.points)}
                         </span>
-                        <span className="w-24 text-right text-xs text-[#A99C8E]">{relTime(h.playedAt)}</span>
+                        <span className="w-24 text-right text-xs text-ink-faint">{relTime(h.playedAt)}</span>
                       </span>
                     </li>
                   ))}
@@ -612,7 +625,7 @@ export default function MeClient({ betaGames = null }) {
                 </div>
               )}
               {!isPremium && (p.history || []).length > 10 && (
-                <p className="mt-3 text-center text-xs text-[#A99C8E]">
+                <p className="mt-3 text-center text-xs text-ink-faint">
                   Riwayat lengkap 25 game terlihat dengan NEXO Pass.
                 </p>
               )}

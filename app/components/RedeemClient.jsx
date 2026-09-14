@@ -106,7 +106,7 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
         <div className="nx-dark mx-auto mt-4 max-w-sm px-4 py-3 text-left">
           <p className="text-sm leading-relaxed text-card-cream">
             <span className="font-bold text-accent">NEXO</span>{' '}
-            <span className="text-[#A99C8E]">&gt;</span>{' '}
+            <span className="text-ink-faint">&gt;</span>{' '}
             Sebelum bisa klaim kode, daftar dulu 10 detik di Discord.
           </p>
         </div>
@@ -119,7 +119,7 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
             Cek Lagi
           </button>
         </div>
-        <p className="mt-4 flex items-center justify-center gap-2 text-[0.7rem] text-[#A99C8E]">
+        <p className="mt-4 flex items-center justify-center gap-2 text-[0.7rem] text-ink-faint">
           <span className="pulse-dot" aria-hidden="true" />
           Otomatis cek ulang tiap 20 detik ·{' '}
           <Link href="/me" className="underline-offset-2 hover:underline cursor-pointer">Buka panduan lengkap</Link>
@@ -138,7 +138,7 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="NEXO2026"
           maxLength={24}
-          className="flex-1 rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-lg uppercase tracking-widest text-ink placeholder:text-[#A99C8E] focus:border-accent focus:outline-none"
+          className="flex-1 rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-lg uppercase tracking-widest text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
         <button type="submit" disabled={loading || !code.trim()} className="btn-primary cursor-pointer disabled:opacity-50">
           {loading ? 'Memproses…' : 'Redeem'}

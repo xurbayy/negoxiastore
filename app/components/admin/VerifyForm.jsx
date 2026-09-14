@@ -97,6 +97,8 @@ export default function VerifyForm() {
                   type="checkbox"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
+                  // accent-[#F19A1A] = CSS property `accent-color` (warna
+                  // checkbox native), nilainya sama dengan token accent.
                   className="h-4 w-4 cursor-pointer accent-[#F19A1A]"
                 />
                 Ingat perangkat ini (30 hari, tidak perlu kode lagi)

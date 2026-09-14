@@ -55,7 +55,7 @@ export default function PlayerLookup() {
             onChange={(e) => setId(e.target.value.replace(/\D/g, ''))}
             onKeyDown={(e) => e.key === 'Enter' && load(id)}
             placeholder="836383639439671366"
-            className="w-full rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-ink placeholder:text-[#A99C8E] focus:border-accent focus:outline-none"
+            className="w-full rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
           />
           <button type="button" disabled={busy || id.length < 5} onClick={() => load(id)}
             className="shrink-0 rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">

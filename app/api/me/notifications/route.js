@@ -10,7 +10,9 @@ export const dynamic = 'force-dynamic';
 //   1. PERSONAL  : tabel web_notifications (discord_id = user ATAU NULL = broadcast)
 //   2. TURUNAN   : di-compute dari snapshot terakhir (flash sale, broadcast
 //                  nxadmin, promo shop, kode redeem yang belum diklaim user)
-// Derived id format "d:<jenis>:<kunci>" - dismissal di sisi client (localStorage).
+// Derived id format "d:<jenis>:<kunci>". Penutupannya PERMANEN di DB per user
+// (tabel web_notif_dismiss) - bukan localStorage. Sudah ditutup = tidak muncul
+// lagi walau ganti perangkat / bot-web restart; isi baru (key beda) tetap muncul.
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ ok: true, notifications: [], unreadCount: 0 }, { status: 200 });

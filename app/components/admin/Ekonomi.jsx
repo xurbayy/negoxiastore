@@ -44,7 +44,7 @@ export default function Ekonomi({ send }) {
           value={userId}
           onChange={(e) => setUserId(e.target.value.replace(/\D/g, ''))}
           placeholder="836383639439671366"
-          className="mt-3 w-full rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-ink placeholder:text-[#A99C8E] focus:border-accent focus:outline-none"
+          className="mt-3 w-full rounded-xl border border-border-soft bg-bg-soft px-4 py-3 font-mono text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
         {uid && uid.length < 5 && <p className="mt-2 text-xs text-danger">ID minimal 5 digit.</p>}
       </div>
