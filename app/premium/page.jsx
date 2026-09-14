@@ -78,10 +78,9 @@ export default async function PremiumPage({ searchParams }) {
         <PremiumClient loggedIn={Boolean(session)} botOnline={botOnline} justPaid={payment === 'done' || payment === 'pending'} />
         </div>
             <Script
-        src={process.env.MIDTRANS_IS_PRODUCTION === 'true'
-          ? 'https://app.midtrans.com/snap/snap.js'
-          : 'https://app.sandbox.midtrans.com/snap/snap.js'}
-        data-client-key={process.env.MIDTRANS_CLIENT_KEY || ''}
+        src={process.env.DUITKU_IS_PRODUCTION === 'true'
+          ? 'https://app.duitku.com/lib/js/duitku.js'
+          : 'https://app-sandbox.duitku.com/lib/js/duitku.js'}
         strategy="lazyOnload"
       />
     </main>

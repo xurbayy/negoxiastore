@@ -6,32 +6,47 @@ import { touchActivity } from '../../../lib/activity';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/payment/webhook - webhook Midtrans (PUBLIK, tanpa Bearer).
-// Wajib verifikasi signature + idempotency via webhook_events.
+// POST /api/payment/webhook - webhook Duitku (PUBLIK, tanpa Bearer).
+// Wajib verifikasi signature MD5 + idempotency via webhook_events.
+// Duitku mengirim body sebagai application/x-www-form-urlencoded ATAU JSON.
 export async function POST(request) {
-  const serverKey = process.env.MIDTRANS_SERVER_KEY;
-  if (!serverKey) return NextResponse.json({ ok: false }, { status: 503 });
+  const merchantCode = process.env.DUITKU_MERCHANT_CODE;
+  const apiKey = process.env.DUITKU_API_KEY;
+  if (!merchantCode || !apiKey) return new Response('OK', { status: 503 });
 
+  // Parse body — Duitku bisa kirim form-urlencoded atau JSON
   let body;
-  try { body = await request.json(); } catch { return NextResponse.json({ ok: false }, { status: 400 }); }
-
-  const {
-    order_id, status_code, gross_amount, signature_key,
-    transaction_status, fraud_status,
-  } = body || {};
-  if (!order_id || !signature_key) return NextResponse.json({ ok: false }, { status: 400 });
-
-  // 1. Verifikasi signature: sha512(order_id + status_code + gross_amount + ServerKey)
-  const expected = crypto
-    .createHash('sha512')
-    .update(`${order_id}${status_code}${gross_amount}${serverKey}`)
-    .digest('hex');
-  if (signature_key !== expected) {
-    return NextResponse.json({ ok: false, error: 'invalid signature' }, { status: 403 });
+  try {
+    const contentType = request.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      body = await request.json();
+    } else {
+      // application/x-www-form-urlencoded
+      const text = await request.text();
+      body = Object.fromEntries(new URLSearchParams(text));
+    }
+  } catch {
+    return new Response('OK', { status: 400 });
   }
 
-  // 2. Idempotency: event_id = sha512(signature_key + transaction_status)
-  const eventId = crypto.createHash('sha512').update(`${signature_key}${transaction_status}`).digest('hex');
+  const {
+    merchantOrderId, amount, resultCode, signature,
+    merchantUserId, reference,
+  } = body || {};
+  if (!merchantOrderId || !signature) return new Response('OK', { status: 400 });
+
+  // 1. Verifikasi signature: MD5(merchantCode + amount + merchantOrderId + apiKey)
+  const expected = crypto
+    .createHash('md5')
+    .update(`${merchantCode}${amount}${merchantOrderId}${apiKey}`)
+    .digest('hex');
+  if (signature !== expected) {
+    console.warn('[duitku-webhook] invalid signature', merchantOrderId);
+    return new Response('Invalid Signature', { status: 403 });
+  }
+
+  // 2. Idempotency: event_id = md5(signature + resultCode)
+  const eventId = crypto.createHash('md5').update(`${signature}${resultCode}`).digest('hex');
   await schemaReady();
   const db = getDb();
 
@@ -40,60 +55,52 @@ export async function POST(request) {
     args: [eventId],
   });
   if (seen.rows.length) {
-    return NextResponse.json({ ok: true, duplicate: true });
+    return new Response('OK', { status: 200 });
   }
 
-  // 3. Cari order berdasarkan order_id Midtrans (kolom gateway_ref saat pending = snap token;
-  //    order_id Midtrans format NEXO-<id>-<ts> -> ambil id tengah)
-  const m = /^NEXO-(\d+)-\d+$/.exec(String(order_id));
+  // 3. Cari order berdasarkan merchantOrderId (format NEXO-<id>-<ts> -> ambil id tengah)
+  const m = /^NEXO-(\d+)-\d+$/.exec(String(merchantOrderId));
   if (!m) {
     await db.execute({
       sql: 'INSERT INTO webhook_events (event_id, gateway, payload, processed_at) VALUES (?, ?, ?, ?)',
-      args: [eventId, 'midtrans', JSON.stringify(body), Date.now()],
+      args: [eventId, 'duitku', JSON.stringify(body), Date.now()],
     });
-    return NextResponse.json({ ok: true, unknown_order: true });
+    return new Response('OK', { status: 200 });
   }
   const orderId = Number(m[1]);
 
-  // 4. Update status sesuai transaction_status
-  const txStatus = Array.isArray(transaction_status) ? transaction_status[0] : transaction_status;
-  const paid = status_code === '200' && (txStatus === 'settlement' || txStatus === 'capture') && (!fraud_status || fraud_status === 'accept');
-  const failed = txStatus === 'expire' || txStatus === 'cancel' || txStatus === 'deny';
+  // 4. Tentukan status dari resultCode
+  //    "00" = Success/Lunas, "01" = Pending/Gagal, "02" = Expired/Batal
+  const paid = String(resultCode) === '00';
+  const failed = String(resultCode) === '02';
 
   // Krusial: uang masuk TAPI bot sedang mati -> JANGAN tandai paid, JANGAN catat
-  // event, dan balas 500 supaya Midtrans RETRY webhook-nya sendiri. (Dulu balas
-  // 200 deferred: Midtrans berhenti retry dan settlement menggantung sampai user
-  // buka /premium lagi - uang masuk tanpa jejak. Idempotensi juga tidak boleh
-  // keburu tercatat, karena retry dengan event_id sama akan dianggap duplicate.)
-  // Cadangan tetap: poll GET /api/payment/snap + rekonsiliasi premium.
+  // event, dan balas 500 supaya Duitku RETRY webhook-nya sendiri.
   if (paid) {
     const liveSnap = await getLatestSnapshot();
     if (!liveSnap || Date.now() - Number(liveSnap.ts) > 3 * 60 * 1000) {
-      return NextResponse.json({ ok: false, error: 'bot offline, coba ulang' }, { status: 500 });
+      return new Response('bot offline, retry later', { status: 500 });
     }
   }
 
   if (paid) {
     const now = Date.now();
     // TRANSISI ATOMIK: hanya pemenang UPDATE yang enqueue grant (poll 2 dtk
-    // & webhook tidak dobel antrean). Gross amount harus = harga order.
+    // & webhook tidak dobel antrean). Amount harus = harga order.
     const order = await db.execute({
       sql: 'SELECT discord_id, amount FROM orders WHERE id = ?',
       args: [orderId],
     });
     const orow = order.rows[0];
-    // FIX (2026-09-14): bandingkan NUMERIK, bukan string. Midtrans kadang kirim
-    // "20000.00" (dengan desimal) dan kadang "20000" - perbandingan string
-    // bikin order berbayar TIDAK pernah di-flip ke paid (grant premium tidak
-    // pernah dikirim). Number("20000.00") === Number("20000") -> aman dua-duanya.
-    if (orow && Number(gross_amount) === Number(orow.amount)) {
+    // Bandingkan NUMERIK — Duitku kadang kirim "20000.00"
+    if (orow && Number(amount) === Number(orow.amount)) {
       const flip = await db.execute({
         sql: "UPDATE orders SET status = 'paid', paid_at = ?, gateway_ref = ? WHERE id = ? AND status IN ('pending', 'canceled', 'expired')",
-        args: [now, String(order_id), orderId],
+        args: [now, String(reference || merchantOrderId), orderId],
       });
       if (flip.rowsAffected > 0 && orow.discord_id) {
         await db.execute({
-          sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'midtrans', 'pending', ?)",
+          sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'duitku', 'pending', ?)",
           args: [JSON.stringify({ userId: orow.discord_id, tier: 'pro', days: 30 }), now],
         });
         await db.execute({
@@ -103,19 +110,19 @@ export async function POST(request) {
       }
     }
   } else if (failed) {
-    const status = transaction_status === 'expire' ? 'expired' : transaction_status === 'cancel' ? 'canceled' : 'failed';
     await db.execute({
       sql: 'UPDATE orders SET status = ? WHERE id = ? AND status = ?',
-      args: [status, orderId, 'pending'],
+      args: ['expired', orderId, 'pending'],
     });
   }
 
   // 5. Catat event (semua kasus)
   await db.execute({
     sql: 'INSERT INTO webhook_events (event_id, gateway, payload, processed_at) VALUES (?, ?, ?, ?)',
-    args: [eventId, 'midtrans', JSON.stringify(body), Date.now()],
+    args: [eventId, 'duitku', JSON.stringify(body), Date.now()],
   });
 
   await touchActivity().catch(() => {});
-  return NextResponse.json({ ok: true });
+  // Duitku mengharapkan response text "OK" dengan HTTP 200
+  return new Response('OK', { status: 200 });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
 import { getLatestSnapshot } from '../../../lib/snapshot';
@@ -8,68 +9,73 @@ import { SITE_URL } from '../../../lib/site';
 export const dynamic = 'force-dynamic';
 
 const PRICE = 20000; // konstanta server - harga NEXO Pass (jangan expose ke client)
-const IS_PROD = () => process.env.MIDTRANS_IS_PRODUCTION === 'true';
+const IS_PROD = () => process.env.DUITKU_IS_PRODUCTION === 'true';
 
-// Order_id Midtrans deterministik dari baris orders -> status bisa dicek ulang
+// Order_id deterministik dari baris orders -> status bisa dicek ulang
 // kapan pun tanpa kolom tambahan (webhook tidak selalu bisa reached, mis. dev).
-function midtransOrderId(row) {
+function duitkuOrderId(row) {
   return `NEXO-${row.id}-${row.created_at}`;
 }
 
-// Cek status transaksi ke Midtrans Core API v2 (Server Key, Basic auth).
-// Docs: https://docs.midtrans.com/reference/get-transaction-status
-async function midtransStatus(orderId) {
-  const serverKey = process.env.MIDTRANS_SERVER_KEY;
-  if (!serverKey || !orderId) return null;
-  const base = IS_PROD() ? 'https://api.midtrans.com' : 'https://api.sandbox.midtrans.com';
-  const url = `${base}/v2/${encodeURIComponent(orderId)}/status`;
+// MD5 signature helper
+function md5(...parts) {
+  return crypto.createHash('md5').update(parts.join('')).digest('hex');
+}
+
+// Cek status transaksi ke Duitku API.
+// Docs: https://docs.duitku.com
+async function duitkuStatus(orderId) {
+  const merchantCode = process.env.DUITKU_MERCHANT_CODE;
+  const apiKey = process.env.DUITKU_API_KEY;
+  if (!merchantCode || !apiKey || !orderId) return null;
+
+  const base = IS_PROD()
+    ? 'https://passport.duitku.com/webapi/api/merchant/transactionStatus'
+    : 'https://sandbox.duitku.com/webapi/api/merchant/transactionStatus';
+
+  const signature = md5(merchantCode, orderId, apiKey);
+
   try {
-    const res = await fetch(url, {
-      headers: { Authorization: 'Basic ' + Buffer.from(serverKey + ':').toString('base64') },
+    const res = await fetch(base, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merchantCode,
+        merchantOrderId: orderId,
+        signature,
+      }),
     });
-    if (res.status === 404) {
-      // 404 ASLI Midtrans selalu ada body JSON (mis. error_code 4041).
-      // 404 BODY KOSONG = bukan Midtrans - biasanya WAF/proxy jaringan yang
-      // memblokir endpoint status (pernah terbukti bikin order berbayar
-      // dianggap hantu lalu expired sepihak). Anggap error sementara.
-      try { await res.json(); return { http: 404 }; } catch { return null; }
-    }
     if (!res.ok) {
-      console.warn('[midtrans-status] non-ok response', res.status, orderId);
+      console.warn('[duitku-status] non-ok response', res.status, orderId);
       return null;
     }
     const body = await res.json();
-    console.log('[midtrans-status]', orderId, body.transaction_status);
-    // GOTCHA (fix 2026-09-14): Midtrans membalas HTTP 200 + body
-    // { status_code: "404", status_message: "Transaction doesn't exist." }
-    // untuk transaksi yang popup-nya dibuka tapi tidak pernah dibayar.
-    // Dulu hanya HTTP 404 yang dikenali -> order 'pending' NYANGKUT selamanya
-    // (user melihat "jangan bayar dua kali" padahal transaksinya tidak ada).
-    // Perlakukan sama seperti HTTP 404: transaksi tidak ada.
-    if (String(body.status_code) === '404') return { http: 404, notFound: true };
-    return { http: res.status, ...body, transaction_status: Array.isArray(body.transaction_status) ? body.transaction_status[0] : body.transaction_status };
+    console.log('[duitku-status]', orderId, body.statusCode, body.statusMessage);
+
+    // statusCode: "00" = Success, "01" = Pending, "02" = Canceled/Expired
+    if (String(body.statusCode) === '00') {
+      return { http: 200, transaction_status: 'settlement', amount: body.amount, reference: body.reference };
+    }
+    if (String(body.statusCode) === '02') {
+      return { http: 200, transaction_status: 'expire' };
+    }
+    // "01" = masih pending
+    return { http: 200, transaction_status: 'pending' };
   } catch (err) {
-    console.warn('[midtrans-status] fetch error', orderId, err.message);
+    console.warn('[duitku-status] fetch error', orderId, err.message);
     return null;
   }
 }
 
-// Verifikasi isi respons Midtrans - JANGAN percaya status doang:
-// nominal harus persis = harga order, order_id harus milik order ini,
-// fraud_status wajib accept.
+// Verifikasi isi respons Duitku - nominal harus persis = harga order.
 function isTrulyPaid(st, row) {
-  const tx = st.transaction_status;
-  if (tx !== 'settlement' && tx !== 'capture') return false;
-  if (st.fraud_status && st.fraud_status !== 'accept') return false;
-  // FIX (2026-09-14): bandingkan NUMERIK - Midtrans kadang kirim "20000.00"
-  // (desimal) dan kadang "20000"; perbandingan string bikin pembayaran sah
-  // dianggap tidak cocok (order tidak pernah di-flip ke paid).
-  if (Number(st.gross_amount) !== Number(row.amount)) return false;
-  if (st.transaction_id && String(st.order_id || '') !== midtransOrderId(row)) return false;
+  if (st.transaction_status !== 'settlement') return false;
+  // Bandingkan NUMERIK — Duitku kadang kirim "20000.00"
+  if (st.amount != null && Number(st.amount) !== Number(row.amount)) return false;
   return true;
 }
 
-// Terapkan status Midtrans ke order (persis logika webhook + grant_premium).
+// Terapkan status Duitku ke order (persis logika webhook + grant_premium).
 async function applyStatus(db, row, st) {
   const now = Date.now();
   const paid = isTrulyPaid(st, row);
@@ -82,7 +88,7 @@ async function applyStatus(db, row, st) {
     });
     if (flip.rowsAffected > 0) {
       await db.execute({
-        sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'midtrans', 'pending', ?)",
+        sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'duitku', 'pending', ?)",
         args: [JSON.stringify({ userId: row.discord_id, tier: 'pro', days: 30 }), now],
       });
       await db.execute({
@@ -93,22 +99,21 @@ async function applyStatus(db, row, st) {
     }
     return 'paid';
   }
-  if (['expire', 'cancel', 'deny'].includes(st.transaction_status)) {
-    const s = st.transaction_status === 'expire' ? 'expired' : st.transaction_status === 'cancel' ? 'canceled' : 'failed';
+  if (st.transaction_status === 'expire') {
     await db.execute({
       sql: 'UPDATE orders SET status = ? WHERE id = ? AND status = ?',
-      args: [s, Number(row.id), 'pending'],
+      args: ['expired', Number(row.id), 'pending'],
     });
-    return s;
+    return 'expired';
   }
   return null;
 }
 
-// Aturan anti-nyangkut: order pending yang umurnya lewat 24 jam (batas token
-// Snap) atau transaksinya tidak pernah muncul di Midtrans (404) setelah 1 jam
+// Aturan anti-nyangkut: order pending yang umurnya lewat 24 jam (batas token)
+// atau transaksinya tidak pernah muncul di Duitku setelah 10 menit
 // -> dianggap expired, user langsung bisa beli lagi.
 const DAY_MS = 24 * 60 * 60 * 1000;
-const STALE_NO_TX_MS = 10 * 60 * 1000; // 10 menit: popup 404 = hantu, jangan menunggu 1 jam
+const STALE_NO_TX_MS = 10 * 60 * 1000;
 async function expireStuck(db, row, missingTx) {
   const age = Date.now() - Number(row.created_at);
   const shouldExpire = age > DAY_MS || (missingTx && age > STALE_NO_TX_MS);
@@ -120,17 +125,18 @@ async function expireStuck(db, row, missingTx) {
   return 'expired';
 }
 
-// POST /api/payment/snap - buat order + Snap token Midtrans (user login member).
+// POST /api/payment/snap - buat order + Duitku Pop reference (user login member).
 export async function POST() {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: 'unauthenticated', returnTo: '/premium' }, { status: 401 });
   }
 
-  const serverKey = process.env.MIDTRANS_SERVER_KEY;
-  if (!serverKey) {
+  const merchantCode = process.env.DUITKU_MERCHANT_CODE;
+  const apiKey = process.env.DUITKU_API_KEY;
+  if (!merchantCode || !apiKey) {
     return NextResponse.json(
-      { ok: false, error: 'Pembayaran belum dikonfigurasi (MIDTRANS_SERVER_KEY kosong).' },
+      { ok: false, error: 'Pembayaran belum dikonfigurasi (DUITKU_MERCHANT_CODE / DUITKU_API_KEY kosong).' },
       { status: 503 }
     );
   }
@@ -157,12 +163,9 @@ export async function POST() {
   }
 
   // Guard ANTI-NUMPUK: user hanya boleh punya SATU order pending.
-  //  - Order pending yang masih hidup (< 10 menit) -> pakai ulang tokennya.
+  //  - Order pending yang masih hidup (< 10 menit) -> pakai ulang reference-nya.
   //  - Order pending yang sudah lewat 10 menit (user tidak melanjutkan bayar)
   //    -> di-EXPIRE dulu, baru boleh buat order baru.
-  // Dulu tiap klik "Beli" bikin order baru -> riwayat penuh expired dan user
-  // bisa bayar token lama yang webhook-nya sudah tidak nyambung. Sekarang
-  // TIDAK MUNGKIN ada 2 order pending numpuk untuk satu user.
   const pendingRow = await db.execute({
     sql: "SELECT id, gateway_ref, created_at FROM orders WHERE discord_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1",
     args: [session.discordId],
@@ -170,12 +173,12 @@ export async function POST() {
   if (pendingRow.rows.length) {
     const pr = pendingRow.rows[0];
     const age = Date.now() - Number(pr.created_at);
-    const snapToken = pr.gateway_ref && !String(pr.gateway_ref).startsWith('snap error') ? String(pr.gateway_ref) : null;
-    if (snapToken && age < 10 * 60 * 1000) {
+    const reference = pr.gateway_ref && !String(pr.gateway_ref).startsWith('duitku error') ? String(pr.gateway_ref) : null;
+    if (reference && age < 10 * 60 * 1000) {
       await touchActivity().catch(() => {});
-      return NextResponse.json({ ok: true, token: snapToken, clientKey: process.env.MIDTRANS_CLIENT_KEY || null, sandbox: !IS_PROD(), reused: true });
+      return NextResponse.json({ ok: true, reference, sandbox: !IS_PROD(), reused: true });
     }
-    // Lewat 10 menit / token tidak ada -> tutup order lama SEBELUM bikin baru.
+    // Lewat 10 menit / reference tidak ada -> tutup order lama SEBELUM bikin baru.
     await db.execute({
       sql: "UPDATE orders SET status = 'expired' WHERE id = ? AND status = 'pending'",
       args: [Number(pr.id)],
@@ -191,55 +194,68 @@ export async function POST() {
 
   const created = Date.now();
   const res = await db.execute({
-    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, created_at) VALUES (?, 'nexo_pass_monthly', ?, 'midtrans', 'pending', ?)",
+    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, created_at) VALUES (?, 'nexo_pass_monthly', ?, 'duitku', 'pending', ?)",
     args: [session.discordId, PRICE, created],
   });
   const orderId = Number(res.lastInsertRowid);
-  const midtransId = `NEXO-${orderId}-${created}`;
+  const merchantOrderId = `NEXO-${orderId}-${created}`;
 
-  const auth = Buffer.from(`${serverKey}:`).toString('base64');
+  // Duitku createinvoice: signature = MD5(merchantCode + merchantOrderId + paymentAmount + apiKey)
+  const signature = md5(merchantCode, merchantOrderId, String(PRICE), apiKey);
+
   const endpoint = IS_PROD()
-    ? 'https://app.midtrans.com/snap/v1/transactions'
-    : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+    ? 'https://api.duitku.com/api/merchant/createinvoice'
+    : 'https://api-sandbox.duitku.com/api/merchant/createinvoice';
 
-  const snapRes = await fetch(endpoint, {
+  const invoiceRes = await fetch(endpoint, {
     method: 'POST',
-    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      transaction_details: { order_id: midtransId, gross_amount: PRICE },
-      customer_details: { customer_id: session.discordId, first_name: session.username },
-      // Parameter RESMI Snap API: setelah user selesai/pagal bayar, browser
-      // diarahkan ke URL ini (bukan example.com default dari dashboard).
-      // 'pending' dipisah: uang belum settle -> jangan klaim "berhasil".
-      callbacks: {
-        finish: `${SITE_URL}/premium?payment=done`,
-        pending: `${SITE_URL}/premium?payment=pending`,
-        error: `${SITE_URL}/premium?payment=gagal`,
-        unset: `${SITE_URL}/premium`,
-      },
+      paymentAmount: PRICE,
+      merchantOrderId,
+      productDetails: 'NEXO Pass Monthly',
+      email: `${session.discordId}@nexogames.local`,
+      merchantUserInfo: session.discordId,
+      customerVaName: session.username || 'NEXO Player',
+      callbackUrl: `${SITE_URL}/api/payment/webhook`,
+      returnUrl: `${SITE_URL}/premium?payment=done`,
+      expiryPeriod: 1440, // 24 jam dalam menit
+      signature,
+      paymentMethod: '', // kosong = tampilkan semua metode
     }),
   });
-  if (!snapRes.ok) {
-    const detail = await snapRes.text().catch(() => '');
+
+  if (!invoiceRes.ok) {
+    const detail = await invoiceRes.text().catch(() => '');
+    console.error('[duitku-create] error', invoiceRes.status, detail);
     await db.execute({
       sql: "UPDATE orders SET status = 'failed', gateway_ref = ? WHERE id = ?",
-      args: [`snap error ${snapRes.status}: ${detail.slice(0, 120)}`, orderId],
+      args: [`duitku error ${invoiceRes.status}: ${detail.slice(0, 120)}`, orderId],
     });
     return NextResponse.json({ ok: false, error: 'Gagal membuat transaksi pembayaran.' }, { status: 502 });
   }
-  const snapJson = await snapRes.json();
+  const invoiceJson = await invoiceRes.json();
+
+  if (invoiceJson.statusCode !== '00' && invoiceJson.statusCode !== undefined) {
+    console.error('[duitku-create] statusCode not 00', invoiceJson);
+    await db.execute({
+      sql: "UPDATE orders SET status = 'failed', gateway_ref = ? WHERE id = ?",
+      args: [`duitku error: ${invoiceJson.statusMessage || 'unknown'}`, orderId],
+    });
+    return NextResponse.json({ ok: false, error: 'Gagal membuat transaksi pembayaran.' }, { status: 502 });
+  }
 
   await db.execute({
     sql: 'UPDATE orders SET gateway_ref = ? WHERE id = ?',
-    args: [snapJson.token, orderId],
+    args: [invoiceJson.reference, orderId],
   });
 
   await touchActivity();
-  return NextResponse.json({ ok: true, token: snapJson.token, clientKey: process.env.MIDTRANS_CLIENT_KEY || null, sandbox: !IS_PROD() });
+  return NextResponse.json({ ok: true, reference: invoiceJson.reference, paymentUrl: invoiceJson.paymentUrl, sandbox: !IS_PROD() });
 }
 
 // GET /api/payment/snap - status order user; order pending disinkron aktif
-// dari Midtrans (webhook tidak selalu bisa reached, mis. dev localhost).
+// dari Duitku (webhook tidak selalu bisa reached, mis. dev localhost).
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
@@ -258,12 +274,13 @@ export async function GET() {
 
   const withinRecheck = row.status === 'pending'
     || (Date.now() - Number(row.created_at) < 72 * 60 * 60 * 1000);
-  if (['pending', 'canceled', 'expired'].includes(row.status) && withinRecheck && process.env.MIDTRANS_SERVER_KEY) {
-    const st = await midtransStatus(midtransOrderId(row));
+  if (['pending', 'canceled', 'expired'].includes(row.status) && withinRecheck && process.env.DUITKU_API_KEY) {
+    const st = await duitkuStatus(duitkuOrderId(row));
     let applied = null;
-    if (st && st.http === 404) applied = await expireStuck(db, row, true);
-    else if (st) applied = await applyStatus(db, row, st);
-    else applied = await expireStuck(db, row, false); // cek status gagal: tetap batasi umur
+    if (st && st.transaction_status === 'expire') applied = await expireStuck(db, row, false);
+    else if (st && st.transaction_status === 'settlement') applied = await applyStatus(db, row, st);
+    else if (!st) applied = await expireStuck(db, row, true);
+    else applied = await expireStuck(db, row, false);
     if (applied) row = { ...row, status: applied };
   }
 
@@ -275,7 +292,7 @@ export async function GET() {
       plan: row.plan,
       amount: Number(row.amount),
       status: row.status,
-      snapToken: row.status === 'pending' ? row.gateway_ref : null,
+      reference: row.status === 'pending' ? row.gateway_ref : null,
       createdAt: Number(row.created_at),
       paidAt: row.paid_at ? Number(row.paid_at) : null,
     },

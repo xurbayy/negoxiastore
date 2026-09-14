@@ -14,7 +14,7 @@ const PERKS = [
   { emoji: 'download3', text: 'Profil Web Premium: grafik riwayat & badge khusus di website' },
 ];
 
-// Alur beli NEXO Pass: cek status order -> beli (Snap popup Midtrans).
+// Alur beli NEXO Pass: cek status order -> beli (Duitku Pop popup).
 // Sudah premium = tombol disabled. Belum login = redirect /login?returnTo=/premium.
 function nowMs() {
   return Date.now();
@@ -54,7 +54,7 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
     else setLoading(false);
   }, [loggedIn, loadStatus]);
 
-  // Baru diarahkan dari Midtrans (payment=done): kejar status tiap 2 detik
+  // Baru diarahkan dari Duitku (payment=done): kejar status tiap 2 detik
   // selama 12 detik pertama sampai order berubah dari pending.
   useEffect(() => {
     if (!loggedIn || !justPaid) return;
@@ -106,16 +106,21 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
           }
           throw new Error(d.error === 'bot_offline' ? 'Sedang tidak bisa membeli: bot lagi mati. Coba lagi beberapa menit lagi, uangnya dijamin aman.' : (d.error || 'Gagal membuat transaksi.'));
         }
-        setOrder({ status: 'pending', snapToken: d.token });
-        if (window.snap) {
-          window.snap.pay(d.token, {
-            onSuccess: () => loadStatus(),
-            onPending: () => loadStatus(),
-            onError: () => setError('Pembayaran gagal diproses. Coba lagi.'),
-            onClose: () => loadStatus(),
+        setOrder({ status: 'pending', reference: d.reference });
+        if (typeof checkout !== 'undefined' && checkout.process) {
+          checkout.process(d.reference, {
+            successEvent: () => loadStatus(),
+            pendingEvent: () => loadStatus(),
+            errorEvent: () => setError('Pembayaran gagal diproses. Coba lagi.'),
+            closeEvent: () => loadStatus(),
           });
         } else {
-          setError('Popup pembayaran belum siap. Muat ulang halaman lalu coba lagi.');
+          // Fallback: buka paymentUrl di tab baru kalau SDK belum load
+          if (d.paymentUrl) {
+            window.open(d.paymentUrl, '_blank');
+          } else {
+            setError('Popup pembayaran belum siap. Muat ulang halaman lalu coba lagi.');
+          }
         }
       })
       .catch((e) => setError(e.message))
@@ -123,12 +128,12 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
   }
 
   function payNow() {
-    if (order?.snapToken && window.snap) {
-      window.snap.pay(order.snapToken, {
-        onSuccess: () => loadStatus(),
-        onPending: () => loadStatus(),
-        onError: () => setError('Pembayaran gagal diproses.'),
-        onClose: () => {},
+    if (order?.reference && typeof checkout !== 'undefined' && checkout.process) {
+      checkout.process(order.reference, {
+        successEvent: () => loadStatus(),
+        pendingEvent: () => loadStatus(),
+        errorEvent: () => setError('Pembayaran gagal diproses.'),
+        closeEvent: () => {},
       });
     }
   }
@@ -173,7 +178,7 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
       ) : loggedIn && pending ? (
         <>
           {justPaid ? (
-            // Baru balik dari halaman Midtrans "Payment successful" - JANGAN
+            // Baru balik dari halaman Duitku "Payment successful" - JANGAN
             // tampilkan tombol "Lanjut Bayar" (risiko user bayar DUA KALI).
             // Webhook sedang memproses; halaman ini poll tiap 2 detik.
             <p className="rounded-xl border border-success/40 bg-success/10 px-5 py-3 text-sm font-semibold text-success">
