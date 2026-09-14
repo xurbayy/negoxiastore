@@ -128,12 +128,12 @@ export function stripEmojiToken(str) {
 // push snapshot berikutnya. Aman kalau DB error -> false.
 export async function userHasPremium(discordId) {
   if (!discordId) return false;
-  const snap = await getLatestSnapshot();
-  if ((snap?.premiumMembers || []).some((m) => String(m.userId) === String(discordId))) return true;
 
-  // Fallback cepat: profil terakhir dari bot (diisi oleh ACK LIVE webhook/ack).
-  // Dipakai HANYA kalau datanya masih segar (< 5 menit) supaya premium yang
-  // sudah dicabut tidak terus tampil dari cache lama.
+  // Cek profil terakhir dari bot (diisi oleh ACK LIVE webhook/ack atau /api/me).
+  // Dipakai HANYA kalau datanya masih segar (< 5 menit). Jika segar, ini adalah
+  // SUMBER KEBENARAN PALING AKURAT (karena ini request spesifik untuk user ini).
+  // Memperbaiki bug di mana admin mencabut premium manual, tapi snapshot global
+  // terlambat update, sehingga user tidak bisa beli lagi.
   try {
     const r = await safeQuery(async () => {
       await schemaReady();
@@ -146,12 +146,16 @@ export async function userHasPremium(discordId) {
       const filledAt = Number(res.rows[0].filled_at || 0);
       if (!filledAt || Date.now() - filledAt > 5 * 60_000) return null;
       const parsed = JSON.parse(res.rows[0].data);
-      return parsed?.profile?.premium ? true : null;
+      return parsed?.profile?.premium === true; // true atau false (boolean)
     });
-    return Boolean(r);
-  } catch {
-    return false;
-  }
+    if (r !== null) return r; // Jika ada data segar, langsung gunakan itu! (bisa true atau false)
+  } catch {}
+
+  // Fallback ke snapshot global jika tidak ada data spesifik yang segar.
+  const snap = await getLatestSnapshot();
+  if ((snap?.premiumMembers || []).some((m) => String(m.userId) === String(discordId))) return true;
+
+  return false;
 }
 
 export async function isUserBanned(discordId) {

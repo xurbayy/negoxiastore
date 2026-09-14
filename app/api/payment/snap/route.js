@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
-import { getLatestSnapshot } from '../../../lib/snapshot';
+import { getLatestSnapshot, userHasPremium } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
 import { SITE_URL } from '../../../lib/site';
 
@@ -153,11 +153,11 @@ export async function POST() {
       { status: 503 }
     );
   }
-  // Guard: user yang sudah premium tidak bisa beli lagi (cek profil bot terakhir).
-  const premiumMember = (snap?.premiumMembers || []).find((m) => m.userId === session.discordId);
-  if (premiumMember) {
+  // Guard: user yang sudah premium tidak bisa beli lagi (cek profil bot terbaru).
+  const isPremium = await userHasPremium(session.discordId);
+  if (isPremium) {
     return NextResponse.json(
-      { ok: false, error: 'premium_active', expiresAt: premiumMember.expiresAt },
+      { ok: false, error: 'premium_active' },
       { status: 409 }
     );
   }
