@@ -14,12 +14,13 @@ import FeedbackManager from './FeedbackManager';
 import ActivityLog from './ActivityLog';
 import PlayerLookup from './PlayerLookup';
 import Titles from './Titles';
+import ManualOrders from './ManualOrders';
 
 // Sidebar dikelompokkan per area kerja + badge angka live (dari data yang
 // sudah di-poll - tanpa API baru). Visual saja, alur data tidak berubah.
 const TAB_GROUPS = [
   { label: 'Pantau', tabs: [['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
-  { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem']] },
+  { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
   { label: 'Member', tabs: [['nexopass', 'NEXO Pass'], ['titles', 'Titles']] },
   { label: 'Komunitas', tabs: [['broadcast', 'Broadcast'], ['moderasi', 'Sanksi & Moderasi'], ['feedback', 'Feedback']] },
 ];
@@ -42,6 +43,7 @@ export default function AdminShell({ username, avatar = null }) {
     moderasi: (data.snapshot?.monitor?.bannedUsers || []).length,
     feedback: (data.feedback || []).length,
     nexopass: (data.snapshot?.premiumMembers || []).length,
+    manualorders: (data.orders || []).filter((r) => r.status === 'pending' && r.gateway === 'manual').length,
   } : {};
 
   const load = useCallback(async () => {
@@ -274,6 +276,7 @@ export default function AdminShell({ username, avatar = null }) {
             {tab === 'players' && <PlayerLookup />}
             {tab === 'redeem' && <RedeemManager send={send} data={data} />}
             {tab === 'titles' && <Titles send={send} data={data} />}
+            {tab === 'manualorders' && <ManualOrders orders={data?.orders} send={send} />}
             {tab === 'broadcast' && <BroadcastManager send={send} data={data} />}
             {tab === 'moderasi' && <Moderasi send={send} data={data} />}
             {tab === 'feedback' && <FeedbackManager send={send} data={data} />}

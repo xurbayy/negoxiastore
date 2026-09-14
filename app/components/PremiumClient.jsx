@@ -1,43 +1,45 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { emojiSrc } from '../lib/emojisClient';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 
 const PERKS = [
-  { emoji: 'PE_PandaBackPack', text: 'Inventori Unlimited: simpan item tanpa batas 5 per jenis' },
-  { emoji: 'sun58', text: 'Kuota Harian +5.000 pts: limit main harianmu naik di atas streak bonus' },
-  { emoji: '267042fire', text: 'Klaim Harian +10%: reward nxdaily selalu 10% lebih besar' },
-  { emoji: 'goldcoin', text: 'Bunga Pinjaman -10%: pinjam di bank lebih murah' },
-  { emoji: 'tasks', text: '+1 Slot Misi Harian: 4 misi per hari, lebih banyak poin dicairkan' },
-  { emoji: 'UC_Checkmark', text: 'Prioritas Render: papan game muncul lebih cepat + cooldown render setengah' },
-  { emoji: 'controller', text: 'Akses Game Beta: coba game baru sebelum rilis publik' },
+  { emoji: 'gem', text: 'Badge Supporter Eksklusif (NEXO Pass) in-game & di profil web' },
+  { emoji: 'crown', text: 'Role NEXO PASS berwana emas mengkilap di Discord' },
+  { emoji: 'backpack', text: 'Kapasitas Inventori TERBUKA BEBAS (dari max 5 jadi Unlimited)' },
+  { emoji: 'battery', text: '+20% Bonus limit main harian (Kuota Energi & Action Points)' },
+  { emoji: 'zap', text: 'Prioritas Render: avatar & aset in-game diprioritaskan server' },
   { emoji: 'download3', text: 'Profil Web Premium: grafik riwayat & badge khusus di website' },
 ];
 
-// Alur beli NEXO Pass: cek status order -> beli (Duitku Pop popup).
-// Sudah premium = tombol disabled. Belum login = redirect /login?returnTo=/premium.
 function nowMs() {
   return Date.now();
 }
 
-export default function PremiumClient({ loggedIn, botOnline = true, justPaid = false }) {
-  const [order, setOrder] = useState(null);
-  const [premiumActive, setPremiumActive] = useState(false);
-  const [online, setOnline] = useState(botOnline);
+export default function PremiumClient({ loggedIn, botOnline, justPaid }) {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
+  const [online, setOnline] = useState(botOnline);
+  const [order, setOrder] = useState(null);
   const [error, setError] = useState(null);
+  const [premiumActive, setPremiumActive] = useState(false);
+  
+  // Form states
+  const [showForm, setShowForm] = useState(false);
+  const [senderName, setSenderName] = useState('');
+  const [receiptBase64, setReceiptBase64] = useState('');
+  const [fileError, setFileError] = useState(null);
+  const fileInputRef = useRef(null);
 
   const loadStatus = useCallback(async () => {
     try {
       const [payRes, meRes] = await Promise.all([
-        fetch('/api/payment/snap', { cache: 'no-store' }),
+        fetch('/api/payment/manual', { cache: 'no-store' }),
         fetch('/api/me', { cache: 'no-store' }),
       ]);
       if (payRes.ok) {
         const d = await payRes.json();
         setOrder(d.order || null);
-
         setOnline(Boolean(d.botOnline));
       }
       if (meRes.ok) {
@@ -49,39 +51,46 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
     }
   }, []);
 
+  // Poll status untuk memantau approve admin
+  useEffect(() => {
+    if (!loggedIn || !justPaid) return;
+    const i1 = setInterval(loadStatus, 3000);
+    const i2 = setTimeout(() => {
+      clearInterval(i1);
+      setInterval(loadStatus, 15000);
+    }, 15000);
+    return () => { clearInterval(i1); clearTimeout(i2); };
+  }, [loggedIn, justPaid, loadStatus]);
+
   useEffect(() => {
     if (loggedIn) loadStatus();
     else setLoading(false);
   }, [loggedIn, loadStatus]);
 
-  // Baru diarahkan dari Duitku (payment=done): kejar status tiap 2 detik
-  // selama 12 detik pertama sampai order berubah dari pending.
-  useEffect(() => {
-    if (!loggedIn || !justPaid) return;
-    let tries = 0;
-    const iv = setInterval(async () => {
-      tries += 1;
-      const res = await fetch('/api/payment/snap', { cache: 'no-store' });
-      const d = await res.json().catch(() => ({}));
-      if (d.order && d.order.status !== 'pending') { clearInterval(iv); loadStatus(); return; }
-      if (tries >= 6) clearInterval(iv);
-    }, 2000);
-    return () => clearInterval(iv);
-  }, [loggedIn, justPaid, loadStatus]);
+  const handleFileChange = (e) => {
+    setFileError(null);
+    const file = e.target.files[0];
+    if (!file) return;
 
-  // Poll status: cepat (5 dtk) saat ada pembayaran menggantung; jinak 30 dtk
-  // utk deteksi "bot sudah hidup lagi" tanpa refresh halaman.
-  useEffect(() => {
-    const iv = setInterval(loadStatus, order && order.status === 'pending' ? 2000 : 30000);
-    return () => clearInterval(iv);
-  }, [order, loadStatus]);
+    if (!file.type.startsWith('image/')) {
+      setFileError('File harus berupa gambar (JPG/PNG).');
+      return;
+    }
+    if (file.size > 1.5 * 1024 * 1024) {
+      setFileError('Ukuran file maksimal 1MB. Silahkan compress/screenshot ulang.');
+      return;
+    }
 
-  async function buy() {
+    const reader = new FileReader();
+    reader.onload = (ev) => setReceiptBase64(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  async function startBuy() {
     if (!loggedIn) {
       window.location.href = '/api/auth/login?returnTo=%2Fpremium';
       return;
     }
-    // Aturan: tanpa registered=true di bot, tombol beli tidak boleh aktif.
     try {
       const meRes = await fetch('/api/me', { cache: 'no-store' });
       const me = await meRes.json();
@@ -93,64 +102,60 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
       setError('Gagal memeriksa status pemain. Coba lagi.');
       return;
     }
+    setShowForm(true);
+    setError(null);
+  }
+
+  async function submitPayment() {
+    if (!senderName || senderName.length < 3) {
+      setError('Masukkan nama pengirim yang valid.');
+      return;
+    }
+    if (!receiptBase64) {
+      setError('Upload bukti transfer terlebih dahulu.');
+      return;
+    }
     setBuying(true);
     setError(null);
-    fetch('/api/payment/snap', { method: 'POST' })
+    
+    fetch('/api/payment/manual', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ senderName, receiptBase64 })
+    })
       .then(async (res) => {
         const d = await res.json();
         if (!res.ok) {
           if (d.error === 'premium_active') {
             setPremiumActive(true);
+            setShowForm(false);
             loadStatus();
             return;
           }
-          throw new Error(d.error === 'bot_offline' ? 'Sedang tidak bisa membeli: bot lagi mati. Coba lagi beberapa menit lagi, uangnya dijamin aman.' : (d.error || 'Gagal membuat transaksi.'));
+          throw new Error(d.error === 'bot_offline' ? 'Sedang tidak bisa membeli: bot lagi mati.' : (d.error || 'Gagal mengirim pembayaran.'));
         }
-        setOrder({ status: 'pending', reference: d.reference });
-        if (typeof checkout !== 'undefined' && checkout.process) {
-          checkout.process(d.reference, {
-            successEvent: () => loadStatus(),
-            pendingEvent: () => loadStatus(),
-            errorEvent: () => setError('Pembayaran gagal diproses. Coba lagi.'),
-            closeEvent: () => loadStatus(),
-          });
-        } else {
-          // Fallback: buka paymentUrl di tab baru kalau SDK belum load
-          if (d.paymentUrl) {
-            window.open(d.paymentUrl, '_blank');
-          } else {
-            setError('Popup pembayaran belum siap. Muat ulang halaman lalu coba lagi.');
-          }
-        }
+        setShowForm(false);
+        setOrder({ status: 'pending' });
+        loadStatus();
       })
       .catch((e) => setError(e.message))
       .finally(() => setBuying(false));
   }
 
-  function payNow() {
-    if (order?.reference && typeof checkout !== 'undefined' && checkout.process) {
-      checkout.process(order.reference, {
-        successEvent: () => loadStatus(),
-        pendingEvent: () => loadStatus(),
-        errorEvent: () => setError('Pembayaran gagal diproses.'),
-        closeEvent: () => {},
-      });
-    }
-  }
-
   if (loading) {
-    return <div className="skeleton mx-auto mt-8 h-14 w-64" />;
+    return (
+      <div className="mt-8 flex animate-pulse flex-col items-center gap-4">
+        <div className="h-10 w-32 rounded-lg bg-surface-raised" />
+        <div className="h-4 w-48 rounded bg-surface-raised" />
+      </div>
+    );
   }
 
-  // Status premium aktif: kartu hijau jelas + tombol hilang (tidak membingungkan)
   if (premiumActive) {
     return (
       <div className="mt-8 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-3 rounded-2xl bg-success px-6 py-4 text-white shadow-md">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-success">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
-          </span>
-          <p className="font-semibold">Kamu sudah Premium</p>
+        <div className="rounded-xl border border-success/40 bg-success/10 px-5 py-3 text-sm font-semibold text-success">
+          Kamu sudah Premium
         </div>
         <p className="text-xs text-ink-muted">Semua perk aktif di Discord dan halaman profil.</p>
       </div>
@@ -163,61 +168,103 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
   return (
     <div className="mt-8 flex flex-col items-center gap-3">
       {!loggedIn && (
-        <>
-          <button type="button" onClick={buy} className="btn-primary !px-8 !py-3.5 text-base cursor-pointer">
-            Login untuk Membeli
-          </button>
-          <p className="text-xs text-ink-muted">Login pakai Discord, lanjut bayar via QRIS atau e-wallet.</p>
-        </>
+        <p className="text-xs text-ink-muted">Login untuk melihat status langgananmu.</p>
       )}
-
-      {loggedIn && paid && (premiumActive || (order.paidAt && nowMs() - order.paidAt < 3 * 60 * 1000)) ? (
-        <p className="rounded-xl border border-success/40 bg-success/10 px-5 py-3 text-sm font-semibold text-success">
-          Pembayaran diterima! Premium aktif dalam ~5-10 detik{premiumActive ? ' - sudah aktif, cek lonceng notifikasi.' : '.'}
-        </p>
-      ) : loggedIn && pending ? (
-        <>
-          {justPaid ? (
-            // Baru balik dari halaman Duitku "Payment successful" - JANGAN
-            // tampilkan tombol "Lanjut Bayar" (risiko user bayar DUA KALI).
-            // Webhook sedang memproses; halaman ini poll tiap 2 detik.
-            <p className="rounded-xl border border-success/40 bg-success/10 px-5 py-3 text-sm font-semibold text-success">
-              Pembayaran diterima! Sedang diverifikasi otomatis - jangan bayar lagi, premium menyala sendiri dalam beberapa detik.
-            </p>
-          ) : (
-            <>
-              <p className="rounded-xl border border-accent/40 bg-accent/10 px-5 py-3 text-sm text-accent-hover">
-                Pembayaran terakhir belum selesai. Kalau kamu sudah transfer, JANGAN bayar dua kali - statusnya otomatis dicek ulang tiap beberapa detik. Atau lanjut bayar di bawah.
-              </p>
-              <button type="button" onClick={payNow} className="btn-primary cursor-pointer text-sm">
-                Lanjut Bayar
-              </button>
-            </>
-          )}
-        </>
-      ) : loggedIn ? (
-        <button type="button" onClick={buy} disabled={buying || !online} className="btn-primary !px-8 !py-3.5 text-base cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
-          {buying ? 'Memproses…' : !online ? 'Bot Offline - Beli Nanti Lagi' : 'Beli NEXO Pass · Rp 20.000/bulan'}
-        </button>
-      ) : null}
 
       {error && (
-        <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+        <div className="max-w-md rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-center text-sm text-danger shadow-sm">
           {error}
-        </p>
+        </div>
+      )}
+      
+      {!online && (
+        <div className="max-w-md rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-center text-sm text-warning shadow-sm">
+          <strong>Perhatian:</strong> Sistem bot Nexo sedang offline/maintenance. Pesanan mungkin agak terlambat diproses.
+        </div>
       )}
 
-      <ul className="mx-auto mt-8 grid w-full max-w-2xl gap-3 text-left sm:grid-cols-2">
-        {PERKS.map((p) => (
-          <li key={p.text} className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3.5">
-            {emojiSrc(p.emoji) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={emojiSrc(p.emoji)} alt="" width={20} height={20} loading="lazy" className="mt-0.5 h-5 w-5 shrink-0" />
-            )}
-            <span className="text-sm leading-snug text-ink">{p.text}</span>
-          </li>
-        ))}
-      </ul>
+      {showForm && !pending && !paid ? (
+        <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-surface-raised bg-surface-sunken p-6 shadow-xl relative text-left">
+          <button onClick={() => setShowForm(false)} className="absolute top-4 right-4 text-ink-muted hover:text-ink">
+            ✕
+          </button>
+          
+          <h3 className="text-xl font-bold mb-4">Bayar via QRIS</h3>
+          <p className="text-sm text-ink-muted mb-4">
+            Scan QRIS di bawah ini dengan aplikasi e-wallet atau m-banking kamu (GoPay, OVO, Dana, BCA, dll) sebesar <strong>Rp 20.000</strong>.
+          </p>
+          
+          <div className="bg-white p-2 rounded-xl border-4 border-primary/20 mx-auto w-fit mb-4">
+            <Image src="/images/qris.png" alt="QRIS Payment" width={200} height={200} className="rounded-lg" />
+          </div>
+
+          <div className="mb-4 rounded-lg bg-surface-raised p-3 text-xs text-ink-muted">
+            🕒 <strong>Jam Operasional: 08:00 - 22:00 WIB</strong><br/>
+            Pembayaran di jam ini akan diproses cepat oleh Admin. Di luar jam ini, pesanan akan diproses besok.
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">
+                Nama Pengirim (sesuai rekening/e-wallet)
+              </label>
+              <input
+                type="text"
+                placeholder="Cth: Budi Santoso"
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                className="w-full rounded-lg border border-surface-raised bg-surface px-4 py-2 text-sm text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                disabled={buying}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-1">
+                Upload Bukti Transfer
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="w-full text-sm text-ink-muted file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20"
+                disabled={buying}
+              />
+              {fileError && <p className="mt-1 text-xs text-danger">{fileError}</p>}
+            </div>
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <button
+              onClick={submitPayment}
+              disabled={buying || !senderName || !receiptBase64}
+              className="flex-1 justify-center rounded-xl bg-primary text-primary-content hover:bg-primary/90 px-5 py-3 font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {buying ? 'Mengirim...' : 'Konfirmasi Bayar'}
+            </button>
+          </div>
+        </div>
+      ) : loggedIn && paid && (premiumActive || (order.paidAt && nowMs() - order.paidAt < 3 * 60 * 1000)) ? (
+        <div className="rounded-xl border border-success/40 bg-success/10 px-5 py-3 text-sm font-semibold text-success">
+          Pembayaran diterima! Premium sudah aktif.
+        </div>
+      ) : loggedIn && pending ? (
+        <div className="max-w-sm w-full rounded-2xl border border-warning/40 bg-warning/10 p-6 text-center text-warning shadow-sm">
+          <div className="text-3xl mb-2">⏳</div>
+          <h3 className="font-bold text-lg mb-2">Lagi diproses, silahkan tunggu</h3>
+          <p className="text-sm opacity-90">
+            Admin sedang memvalidasi bukti transfer kamu. Cek halaman ini secara berkala, pesanan akan segera disetujui.
+          </p>
+        </div>
+      ) : loggedIn ? (
+        <button
+          onClick={startBuy}
+          disabled={buying || !online}
+          className="rounded-full bg-primary text-primary-content hover:bg-primary/90 px-8 py-4 font-bold shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Bayar via QRIS (Manual)
+        </button>
+      ) : null}
     </div>
   );
 }

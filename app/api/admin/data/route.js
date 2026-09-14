@@ -23,7 +23,7 @@ export async function GET() {
   const db = getDb();
 
   const orders = await db.execute(
-    'SELECT id, discord_id, plan, amount, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 20'
+    'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 50'
   );
 
   const log = await db.execute(
@@ -56,6 +56,8 @@ export async function GET() {
         discordId: r.discord_id,
         plan: r.plan,
         amount: Number(r.amount),
+        gateway: r.gateway,
+        gatewayRef: r.gateway_ref,
         status: r.status,
         createdAt: Number(r.created_at),
         paidAt: r.paid_at ? Number(r.paid_at) : null,
