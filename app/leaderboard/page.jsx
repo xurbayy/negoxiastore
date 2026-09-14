@@ -5,6 +5,7 @@ import { emojiSrc } from '../lib/emojis';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
+import LeaderboardClient from '../leaderboard/LeaderboardClient';
 
 export const metadata = {
   title: 'Leaderboard',
@@ -23,10 +24,9 @@ export default async function LeaderboardPage() {
   const guilds = snap?.guildBoard || [];
   const richest = snap?.monitor?.richest || [];
 
-  // Highlight baris milik user yang sedang login (bandingkan via userId).
+  // Highlight baris milik user yang sedang login (bandingkan via userId)
+  // - logika isMe pindah ke LeaderboardClient (client component).
   const myId = session?.discordId || null;
-  const isMe = (id) => myId && String(id) === myId;
-  const rowMe = "bg-accent/15 border-l-4 border-l-accent";
 
   return (
     <>
@@ -48,66 +48,9 @@ export default async function LeaderboardPage() {
             </p>
           )}
 
-          {/* Pemain */}
-          <section className="mt-10" aria-labelledby="lb-pemain">
-            <h2 id="lb-pemain" className="font-display text-xl text-ink">
-            {emojiSrc('trophy') && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={emojiSrc('trophy')} alt="" width={20} height={20} className="mr-2 inline h-5 w-5 align-middle" />
-            )}Top 10 Pemain
-          </h2>
-            <div className="nx-card mt-4 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
-                    <th scope="col" className="px-4 py-3">#</th>
-                    <th scope="col" className="px-4 py-3">Pemain</th>
-                    <th scope="col" className="px-4 py-3 text-right">Poin</th>
-                    <th scope="col" className="px-4 py-3 text-right">Level</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {players.length === 0 && (
-                    <tr><td colSpan="4" className="px-4 py-6 text-center text-ink-muted">Belum ada data.</td></tr>
-                  )}
-                  {players.map((p) => (
-                    <tr
-                      key={p.userId}
-                      className={`border-b border-border-soft/60 last:border-0 ${isMe(p.userId) ? rowMe : 'hover:bg-card-cream/60'}`}
-                    >
-                      <td className="px-4 py-3 font-display text-ink">
-                        {Number(p.rank) === 1 && emojiSrc('crown') && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={emojiSrc('crown')} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
-                      )}
-                      {Number(p.rank) > 1 && Number(p.rank) <= 3 && emojiSrc('medal') && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={emojiSrc('medal')} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
-                      )}
-                        {p.rank}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-ink">
-                        {p.username}
-                        {isMe(p.userId) && (
-                          <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Kamu</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="inline-flex items-center gap-1.5">
-                          {emojiSrc('goldcoin') && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={emojiSrc('goldcoin')} alt="" width={16} height={16} className="inline h-4 w-4" />
-                          )}
-                          {Number(p.points).toLocaleString('id-ID')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-ink-muted">{p.level}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          {/* Pemain -> Guild -> Terkaya (client: baris pemain bisa diklik ->
+              kartu profil + PP fresh; guild tetap server component di tengah) */}
+          <LeaderboardClient players={players} richest={richest} myId={myId}>
 
           {/* Guild */}
           <section className="mt-12" aria-labelledby="lb-guild">
@@ -145,65 +88,7 @@ export default async function LeaderboardPage() {
               </table>
             </div>
           </section>
-
-          {/* Terkaya */}
-          <section className="mt-12" aria-labelledby="lb-kaya">
-            <h2 id="lb-kaya" className="font-display text-xl text-ink">
-            {emojiSrc('diamond') && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={emojiSrc('diamond')} alt="" width={20} height={20} className="mr-2 inline h-5 w-5 align-middle" />
-            )}Para Terkaya
-          </h2>
-            <div className="nx-card mt-4 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
-                    <th scope="col" className="px-4 py-3">#</th>
-                    <th scope="col" className="px-4 py-3">Pemain</th>
-                    <th scope="col" className="px-4 py-3 text-right">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {richest.length === 0 && (
-                    <tr><td colSpan="3" className="px-4 py-6 text-center text-ink-muted">Belum ada data.</td></tr>
-                  )}
-                  {richest.map((r, i) => (
-                    <tr
-                      key={r.userId}
-                      className={`border-b border-border-soft/60 last:border-0 ${isMe(r.userId) ? rowMe : 'hover:bg-card-cream/60'}`}
-                    >
-                      <td className="px-4 py-3 font-display text-ink">
-                        {Number(i + 1) === 1 && emojiSrc('crown') && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={emojiSrc('crown')} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
-                      )}
-                      {Number(i + 1) > 1 && Number(i + 1) <= 3 && emojiSrc('medal') && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={emojiSrc('medal')} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
-                      )}
-                        {i + 1}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-ink">
-                        {r.username}
-                        {isMe(r.userId) && (
-                          <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Kamu</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="inline-flex items-center gap-1.5">
-                          {emojiSrc('goldcoin') && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={emojiSrc('goldcoin')} alt="" width={16} height={16} className="inline h-4 w-4" />
-                          )}
-                          {Number(r.points).toLocaleString('id-ID')}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          </LeaderboardClient>
         </div>
       </main>
       <Footer />

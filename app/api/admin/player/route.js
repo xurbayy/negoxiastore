@@ -42,22 +42,28 @@ export async function GET(request) {
     if (profile && !profile.exists) profile = null; // user tak dikenal bot
   }
 
-  // basi (>2 menit) -> minta segarkan
+  // basi (>2 menit) -> minta segarkan.
+  // ANTI-SPAM (fix 2026-09-14): selain cek pending, hormati cooldown 30 dtk
+  // sejak permintaan terakhir (pending ATAU baru selesai). Dulu untuk user
+  // tak dikenal (profile selalu null) tiap klik admin mengantre permintaan
+  // baru lagi - antrean bot bisa dibanjiri klik berulang.
   let refreshing = false;
   if (!profile || profileAge > 2 * 60_000) {
-    const inFlight = await db.execute({
-      sql: "SELECT 1 as x FROM data_requests WHERE discord_id = ? AND status = 'pending' LIMIT 1",
-      args: [id],
+    const recent = await db.execute({
+      sql: `SELECT id, status, created_at, filled_at FROM data_requests
+            WHERE discord_id = ? AND (status = 'pending' OR filled_at > ?)
+            ORDER BY id DESC LIMIT 1`,
+      args: [id, Date.now() - 30_000],
     });
-    if (!inFlight.rows.length) {
+    if (!recent.rows.length) {
       await db.execute({
         sql: "INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, 'pending', ?)",
         args: [id, Date.now()],
       });
+      // Segarkan cepat: tanpa hint ini bot mode idle baru tarik antrean <=30 dtk
+      // sementara client hanya poll 8x3dtk -> profil tidak kunjung muncul.
+      await touchActivity().catch(() => {});
     }
-    // Segarkan cepat: tanpa hint ini bot mode idle baru tarik antrean <=30 dtk
-    // sementara client hanya poll 8x3dtk -> profil tidak kunjung muncul.
-    await touchActivity().catch(() => {});
     refreshing = true;
   }
 

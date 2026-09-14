@@ -78,8 +78,6 @@ const MODE_EMOJI = {
 
 export default function MeClient({ betaGames = null }) {
   const [state, setState] = useState({ loading: true, authenticated: false, user: null, profile: null });
-  const [polling, setPolling] = useState(false);
-  const [waitError, setWaitError] = useState(null);
   const [upsellDismissed, setUpsellDismissed] = useState(false);
   const [histPage, setHistPage] = useState(0);
   const [invPage, setInvPage] = useState(0);
@@ -101,32 +99,46 @@ export default function MeClient({ betaGames = null }) {
     return () => clearTimeout(t);
   }, [load]);
 
-  // polling cepat (5s) saat menunggu respons bot setelah tombol Refresh;
-  // max 45 detik - kalau lebih, berhenti & bilang jujur (bot/offline/timeout).
-  useEffect(() => {
-    if (!polling) return;
-    const startedAt = Date.now();
-    let stop = false;
-    const iv = setInterval(async () => {
-      const data = await load();
-      if (stop) return;
-      if (data?.profile) { setPolling(false); return; }
-      if (Date.now() - startedAt > 45000) {
-        stop = true;
-        setPolling(false);
-        setWaitError('Bot belum menjawab 45 detik. Kemungkinan bot mati atau koneksi database lambat - coba lagi sebentar.');
-      }
-    }, 5000);
-    const kill = setTimeout(() => { if (!stop) { stop = true; setPolling(false); setWaitError('Bot belum menjawab 45 detik. Kemungkinan bot mati atau koneksi database lambat - coba lagi sebentar.'); } }, 46000);
-    return () => { stop = true; clearInterval(iv); clearTimeout(kill); };
-  }, [polling, load]);
-
-  // auto-refresh latar tiap 15 detik: edit admin & grant premium langsung kebaca
+  // AUTO-REFRESH ADAPTIF (2026-09-14, tanpa tombol Refresh):
+  //  - Tab AKTIF & data belum lengkap  -> 5 dtk (nunggu bot balas cepat)
+  //  - Tab AKTIF & data sudah ada      -> 20 dtk (update admin/grant kebaca)
+  //  - Tab TIDAK aktif (idle/background) -> berhenti total, hemat
+  //  - Tab kembali aktif                -> langsung load() sekali (terasa instan)
+  //  - Ada perubahan data              -> load() tambahan (langsung tampil)
   useEffect(() => {
     if (!state.authenticated) return;
-    const iv = setInterval(load, 15000);
-    return () => clearInterval(iv);
-  }, [state.authenticated, load]);
+    let iv = null;
+    let stopped = false;
+
+    const intervalFor = () => (state.profile?.exists ? 20000 : 5000);
+
+    const start = () => {
+      if (stopped) return;
+      if (iv) clearInterval(iv);
+      iv = setInterval(load, intervalFor());
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (iv) { clearInterval(iv); iv = null; } // idle: berhenti, hemat kuota
+      } else {
+        load();   // balik ke tab: langsung segarkan (terasa tanpa delay)
+        start();
+      }
+    };
+
+    const onFocus = () => { if (!document.hidden) load(); };
+
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      stopped = true;
+      if (iv) clearInterval(iv);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [state.authenticated, state.profile?.exists, load]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -138,12 +150,6 @@ export default function MeClient({ betaGames = null }) {
   function hideUpsell() {
     setUpsellDismissed(true);
     try { sessionStorage.setItem('nexo_upsell_hidden', '1'); } catch {}
-  }
-
-  async function refreshFromBot() {
-    setWaitError(null);
-    await fetch('/api/me/refresh', { method: 'POST' });
-    setPolling(true);
   }
 
   if (state.loading) {
@@ -244,70 +250,51 @@ export default function MeClient({ betaGames = null }) {
         </div>
 
         <div className="nx-card px-6 py-10 text-center">
-          {polling ? (
-            <>
-              <div className="skeleton mx-auto h-4 w-64" />
-              <p className="mt-4 flex items-center justify-center gap-2 text-sm text-ink-muted">
-                <span className="pulse-dot" aria-hidden="true" /> Menunggu bot merespons… (15-30 detik)
-              </p>
-            </>
-          ) : waitError ? (
-            <>
-              <p className="text-sm text-danger">{waitError}</p>
-              <button type="button" onClick={refreshFromBot} className="btn-ghost mt-4 cursor-pointer !px-5 !py-2 text-sm">Cek Lagi</button>
-            </>
-          ) : (
-            <>
-              <h2 className="font-display text-5xl tracking-tight text-ink">404.</h2>
-              <p className="mt-1 font-display text-xl tracking-tight text-ink">
-                {unknown ? 'Data kamu belum ada di sini.' : 'Tapi hampir loh.'}
-              </p>
-              <div className="nx-dark mx-auto mt-5 max-w-md px-5 py-4 text-left">
-                <p className="text-sm leading-relaxed text-card-cream">
-                  <span className="font-bold text-accent">NEXO</span>{' '}
-                  <span className="text-[#A99C8E]">&gt;</span>{' '}
-                  <span className="text-[#8EA2B9]">&lt;@{freshName || 'kamu'}&gt;</span>{' '}
-                  belum terdaftar di database-ku. Aku ini bot, bukan dukun. 🔮
-                </p>
-              </div>
-              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
-                Website ini mencerminkan profilmu di Discord — dan kita belum pernah ketemu.
-                Daftar 10 detik, balik lagi.
-              </p>
+          <h2 className="font-display text-5xl tracking-tight text-ink">404.</h2>
+          <p className="mt-1 font-display text-xl tracking-tight text-ink">
+            {unknown ? 'Data kamu belum ada di sini.' : 'Tapi hampir loh.'}
+          </p>
+          <div className="nx-dark mx-auto mt-5 max-w-md px-5 py-4 text-left">
+            <p className="text-sm leading-relaxed text-card-cream">
+              <span className="font-bold text-accent">NEXO</span>{' '}
+              <span className="text-[#A99C8E]">&gt;</span>{' '}
+              <span className="text-[#8EA2B9]">&lt;@{freshName || 'kamu'}&gt;</span>{' '}
+              belum terdaftar di database-ku. Aku ini bot, bukan dukun. 🔮
+            </p>
+          </div>
+          <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
+            Website ini mencerminkan profilmu di Discord — dan kita belum pernah ketemu.
+            Daftar 10 detik, balik lagi.
+          </p>
 
-              <ol className="mx-auto mt-6 max-w-md space-y-3 text-left">
-                <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">1</span>
-                  <span className="text-sm text-ink">Invite NEXO Games ke server Discord kamu</span>
-                </li>
-                <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">2</span>
-                  <span className="text-sm text-ink">Ketik <code className="rounded bg-bg-soft px-2 py-0.5 font-mono">nxdaily</code> di server itu untuk mendaftar</span>
-                </li>
-                <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">3</span>
-                  <span className="text-sm text-ink">Kembali ke sini, klik <strong>Cek Lagi</strong></span>
-                </li>
-              </ol>
+          <ol className="mx-auto mt-6 max-w-md space-y-3 text-left">
+            <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">1</span>
+              <span className="text-sm text-ink">Invite NEXO Games ke server Discord kamu</span>
+            </li>
+            <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">2</span>
+              <span className="text-sm text-ink">Ketik <code className="rounded bg-bg-soft px-2 py-0.5 font-mono">nxdaily</code> di server itu untuk mendaftar</span>
+            </li>
+            <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">3</span>
+              <span className="text-sm text-ink">Kembali ke halaman ini - data muncul <strong>otomatis</strong> begitu bot memproses</span>
+            </li>
+          </ol>
 
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                <a href={BOT_INVITE_URL} target="_blank" rel="noopener noreferrer" className={unknown ? 'btn-primary cursor-pointer' : 'btn-ghost !px-4 !py-2 text-sm cursor-pointer'}>
-                  Invite NEXO ke Server Kamu
-                </a>
-                <button type="button" onClick={refreshFromBot} className="btn-ghost cursor-pointer">
-                  Cek Lagi
-                </button>
-              </div>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <a href={BOT_INVITE_URL} target="_blank" rel="noopener noreferrer" className={unknown ? 'btn-primary cursor-pointer' : 'btn-ghost !px-4 !py-2 text-sm cursor-pointer'}>
+              Invite NEXO ke Server Kamu
+            </a>
+          </div>
 
-              {state.profile?.hint && (
-                <p className="mx-auto mt-5 max-w-md text-xs italic text-ink-muted">{state.profile.hint}</p>
-              )}
-              <p className="mx-auto mt-4 max-w-md text-[0.7rem] text-[#A99C8E]">
-                Sudah daftar tapi masih muncul halaman ini? Klik Cek Lagi, atau pastikan login
-                pakai akun Discord yang sama.
-              </p>
-            </>
+          {state.profile?.hint && (
+            <p className="mx-auto mt-5 max-w-md text-xs italic text-ink-muted">{state.profile.hint}</p>
           )}
+          <p className="mx-auto mt-4 max-w-md text-[0.7rem] text-[#A99C8E]">
+            Halaman ini menyegarkan sendiri - data muncul otomatis begitu bot selesai memproses.
+            Pastikan kamu login pakai akun Discord yang sama.
+          </p>
         </div>
       </div>
     );
@@ -330,29 +317,15 @@ export default function MeClient({ betaGames = null }) {
 
   return (
     <div className="space-y-5">
-      {polling && (
-        <p className="flex items-center gap-2 text-xs text-ink-muted">
-          <span className="pulse-dot" aria-hidden="true" /> Memuat data terbaru dari bot…
-        </p>
-      )}
-      {waitError && (
-        <p role="alert" className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{waitError}</p>
-      )}
-
       {/* ═══ HEADER: kartu dark ala Discord ═══ */}
       <div className="nx-dark overflow-hidden">
         <div className="nx-dark-header flex items-center justify-between gap-3 px-6 py-3">
           <span className="font-mono text-xs uppercase tracking-wider text-[#A99C8E]">profil pemain</span>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={refreshFromBot}
-              disabled={polling}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border-soft bg-white px-3.5 py-1.5 text-xs font-semibold text-ink shadow-sm transition hover:-translate-y-px hover:border-accent hover:bg-accent/10 active:translate-y-0 active:shadow-none disabled:opacity-40 cursor-pointer"
-            >
-              <svg className={`h-3.5 w-3.5 ${polling ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" /></svg>
-              {polling ? "Menyegarkan…" : "Refresh"}
-            </button>
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-border-soft bg-white px-3.5 py-1.5 text-xs font-semibold text-ink-muted shadow-sm" title="Data tersinkron otomatis - tidak perlu refresh manual">
+              <span className="pulse-dot" aria-hidden="true" />
+              Auto-sync
+            </span>
             <a
               href="/api/auth/logout"
               className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-3.5 py-1.5 text-xs font-semibold text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer"
