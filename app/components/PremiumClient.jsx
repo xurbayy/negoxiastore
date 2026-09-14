@@ -80,19 +80,24 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       window.location.href = '/api/auth/login?returnTo=%2Fpremium';
       return;
     }
+    
+    setBuying(true);
+    setError(null);
     try {
       const meRes = await fetch('/api/me', { cache: 'no-store' });
       const me = await meRes.json();
       if (me.profile?.registered !== true || me.profile?.needsOnboarding === true) {
         setError('Datamu belum terdaftar sebagai pemain. Daftar dulu di Discord: invite NEXO lalu ketik nxdaily. Setelah itu baru bisa beli NEXO Pass.');
+        setBuying(false);
         return;
       }
     } catch {
       setError('Gagal memeriksa status pemain. Coba lagi.');
+      setBuying(false);
       return;
     }
+    setBuying(false);
     setShowForm(true);
-    setError(null);
   }
 
   async function submitPayment() {
@@ -251,7 +256,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           disabled={buying}
           className="btn-primary !px-8 !py-4 text-base font-bold shadow-lg shadow-accent/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Bayar via QRIS
+          {buying ? 'Memproses...' : 'Bayar via QRIS'}
         </button>
       ) : null}
     </div>
