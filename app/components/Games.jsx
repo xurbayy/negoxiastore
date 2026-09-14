@@ -13,8 +13,8 @@ const GAME_GROUPS = [
       { name: 'Number Guess', cmd: 'np guess', alias: 'g, tebak', emoji: 'Numbers', fb: 'numwar' },
       { name: 'Hangman', cmd: 'np hangman', alias: '', emoji: 'blob_hang', fb: 'knot' },
       { name: 'Math Quiz', cmd: 'np math', alias: '', emoji: 'cerebralassassin', fb: 'brain' },
-      { name: 'Memory Match', cmd: 'np memory', alias: '', emoji: 'brain_shrink36~1', fb: 'Nos_Rubikcube' },
-      { name: 'Fun Riddle', cmd: 'np riddle', alias: '', emoji: 'Nos_Rubikcube', fb: 'puzzle' },
+      { name: 'Memory Match', cmd: 'np memory', alias: '', emoji: 'Nos_Rubikcube', fb: 'Nos_Rubikcube' },
+      { name: 'Fun Riddle', cmd: 'np riddle', alias: '', emoji: 'puzzle', fb: 'puzzle' },
       { name: 'RPG Battle', cmd: 'np rpg', alias: '', emoji: 'roleiconpirate87', fb: 'rpg' },
       { name: 'Slot Machine', cmd: 'np slot', alias: 's, sc, jackpot', emoji: 'sanic_slot_eyes1', fb: 'slot' },
       { name: 'Trivia Challenge', cmd: 'np trivia', alias: 'tr, kuis', emoji: 'nequestion', fb: 'question' },
@@ -104,7 +104,7 @@ export default function Games() {
                       <div className="truncate text-sm font-semibold text-ink">{g.name}</div>
                       <div className="flex items-center gap-2">
                         <code className="font-mono text-xs text-accent-hover">{g.cmd}</code>
-                        {g.alias && <span className="truncate text-[0.65rem] text-ink-faint">({g.alias})</span>}
+                        {g.alias && <span className="truncate text-[0.65rem] text-ink-faint">alias {g.alias}</span>}
                       </div>
                     </div>
                   </li>

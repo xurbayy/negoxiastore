@@ -136,7 +136,7 @@ export default async function RootLayout({ children }) {
                 Akses Ditolak
               </h2>
               <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
-                Sistem mendeteksi bahwa akun Discord-mu saat ini sedang <strong>terkena sanksi (Banned/Timeout)</strong> atau datamu telah di-wipe dari layanan NEXO.
+                Sistem mendeteksi bahwa akun Discord-mu saat ini sedang <strong>terkena sanksi, bisa ban atau timeout,</strong> atau datamu telah di-wipe dari layanan NEXO.
               </p>
               
               <div className="mx-auto mt-7 flex flex-col items-center justify-center rounded-xl border border-border-soft bg-card-dark p-5 max-w-md">

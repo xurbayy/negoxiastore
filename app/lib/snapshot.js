@@ -73,48 +73,20 @@ export async function getSnapshotSeries(days = 7) {
   return [];
 }
 
-// Format angka gaya id-ID (1.234.567)
-export function fmt(n) {
-  if (n === null || n === undefined) return '-';
-  return Number(n).toLocaleString('id-ID');
-}
+// Format angka gaya id-ID (1.234.567) dan uptime - lihat lib/formatClient.js
+// (SATU sumber). Dulu file ini punya salinan sendiri.
+export { fmt, fmtUptime } from './formatClient';
 
-// Waktu relatif "x lalu"
-export function timeAgo(ts) {
-  if (!ts) return 'belum pernah';
-  const diff = Date.now() - ts;
-  if (diff < 0) return 'baru saja';
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s} detik lalu`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} menit lalu`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} jam lalu`;
-  return `${Math.floor(h / 24)} hari lalu`;
-}
+// Waktu relatif "x lalu" - lihat lib/formatClient.js (SATU sumber, sudah
+// menangani satuan hari). Dulu file ini punya salinan sendiri.
+export { timeAgo } from './formatClient';
 
-// Uptime detik -> "3h 12m"
-export function fmtUptime(sec) {
-  if (!sec && sec !== 0) return '-';
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-// Nama game dari gameType (history/missions)
-export function gameName(key) {
-  const NAMES = {
-    coinflip: 'Coinflip', guess: 'Guess Number', hangman: 'Hangman', math: 'Math Challenge',
-    memory: 'Memory', riddle: 'Riddle', rpg: 'RPG Dungeon', slot: 'Slot Machine',
-    trivia: 'Trivia', word: 'Word Game', autochess: 'Autochess', blackjack: 'Blackjack',
-    guildwar: 'Guild War', monopoly: 'Monopoly', musicalchairs: 'Musical Chairs',
-    numwar: 'Number War', quickdraw: 'Quickdraw', racing: 'Racing', rps: 'Rock Paper Scissors',
-    russianroulette: 'Russian Roulette', snakeladder: 'Snake & Ladder', bombsquad: 'Bomb Squad',
-    bossraid: 'Boss Raid', dungeoncrawler: 'Dungeon Crawler', heist: 'Heist',
-    zombiesurvival: 'Zombie Survival',
-  };
-  return NAMES[key] || key || '-';
-}
+// Nama game dari gameType (history/missions).
+// Daftar nama SUDAH dipindah ke lib/formatClient.js supaya cuma ada SATU sumber.
+// Dulu fungsi ini punya daftar sendiri yang ketinggalan (masih "Riddle",
+// "Math Challenge", "RPG Dungeon", "Heist", "Snake & Ladder") sehingga nama game
+// bisa beda antar halaman. Sekarang meneruskan ke sumber kanonik itu.
+export { gameName } from './formatClient';
 
 // Buang token emoji Discord (<:name:id> / <a:name:id>) dari string (nama guild dll).
 export function stripEmojiToken(str) {

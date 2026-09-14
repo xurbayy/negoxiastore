@@ -81,7 +81,7 @@ export default function FeedbackManager({ send, data }) {
                       {f.kind}
                     </span>
                     <span className="font-semibold text-ink">{f.username}</span>
-                    <span className="text-ink-muted">({f.discordId})</span>
+                    <span className="font-mono text-ink-muted">{f.discordId}</span>
                     <span className="text-ink-muted">· {new Date(f.createdAt).toLocaleString('id-ID')}</span>
                   </div>
                   <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-muted">{f.message}</p>

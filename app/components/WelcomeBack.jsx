@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { getSessionProfile } from '../lib/welcome';
+// stripEmojiToken dari lib/snapshot - SATU sumber (dulu file ini punya salinan
+// fungsi yang sama, padahal regex-nya identik).
+import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
 
 // Kartu sambutan utk user yang sudah login: ringkasan profil dari cache bot
 // (kalau snapshot data_requests tersedia) + shortcut ke fitur utama.
-function stripEmoji(str) {
-  return String(str || '').replace(/<a?:[A-Za-z0-9_]+:\d+>/g, '').trim();
-}
 
 export default async function WelcomeBack({ username }) {
   const profile = await getSessionProfile();

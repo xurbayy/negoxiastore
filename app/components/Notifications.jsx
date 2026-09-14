@@ -14,9 +14,16 @@ function countdown(expiresAt) {
 // Penutupan TIDAK lagi di localStorage - disimpan ke DB per user, jadi notif
 // yang sudah di-clear tetap hilang walau ganti perangkat, cache dibersihkan,
 // atau bot/web mati-nyala. Notifikasi baru (isi berbeda) tetap muncul.
+//
+// PENTING (anti-kedip): dulu di sini ada `if (!enabled) return null` sehingga
+// tiap ganti halaman komponen mount ulang, fetch ulang, dan tombol lonceng
+// HILANG dulu lalu muncul lagi (kedip) - padahal tombol sebelahnya (Feedback)
+// tidak begitu. Sekarang tombol SELALU dirender sejak awal; yang disembunyikan
+// hanya status "sudah pasti tamu" (401), bukan status "sedang memuat".
 export default function Notifications() {
   const [items, setItems] = useState([]);
-  const [enabled, setEnabled] = useState(false);
+  // null = belum tahu (masih memuat). true = ada sesi. false = tamu.
+  const [enabled, setEnabled] = useState(null);
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
 
@@ -26,8 +33,13 @@ export default function Notifications() {
       if (res.status === 401) { setEnabled(false); return; }
       const d = await res.json();
       setEnabled(true);
-      setItems(Array.isArray(d.notifications) ? d.notifications : []);
-    } catch {}
+      // Kalau muat gagal, pertahankan daftar sebelumnya (jangan kosongkan).
+      setItems((prev) => (Array.isArray(d.notifications) ? d.notifications : prev));
+    } catch {
+      // Gagal jaringan: jangan turunkan ke "tamu" kalau sebelumnya sudah tahu
+      // ada sesi - biar tombol tidak berkedip hilang.
+      setEnabled((e) => (e === false ? false : e));
+    }
   }, []);
 
   useEffect(() => {
@@ -49,7 +61,9 @@ export default function Notifications() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [open]);
 
-  if (!enabled) return null;
+  // Hanya sembunyikan kalau sudah PASTI tamu. Selama memuat (null) tombol tetap
+  // tampil supaya tidak ada kedip saat berpindah halaman.
+  if (enabled === false) return null;
 
   // Server SUDAH menyaring yang pernah ditutup -> tampil apa adanya.
   const visible = items.filter((n) => !n.read);

@@ -64,7 +64,7 @@ export default function Titles({ send, data }) {
           </p>
           <input value={aForm.userId} onChange={(e) => setAForm({ ...aForm, userId: e.target.value.replace(/\D/g, '') })} placeholder="Discord User ID"
             className="mt-3 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm text-ink! focus:border-accent focus:outline-none" />
-          <textarea value={aForm.text} onChange={(e) => setAForm({ ...aForm, text: e.target.value.slice(0, 100) })} placeholder="Teks title (maks 100 karakter)" rows={2}
+          <textarea value={aForm.text} onChange={(e) => setAForm({ ...aForm, text: e.target.value.slice(0, 100) })} placeholder="Teks title, maks 100 karakter" rows={2}
             className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none" />
           <button type="submit" disabled={busy || !aForm.userId || !aForm.text.trim()} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Pasang</button>
         </form>
@@ -77,7 +77,7 @@ export default function Titles({ send, data }) {
       {/* Daftar pemegang admin title (sinkron snapshot) */}
       <div className="nx-card px-5 py-5">
         <h2 className="font-display text-ink">Pemegang Admin Title : {holders.length}</h2>
-        <p className="mt-1 text-xs text-ink-muted">Data ikut snapshot bot - baru ≤60 detik setelah dipasang/dicabut (termasuk lewat nxadmin Discord).</p>
+        <p className="mt-1 text-xs text-ink-muted">Data ikut snapshot bot, jadi baru muncul dalam 60 detik setelah dipasang atau dicabut, termasuk lewat nxadmin Discord.</p>
         {holders.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada.</p> : (
           <ul className="mt-3 space-y-2 text-sm">
             {holders.map((h) => (

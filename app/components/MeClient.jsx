@@ -3,21 +3,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { emojiSrc } from '../lib/emojisClient';
-
-const GAME_NAMES = {
-  coinflip: 'Coinflip', guess: 'Number Guess', hangman: 'Hangman', math: 'Math Quiz',
-  memory: 'Memory Match', riddle: 'Fun Riddle', rpg: 'RPG Battle', slot: 'Slot Machine',
-  trivia: 'Trivia Challenge', word: 'Word Builder', autochess: 'Autochess', blackjack: 'Blackjack',
-  guildwar: 'Guild War', monopoly: 'Monopoly', musicalchairs: 'Musical Chairs',
-  numwar: 'Number War', quickdraw: 'Quickdraw', racing: 'Racing', rps: 'Rock Paper Scissors',
-  russianroulette: 'Russian Roulette', snakeladder: 'Snakes & Ladders', bombsquad: 'Bomb Squad',
-  bossraid: 'Boss Raid', dungeoncrawler: 'Dungeon Crawler', heist: 'Bank Heist',
-  zombiesurvival: 'Zombie Survival',
-};
-
-function gameName(key) {
-  return GAME_NAMES[key] || key || '-';
-}
+// Helper bersama diambil dari lib/formatClient - SATU sumber untuk fmt, timeAgo,
+// dan gameName. Dulu file ini punya salinan sendiri-sendiri (fmt, stripEmoji,
+// GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
+import { gameName, fmt as fmtLib } from '../lib/formatClient';
+import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
 
 function relTime(ts) {
   const diff = Date.now() - Number(ts);
@@ -30,12 +20,10 @@ function relTime(ts) {
   return `${Math.floor(h / 24)} hari lalu`;
 }
 
-function stripEmoji(str) {
-  return String(str || '').replace(/<a?:[A-Za-z0-9_]+:\d+>/g, '').trim();
-}
-
+// fmt punya aturan berbeda di sini: nilai kosong jadi 0 (bukan '-') karena
+// dipakai untuk angka statistik pemain yang selalu ada.
 function fmt(n) {
-  return Number(n ?? 0).toLocaleString('id-ID');
+  return fmtLib(Number(n ?? 0));
 }
 
 // Isi placeholder {n} pada deskripsi misi dengan target aslinya.
@@ -184,6 +172,13 @@ export default function MeClient({ betaGames = null }) {
   ).map(g => ({ ...g, type: g.type || MODE_LABEL[g.mode] || g.mode || 'Beta' }));
   const exists = state.profile?.exists === true;
   const needsOnboarding = Boolean(state.profile?.needsOnboarding);
+  // PENTING: profile === null BUKAN berarti "user tidak terdaftar". Itu bisa
+  // berarti bot belum sempat menjawab permintaan data (baru login pertama kali,
+  // request masih mengantre di bot_commands). Dulu dua keadaan ini disatukan,
+  // sehingga pemain yang SUDAH lama main di NEXO tapi baru pertama buka web
+  // langsung disuguhi "Data kamu belum ada / belum terdaftar, aku bukan dukun".
+  // Sekarang: menunggu balasan bot = tampilkan status "sedang menyiapkan data".
+  const menungguBot = !state.profile;
 
   const isBanned = Boolean(state.profile?.isBanned);
   if (isBanned) {
@@ -215,6 +210,51 @@ export default function MeClient({ betaGames = null }) {
           <Link href="/" className="btn-ghost cursor-pointer text-sm">
             Ke Beranda
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- MENUNGGU BOT (bukan "tidak terdaftar") ----------
+  // User sudah login, tapi bot belum menjawab permintaan data. Jangan tampilkan
+  // pesan onboarding yang bikin salah paham - cukup beri tahu datanya menyusul.
+  if (menungguBot) {
+    return (
+      <div className="space-y-6">
+        <div className="nx-dark px-6 py-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {freshAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={freshAvatar} alt="" width={56} height={56} className="h-14 w-14 rounded-full ring-2 ring-accent shadow-[0_0_16px_rgba(241,154,26,0.3)]" />
+              ) : (
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent font-display text-lg text-white shadow-[0_0_16px_rgba(241,154,26,0.3)]">
+                  {(freshName || '?').slice(0, 2).toUpperCase()}
+                </span>
+              )}
+              <div>
+                <h1 className="font-display text-xl text-card-cream">{freshName}</h1>
+                <p className="text-sm text-ink-faint">Login Discord berhasil</p>
+              </div>
+            </div>
+            <a href="/api/auth/logout" className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-3.5 py-1.5 text-sm font-semibold text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+              Logout
+            </a>
+          </div>
+        </div>
+
+        <div className="nx-card px-6 py-10 text-center">
+          <span className="mx-auto mb-4 inline-flex h-10 w-10 animate-spin items-center justify-center rounded-full border-2 border-border-soft border-t-accent" aria-hidden="true" />
+          <h2 className="font-display text-2xl tracking-tight text-ink">Menyiapkan datamu</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-ink-muted">
+            Bot sedang mengirim profil kamu dari Discord. Halaman ini menyegarkan sendiri,
+            jadi kamu tinggal tunggu beberapa detik - tidak perlu logout atau daftar ulang.
+          </p>
+          <p className="mx-auto mt-4 max-w-md text-xs text-ink-faint">
+            Sudah main di NEXO? Tenang, datamu aman. Kalau belum pernah daftar, ketik{' '}
+            <code className="rounded bg-bg-soft px-2 py-0.5 font-mono">nxd</code> di server yang ada botnya.
+          </p>
         </div>
       </div>
     );
@@ -642,13 +682,23 @@ export default function MeClient({ betaGames = null }) {
               {isPremium ? (
                 <span className="nx-badge bg-success font-extrabold text-white">Unlimited</span>
               ) : (
-                <span className="flex items-center gap-2 text-xs text-ink-muted" title="Maksimal 5 item berbeda (gratis)">
-                  <span className="flex gap-0.5" aria-hidden="true">
+                // Indikator kapasitas gratis. Dulu bar-nya nempel banget ke teks
+                // "2/5" (gap-2 + bar tipis) sehingga terbaca mepet. Sekarang bar
+                // lebih longgar, ada pemisah, dan angka diberi lebar tetap supaya
+                // tidak bergeser saat nilainya berubah.
+                <span className="flex items-center gap-2.5" title="Maksimal 5 item berbeda untuk akun gratis">
+                  <span className="flex gap-1" aria-hidden="true">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <span key={i} className={`h-2 w-3.5 rounded-full transition-colors ${i < (p.inventory || []).length ? 'bg-accent' : 'bg-border-soft'}`} />
+                      <span
+                        key={i}
+                        className={`h-2 w-4 rounded-full transition-colors ${i < (p.inventory || []).length ? 'bg-accent' : 'bg-border-soft'}`}
+                      />
                     ))}
                   </span>
-                  <span className="font-semibold">{(p.inventory || []).length}/5</span>
+                  <span className="h-3.5 w-px bg-border-soft" aria-hidden="true" />
+                  <span className="min-w-[2.25rem] text-right text-xs font-semibold tabular-nums text-ink-muted">
+                    {(p.inventory || []).length}/5
+                  </span>
                 </span>
               )}
             </div>

@@ -33,7 +33,7 @@ export default function Nexopass({ send, data }) {
 
   return (
     <div className="space-y-5">
-      <h2 className="font-display text-xl text-ink">NEXO Pass: Member Aktif ({members.length})</h2>
+      <h2 className="font-display text-xl text-ink">NEXO Pass: {members.length} Member Aktif</h2>
 
       {/* Form grant */}
       <form onSubmit={grant} className="nx-card flex flex-wrap items-end gap-3 px-5 py-5">
@@ -42,7 +42,7 @@ export default function Nexopass({ send, data }) {
           <input id="g-userid" value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value.replace(/\D/g, '') })} placeholder="83638..." className="mt-1.5 w-52 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
         <div>
-          <label htmlFor="g-days" className="block text-xs uppercase tracking-wider text-ink-muted">Hari (30 = 1 bulan, 3650 = seumur hidup)</label>
+          <label htmlFor="g-days" className="block text-xs uppercase tracking-wider text-ink-muted">Hari, 30 sama dengan 1 bulan, 3650 berarti seumur hidup</label>
           <input id="g-days" type="number" value={form.days} onChange={(e) => setForm({ ...form, days: parseInt(e.target.value, 10) || 0 })} className="mt-1.5 w-32 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
         <button type="submit" disabled={busy || !form.userId} className="rounded-lg bg-accent text-ink! px-5 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer">Grant</button>

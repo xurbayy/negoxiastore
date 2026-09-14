@@ -47,7 +47,7 @@ export default function ShopManager({ send, data }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-xl text-ink">Shop Manager ({items.length} item)</h2>
+        <h2 className="font-display text-xl text-ink">Shop Manager, {items.length} item</h2>
         <button
           type="button"
           onClick={() => setConfirm({ action: 'restock_all', payload: {} })}
@@ -133,7 +133,7 @@ function RowActions({ itemKey, hasDiscount, onSend, busy }) {
         )}
       </div>
       {open === 'restock' && (
-        <NumRow placeholder="amount (kosong = default)" onSubmit={(v) => { onSend('restock_item', { itemKey, amount: v ?? undefined }); setOpen(null); }} busy={busy} optional />
+        <NumRow placeholder="amount, biarkan kosong untuk nilai default" onSubmit={(v) => { onSend('restock_item', { itemKey, amount: v ?? undefined }); setOpen(null); }} busy={busy} optional />
       )}
       {open === 'price' && (
         <NumRow placeholder="harga baru" onSubmit={(v) => { onSend('set_price', { itemKey, price: v }); setOpen(null); }} busy={busy} />
@@ -175,7 +175,7 @@ function DiscountRow({ onSubmit, busy }) {
   return (
     <div className="flex gap-1.5">
       <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="harga diskon" className="w-28 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
-      <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="jam (1-720)" className="w-24 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
+      <input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="jam, 1 sampai 720" className="w-24 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
       <button type="button" disabled={busy || !price || !hours} onClick={() => { onSubmit(parseInt(price, 10), parseInt(hours, 10)); setPrice(''); setHours(''); }} className="rounded-lg bg-accent text-ink! px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
     </div>
   );

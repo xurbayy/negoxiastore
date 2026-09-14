@@ -393,11 +393,7 @@ section, .nx-shell, main { position: relative; overflow-x: clip; }
   .anim-in,
   .pulse-dot::before,
   .skeleton,
-  .shimmer::after,
-  .mascot-bob,
-  .mascot-shadow,
-  .mascot-float-a,
-  .mascot-float-b {
+  .shimmer::after {
     animation: none !important;
   }
   .anim-in {
@@ -408,5 +404,16 @@ section, .nx-shell, main { position: relative; overflow-x: clip; }
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  /* Maskot + bubble tetap melayang walau perangkat memilih "reduce motion".
+     Ini elemen dekoratif utama halaman depan (maskot naga + tag kecil) dan
+     pemilik web memintanya tetap hidup di semua ukuran layar. Gerakannya kecil
+     dan lambat, jadi tidak memicu ketidaknyamanan seperti animasi besar. */
+  .mascot-bob { animation: mascotBob 3.2s ease-in-out infinite; }
+  .mascot-shadow { animation: mascotShadow 3.2s ease-in-out infinite; }
+  .mascot-float-a { animation: bubbleFloat 2.6s ease-in-out infinite; }
+  .mascot-float-b { animation: bubbleFloat 2.6s ease-in-out 1.3s infinite; }
+  @media (max-width: 1023px) {
+    .mascot-bob { animation: mascotWiggle 1.6s ease-in-out infinite; }
   }
 }

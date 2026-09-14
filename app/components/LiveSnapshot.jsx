@@ -1,4 +1,4 @@
-import { getLatestSnapshot } from '../lib/snapshot';
+import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
 
 // LiveSnapshot: strip statistik nyata dari snapshot bot terakhir.
 // Kalau bot belum pernah push / offline -> tampil strip "menunggu data".
@@ -47,7 +47,7 @@ export default async function LiveSnapshot() {
         ) : (
           <span className="pulse-dot" aria-hidden="true" />
         )}
-        {' '}Diperbarui {timeAgoClient(snap.ts)} · data diperbarui tiap 1 menit
+        {' '}Diperbarui {timeAgo(snap.ts)} · data diperbarui tiap 1 menit
       </p>
     </div>
   );
@@ -55,14 +55,4 @@ export default async function LiveSnapshot() {
 
 function computeStale(ts) {
   return Date.now() - ts > 3 * 60_000;
-}
-
-function timeAgoClient(ts) {
-  const diff = Date.now() - ts;
-  if (diff < 0) return 'baru saja';
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s} detik lalu`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} menit lalu`;
-  return `${Math.floor(m / 60)} jam lalu`;
 }

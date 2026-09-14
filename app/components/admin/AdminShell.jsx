@@ -117,9 +117,9 @@ export default function AdminShell({ username, avatar = null }) {
       
       // Jika belum ok setelah 15 detik, timpa finalOut dengan timeout message.
       if (!finalOut.ok && finalOut.error === 'Gagal menghubungi server') {
-        finalOut = { ok: false, id: pollId, error: 'Waktu tunggu habis (bot sedang offline/sibuk) - perintah tetap antre.' };
-      } else if (finalOut.ok && !finalOut.result.includes('#')) {
-        finalOut = { ...finalOut, result: `${finalOut.result} (#${pollId})` };
+        finalOut = { ok: false, id: pollId, error: 'Waktu tunggu habis, bot sedang offline atau sibuk. Perintah tetap antre.' };
+      } else if (finalOut.ok && !finalOut.result.includes('antrean nomor')) {
+        finalOut = { ...finalOut, result: `${finalOut.result} Antrean nomor ${pollId}.` };
       }
     }
     

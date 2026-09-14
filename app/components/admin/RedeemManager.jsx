@@ -52,9 +52,9 @@ export default function RedeemManager({ send, data }) {
           <label htmlFor="p-type" className="block text-xs uppercase tracking-wider text-ink-muted">Reward</label>
           <select id="p-type" value={form.rewardType} onChange={(e) => setForm({ ...form, rewardType: e.target.value })} className="mt-1.5 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none">
             <option value="points">points</option>
-            <option value="item">item (itemKey)</option>
+            <option value="item">item, isi dengan itemKey</option>
             <option value="title">title</option>
-            <option value="premium">NEXO Pass (jumlah hari)</option>
+            <option value="premium">NEXO Pass, isi jumlah hari</option>
           </select>
         </div>
         <div>
@@ -165,13 +165,13 @@ function NotifyForm({ codes, onSent }) {
   return (
     <form onSubmit={submit} className="nx-card px-5 py-5">
       <h3 className="font-display text-lg text-ink">Kabari Kode Baru</h3>
-      <p className="mt-1 text-xs text-ink-muted">Kirim notifikasi &quot;token&quot; ke lonceng user - tampil dengan kode + tombol Klaim. Untuk broadcast umum (info/event/maintenance), pakai tab Broadcast.</p>
+      <p className="mt-1 text-xs text-ink-muted">Kirim notifikasi &quot;token&quot; ke lonceng user - tampil dengan kode + tombol Klaim. Untuk broadcast umum seperti info, event, atau maintenance, pakai tab Broadcast.</p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-xs uppercase tracking-wider text-ink-muted">Target</label>
           <select value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} className="mt-1.5 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none">
             <option value="all">Semua user</option>
-            <option value="one">1 user (discord ID)</option>
+            <option value="one">1 user, pakai Discord ID</option>
           </select>
         </div>
         {form.target === 'one' && (

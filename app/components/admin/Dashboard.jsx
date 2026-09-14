@@ -37,7 +37,7 @@ function Chart({ series, pick, color = '#2B2118', label, unit = '', formatter = 
     [series, pick]
   );
   if (pts.length < 2) {
-    return <p className="mt-3 text-sm text-ink-muted">Belum cukup data untuk grafik (butuh ±2 snapshot).</p>;
+    return <p className="mt-3 text-sm text-ink-muted">Belum cukup data untuk grafik, perlu sekitar 2 snapshot.</p>;
   }
   const max = Math.max(...pts.map((p) => p.v), 1);
   const min = Math.min(...pts.map((p) => p.v));

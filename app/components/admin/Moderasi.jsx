@@ -102,7 +102,7 @@ export default function Moderasi({ send, data }) {
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Alasan (Opsional untuk unban/reset)"
+              placeholder="Alasan, opsional untuk unban dan reset"
               className="w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
             />
           </div>
@@ -110,7 +110,7 @@ export default function Moderasi({ send, data }) {
 
         <div className="mt-8 flex flex-col gap-4 border-t border-border-soft/60 pt-6 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label className="mb-2 block text-sm font-semibold text-warning">1. Berikan Timeout (Sementara)</label>
+            <label className="mb-2 block text-sm font-semibold text-warning">1. Berikan Timeout Sementara</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -133,7 +133,7 @@ export default function Moderasi({ send, data }) {
 
         <div className="mt-6 flex flex-col gap-4 border-t border-border-soft/60 pt-6 sm:flex-row">
           <div className="flex-1 space-y-2">
-            <label className="block text-sm font-semibold text-danger">2. Ban (Permanen)</label>
+            <label className="block text-sm font-semibold text-danger">2. Ban Permanen</label>
             <button
               onClick={() => initiateAction('ban')}
               className="w-full rounded-lg bg-danger px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-105 active:scale-95 sm:w-auto cursor-pointer"
@@ -143,7 +143,7 @@ export default function Moderasi({ send, data }) {
           </div>
 
           <div className="flex-1 space-y-2">
-            <label className="block text-sm font-semibold text-success">3. Pulihkan Akses (Unban)</label>
+            <label className="block text-sm font-semibold text-success">3. Pulihkan Akses Unban</label>
             <button
               onClick={() => initiateAction('unban')}
               className="w-full rounded-lg bg-success px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-105 active:scale-95 sm:w-auto cursor-pointer"

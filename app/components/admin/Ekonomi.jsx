@@ -25,7 +25,7 @@ export default function Ekonomi({ send }) {
     try {
       const out = await send(action, payload);
       setFeedback(out.ok
-        ? { ok: true, text: `Perintah ${action} masuk antrean (#${out.id}). Bot eksekusi dalam ±15 detik.` }
+        ? { ok: true, text: `Perintah ${action} masuk antrean nomor ${out.id}. Bot eksekusi dalam ±15 detik.` }
         : { ok: false, text: out.error || 'Gagal mengirim perintah.' });
       setConfirm(null);
     } finally {
@@ -39,7 +39,7 @@ export default function Ekonomi({ send }) {
     <div className="space-y-6">
       <div className="nx-card px-5 py-5">
         <h2 className="font-display text-ink">Cari User</h2>
-        <p className="mt-1 text-xs text-ink-muted">Masukkan Discord User ID (angka). Profil dari bot bisa dilihat lewat riwayat perintah di Activity Log.</p>
+        <p className="mt-1 text-xs text-ink-muted">Masukkan Discord User ID berupa angka. Profil dari bot bisa dilihat lewat riwayat perintah di Activity Log.</p>
         <input
           value={userId}
           onChange={(e) => setUserId(e.target.value.replace(/\D/g, ''))}
@@ -54,7 +54,7 @@ export default function Ekonomi({ send }) {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <AmountAction label="Tambah Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('add_points', { userId: uid, amount: v })} />
           <AmountAction label="Kurangi Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('remove_points', { userId: uid, amount: v })} />
-          <AmountAction label="Set Poin (0-100jt)" hint="DESTRUKTIF - modal konfirmasi" danger disabled={!uid || busy} onSubmit={(v) => submit('set_points', { userId: uid, amount: v }, true)} />
+          <AmountAction label="Set Poin" hint="0 sampai 100 juta - DESTRUKTIF" danger disabled={!uid || busy} onSubmit={(v) => submit('set_points', { userId: uid, amount: v }, true)} />
           <AmountAction label="Set Level" hint="1-1000" disabled={!uid || busy} onSubmit={(v) => submit('set_level', { userId: uid, level: v })} />
           <AmountAction label="Set Daily Streak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_streak', { userId: uid, value: v })} />
           <AmountAction label="Set Winstreak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_winstreak', { userId: uid, value: v })} />
@@ -66,7 +66,7 @@ export default function Ekonomi({ send }) {
         <div className="mt-4 flex flex-wrap gap-2">
           <QuickAction label="Reset Limit Harian" disabled={!uid || busy} onClick={() => submit('reset_daily', { userId: uid })} />
           <QuickAction label="Reset Misi User" disabled={!uid || busy} onClick={() => submit('reset_missions', { userId: uid })} />
-          <QuickAction label="Clear Sesi Macet (user)" disabled={!uid || busy} onClick={() => submit('clear_lock', { userId: uid })} />
+          <QuickAction label="Clear Sesi Macet User" disabled={!uid || busy} onClick={() => submit('clear_lock', { userId: uid })} />
           <QuickAction label="Reset Misi SEMUA Player" danger disabled={busy} onClick={() => submit('reset_missions', { userId: null }, true)} />
           <QuickAction label="Clear SEMUA Sesi Macet" danger disabled={busy} onClick={() => submit('clear_lock', { userId: null }, true)} />
         </div>

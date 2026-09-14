@@ -66,7 +66,7 @@ export default function PlayerLookup() {
       </div>
 
       {data && data.refreshing && !p && (
-        <div className="nx-card px-5 py-4 text-sm text-ink-muted">Menyegarkan data dari bot… (cek ulang otomatis tiap 3 detik)</div>
+        <div className="nx-card px-5 py-4 text-sm text-ink-muted">Menyegarkan data dari bot… dicek ulang otomatis tiap 3 detik</div>
       )}
 
       {data && !data.profile && !data.refreshing && (

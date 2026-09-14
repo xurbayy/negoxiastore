@@ -1,4 +1,4 @@
-import { getLatestSnapshot } from '../lib/snapshot';
+import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { emojiSrc } from '../lib/emojis';
@@ -102,14 +102,4 @@ export default async function BankPage() {
       <Footer />
     </>
   );
-}
-
-function timeAgo(ts) {
-  const diff = Date.now() - ts;
-  if (diff < 0) return 'baru saja';
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s} detik lalu`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m} menit lalu`;
-  return `${Math.floor(m / 60)} jam lalu`;
 }

@@ -55,8 +55,8 @@ export default function BroadcastManager({ send, data } = {}) {
           <div>
             <label className="block text-xs uppercase tracking-wider text-ink-muted">Target</label>
             <select value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} className="mt-1.5 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none">
-              <option value="all">Semua user (broadcast)</option>
-              <option value="one">1 user saja (Discord ID)</option>
+              <option value="all">Semua user, siaran ke semua</option>
+              <option value="one">1 user saja, pakai Discord ID</option>
             </select>
           </div>
           {form.target === 'one' && (
@@ -75,11 +75,11 @@ export default function BroadcastManager({ send, data } = {}) {
           </div>
         </div>
         <div className="mt-4">
-          <label className="block text-xs uppercase tracking-wider text-ink-muted">Judul (maks 120)</label>
+          <label className="block text-xs uppercase tracking-wider text-ink-muted">Judul, maks 120 karakter</label>
           <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={120} placeholder="Maintenance malam ini" className="mt-1.5 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
         <div className="mt-4">
-          <label className="block text-xs uppercase tracking-wider text-ink-muted">Isi (maks 500)</label>
+          <label className="block text-xs uppercase tracking-wider text-ink-muted">Isi, maks 500 karakter</label>
           <textarea value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} maxLength={500} rows={3} placeholder="Bot update jam 21.00 WIB, fitur utama tetap jalan." className="mt-1.5 w-full resize-y rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
         <div className="mt-4 flex items-center gap-3">
@@ -103,14 +103,14 @@ export default function BroadcastManager({ send, data } = {}) {
       <div className="nx-card px-5 py-5">
         <h3 className="font-display text-ink">Catatan.</h3>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">
-          <li>Broadcast muncul ke semua user dan ditandai terbaca per orang (satu klik tidak mematikan untuk semua).</li>
+          <li>Broadcast muncul ke semua user dan ditandai terbaca per orang, jadi satu klik tidak mematikan untuk semua.</li>
           <li>Pengumuman dari <code className="text-ink">nxadmin</code> di Discord juga otomatis muncul di lonceng user.</li>
         </ul>
       </div>
 
       <div className="nx-card px-5 py-5">
         <h2 className="font-display text-ink flex items-center justify-between">
-          <span>Mode Maintenance (Global)</span>
+          <span>Mode Maintenance Global</span>
           {data?.snapshot?.maintenance?.active ? (
             <span className="nx-badge bg-danger text-white">ON</span>
           ) : (
@@ -123,7 +123,7 @@ export default function BroadcastManager({ send, data } = {}) {
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <input 
             type="text" 
-            placeholder="Alasan (opsional, max 200)"
+            placeholder="Alasan, opsional, maks 200 karakter"
             maxLength={200}
             id="maint-reason"
             className="flex-1 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
@@ -191,7 +191,7 @@ function DiscordAnnouncement({ send, data }) {
         </select>
         {cur && <span className="flex items-center rounded-lg border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs text-ink! truncate max-w-[50%]">Aktif: {String(cur).slice(0, 60)}</span>}
       </div>
-      <textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 800))} rows={2} placeholder={cur ? 'Tulis pesan baru untuk menimpa...' : 'Isi pengumuman (kosong = tidak ada)'} className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none" />
+      <textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 800))} rows={2} placeholder={cur ? 'Tulis pesan baru untuk menimpa...' : 'Isi pengumuman, biarkan kosong bila tidak ada'} className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none" />
       <div className="mt-2 flex gap-2">
         <button type="button" disabled={busy || !text.trim()} onClick={() => push(text.trim(), 'Pengumuman')} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Pasang</button>
         {cur && <button type="button" disabled={busy} onClick={() => push('', 'Penghapusan')} className="rounded-lg border border-danger/40 px-4 py-2 text-sm font-semibold text-danger transition hover:bg-danger/10 disabled:opacity-40 cursor-pointer">Hapus</button>}

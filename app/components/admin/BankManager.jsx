@@ -66,7 +66,7 @@ export default function BankManager({ send, data }) {
       {confirm && (
         <ConfirmModal
           title="Bebaskan hutang?"
-          body={`Hutang ${confirm.username} akan dihapus oleh bot (clear_loan). Lanjutkan?`}
+          body={`Hutang ${confirm.username} akan dihapus oleh bot lewat perintah clear_loan. Lanjutkan?`}
           onCancel={() => setConfirm(null)}
           onConfirm={doClear}
           busy={busy}
