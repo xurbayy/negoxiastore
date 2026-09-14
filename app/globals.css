@@ -13,11 +13,16 @@
   --color-accent: #F19A1A;
   --color-accent-hover: #D98510;
   --color-success: #7BA05B;
+  --color-warning: #C87F0A;
   --color-danger: #C74B3C;
+  --color-primary: #D98510;
   --color-card-dark: #1E1E26;
   --color-card-dark-2: #2B2B35;
   --color-card-cream: #FBF7EC;
   --color-border-soft: #E3D9C2;
+  --color-surface: #FBF7EC;
+  --color-surface-raised: #EFE7D3;
+  --color-surface-sunken: #F4EEDF;
 }
 
 :root {
