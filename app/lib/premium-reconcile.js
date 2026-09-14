@@ -68,6 +68,18 @@ export async function reconcilePremium(db, snapshot) {
     }
 
     // === 1. Deteksi transisi -> revoke sintetis (cabut manual Discord) ===
+    //
+    // PENTING (fix 2026-09-14, premium sah ikut terblokir): dulu SATU snapshot
+    // yang tidak memuat user tertentu langsung dianggap "admin mencabut manual",
+    // lalu ditulis recon_revoke yang MEMBLOKIR semua grant lebih tua darinya.
+    // Akibat nyata di produksi: user yang sudah bayar (order paid) tidak pernah
+    // dapat premium karena hilang sesaat (bot restart / query gagal / snapshot
+    // parsial) lalu ditandai "dicabut manual" secara keliru.
+    //
+    // Sekarang hilang harus TERKONFIRMASI minimal HILANG_MIN_PUSH kali berturut-
+    // turut sebelum dianggap pencabutan manual. Hilang sekali = dicurigai bot
+    // belum stabil, cukup dicatat sebagai kandidat (counter), belum di-revoke.
+    const HILANG_MIN_PUSH = 2;
     let prev = [];
     try { prev = JSON.parse(await meta.get(db, 'recon_prev') || '[]'); } catch { prev = []; }
     const prevTs = await meta.getNum(db, 'recon_prev_ts');
@@ -78,13 +90,66 @@ export async function reconcilePremium(db, snapshot) {
       for (const [id, exp] of prevMap) {
         if (!current.has(id) && exp > snapTs) gone.push(id);
       }
-      // Massal (>=2 & >=60% dari anggota sebelumnya) -> DB reset, revive biasa.
-      const massLoss = gone.length >= 2 && gone.length >= Math.ceil(prevMap.size * 0.6);
-      if (gone.length && !massLoss) {
-        for (const id of gone) {
-          await meta.set(db, 'recon_revoke:' + id, snapTs);
-          await meta.del(db, 'recon_premium:' + id); // reset cooldown, biar event baru langsung kebaca
-          await notifyAdmin(db, id);
+      // Massal -> indikasi DB reset / bot baru pulih, revive biasa (JANGAN
+      // dianggap cabut manual). Bentuknya:
+      //   a) >=2 orang DAN >=60% anggota sebelumnya, ATAU
+      //   b) tepat 1 orang hilang DAN dia punya order paid yang belum kedaluwarsa.
+      //
+      // Bentuk (b) penting 2026-09-14: saat premium cuma 1 orang, hilangnya dia
+      // = 100% tapi syarat (a) butuh >=2 orang, sehingga dulu dicap "dicabut
+      // manual" secara keliru saat bot baru pulih -> user yang sudah BAYAR tidak
+      // dapat premium. Karena itu kalau ada order paid yang belum lewat 30 hari,
+      // pembayaran dianggap menang: TIDAK di-revoke otomatis. Admin yang benar-
+      // benar mencabut tetap bisa revoke manual dari panel web (itu tercatat).
+      let adaOrderAktif = false;
+      if (prevMap.size === 1 && gone.length === 1) {
+        const id = gone[0];
+        const oleh = await db.execute({
+          sql: "SELECT MAX(paid_at) mx FROM orders WHERE status = 'paid' AND discord_id = ?",
+          args: [id],
+        });
+        const mx = Number(oleh.rows?.[0]?.mx || 0);
+        adaOrderAktif = mx > 0 && mx + 30 * DAY > Date.now();
+      }
+      const massLoss =
+        (gone.length >= 2 && gone.length >= Math.ceil(prevMap.size * 0.6)) ||
+        (prevMap.size === 1 && gone.length === 1 && adaOrderAktif);
+
+      // Hitung berapa push beruntun tiap user hilang.
+      //
+      // GOTCHA yang ditemukan lewat simulasi 2026-09-14: kalau counter dihitung
+      // hanya dari `gone` (selisih prev vs current), user yang hilang akan
+      // KELUAR dari prevMap di push berikutnya sehingga tak pernah terhitung
+      // dua kali -> revoke asli pun tidak pernah terdeteksi. Karena itu counter
+      // dibaca dari SEMUA counter aktif di web_meta (recon_gone:*), lalu:
+      //   - user yang MUNCUL lagi  -> counter dihapus
+      //   - user yang masih hilang -> counter dinaikkan
+      //   - user yang baru hilang  -> mulai dari 1
+      const counterAktif = await db.execute("SELECT key FROM web_meta WHERE key LIKE 'recon_gone:%'").catch(() => ({ rows: [] }));
+      const sebelumnyaHilang = new Set((counterAktif.rows || []).map((r) => String(r.key).slice('recon_gone:'.length)));
+
+      // User yang sudah kembali -> reset counter.
+      for (const id of sebelumnyaHilang) {
+        if (current.has(id)) await meta.del(db, 'recon_gone:' + id);
+      }
+
+      if (!massLoss) {
+        // Kandidat: baru hilang (dari gone) + masih hilang dari push sebelumnya.
+        const kandidat = new Set(gone);
+        for (const id of sebelumnyaHilang) if (!current.has(id)) kandidat.add(id);
+
+        for (const id of kandidat) {
+          const n = (await meta.getNum(db, 'recon_gone:' + id)) + 1;
+          if (n >= HILANG_MIN_PUSH) {
+            // Terkonfirmasi hilang beberapa push beruntun -> benar-benar dicabut.
+            await meta.set(db, 'recon_revoke:' + id, snapTs);
+            await meta.del(db, 'recon_premium:' + id); // reset cooldown, event baru langsung kebaca
+            await meta.del(db, 'recon_gone:' + id);    // sudah jadi revoke, counter selesai
+            await notifyAdmin(db, id);
+          } else {
+            // Baru hilang sekali: simpan. Bisa jadi bot cuma belum stabil.
+            await meta.set(db, 'recon_gone:' + id, n);
+          }
         }
       }
     }
@@ -104,9 +169,33 @@ export async function reconcilePremium(db, snapshot) {
       } catch {}
     }
     const syn = await db.execute("SELECT key, value FROM web_meta WHERE key LIKE 'recon_revoke:%'").catch(() => ({ rows: [] }));
+
+    // PEMBATALAN REVOKE YANG TIDAK SAH (fix 2026-09-14): kalau user MEMBAYAR
+    // LAGI setelah revoke tercatat, revoke itu jelas bukan niat terakhir admin -
+    // pembayaran sah harus menang. Dulu revoke sintetis permanen menahan semua
+    // event yang lebih tua, sehingga user yang sudah bayar tidak pernah dapat
+    // premium. Di sini revoke dihapus supaya order/grant sesudahnya bisa masuk.
+    const payBaru = new Map(); // id -> paid_at terbaru
+    {
+      const pr = await db.execute(
+        "SELECT discord_id, MAX(paid_at) AS mx FROM orders WHERE status = 'paid' AND paid_at IS NOT NULL GROUP BY discord_id LIMIT 1000"
+      );
+      for (const r of pr.rows || []) {
+        const id = String(r.discord_id || '');
+        if (id && Number(r.mx)) payBaru.set(id, Number(r.mx));
+      }
+    }
     for (const r of syn.rows || []) {
       const id = String(r.key).slice('recon_revoke:'.length);
       const t = Number(r.value) || 0;
+      const bayarSetelahRevoke = payBaru.get(id);
+      if (bayarSetelahRevoke && bayarSetelahRevoke > t) {
+        // User bayar lagi SESUDAH "revoke" -> revoke tidak sah, batalkan.
+        await meta.del(db, 'recon_revoke:' + id);
+        await meta.del(db, 'recon_premium:' + id); // boleh langsung di-revive
+        await meta.del(db, 'recon_gone:' + id);
+        continue;
+      }
       if (id && t > (revokeAt.get(id) || 0)) revokeAt.set(id, t);
     }
 

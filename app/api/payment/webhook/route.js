@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getDb, schemaReady } from '../../../lib/db';
 import { getLatestSnapshot } from '../../../lib/snapshot';
@@ -31,7 +30,7 @@ export async function POST(request) {
 
   const {
     merchantOrderId, amount, resultCode, signature,
-    merchantUserId, reference,
+    reference,
   } = body || {};
   if (!merchantOrderId || !signature) return new Response('OK', { status: 400 });
 

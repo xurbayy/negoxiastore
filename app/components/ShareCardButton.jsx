@@ -12,10 +12,7 @@ import { emojiSrc } from '../lib/emojisClient';
 const W = 1080;
 const H = 1350;
 const INK = '#FBF7EC';      // teks terang di atas dark card
-const MUTED = 'rgba(251,247,236,0.55)';
 const ACCENT = '#F19A1A';
-const ACCENT_SOFT = 'rgba(241,154,26,0.14)';
-const ACCENT_LINE = 'rgba(241,154,26,0.35)';
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -124,8 +121,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
   ctx.lineWidth = 5;
   ctx.beginPath(); ctx.arc(avCx, avCy, avR + 13, 0, Math.PI * 2); ctx.stroke();
 
-  // Mahkota kecil menempel di ring utk #1 (satu-satunya ornamen)
+  // Ornamen peringkat di atas avatar: mahkota untuk #1, medali untuk #2 dan #3.
+  // (Dulu medalImg dimuat tapi tidak pernah dipakai - rank 2/3 tanpa ornamen.)
   if (rank === 1 && crownImg) ctx.drawImage(crownImg, avCx - 30, avCy - avR - 78, 60, 60);
+  if ((rank === 2 || rank === 3) && medalImg) ctx.drawImage(medalImg, avCx - 26, avCy - avR - 72, 52, 52);
 
   // ═══ Nama + sub ═══
   ctx.textAlign = 'center';

@@ -29,43 +29,28 @@ function Card({ className = '', children }) {
   );
 }
 
-// Placeholder navbar: tinggi & posisi sama dengan Navbar asli (fixed top-0,
-// py-4, logo 36px) supaya tidak ada pergeseran layout.
-function NavbarSkeleton() {
-  return (
-    <header className="fixed inset-x-0 top-0 z-50 py-4">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-5" aria-hidden="true">
-        <div className="flex items-center gap-2.5">
-          <Circle className="h-9 w-9" />
-          <Bar className="hidden h-5 w-28 lg:block" />
-        </div>
-        <div className="flex items-center gap-3">
-          <Bar className="hidden h-4 w-16 sm:block" />
-          <Bar className="hidden h-4 w-20 sm:block" />
-          <div className="skeleton h-9 w-24 rounded-full" />
-        </div>
-      </nav>
-    </header>
-  );
-}
-
 // Pembungkus halaman: menyamakan latar grid + padding atas/bawah halaman asli.
+//
+// PENTING (fix 2026-09-14, halaman dobel): Shell TIDAK lagi merender navbar
+// sendiri. Alasan: Navbar dirender DI DALAM tiap halaman (page.jsx), bukan di
+// layout. Saat transisi route, Next.js sempat mempertahankan DOM halaman lama
+// berdampingan dengan loading.jsx, sehingga navbar dari halaman lama + navbar
+// dari Shell skeleton = DUA navbar dan DUA <main> sekaligus (terukur: 2 header,
+// 2 main, 95 skeleton). Sekarang loading.jsx hanya mengisi <main>, jadi tidak
+// pernah ada navbar dobel. Padding pt-32 tetap sama supaya konten tidak melompat.
 function Shell({ maxWidth = 'max-w-4xl', children }) {
   return (
-    <>
-      <NavbarSkeleton />
-      <main
-        className={`relative mx-auto ${maxWidth} px-5 pb-24 pt-32`}
-        aria-busy="true"
-        aria-label="Memuat halaman"
-      >
-        <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
-        <div className="relative" role="status">
-          <span className="sr-only">Memuat halaman</span>
-          {children}
-        </div>
-      </main>
-    </>
+    <main
+      className={`relative mx-auto ${maxWidth} px-5 pb-24 pt-32`}
+      aria-busy="true"
+      aria-label="Memuat halaman"
+    >
+      <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
+      <div className="relative" role="status">
+        <span className="sr-only">Memuat halaman</span>
+        {children}
+      </div>
+    </main>
   );
 }
 
@@ -89,7 +74,7 @@ function LeaderboardSkeleton() {
   );
   return (
     <Shell maxWidth="max-w-4xl">
-      <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">Leaderboard NEXO</h1>
+      <div className="mt-3 skeleton h-9 w-64 md:h-11 md:w-80" />
       <Bar className="mt-3 w-52" />
 
       {/* Top 10 Pemain */}
@@ -176,7 +161,7 @@ function ShopSkeleton() {
 
   return (
     <Shell maxWidth="max-w-5xl">
-      <h1 className="font-display text-3xl tracking-tight text-ink md:text-4xl">NEXO Shop.</h1>
+      <div className="skeleton h-9 w-52 md:h-11 md:w-64" />
       <div className="accent-bar mt-4" aria-hidden="true" />
       <Bar className="mt-3 w-72" />
 
@@ -213,7 +198,7 @@ function BankSkeleton() {
   );
   return (
     <Shell maxWidth="max-w-4xl">
-      <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">Bank Watch</h1>
+      <div className="mt-3 skeleton h-9 w-48 md:h-11 md:w-56" />
       <Bar className="mt-3 w-56" />
 
       <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -253,14 +238,22 @@ function BankSkeleton() {
  *   pill "NEXO Pass" (bg-accent) + h1 + harga besar "Rp 20.000 /bulan"
  *   + paragraf max-w-lg, lalu kartu pembelian (PremiumClient)
  */
+/**
+ * PREMIUM - halaman asli (rata tengah):
+ *   pill "NEXO Pass" + judul + harga besar + paragraf, lalu kartu QRIS.
+ * CATATAN: skeleton TIDAK menampilkan teks konten apa pun (dulu di sini ada
+ * "Satu Pass, Semua Perk" yang ikut terlihat) - teks ditiru sebagai bar abu
+ * supaya tidak ada tulisan yang bisa basi atau salah saat halaman dimuat.
+ */
 function PremiumSkeleton() {
   return (
     <Shell maxWidth="max-w-4xl">
       <div className="text-center">
         <div className="skeleton mx-auto h-8 w-36 rounded-full" />
-        <h1 className="mt-5 font-display text-3xl text-ink md:text-5xl">Satu Pass, Semua Perk</h1>
+        <div className="skeleton mx-auto mt-5 h-9 w-72 max-w-full md:h-12 md:w-[28rem]" />
         <div className="mt-5 flex items-end justify-center gap-2">
           <div className="skeleton h-10 w-52 md:h-14 md:w-72" />
+          <div className="skeleton mb-2 h-4 w-12" />
         </div>
         <div className="mx-auto mt-5 max-w-lg space-y-2">
           <Bar className="w-full" />
@@ -292,9 +285,15 @@ function PremiumSkeleton() {
  *   banner status akun
  *   grid 3 kolom: kiri (2/3) misi + riwayat, kanan sidebar
  */
-function MeSkeleton() {
+// ISI skeleton profil (tanpa <main>/navbar). Dipakai DUA tempat:
+//  - app/me/loading.jsx  -> MeSkeleton (body + Shell) saat Next menyiapkan halaman
+//  - components/MeClient -> saat menunggu fetch /api/me (halaman sudah punya
+//    main+navbar sendiri, jadi TIDAK boleh pakai Shell lagi)
+// Karena keduanya memakai isi yang sama, transisi dari skeleton ke data mulus
+// dan tidak terlihat seperti skeleton dobel.
+export function MeSkeletonBody() {
   return (
-    <Shell maxWidth="max-w-3xl">
+    <>
       {/* Header dark */}
       <div className="overflow-hidden rounded-2xl bg-card-dark">
         <div className="flex items-center justify-between gap-3 bg-card-dark-2 px-6 py-3">
@@ -377,6 +376,15 @@ function MeSkeleton() {
           </Card>
         </div>
       </div>
+    </>
+  );
+}
+
+// Versi halaman-penuh (untuk loading.jsx): isi + Shell (main + navbar).
+function MeSkeleton() {
+  return (
+    <Shell maxWidth="max-w-3xl">
+      <MeSkeletonBody />
     </Shell>
   );
 }
@@ -386,10 +394,13 @@ function MeSkeleton() {
  *   h1 + kartu form (input kode + tombol klaim, widget Turnstile)
  *   kartu riwayat klaim
  */
-function RedeemSkeleton() {
+// ISI skeleton redeem (tanpa <main>/navbar). Dipakai DUA tempat:
+//  - app/redeem/loading.jsx -> RedeemSkeleton (body + Shell)
+//  - components/RedeemClient -> saat menunggu status registrasi
+export function RedeemSkeletonBody() {
   return (
-    <Shell maxWidth="max-w-2xl">
-      <h1 className="font-display text-3xl text-ink md:text-4xl">Redeem Kode</h1>
+    <>
+      <div className="skeleton h-9 w-48 md:h-11 md:w-56" />
       <Bar className="mt-3 w-64" />
 
       <Card className="mt-8 p-6">
@@ -414,6 +425,14 @@ function RedeemSkeleton() {
           ))}
         </div>
       </Card>
+    </>
+  );
+}
+
+function RedeemSkeleton() {
+  return (
+    <Shell maxWidth="max-w-2xl">
+      <RedeemSkeletonBody />
     </Shell>
   );
 }
@@ -528,6 +547,61 @@ function HomeSkeleton() {
   );
 }
 
+/**
+ * SIMPLE - halaman satu kartu di tengah. Dipakai /login, /no-access,
+ * /admin/login, dan /admin/verify (semuanya berbentuk satu kartu fokus).
+ */
+function SimpleSkeleton() {
+  return (
+    <Shell maxWidth="max-w-md">
+      <div className="mx-auto w-full max-w-md">
+        <Card className="px-8 py-10">
+          <div className="flex justify-center">
+            <div className="skeleton h-12 w-12 rounded-full" />
+          </div>
+          <div className="mt-5 flex justify-center">
+            <div className="skeleton h-7 w-56" />
+          </div>
+          <div className="mx-auto mt-4 space-y-2">
+            <Bar className="w-full" />
+            <Bar className="mx-auto w-4/5" />
+          </div>
+          <div className="mt-7 space-y-4 border-t border-border-soft pt-6">
+            <div className="skeleton h-11 w-full rounded-xl" />
+            <div className="skeleton h-11 w-full rounded-xl" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+          </div>
+        </Card>
+      </div>
+    </Shell>
+  );
+}
+
+/**
+ * DOC - halaman dokumen panjang (Kebijakan Privasi, Ketentuan Layanan):
+ *   judul + subjudul + deretan section (judul + beberapa paragraf).
+ */
+function DocSkeleton() {
+  return (
+    <Shell maxWidth="max-w-3xl">
+      <div className="mt-3 skeleton h-9 w-72 md:h-11 md:w-80" />
+      <Bar className="mt-3 w-64" />
+
+      {Array.from({ length: 3 }).map((_, s) => (
+        <div key={s} className="mt-10">
+          <Bar className="h-6 w-56" />
+          <div className="mt-4 space-y-3">
+            <Bar className="w-full" />
+            <Bar className="w-11/12" />
+            <Bar className="w-full" />
+            <Bar className="w-3/4" />
+          </div>
+        </div>
+      ))}
+    </Shell>
+  );
+}
+
 /* ── Ekspor: pilih varian lewat prop `variant` ────────────────────────── */
 
 const VARIANTS = {
@@ -539,10 +613,12 @@ const VARIANTS = {
   me: MeSkeleton,
   redeem: RedeemSkeleton,
   admin: AdminSkeleton,
+  simple: SimpleSkeleton,
+  doc: DocSkeleton,
 };
 
 /**
- * @param {'home'|'leaderboard'|'shop'|'bank'|'premium'|'me'|'redeem'|'admin'} variant
+ * @param {'home'|'leaderboard'|'shop'|'bank'|'premium'|'me'|'redeem'|'admin'|'simple'|'doc'} variant
  *   Varian skeleton yang meniru halaman tujuan.
  */
 export default function PageSkeleton({ variant = 'home' }) {

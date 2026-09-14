@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createSession, createAdminSession } from '../../../lib/session';
 import { cookies } from 'next/headers';
+import { rateLimitGlobal } from '../../../lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +11,12 @@ export const dynamic = 'force-dynamic';
 // returnTo=@admin = mode ADMIN: callback hanya boleh mengaktifkan ID khusus
 // di ADMIN_DISCORD_IDS (login panel tanpa username/password).
 export async function GET(request) {
+  // Jaring anti-DDoS: endpoint publik yang membuat cookie + redirect. Batasi
+  // total lintas IP supaya tidak bisa dipakai membanjiri server. Batasnya
+  // longgar (300/menit) - login normal tidak akan pernah menyentuhnya.
+  if (!rateLimitGlobal('auth-login', 300, 60_000)) {
+    return NextResponse.json({ ok: false, error: 'Terlalu banyak permintaan login. Coba lagi sebentar.' }, { status: 429 });
+  }
   const url = new URL(request.url);
   let returnTo = url.searchParams.get('returnTo') || '/me';
   if (returnTo !== '@admin' && !(returnTo.startsWith('/') && !returnTo.startsWith('//'))) returnTo = '/me';

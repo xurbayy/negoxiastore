@@ -8,6 +8,8 @@ import { emojiSrc } from '../lib/emojisClient';
 // GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
 import { gameName, fmt as fmtLib } from '../lib/formatClient';
 import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
+// Isi skeleton profil yang SAMA dengan app/me/loading.jsx (anti skeleton dobel).
+import { MeSkeletonBody } from './PageSkeleton';
 
 function relTime(ts) {
   const diff = Date.now() - Number(ts);
@@ -140,12 +142,18 @@ export default function MeClient({ betaGames = null }) {
     try { sessionStorage.setItem('nexo_upsell_hidden', '1'); } catch {}
   }
 
+  // Fase memuat data dari /api/me (setelah halaman ter-render).
+  //
+  // PENTING (fix 2026-09-14, skeleton double): skeleton di sini dulu bentuknya
+  // beda dari app/me/loading.jsx, sehingga pemain melihat DUA skeleton berbeda
+  // berurutan - satu dari Next.js saat menyiapkan halaman, satu lagi dari sini
+  // saat menunggu fetch. Sekarang keduanya memakai ISI yang sama
+  // (MeSkeletonBody), jadi yang terlihat menyambung mulus, bukan dobel.
+  // Sengaja TANPA Shell: halaman ini sudah punya main + navbar sendiri.
   if (state.loading) {
     return (
-      <div className="space-y-4">
-        <div className="skeleton h-44 w-full" />
-        <div className="skeleton h-24 w-full" />
-        <div className="skeleton h-24 w-2/3" />
+      <div className="space-y-5" aria-busy="true" aria-label="Memuat profil">
+        <MeSkeletonBody />
       </div>
     );
   }

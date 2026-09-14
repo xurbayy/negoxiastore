@@ -2,21 +2,11 @@
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 
-const PERKS = [
-  { emoji: 'gem', text: 'Badge Supporter Eksklusif (NEXO Pass) in-game & di profil web' },
-  { emoji: 'crown', text: 'Role NEXO PASS berwana emas mengkilap di Discord' },
-  { emoji: 'backpack', text: 'Kapasitas Inventori TERBUKA BEBAS (dari max 5 jadi Unlimited)' },
-  { emoji: 'battery', text: '+20% Bonus limit main harian (Kuota Energi & Action Points)' },
-  { emoji: 'zap', text: 'Prioritas Render: avatar & aset in-game diprioritaskan server' },
-  { emoji: 'download3', text: 'Profil Web Premium: grafik riwayat & badge khusus di website' },
-];
-
 function nowMs() {
   return Date.now();
 }
 
 export default function PremiumClient({ loggedIn, botOnline, initialPremiumActive, initialOrder, discordId }) {
-  const [loading, setLoading] = useState(false); // No initial loading anymore!
   const [buying, setBuying] = useState(false);
   const [online, setOnline] = useState(botOnline);
   const [order, setOrder] = useState(initialOrder || null);
@@ -133,15 +123,6 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       })
       .catch((e) => setError(e.message))
       .finally(() => setBuying(false));
-  }
-
-  if (loading) {
-    return (
-      <div className="mt-8 flex animate-pulse flex-col items-center gap-4">
-        <div className="h-10 w-32 rounded-lg bg-surface-raised" />
-        <div className="h-4 w-48 rounded bg-surface-raised" />
-      </div>
-    );
   }
 
   // Satu Pass = satu pembelian per bulan. Yang sudah premium TIDAK bisa beli

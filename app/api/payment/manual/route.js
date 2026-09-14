@@ -3,12 +3,20 @@ import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
 import { getLatestSnapshot, userHasPremium } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
+import { rateLimitGlobal } from '../../../lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 const PRICE = 20000;
 
 // POST /api/payment/manual - Submit bukti transfer manual
 export async function POST(request) {
+  // Jaring anti-DDoS: endpoint ini menerima upload gambar base64 (sampai ~1MB),
+  // jadi paling berat. Batasi total request lintas IP (kiriman sah sangat jarang,
+  // satu user hanya sekali bayar). Ini TIDAK mengganggu pemakaian normal.
+  if (!rateLimitGlobal('payment-manual', 60, 60_000)) {
+    return NextResponse.json({ ok: false, error: 'Terlalu banyak permintaan. Coba lagi sebentar.' }, { status: 429 });
+  }
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
