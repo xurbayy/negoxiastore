@@ -35,7 +35,7 @@ export default function NoAccessPage() {
             ada apa-apa selain spreadsheet dan penyesalan.
           </p>
 
-          {/* Terminal hint — consistent with 404 page */}
+          {/* Terminal hint - consistent with 404 page */}
           <div className="mx-auto mt-7 flex h-12 w-full max-w-sm items-center justify-center rounded-xl border border-border-soft bg-card-dark px-4">
             <span className="font-mono text-sm text-success">
               $ sudo masuk-panel-admin

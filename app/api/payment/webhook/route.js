@@ -14,7 +14,7 @@ export async function POST(request) {
   const apiKey = process.env.DUITKU_API_KEY;
   if (!merchantCode || !apiKey) return new Response('OK', { status: 503 });
 
-  // Parse body — Duitku bisa kirim form-urlencoded atau JSON
+  // Parse body - Duitku bisa kirim form-urlencoded atau JSON
   let body;
   try {
     const contentType = request.headers.get('content-type') || '';
@@ -92,7 +92,7 @@ export async function POST(request) {
       args: [orderId],
     });
     const orow = order.rows[0];
-    // Bandingkan NUMERIK — Duitku kadang kirim "20000.00"
+    // Bandingkan NUMERIK - Duitku kadang kirim "20000.00"
     if (orow && Number(amount) === Number(orow.amount)) {
       const flip = await db.execute({
         sql: "UPDATE orders SET status = 'paid', paid_at = ?, gateway_ref = ? WHERE id = ? AND status IN ('pending', 'canceled', 'expired')",

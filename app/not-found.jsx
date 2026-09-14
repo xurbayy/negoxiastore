@@ -27,7 +27,7 @@ export default function NotFound() {
           Halaman yang kamu cari tidak ada atau sudah dipindahkan. Kembali ke lobby dan main lagi.
         </p>
 
-        {/* Terminal hint — gaming nuance */}
+        {/* Terminal hint - gaming nuance */}
         <div className="mx-auto mt-6 flex h-12 w-full max-w-sm items-center justify-center rounded-xl border border-border-soft bg-card-dark px-4">
           <span className="font-mono text-sm text-success">
             $ nexo --find-page

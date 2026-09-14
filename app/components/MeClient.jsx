@@ -360,7 +360,7 @@ export default function MeClient({ betaGames = null }) {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="font-display text-2xl text-card-cream" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.3)' }}>{p.username}</h1>
-                  {/* Title badge — standardized with nx-badge */}
+                  {/* Title badge - standardized with nx-badge */}
                   {p.titleInfo && (
                     <span
                       className="nx-badge"
@@ -377,7 +377,7 @@ export default function MeClient({ betaGames = null }) {
                       {String(p.titleInfo.label || '').replace(/<a?:[A-Za-z0-9_]+:\d+>/g, '').trim()}
                     </span>
                   )}
-                  {/* Admin title badge — standardized */}
+                  {/* Admin title badge - standardized */}
                   {Array.isArray(p.adminTitleInfo?.parts) && p.adminTitleInfo.parts.length > 0 && (
                     <span className="nx-badge bg-bg-soft tracking-wide text-ink-muted">
                       {p.adminTitleInfo.parts.map((pt, i) =>
@@ -390,7 +390,7 @@ export default function MeClient({ betaGames = null }) {
                       )}
                     </span>
                   )}
-                  {/* STATUS NEXO PASS — standardized nx-badge */}
+                  {/* STATUS NEXO PASS - standardized nx-badge */}
                   {isPremium ? (
                     <span className="nx-badge bg-success px-3 py-1 text-white shadow-sm">
                       {emojiSrc('download3') && (
