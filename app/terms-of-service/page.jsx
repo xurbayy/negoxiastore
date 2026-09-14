@@ -32,11 +32,13 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'NEXO Pass dan pembayaran.',
+    title: 'NEXO Pass dan pembayaran manual.',
     body: [
       'NEXO Pass adalah langganan opsional Rp 20.000/bulan untuk kenyamanan ekstra (inventori unlimited, kuota harian tambahan, akses beta). Pass tidak menjual kekuatan dalam game (no pay-to-win): hasil game tetap soal keberuntungan dan strategi.',
-      'Setelah dibayar, pass aktif otomatis dan berlaku sampai masa 30 hari berakhir. Kalau pembayaran terdeteksi curang (chargeback), pass dicabut tanpa pengembalian.',
-      'Semua pembelian sifatnya final dan tidak ada pengembalian dana (no refund). KECUALI kalau ada murni kesalahan sistem (misal: uang udah kepotong tapi pass nggak masuk, atau masa aktif pass mati sebelum waktunya habis). Kalau kejadian begitu, langsung hubungi admin lewat tombol Feedback di web atau via bot, pasti kami tanggung jawab!',
+      'Pembayaran dilakukan secara manual via QRIS (GoPay, OVO, Dana, m-Banking). Setelah kamu transfer dan meng-upload bukti pembayaran, admin akan memvalidasi mutasi dan mengaktifkan Pass-mu.',
+      'Jam Operasional proses pembayaran adalah pukul 08:00 - 22:00 WIB. Pembayaran di jam ini akan diproses dengan cepat. Jika kamu transfer di luar jam tersebut, pesanan kemungkinan akan diproses keesokan harinya.',
+      'Pastikan kamu melampirkan screenshot bukti transfer yang asli. Bukti transfer palsu atau tidak sesuai dengan mutasi e-wallet Admin akan otomatis ditolak.',
+      'Semua pembelian sifatnya final dan tidak ada pengembalian dana (no refund). KECUALI kalau ada murni kesalahan sistem (misal: uang sudah masuk ke mutasi tapi pass mati sebelum waktunya). Kalau terjadi kendala, langsung hubungi admin lewat Discord.',
     ],
   },
   {
