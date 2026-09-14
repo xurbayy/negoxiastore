@@ -82,44 +82,53 @@ export async function GET() {
       const isPremium = Boolean(profile.profile.premium);
       const now = Date.now();
 
+      // TRANSISI ATOMIK (fix 2026-09-14): dulu dua request /api/me yang
+      // bersamaan (profil + auto-refresh + poll) sama-sama membaca was_premium
+      // LAMA lalu dua-duanya menulis notif -> notif DOBEL/TRIPLE (terbukti di
+      // data: 2 notif identik di detik yang sama). Sekarang UPDATE dulu dengan
+      // syarat nilai lama; hanya pemenang UPDATE yang menulis notifikasi.
       if (isPremium && !wasPremium) {
-        await db.execute({
-          sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-          args: [
-            session.discordId,
-            'NEXO Pass kamu AKTIF!',
-            'Semua perk premium sudah jalan in-game: inventori unlimited, bonus kuota, dan prioritas render.',
-            now,
-          ],
-        });
-        await db.execute({
-          sql: 'UPDATE users SET was_premium = 1 WHERE discord_id = ?',
+        const flip = await db.execute({
+          sql: 'UPDATE users SET was_premium = 1 WHERE discord_id = ? AND (was_premium IS NULL OR was_premium = 0)',
           args: [session.discordId],
         });
+        if (flip.rowsAffected > 0) {
+          await db.execute({
+            sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
+            args: [
+              session.discordId,
+              'NEXO Pass kamu AKTIF!',
+              'Semua perk premium sudah jalan in-game: inventori unlimited, bonus kuota, dan prioritas render.',
+              now,
+            ],
+          });
+        }
       } else if (!isPremium && wasPremium) {
-        await db.execute({
-          sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'info', ?, ?, ?)",
-          args: [
-            session.discordId,
-            'Langganan NEXO Pass berakhir',
-            'Inventori kembali dibatasi 5 unit per item. Aktifkan lagi kapan saja di halaman Premium.',
-            now,
-          ],
-        });
-        // Siklus langganan langkah 4: satu pengingat "aktifkan lagi" (event).
-        await db.execute({
-          sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-          args: [
-            session.discordId,
-            'Aktifkan lagi NEXO Pass',
-            'Beli ulang kapan saja - Rp 20.000/bulan, semua perk balik lagi.',
-            now + 1,
-          ],
-        });
-        await db.execute({
-          sql: 'UPDATE users SET was_premium = 0 WHERE discord_id = ?',
+        const flip = await db.execute({
+          sql: 'UPDATE users SET was_premium = 0 WHERE discord_id = ? AND was_premium = 1',
           args: [session.discordId],
         });
+        if (flip.rowsAffected > 0) {
+          await db.execute({
+            sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'info', ?, ?, ?)",
+            args: [
+              session.discordId,
+              'Langganan NEXO Pass berakhir',
+              'Inventori kembali dibatasi 5 unit per item. Aktifkan lagi kapan saja di halaman Premium.',
+              now,
+            ],
+          });
+          // Siklus langganan langkah 4: satu pengingat "aktifkan lagi" (event).
+          await db.execute({
+            sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
+            args: [
+              session.discordId,
+              'Aktifkan lagi NEXO Pass',
+              'Beli ulang kapan saja - Rp 20.000/bulan, semua perk balik lagi.',
+              now + 1,
+            ],
+          });
+        }
       }
     }
   }

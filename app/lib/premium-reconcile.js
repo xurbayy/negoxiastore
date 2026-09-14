@@ -188,19 +188,22 @@ export async function reconcilePremium(db, snapshot) {
 }
 
 // Kabari admin pertama saat auto-recovery membatalkan user (cabut manual).
+// DEDUP (fix 2026-09-14): notif yang sama untuk user yang sama tidak dibuat
+// ulang dalam 6 jam - dulu tiap push snapshot (60 dtk) bikin notif baru
+// selama kondisi "dicabut manual" belum berubah -> lonceng admin banjir.
 async function notifyAdmin(db, userId) {
   try {
     const adminId = String(process.env.ADMIN_DISCORD_IDS || process.env.NEXT_PUBLIC_ADMIN_IDS || '').split(',')[0]?.trim();
     if (!adminId) return;
+    const body = `User ${userId} hilang dari daftar premium tanpa perintah web -> dianggap pencabutan manual dari Discord. Auto-recovery DIJEDA untuk user ini. Grant dari panel web / pembayaran baru akan mengaktifkan recovery lagi.`;
+    const existing = await db.execute({
+      sql: 'SELECT 1 as x FROM web_notifications WHERE discord_id = ? AND title = ? AND body = ? AND created_at > ? LIMIT 1',
+      args: [adminId, 'Premium dicabut manual terdeteksi', body, Date.now() - 6 * 60 * 60_000],
+    });
+    if (existing.rows.length) return; // sudah ada notif serupa < 6 jam -> jangan dobel
     await db.execute({
       sql: 'INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)',
-      args: [
-        adminId,
-        'info',
-        'Premium dicabut manual terdeteksi',
-        `User ${userId} hilang dari daftar premium tanpa perintah web -> dianggap pencabutan manual dari Discord. Auto-recovery DIJEDA untuk user ini. Grant dari panel web / pembayaran baru akan mengaktifkan recovery lagi.`,
-        Date.now(),
-      ],
+      args: [adminId, 'info', 'Premium dicabut manual terdeteksi', body, Date.now()],
     });
   } catch {}
 }
