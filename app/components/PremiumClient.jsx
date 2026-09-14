@@ -238,7 +238,7 @@ export default function PremiumClient({ loggedIn, botOnline, justPaid }) {
             <button
               onClick={submitPayment}
               disabled={buying || !senderName || !receiptBase64}
-              className="flex-1 justify-center rounded-xl bg-primary text-primary-content hover:bg-primary/90 px-5 py-3 font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary flex-1 justify-center !px-5 !py-3 font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {buying ? 'Mengirim...' : 'Konfirmasi Bayar'}
             </button>
@@ -260,7 +260,7 @@ export default function PremiumClient({ loggedIn, botOnline, justPaid }) {
         <button
           onClick={startBuy}
           disabled={buying}
-          className="rounded-full bg-primary text-primary-content hover:bg-primary/90 px-8 py-4 font-bold shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary !px-8 !py-4 text-base font-bold shadow-lg shadow-accent/20 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Bayar via QRIS
         </button>
