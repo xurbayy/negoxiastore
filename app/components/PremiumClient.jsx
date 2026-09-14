@@ -172,14 +172,23 @@ export default function PremiumClient({ loggedIn, botOnline = true, justPaid = f
         </p>
       ) : loggedIn && pending ? (
         <>
-          <p className="rounded-xl border border-accent/40 bg-accent/10 px-5 py-3 text-sm text-accent-hover">
-            {justPaid
-              ? 'Menunggu konfirmasi dari bank/e-wallet. Jangan bayar dua kali - statusnya kita cek otomatis dan premium nyala sendiri.'
-              : 'Pembayaran terakhir belum selesai. Kalau kamu sudah transfer, JANGAN bayar dua kali - statusnya otomatis dicek ulang tiap beberapa detik. Atau lanjut bayar di bawah.'}
-          </p>
-          <button type="button" onClick={payNow} className="btn-primary cursor-pointer text-sm">
-            Lanjut Bayar
-          </button>
+          {justPaid ? (
+            // Baru balik dari halaman Midtrans "Payment successful" - JANGAN
+            // tampilkan tombol "Lanjut Bayar" (risiko user bayar DUA KALI).
+            // Webhook sedang memproses; halaman ini poll tiap 2 detik.
+            <p className="rounded-xl border border-success/40 bg-success/10 px-5 py-3 text-sm font-semibold text-success">
+              Pembayaran diterima! Sedang diverifikasi otomatis - jangan bayar lagi, premium menyala sendiri dalam beberapa detik.
+            </p>
+          ) : (
+            <>
+              <p className="rounded-xl border border-accent/40 bg-accent/10 px-5 py-3 text-sm text-accent-hover">
+                Pembayaran terakhir belum selesai. Kalau kamu sudah transfer, JANGAN bayar dua kali - statusnya otomatis dicek ulang tiap beberapa detik. Atau lanjut bayar di bawah.
+              </p>
+              <button type="button" onClick={payNow} className="btn-primary cursor-pointer text-sm">
+                Lanjut Bayar
+              </button>
+            </>
+          )}
         </>
       ) : loggedIn ? (
         <button type="button" onClick={buy} disabled={buying || !online} className="btn-primary !px-8 !py-3.5 text-base cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">

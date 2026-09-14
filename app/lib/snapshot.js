@@ -121,12 +121,37 @@ export function stripEmojiToken(str) {
   return String(str || '').replace(/<a?:[A-Za-z0-9_]+:\d+>/g, '').trim();
 }
 
-// Apakah user ini sedang premium? Sumber: premiumMembers di snapshot bot
-// terakhir (segar tiap 60 detik dari push). Aman kalau DB error -> false.
+// Apakah user ini sedang premium? DUA sumber, yang terbaru menang:
+//  1. premiumMembers di snapshot bot (segar tiap 60 detik dari push)
+//  2. data_requests profil terakhir (ACK LIVE ~5-10 detik setelah grant)
+// Ini bikin badge NEXO PASS muncul cepat setelah pembayaran, tanpa menunggu
+// push snapshot berikutnya. Aman kalau DB error -> false.
 export async function userHasPremium(discordId) {
   if (!discordId) return false;
   const snap = await getLatestSnapshot();
-  return (snap?.premiumMembers || []).some((m) => String(m.userId) === String(discordId));
+  if ((snap?.premiumMembers || []).some((m) => String(m.userId) === String(discordId))) return true;
+
+  // Fallback cepat: profil terakhir dari bot (diisi oleh ACK LIVE webhook/ack).
+  // Dipakai HANYA kalau datanya masih segar (< 5 menit) supaya premium yang
+  // sudah dicabut tidak terus tampil dari cache lama.
+  try {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute({
+        sql: "SELECT data, filled_at FROM data_requests WHERE discord_id = ? AND status = 'done' ORDER BY filled_at DESC LIMIT 1",
+        args: [String(discordId)],
+      });
+      if (!res.rows.length) return null;
+      const filledAt = Number(res.rows[0].filled_at || 0);
+      if (!filledAt || Date.now() - filledAt > 5 * 60_000) return null;
+      const parsed = JSON.parse(res.rows[0].data);
+      return parsed?.profile?.premium ? true : null;
+    });
+    return Boolean(r);
+  } catch {
+    return false;
+  }
 }
 
 export async function isUserBanned(discordId) {
