@@ -274,7 +274,7 @@ export default function MeClient({ betaGames = null }) {
             </li>
             <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">2</span>
-              <span className="text-sm text-ink">Ketik <code className="rounded bg-bg-soft px-2 py-0.5 font-mono">nxdaily</code> di server itu untuk mendaftar</span>
+              <span className="text-sm text-ink">Ketik <code className="rounded bg-bg-soft px-2 py-0.5 font-mono">nxd</code> di server itu untuk mendaftar</span>
             </li>
             <li className="flex items-start gap-3 rounded-xl border border-border-soft bg-card-cream px-4 py-3 transition hover:border-accent/40">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-white shadow-sm">3</span>
@@ -320,12 +320,8 @@ export default function MeClient({ betaGames = null }) {
       {/* ═══ HEADER: kartu dark ala Discord ═══ */}
       <div className="nx-dark overflow-hidden">
         <div className="nx-dark-header flex items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6">
-          <span className="hidden truncate font-mono text-xs uppercase tracking-wider text-[#A99C8E] sm:inline">profil pemain</span>
+          <span className="truncate font-mono text-xs uppercase tracking-wider text-[#A99C8E]">profil pemain</span>
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border-soft bg-white px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-ink-muted shadow-sm sm:px-3.5 sm:text-xs" title="Data tersinkron otomatis - tidak perlu refresh manual">
-              <span className="pulse-dot" aria-hidden="true" />
-              Auto-sync
-            </span>
             <a
               href="/api/auth/logout"
               className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer sm:px-3.5 sm:text-xs"

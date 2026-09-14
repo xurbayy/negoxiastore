@@ -174,7 +174,7 @@ export default function AdminShell({ username, avatar = null }) {
     <div className="mx-auto flex max-w-7xl gap-6 px-4 pb-20 pt-6 md:px-5">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col overflow-y-auto border-r border-border-soft bg-bg-soft p-5 transition-transform md:sticky md:top-6 md:z-auto md:max-h-[calc(100vh-3rem)] md:w-60 md:translate-x-0 md:overflow-hidden md:rounded-2xl md:border md:bg-card-cream/60 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col overflow-hidden border-r border-border-soft bg-bg-soft p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] transition-transform md:sticky md:top-6 md:z-auto md:max-h-[calc(100vh-3rem)] md:w-60 md:translate-x-0 md:rounded-2xl md:border md:bg-card-cream/60 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -199,7 +199,7 @@ export default function AdminShell({ username, avatar = null }) {
             <p className="min-w-0 truncate text-sm font-semibold text-ink">{username}</p>
           </div>
         </div>
-        <nav aria-label="Menu admin" className="min-h-0 flex-1 md:overflow-y-auto">
+        <nav aria-label="Menu admin" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 md:overflow-y-auto">
           {TAB_GROUPS.map((g) => (
             <div key={g.label} className="mb-2.5">
               <p className="px-3 pb-0.5 text-[0.6rem] font-bold uppercase tracking-widest text-ink-muted/70">{g.label}</p>
