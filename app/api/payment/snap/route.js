@@ -40,6 +40,13 @@ async function midtransStatus(orderId) {
     }
     const body = await res.json();
     console.log('[midtrans-status]', orderId, body.transaction_status);
+    // GOTCHA (fix 2026-09-14): Midtrans membalas HTTP 200 + body
+    // { status_code: "404", status_message: "Transaction doesn't exist." }
+    // untuk transaksi yang popup-nya dibuka tapi tidak pernah dibayar.
+    // Dulu hanya HTTP 404 yang dikenali -> order 'pending' NYANGKUT selamanya
+    // (user melihat "jangan bayar dua kali" padahal transaksinya tidak ada).
+    // Perlakukan sama seperti HTTP 404: transaksi tidak ada.
+    if (String(body.status_code) === '404') return { http: 404, notFound: true };
     return { http: res.status, ...body, transaction_status: Array.isArray(body.transaction_status) ? body.transaction_status[0] : body.transaction_status };
   } catch (err) {
     console.warn('[midtrans-status] fetch error', orderId, err.message);
