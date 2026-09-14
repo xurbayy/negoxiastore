@@ -10,7 +10,7 @@ import LeaderboardClient from '../leaderboard/LeaderboardClient';
 export const metadata = {
   title: 'Leaderboard',
   description:
-    'Leaderboard NEXO Games: top 10 pemain dengan poin tertinggi, guild terkuat, dan para terkaya di ekonomi NEXO. Data live dari bot.',
+    'Leaderboard NEXO Games: top 10 pemain dengan poin tertinggi dan guild terkuat di NEXO. Data live dari bot.',
   alternates: { canonical: '/leaderboard' },
 };
 
@@ -22,7 +22,6 @@ export default async function LeaderboardPage() {
   const snap = await getLatestSnapshot();
   const players = snap?.leaderboard || [];
   const guilds = snap?.guildBoard || [];
-  const richest = snap?.monitor?.richest || [];
 
   // Highlight baris milik user yang sedang login (bandingkan via userId)
   // - logika isMe pindah ke LeaderboardClient (client component).
@@ -48,9 +47,9 @@ export default async function LeaderboardPage() {
             </p>
           )}
 
-          {/* Pemain -> Guild -> Terkaya (client: baris pemain bisa diklik ->
-              kartu profil + PP fresh; guild tetap server component di tengah) */}
-          <LeaderboardClient players={players} richest={richest} myId={myId}>
+          {/* Pemain -> Guild (client: baris pemain bisa diklik ->
+              kartu profil + PP fresh; guild tetap server component) */}
+          <LeaderboardClient players={players} myId={myId}>
 
           {/* Guild */}
           <section className="mt-12" aria-labelledby="lb-guild">
