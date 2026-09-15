@@ -52,6 +52,15 @@ export async function proxy(request) {
     return NextResponse.redirect(target, 308);
   }
 
+  // === GUARD PANEL ADMIN ===
+  // BUGFIX KRITIS (2026-09-16): guard di bawah WAJIB dibatasi ke path /admin.
+  // Saat matcher diperluas ke semua path (untuk pengalihan domain), guard ini
+  // ikut berjalan di halaman publik -> seluruh situs (termasuk beranda,
+  // leaderboard, shop) terlempar ke /admin/login. Sekarang: path non-admin
+  // langsung lolos (hanya diperiksa host-nya di atas).
+  const isAdminPath = pathname === '/admin' || pathname.startsWith('/admin/');
+  if (!isAdminPath) return NextResponse.next();
+
   // Halaman publik dalam cluster /admin: login page saja.
   if (pathname === '/admin/login') return NextResponse.next();
 
