@@ -416,42 +416,48 @@ function MeSkeleton() {
 }
 
 /**
- * REDEEM - halaman asli:
- *   h1 + kartu form (input kode + tombol klaim, widget Turnstile)
- *   kartu riwayat klaim
+ * REDEEM - halaman asli (app/redeem/page.jsx):
+ *   wrapper text-center, h1 "Redeem Hadiah", subjudul, lalu blok text-left
+ *   berisi kartu form (input kode + tombol + Turnstile) dan kartu riwayat.
+ * CATATAN: dulu skeleton ini juga dipakai ulang oleh RedeemClient saat
+ * menunggu status registrasi, sehingga pemain melihat skeleton form+riwayat
+ * DUA KALI (dan yang kedua judulnya beda karena tidak rata tengah). Sekarang
+ * HANYA dipakai app/redeem/loading.jsx; RedeemClient memakai indikator kecil.
  */
-// ISI skeleton redeem (tanpa <main>/navbar). Dipakai DUA tempat:
-//  - app/redeem/loading.jsx -> RedeemSkeleton (body + Shell)
-//  - components/RedeemClient -> saat menunggu status registrasi
 export function RedeemSkeletonBody() {
   return (
-    <>
-      <div className="skeleton h-9 w-48 md:h-11 md:w-56" />
-      <Bar className="mt-3 w-64" />
+    <div className="text-center">
+      <div className="skeleton mx-auto mt-3 h-9 w-56 md:h-11 md:w-64" />
+      <div className="mx-auto mt-4 max-w-md space-y-2">
+        <Bar className="w-full" />
+        <Bar className="mx-auto w-3/4" />
+      </div>
 
-      <Card className="mt-8 p-6">
-        <Bar className="h-5 w-32" />
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <div className="skeleton h-11 flex-1 rounded-xl" />
-          <div className="skeleton h-11 w-full rounded-xl sm:w-28" />
-        </div>
-        {/* kotak Turnstile */}
-        <div className="skeleton mt-4 h-16 w-full max-w-xs rounded-lg" />
-      </Card>
+      <div className="mt-10 text-left">
+        <Card className="p-6">
+          <Bar className="h-5 w-32" />
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <div className="skeleton h-11 flex-1 rounded-xl" />
+            <div className="skeleton h-11 w-full rounded-xl sm:w-28" />
+          </div>
+          {/* kotak Turnstile */}
+          <div className="skeleton mt-4 h-16 w-full max-w-xs rounded-lg" />
+        </Card>
 
-      <Card className="mt-6 p-6">
-        <Bar className="h-5 w-36" />
-        <div className="mt-4 space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="skeleton h-6 w-20 shrink-0 rounded-md" />
-              <Bar className={i % 2 ? 'w-2/5' : 'w-1/2'} />
-              <div className="skeleton ml-auto h-5 w-16 shrink-0 rounded-full" />
-            </div>
-          ))}
-        </div>
-      </Card>
-    </>
+        <Card className="mt-6 p-6">
+          <Bar className="h-5 w-36" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="skeleton h-6 w-20 shrink-0 rounded-md" />
+                <Bar className={i % 2 ? 'w-2/5' : 'w-1/2'} />
+                <div className="skeleton ml-auto h-5 w-16 shrink-0 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }
 

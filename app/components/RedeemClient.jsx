@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Turnstile from './Turnstile';
-// Isi skeleton redeem yang SAMA dengan app/redeem/loading.jsx (anti skeleton dobel).
-import { RedeemSkeletonBody } from './PageSkeleton';
 
 // Turnstile aktif hanya kalau site-key diset DAN bukan localhost (dev).
 // Server-side verifyTurnstile() sudah punya dev graceful-mode yang sama.
@@ -92,12 +90,17 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
 
   // Data pemain belum ada di bot -> jangan suruh ngetik kode ke void:
   // kartu mini 404 dulu, form baru muncul setelah registered.
-  // Pakai ISI skeleton redeem yang sama dengan app/redeem/loading.jsx supaya
-  // tidak terlihat seperti skeleton dobel (dulu di sini cuma satu batang abu).
+  //
+  // PENTING (fix 2026-09-14, skeleton redeem dobel): di sini DULU dipasang
+  // skeleton form+riwayat penuh yang sama dengan app/redeem/loading.jsx. Karena
+  // halaman asli sudah lewat loading.jsx lebih dulu, pemain melihat skeleton
+  // itu DUA KALI. Sekarang cukup satu kartu dengan indikator halus di area
+  // yang sama - tidak mengulang kerangka halaman.
   if (reg === 'check') {
     return (
-      <div aria-busy="true" aria-label="Memuat form redeem">
-        <RedeemSkeletonBody />
+      <div className="nx-card px-6 py-10 text-center" aria-busy="true" aria-label="Memeriksa data akun">
+        <span className="mx-auto mb-4 inline-flex h-9 w-9 animate-spin items-center justify-center rounded-full border-2 border-border-soft border-t-accent" aria-hidden="true" />
+        <p className="text-sm text-ink-muted">Sebentar, cek data akunmu dulu...</p>
       </div>
     );
   }
