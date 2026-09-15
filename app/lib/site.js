@@ -1,6 +1,7 @@
 // Pusat konstanta SEO + branding. Ganti SITE_URL lewat env saat deploy.
-// Domain publik FINAL NEXO = https://nexogames.site (alias Vercel tetap hidup,
-// tapi semua URL yang dilihat user/pembeli memakai domain ini).
+// Domain publik FINAL NEXO = https://nexogames.site - HANYA SATU domain.
+// Domain lain (alias Vercel & www) sudah dihapus; pengalihan www ditangani
+// pengaturan domain di Vercel sendiri, bukan oleh kode aplikasi.
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || 'https://nexogames.site'
 ).replace(/\/+$/, '');
@@ -10,21 +11,12 @@ export const CANONICAL_HOST = (() => {
   try { return new URL(SITE_URL).host; } catch { return 'nexogames.site'; }
 })();
 
-// Domain lama / alias yang HARUS dialihkan ke domain kanonik.
-// Daftar ini dipakai proxy.js untuk redirect 308 di level-edge: begitu user
-// membuka domain lama, dia langsung dipindah ke nexogames.site - jadi tidak
-// ada lagi pengalaman "domainnya ganti-ganti" saat login.
-export const HOST_LAMA = [
-  'nexogamess.vercel.app',
-  `www.${CANONICAL_HOST}`,
-];
-
 /**
  * Origin kanonik untuk redirect server-side.
  *
  * KENAPA ADA: dulu semua redirect OAuth memakai `url.origin` (= host dari
- * request). Akibatnya user yang datang lewat domain lama DIBALIKKAN ke domain
- * lama, padahal Discord sudah melemparnya ke domain kanonik - jadi terasa
+ * request). Akibatnya user yang datang lewat domain lain DIBALIKKAN ke domain
+ * itu lagi, padahal Discord sudah melemparnya ke domain kanonik - jadi terasa
  * dilempar-lempar antar domain. Sekarang: satu domain saja.
  *
  * ATURAN:
