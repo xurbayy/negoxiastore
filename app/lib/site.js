@@ -1,7 +1,52 @@
 // Pusat konstanta SEO + branding. Ganti SITE_URL lewat env saat deploy.
+// Domain publik FINAL NEXO = https://nexogames.site (alias Vercel tetap hidup,
+// tapi semua URL yang dilihat user/pembeli memakai domain ini).
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://nexogamess.vercel.app'
+  process.env.NEXT_PUBLIC_SITE_URL || 'https://nexogames.site'
 ).replace(/\/+$/, '');
+
+// Host kanonik (tanpa protokol) - mis. "nexogames.site".
+export const CANONICAL_HOST = (() => {
+  try { return new URL(SITE_URL).host; } catch { return 'nexogames.site'; }
+})();
+
+// Domain lama / alias yang HARUS dialihkan ke domain kanonik.
+// Daftar ini dipakai proxy.js untuk redirect 308 di level-edge: begitu user
+// membuka domain lama, dia langsung dipindah ke nexogames.site - jadi tidak
+// ada lagi pengalaman "domainnya ganti-ganti" saat login.
+export const HOST_LAMA = [
+  'nexogamess.vercel.app',
+  `www.${CANONICAL_HOST}`,
+];
+
+/**
+ * Origin kanonik untuk redirect server-side.
+ *
+ * KENAPA ADA: dulu semua redirect OAuth memakai `url.origin` (= host dari
+ * request). Akibatnya user yang datang lewat domain lama DIBALIKKAN ke domain
+ * lama, padahal Discord sudah melemparnya ke domain kanonik - jadi terasa
+ * dilempar-lempar antar domain. Sekarang: satu domain saja.
+ *
+ * ATURAN:
+ *   - localhost / 127.0.0.1 -> pakai host+PORT asli (biar dev lokal tidak
+ *     terlempar ke produksi saat tes). PENTING: pakai `.host` BUKAN `.hostname`
+ *     - `.hostname` membuang port sehingga `localhost:3000` jadi `localhost`
+ *     dan dev login rusak (pernah kejadian saat uji).
+ *   - selain itu            -> SELALU domain kanonik (nexogames.site)
+ *
+ * @param {string} [requestUrl] - URL request (dipakai hanya untuk deteksi dev)
+ */
+export function canonicalOrigin(requestUrl) {
+  if (requestUrl) {
+    try {
+      const u = new URL(requestUrl);
+      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '::1') {
+        return `${u.protocol}//${u.host}`; // host = hostname + port
+      }
+    } catch { /* URL aneh -> pakai kanonik */ }
+  }
+  return SITE_URL;
+}
 
 export const BOT_INVITE =
   process.env.NEXT_PUBLIC_BOT_INVITE ||

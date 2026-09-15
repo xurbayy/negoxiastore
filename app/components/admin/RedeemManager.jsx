@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
-import { fmt } from '../../lib/formatClient';
+import { fmtRingkas } from '../../lib/formatClient';
 
 // Redeem & Event Manager: daftar kode + buat/hapus.
 export default function RedeemManager({ send, data }) {
@@ -98,14 +98,14 @@ export default function RedeemManager({ send, data }) {
                 <tr key={c.code} className="border-b border-border-soft/60 last:border-0">
                   <td className="px-4 py-3 font-mono font-bold text-ink">{c.code}</td>
                   <td className="px-4 py-3 text-ink">
-                    {c.rewardType === 'points' ? `${fmt(c.rewardValue)} pts` : c.rewardType === 'premium' ? `NEXO Pass ${c.rewardValue} hari` : `${c.rewardType}: ${c.rewardValue}`}
+                    {c.rewardType === 'points' ? `${fmtRingkas(c.rewardValue)} pts` : c.rewardType === 'premium' ? `NEXO Pass ${c.rewardValue} hari` : `${c.rewardType}: ${c.rewardValue}`}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-soft">
                         <div className={`h-full rounded-full ${habis ? 'bg-danger' : 'bg-success'}`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-xs text-ink-muted">sisa {fmt(remaining)}/{fmt(c.quota)}{habis ? ' · HABIS' : ''}</span>
+                      <span className="text-xs text-ink-muted">sisa {fmtRingkas(remaining)}/{fmtRingkas(c.quota)}{habis ? ' · HABIS' : ''}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">

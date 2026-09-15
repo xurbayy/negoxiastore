@@ -1,4 +1,5 @@
 import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 
 // LiveSnapshot: strip statistik nyata dari snapshot bot terakhir.
 // Kalau bot belum pernah push / offline -> tampil strip "menunggu data".
@@ -17,25 +18,24 @@ export default async function LiveSnapshot() {
   }
 
   const m = snap.monitor || {};
-  const live = m.live || {};
-  const liveTotal = (live.playing || 0) + (live.lobby || 0) + (live.mp || 0) + (live.solo || 0);
   const stale = computeStale(snap.ts);
 
+  // CATATAN: kartu "Sesi LIVE" DIHAPUS (permintaan pemilik, 2026-09-16) - angka
+  // sesi berjalan naik-turun cepat dan tidak berguna untuk pengunjung web.
   const stats = [
     { label: 'Player Terdaftar', value: m.totalUsers, emoji: 'people' },
     { label: 'Poin Beredar', value: m.totalMoney, emoji: 'goldcoin' },
     { label: 'Member NEXO Pass', value: m.premiumCount, emoji: 'crown' },
     { label: 'Game Hari Ini', value: m.gamesToday, emoji: 'dice' },
-    { label: 'Sesi LIVE', value: liveTotal, emoji: 'sparkles' },
   ];
 
   return (
     <div className="relative mx-auto mt-14 max-w-6xl px-5">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {stats.map((s) => (
           <div key={s.label} className="nx-card px-4 py-4 text-center">
             {typeof s.value === 'number' && (
-              <div className="font-display text-2xl text-ink">{Number(s.value).toLocaleString('id-ID')}</div>
+              <div className="font-display text-2xl text-ink" title={fmtPenuh(s.value)}>{fmtRingkas(s.value)}</div>
             )}
             <div className="mt-1 text-xs text-ink-muted">{s.label}</div>
           </div>

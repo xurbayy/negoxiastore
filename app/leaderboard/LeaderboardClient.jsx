@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import PlayerProfileCard from '../components/PlayerProfileCard';
 import ShareCardButton from '../components/ShareCardButton';
 
@@ -102,12 +103,12 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5" title={fmtPenuh(p.points)}>
                       {emojiSrc('goldcoin') && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={emojiSrc('goldcoin')} alt="" width={16} height={16} className="inline h-4 w-4" />
                       )}
-                      {Number(p.points).toLocaleString('id-ID')}
+                      {fmtRingkas(p.points)}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-ink-muted">{p.level}</td>

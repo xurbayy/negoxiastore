@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
-import { fmt } from '../../lib/formatClient';
+import { fmtRingkas, fmtPenuh } from '../../lib/formatClient';
 
 export default function BankManager({ send, data }) {
   const loans = data.snapshot?.loans || [];
@@ -45,7 +45,7 @@ export default function BankManager({ send, data }) {
             {loans.map((l) => (
               <tr key={l.userId} className="border-b border-border-soft/60 last:border-0">
                 <td className="px-4 py-3 font-semibold text-ink">{l.username}</td>
-                <td className="px-4 py-3 text-right text-ink">{fmt(l.totalDue)}</td>
+                <td className="px-4 py-3 text-right text-ink" title={fmtPenuh(l.totalDue)}>{fmtRingkas(l.totalDue)}</td>
                 <td className="px-4 py-3 text-ink-muted">{new Date(l.dueDate).toLocaleDateString('id-ID')}</td>
                 <td className="px-4 py-3">
                   {l.overdue

@@ -2,6 +2,7 @@ import { getLatestSnapshot, stripEmojiToken, timeAgo } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { emojiSrc } from '../lib/emojis';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
@@ -81,7 +82,7 @@ export default async function LeaderboardPage() {
                     <tr key={g.rank + g.name} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
                       <td className="px-4 py-3 font-display text-ink">{g.rank}</td>
                       <td className="px-4 py-3 font-semibold text-ink">{stripEmojiToken(g.name)}</td>
-                      <td className="px-4 py-3 text-right">{Number(g.points).toLocaleString('id-ID')}</td>
+                      <td className="px-4 py-3 text-right" title={fmtPenuh(g.points)}>{fmtRingkas(g.points)}</td>
                       <td className="hidden px-4 py-3 text-right text-ink-muted sm:table-cell">{g.warWins}</td>
                       <td className="px-4 py-3 text-right text-ink-muted">{g.members}</td>
                     </tr>

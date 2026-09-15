@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import RichText from './RichText';
-import { fmt } from '../../lib/formatClient';
+import { fmt, fmtRingkas, fmtPenuh } from '../../lib/formatClient';
 
 // PLAYER LOOKUP: admin memasukkan Discord ID -> profil penuh (dari bot,
 // real-time) + jejak perintah (gift/reward masuk atau belum) + order & klaim.
@@ -95,14 +95,14 @@ export default function PlayerLookup() {
                   )}
                 </p>
                 {p.adminTitle && <p className="text-sm text-ink-muted"><RichText text={p.adminTitle} /></p>}
-                <p className="text-xs text-ink-muted">Level {p.level} • XP {fmt(p.xp)}/{fmt(p.xpNext)} • Rank global #{fmt(p.globalRank)}</p>
+                <p className="text-xs text-ink-muted">Level {p.level} • XP {fmtRingkas(p.xp)}/{fmtRingkas(p.xpNext)} • Rank global #{fmt(p.globalRank)}</p>
               </div>
-              <p className="ml-auto text-right"><span className="block text-2xl font-bold text-ink">{fmt(p.points)}</span><span className="text-xs text-ink-muted">poin</span></p>
+              <p className="ml-auto text-right"><span className="block text-2xl font-bold text-ink" title={fmtPenuh(p.points)}>{fmtRingkas(p.points)}</span><span className="text-xs text-ink-muted">poin</span></p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
               <Stat label="Daily streak" value={`${p.dailyStreak} hari`} />
               <Stat label="Winstreak MP" value={`${p.winstreak}x`} />
-              <Stat label="Menang / pasang" value={`${fmt(p.totalWon)} / ${fmt(p.totalBet)}`} />
+              <Stat label="Menang / pasang" value={`${fmtRingkas(p.totalWon)} / ${fmtRingkas(p.totalBet)}`} />
               <Stat label="Guild" value={p.guild ? p.guild.name : '-'} />
             </div>
             {premium && (
@@ -160,7 +160,7 @@ export default function PlayerLookup() {
                       <tr key={i} className="border-b border-border-soft/50">
                         <td className="whitespace-nowrap py-1.5 pr-3 text-ink-muted">{new Date(t.createdAt).toLocaleString('id-ID')}</td>
                         <td className="pr-3"><span className={`rounded-full px-2 py-0.5 text-xs ${t.amount > 0 ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'}`}>{t.type}</span></td>
-                        <td className="pr-3 text-right font-mono">{t.amount > 0 ? '+' : ''}{fmt(t.amount)}</td>
+                        <td className="pr-3 text-right font-mono">{t.amount > 0 ? '+' : ''}{fmtRingkas(t.amount)}</td>
                         <td className="text-ink-muted">{t.description}</td>
                       </tr>
                     ))}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canonicalOrigin } from '../../../lib/site';
 import { destroySession, destroyAdminSession } from '../../../lib/session';
 import { clearTrustedDevice } from '../../../lib/admin-2fa';
 
@@ -12,5 +13,5 @@ export async function GET(request) {
   await destroySession();
   await destroyAdminSession();
   await clearTrustedDevice();
-  return NextResponse.redirect(new URL('/', request.url));
+  return NextResponse.redirect(new URL('/', canonicalOrigin(request.url)));
 }

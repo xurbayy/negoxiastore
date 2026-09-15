@@ -2,6 +2,7 @@ import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { emojiSrc } from '../lib/emojis';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
@@ -58,11 +59,11 @@ function ItemCard({ it, discount }) {
         <div>
           {hasDisc && (
             <span className="mr-2 text-xs text-ink-muted line-through">
-              {Number(disc.original_price).toLocaleString('id-ID')}
+              {fmtRingkas(disc.original_price)}
             </span>
           )}
           <span className={`font-display ${hasDisc ? 'text-danger' : 'text-ink'}`}>
-            {Number(it.price).toLocaleString('id-ID')}
+            {fmtRingkas(it.price)}
           </span>
           {emojiSrc('goldcoin') && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -97,7 +98,7 @@ function TitleCard({ t }) {
       </div>
       <div className="mt-4 flex items-end justify-between">
         <div>
-          <span className="font-display text-ink">{Number(t.price).toLocaleString('id-ID')}</span>
+          <span className="font-display text-ink" title={fmtPenuh(t.price)}>{fmtRingkas(t.price)}</span>
           {emojiSrc('goldcoin') && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={emojiSrc('goldcoin')} alt="poin" width={14} height={14} className="ml-1 inline h-3.5 w-3.5" />

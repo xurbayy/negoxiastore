@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSessionProfile } from '../lib/welcome';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 // stripEmojiToken dari lib/snapshot - SATU sumber (dulu file ini punya salinan
 // fungsi yang sama, padahal regex-nya identik).
 import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
@@ -18,8 +19,8 @@ export default async function WelcomeBack({ username }) {
           <p className="mt-1 font-display text-xl tracking-tight text-ink">{username}</p>
           {profile ? (
             <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <strong className="text-ink">{profile.points.toLocaleString('id-ID')}</strong> poin
+              <span className="inline-flex items-center gap-1.5" title={fmtPenuh(profile.points)}>
+                <strong className="text-ink">{fmtRingkas(profile.points)}</strong> poin
               </span>
               <span>Level {profile.level}</span>
               {profile.dailyStreak > 0 && <span>Streak {profile.dailyStreak} hari</span>}

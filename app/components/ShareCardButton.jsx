@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
+import { SITE_URL } from '../lib/site';
+import { fmtRingkas } from '../lib/formatClient';
 
 // Kartu "Sharing Leaderboard": menggambar peringkat pemain ke <canvas>
 // 1080x1350 (rasio 4:5, ideal utk IG/WA/story) dengan palet resmi tema
@@ -137,7 +139,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
   ctx.fillText(`Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W / 2, avCy + avR + 152);
 
   // ═══ Dua stat tile cream-soft, gaya kartu profil ═══
-  const points = Number(player.points || 0).toLocaleString('id-ID');
+  // Angka RINGKAS (fmtRingkas): poin bisa ratusan juta dan di kartu gambar
+  // tidak ada tooltip - kalau kepanjangan akan keluar batas tile. Ringkas =
+  // selalu muat, dan tetap jujur (1,2 jt) bukan terpotong.
+  const points = fmtRingkas(player.points || 0);
   const tileY = avCy + avR + 208;
   const tileH = 240;
   const tileW = (W - 128 - 24) / 2;
@@ -178,12 +183,17 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
   ctx.fillStyle = INK;
   ctx.font = '700 38px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText('Main gratis di Discord, kamu mau nyusul?', W / 2, ctaY + 56);
+  // Domain di kartu SELALU domain resmi (SITE_URL dari env NEXT_PUBLIC_SITE_URL),
+  // BUKAN location.host - dulu kartu ikut menampilkan domain tempat pemain
+  // membuka web, jadi gambar bisa memuat domain lama/alias Vercel.
+  // Saat dev (localhost) tetap tampilkan branding studio, bukan localhost:3000.
+  const isDev = typeof window !== 'undefined' && window.location.host.includes('localhost');
+  const domainTxt = isDev
+    ? 'NEXO Games  ·  xurbaybase'
+    : `NEXO Games  ·  ${String(SITE_URL).replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
   ctx.fillStyle = 'rgba(169,156,142,1)';
   ctx.font = '500 26px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText(
-    location.host.includes('localhost') ? 'NEXO Games  ·  xurbaybase' : `NEXO Games  ·  ${location.host}`,
-    W / 2, ctaY + 106
-  );
+  ctx.fillText(domainTxt, W / 2, ctaY + 106);
   ctx.textAlign = 'left';
 
   return canvas;
@@ -228,7 +238,7 @@ export default function ShareCardButton({ player, loggedIn }) {
         a.download = `nexo-rank-${player.rank}.png`;
         a.click();
         URL.revokeObjectURL(url);
-        try { await nav.clipboard.writeText(`${location.origin}/leaderboard`); } catch {}
+        try { await nav.clipboard.writeText(`${SITE_URL}/leaderboard`); } catch {}
         setNote('Gambar tersimpan & tautan tersalin ke clipboard.');
         setTimeout(() => setNote(null), 3500);
       }

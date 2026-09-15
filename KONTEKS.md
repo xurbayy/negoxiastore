@@ -146,7 +146,8 @@ tambahan, akses beta, prioritas render.
 - Pass hanya untuk akun Discord milik sendiri.
 
 **Pembayaran = MANUAL QRIS, tanpa payment gateway** (Midtrans/Duitku sudah
-ditinggalkan). Alurnya:
+ditinggalkan; dependency `midtrans-client`, env MIDTRANS_*, skrip tes lama, dan
+endpoint webhook lama sudah dihapus dari repo). Alurnya:
 1. `/premium` → `PremiumClient` menampilkan QRIS (`public/images/qris.png`,
    asset asli user, di-resize ~130KB), blok Discord ID pembeli, form Nama
    Pengirim + upload bukti (maks 1MB base64).

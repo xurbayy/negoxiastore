@@ -2,6 +2,7 @@ import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { emojiSrc } from '../lib/emojis';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
@@ -41,15 +42,15 @@ export default async function BankPage() {
           {/* Ringkasan */}
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="nx-card px-5 py-5 text-center">
-              <div className="font-display text-2xl text-ink">{Number(mon.count ?? loans.length).toLocaleString('id-ID')}</div>
+              <div className="font-display text-2xl text-ink" title={fmtPenuh(mon.count ?? loans.length)}>{fmtRingkas(mon.count ?? loans.length)}</div>
               <div className="mt-1 text-xs text-ink-muted">Pinjaman Aktif</div>
             </div>
             <div className="nx-card px-5 py-5 text-center">
-              <div className="font-display text-2xl text-ink">{Number(mon.owed ?? 0).toLocaleString('id-ID')}</div>
+              <div className="font-display text-2xl text-ink" title={fmtPenuh(mon.owed ?? 0)}>{fmtRingkas(mon.owed ?? 0)}</div>
               <div className="mt-1 text-xs text-ink-muted">Total Tunggakan</div>
             </div>
             <div className="nx-card border-danger/40 px-5 py-5 text-center">
-              <div className="font-display text-2xl text-danger">{Number(mon.overdue ?? 0).toLocaleString('id-ID')}</div>
+              <div className="font-display text-2xl text-danger" title={fmtPenuh(mon.overdue ?? 0)}>{fmtRingkas(mon.overdue ?? 0)}</div>
               <div className="mt-1 text-xs text-ink-muted">Telat Bayar</div>
             </div>
           </div>
@@ -74,14 +75,14 @@ export default async function BankPage() {
                 {loans.map((l) => (
                   <tr key={l.userId} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
                     <td className="px-4 py-3 font-semibold text-ink">{l.username}</td>
-                    <td className="px-4 py-3 text-right">{Number(l.amount).toLocaleString('id-ID')}</td>
+                    <td className="px-4 py-3 text-right" title={fmtPenuh(l.amount)}>{fmtRingkas(l.amount)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="inline-flex items-center gap-1.5">
                         {emojiSrc('goldcoin') && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={emojiSrc('goldcoin')} alt="" width={14} height={14} className="inline h-3.5 w-3.5" />
                         )}
-                        {Number(l.totalDue).toLocaleString('id-ID')}
+                        {fmtRingkas(l.totalDue)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{new Date(l.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>

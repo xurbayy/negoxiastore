@@ -4,6 +4,81 @@ export function fmt(n) {
   return Number(n).toLocaleString('id-ID');
 }
 
+/**
+ * Format angka RINGKAS - dipakai di SEMUA tampilan angka pemain di web.
+ *
+ * KENAPA: angka poin bisa panjang (ratusan juta / miliaran). Di kartu & sel grid
+ * yang sempit, angka penuh jadi terpotong "10.000.000…" sehingga pemain tidak
+ * tahu angka aslinya. Versi ringkas ini selalu muat dan tetap jujur.
+ *
+ * ATURAN (kata penuh, bukan singkatan - lebih jelas dibaca):
+ *   < 10.000         -> angka apa adanya        (7.500)
+ *   >= 10.000        -> "12,5 ribu"             (12.500)
+ *   >= 1.000.000     -> "1,2 juta"              (1.234.567)
+ *   >= 1.000.000.000 -> "1,2 miliar"            (1.234.567.890)
+ *   >= 1e12          -> "1,2 triliun"
+ *
+ * MAKSIMAL 1 desimal supaya lebarnya bisa diprediksi, koma sebagai desimal
+ * (id-ID). Nilai penuh tetap bisa dilihat lewat tooltip (fmtPenuh).
+ *
+ * CATATAN PENTING: ini HANYA untuk tampilan. Jangan pakai hasilnya untuk
+ * perhitungan atau pengiriman ke API - selalu kirim angka mentahnya.
+ */
+export function fmtRingkas(n) {
+  if (n === null || n === undefined) return '-';
+  const num = Number(n);
+  if (!Number.isFinite(num)) return '-';
+
+  // -0 dan 0 diperlakukan sama ("-0" membingungkan).
+  if (num === 0) return '0';
+
+  const abs = Math.abs(num);
+  const tanda = num < 0 ? '-' : '';
+
+  // Susun satuan dari besar ke kecil; 1 desimal, buang ",0" yang mubazir.
+  // PENTING: kalau hasil pembulatan menyentuh 1000 (mis. 999.999.999 -> "1000,0"
+  // pada satuan juta), NAIKKAN ke satuan berikutnya. Tanpa ini hasilnya
+  // "1.000 juta" - titik ribuan itu terbaca seperti "seribu juta" dan menyesatkan.
+  const satuans = [
+    { batas: 1e12, bagi: 1e12, label: ' triliun' },
+    { batas: 1e9, bagi: 1e9, label: ' miliar' },
+    { batas: 1e6, bagi: 1e6, label: ' juta' },
+    { batas: 1e4, bagi: 1e3, label: ' ribu' },
+  ];
+  for (let i = 0; i < satuans.length; i++) {
+    const s = satuans[i];
+    if (abs < s.batas) continue;
+    const v = abs / s.bagi;
+    // Cek apakah pembulatan 1 desimal akan mencapai 1000.
+    if (v >= 999.95) {
+      const naik = satuans[i - 1]; // satuan yang lebih besar (ada karena i>0 saat v>=999.95)
+      if (naik) {
+        const vn = abs / naik.bagi;
+        const tn = vn.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+        return `${tanda}${tn}${naik.label}`;
+      }
+      // Satuan TERBESAR (triliun) dan sudah >= 1000: jangan pakai pemisah
+      // ribuan ("1.000 triliun" terbaca ambigu). Pakai bentuk polos.
+      return `${tanda}${Math.round(v)}${s.label}`;
+    }
+    const teks = v.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+    return `${tanda}${teks}${s.label}`;
+  }
+  return fmt(num);
+}
+
+/**
+ * Angka penuh bertitik untuk tooltip (title) - supaya pemain yang mau tahu
+ * nilai persisnya tetap bisa lihat. Pakai di atribut title elemen yang
+ * menampilkan fmtRingkas().
+ */
+export function fmtPenuh(n) {
+  if (n === null || n === undefined) return '';
+  const num = Number(n);
+  if (!Number.isFinite(num)) return '';
+  return `${fmt(num)} poin`;
+}
+
 export function fmtUptime(sec) {
   if (!sec && sec !== 0) return '-';
   const h = Math.floor(sec / 3600);

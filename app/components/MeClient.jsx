@@ -6,7 +6,7 @@ import { emojiSrc } from '../lib/emojisClient';
 // Helper bersama diambil dari lib/formatClient - SATU sumber untuk fmt, timeAgo,
 // dan gameName. Dulu file ini punya salinan sendiri-sendiri (fmt, stripEmoji,
 // GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
-import { gameName, fmt as fmtLib } from '../lib/formatClient';
+import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
 // Isi skeleton profil yang SAMA dengan app/me/loading.jsx (anti skeleton dobel).
 import { MeSkeletonBody } from './PageSkeleton';
@@ -468,7 +468,7 @@ export default function MeClient({ betaGames = null }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={emojiSrc('goldcoin')} alt="" width={22} height={22} className="mr-1.5 inline h-5 w-5" />
                 )}
-                {fmt(p.points)}
+                {fmtRingkas(p.points)}
               </div>
               <div className="text-xs font-medium uppercase tracking-wider text-ink-faint">poin</div>
             </div>
@@ -479,7 +479,7 @@ export default function MeClient({ betaGames = null }) {
             <div className="mt-5">
               <div className="flex items-center justify-between text-xs text-ink-faint">
                 <span className="font-semibold">Level {p.level}</span>
-                <span>{fmt(p.xp)} / {fmt(p.xpNext)} XP</span>
+                <span title={`${fmtPenuh(p.xp)} / ${fmtPenuh(p.xpNext)}`}>{fmtRingkas(p.xp)} / {fmtRingkas(p.xpNext)} XP</span>
               </div>
               <div className="mt-1.5 h-3 overflow-hidden rounded-full bg-card-dark-2">
                 <div
@@ -504,7 +504,9 @@ export default function MeClient({ betaGames = null }) {
                   ) : null}
                   {k}
                 </dt>
-                <dd className="mt-1 font-display text-lg text-card-cream">{fmt(v)}</dd>
+                {/* Angka ringkas + tooltip nilai penuh: Total Won/Bet bisa
+                    panjang dan sel ini sempit. */}
+                <dd className="mt-1 font-display text-lg text-card-cream" title={fmtPenuh(v)}>{fmtRingkas(v)}</dd>
               </div>
             ))}
             {!isPremium && (
@@ -644,7 +646,7 @@ export default function MeClient({ betaGames = null }) {
                       <span className="text-card-cream">{gameName(h.gameType)}</span>
                       <span className="flex items-center gap-4">
                         <span className={Number(h.points) >= 0 ? 'font-semibold text-success' : 'font-semibold text-danger'}>
-                          {Number(h.points) >= 0 ? '+' : ''}{fmt(h.points)}
+                          {Number(h.points) >= 0 ? '+' : ''}{fmtRingkas(h.points)}
                         </span>
                         <span className="w-24 text-right text-xs text-ink-faint">{relTime(h.playedAt)}</span>
                       </span>
@@ -826,8 +828,8 @@ export default function MeClient({ betaGames = null }) {
           <div>
             <p className="font-display text-lg text-danger">Hutang Bank</p>
             <p className="mt-0.5 text-sm text-ink-muted">
-              Pinjaman <span className="font-semibold text-ink">{fmt(p.loan.amount)}</span> ·
-              Total due <span className="font-semibold text-ink">{fmt(p.loan.totalDue)}</span> ·
+              Pinjaman <span className="font-semibold text-ink" title={fmtPenuh(p.loan.amount)}>{fmtRingkas(p.loan.amount)}</span> ·
+              Total due <span className="font-semibold text-ink" title={fmtPenuh(p.loan.totalDue)}>{fmtRingkas(p.loan.totalDue)}</span> ·
               Jatuh tempo {new Date(p.loan.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
               {p.loan.dueDate < nowMs() && (
                 <span className="nx-badge ml-2 bg-danger font-bold text-white">Telat</span>

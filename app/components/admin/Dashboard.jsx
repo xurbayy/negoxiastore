@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { fmt, fmtUptime, timeAgo } from '../../lib/formatClient';
+import { fmt, fmtRingkas, fmtUptime, timeAgo } from '../../lib/formatClient';
 import { emojiSrc } from '../../lib/emojisClient';
 import { GAME_META } from '../../lib/game-meta';
 
@@ -211,7 +211,7 @@ export default function Dashboard({ data }) {
               <div className="mt-1 text-xs text-ink-muted">{c.label}</div>
               {d != null && (
                 <div className={`mt-0.5 text-[0.65rem] font-bold ${d > 0 ? 'text-success' : 'text-danger'}`} title="Perubahan 24 jam">
-                  {d > 0 ? '▲' : '▼'} {fmt(Math.abs(d))} <span className="font-normal">/24 jam</span>
+                  {d > 0 ? '▲' : '▼'} {fmtRingkas(Math.abs(d))} <span className="font-normal">/24 jam</span>
                 </div>
               )}
               {c.pick && <Spark series={fullSeries} pick={c.pick} color={c.color || '#D98510'} />}
@@ -275,7 +275,7 @@ export default function Dashboard({ data }) {
                           </span>
                         )}
                       </span>
-                      <span className="text-ink-muted">{fmt(g.plays)}x main</span>
+                      <span className="text-ink-muted">{fmtRingkas(g.plays)}x main</span>
                     </div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg-soft">
                       <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(4, (g.plays / maxPlays) * 100)}%` }} />
@@ -303,7 +303,7 @@ export default function Dashboard({ data }) {
                     )}
                     <span className="truncate text-ink">{s.name}</span>
                   </span>
-                  <span className="shrink-0 text-ink-muted">{fmt(s.players)} pemain{s.members ? ` • ${fmt(s.members)} member` : ''}</span>
+                  <span className="shrink-0 text-ink-muted">{fmtRingkas(s.players)} pemain{s.members ? ` • ${fmtRingkas(s.members)} member` : ''}</span>
                 </li>
               ))}
             </ul>

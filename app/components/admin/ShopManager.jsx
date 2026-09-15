@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
-import { fmt } from '../../lib/formatClient';
+import { fmtRingkas, fmtPenuh } from '../../lib/formatClient';
 
 export default function ShopManager({ send, data }) {
   const items = data.snapshot?.shopItems || [];
@@ -87,11 +87,11 @@ export default function ShopManager({ send, data }) {
                     </div>
                     <code className="text-xs text-ink-muted">{it.itemKey}</code>
                   </td>
-                  <td className="px-4 py-3 text-right text-ink">{fmt(it.price)}</td>
+                  <td className="px-4 py-3 text-right text-ink" title={fmtPenuh(it.price)}>{fmtRingkas(it.price)}</td>
                   <td className="px-4 py-3 text-right text-ink-muted">{it.stock}</td>
                   <td className="px-4 py-3">
                     {disc ? (
-                      <span className="rounded bg-bg-soft px-2 py-0.5 text-xs font-bold text-danger line-through decoration-2">{fmt(disc.original_price)}</span>
+                      <span className="rounded bg-bg-soft px-2 py-0.5 text-xs font-bold text-danger line-through decoration-2">{fmtRingkas(disc.original_price)}</span>
                     ) : (
                       <span className="text-xs text-ink-muted">-</span>
                     )}

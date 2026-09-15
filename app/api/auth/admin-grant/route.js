@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canonicalOrigin } from '../../../lib/site';
 import { getSession, createAdminSession } from '../../../lib/session';
 import { totpConfigured, hasTrustedDevice, createPending2fa } from '../../../lib/admin-2fa';
 
@@ -8,19 +9,20 @@ export const dynamic = 'force-dynamic';
 // Dipanggil dari guard /admin ketika user sudah login Discord dan ID-nya
 // termasuk ADMIN_DISCORD_IDS. Selain itu: lempar ke /no-access.
 export async function GET(request) {
+  const ORIGIN = canonicalOrigin(request.url);
   const session = await getSession();
   if (!session) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+    return NextResponse.redirect(new URL('/admin/login', ORIGIN));
   }
   const adminIds = (process.env.ADMIN_DISCORD_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!adminIds.includes(session.discordId)) {
-    return NextResponse.redirect(new URL('/no-access', request.url));
+    return NextResponse.redirect(new URL('/no-access', ORIGIN));
   }
   // 2FA admin: perangkat belum tepercaya -> wajib kode TOTP dulu.
   if (totpConfigured() && !(await hasTrustedDevice())) {
     await createPending2fa(session.username, session.avatar || null);
-    return NextResponse.redirect(new URL('/admin/verify', request.url));
+    return NextResponse.redirect(new URL('/admin/verify', ORIGIN));
   }
   await createAdminSession(session.username, session.avatar || null);
-  return NextResponse.redirect(new URL('/admin', request.url));
+  return NextResponse.redirect(new URL('/admin', ORIGIN));
 }

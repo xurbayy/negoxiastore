@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canonicalOrigin } from '../../../lib/site';
 import crypto from 'crypto';
 import { createSession, createAdminSession } from '../../../lib/session';
 import { cookies } from 'next/headers';
@@ -18,10 +19,12 @@ export async function GET(request) {
     return NextResponse.json({ ok: false, error: 'Terlalu banyak permintaan login. Coba lagi sebentar.' }, { status: 429 });
   }
   const url = new URL(request.url);
+  // Domain kanonik (lihat lib/site.js) - redirect selalu ke nexogames.site.
+  const ORIGIN = canonicalOrigin(request.url);
   let returnTo = url.searchParams.get('returnTo') || '/me';
   if (returnTo !== '@admin' && !(returnTo.startsWith('/') && !returnTo.startsWith('//'))) returnTo = '/me';
   const clientId = process.env.DISCORD_CLIENT_ID;
-  const redirect = process.env.DISCORD_REDIRECT_URI || `${url.origin}/api/auth/callback`;
+  const redirect = process.env.DISCORD_REDIRECT_URI || `${ORIGIN}/api/auth/callback`;
 
   if (!clientId) {
     // Dev tanpa OAuth: session demo - HANYA di development. Di production jalur
@@ -38,7 +41,7 @@ export async function GET(request) {
         avatar: null,
       });
     }
-    return NextResponse.redirect(new URL(returnTo === '@admin' ? '/admin' : returnTo, url.origin));
+    return NextResponse.redirect(new URL(returnTo === '@admin' ? '/admin' : returnTo, ORIGIN));
   }
 
   // Nonce CSRF: acak, disimpan di cookie httpOnly 10 menit, sekali pakai.

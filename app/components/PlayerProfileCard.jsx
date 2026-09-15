@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 
 // Kartu profil mini pemain di halaman Leaderboard: muncul saat nama pemain
 // diklik. Data 100% dari snapshot bot (leaderboard + richest) - tidak ada
@@ -33,7 +34,10 @@ export default function PlayerProfileCard({ player, onClose }) {
       key: 'points',
       icon: 'goldcoin',
       label: player.board === 'richest' ? 'Saldo' : 'Poin',
-      value: Number(player.points).toLocaleString('id-ID'),
+      // Angka RINGKAS supaya tidak terpotong jadi "10.000…" di sel sempit.
+      // Nilai penuh tetap tersedia lewat title (tooltip) di komponen Stat.
+      value: fmtRingkas(player.points),
+      full: fmtPenuh(player.points),
     },
   ];
   if (player.level != null) stats.push({ key: 'level', icon: 'star', label: 'Level', value: String(player.level) });
@@ -99,7 +103,7 @@ export default function PlayerProfileCard({ player, onClose }) {
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
         >
           {cells.map((c) =>
-            c.pass ? <PassStat key={c.key} /> : <Stat key={c.key} icon={c.icon} label={c.label} value={c.value} />
+            c.pass ? <PassStat key={c.key} /> : <Stat key={c.key} icon={c.icon} label={c.label} value={c.value} full={c.full} />
           )}
         </div>
 
@@ -115,9 +119,13 @@ export default function PlayerProfileCard({ player, onClose }) {
 
 // Sel statistik. Struktur flex kolom: emoji + nilai di tengah, label dipatok
 // ke dasar sel (mt-auto) supaya semua sel sejajar rata walau panjang nilainya
-// berbeda-beda. min-w-0 + truncate mencegah angka panjang mendorong lebar kolom.
+// berbeda-beda.
+// ANGKA: nilai yang ditampilkan sudah versi RINGKAS (fmtRingkas) sehingga tidak
+// pernah terpotong jadi "10.000…". `truncate` tetap dipertahankan sebagai jaring
+// terakhir (mis. nama pemain di sel status), tapi nilai penuh selalu bisa
+// dibaca lewat tooltip (`full`) - pemain yang mau angka persisnya tinggal hover.
 // `accent` = varian sel NEXO Pass (border & latar oranye tipis).
-function Stat({ icon, label, value, accent = false }) {
+function Stat({ icon, label, value, full, accent = false }) {
   return (
     <div
       className={`flex min-w-0 flex-col items-center justify-center rounded-xl border px-2 py-2.5 text-center ${
@@ -128,7 +136,7 @@ function Stat({ icon, label, value, accent = false }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={emojiSrc(icon)} alt="" width={16} height={16} className="mb-1 h-4 w-4 shrink-0" />
       )}
-      <p className="w-full truncate font-display text-sm leading-tight text-ink" title={String(value)}>{value}</p>
+      <p className="w-full truncate font-display text-sm leading-tight text-ink" title={full || String(value)}>{value}</p>
       <p className="mt-auto w-full truncate pt-0.5 text-[0.6rem] uppercase tracking-wider text-ink-muted">{label}</p>
     </div>
   );
