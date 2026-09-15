@@ -4,14 +4,16 @@
 //     layout tidak "melompat" (jauh lebih halus, dan tidak terasa mengelabui).
 //   - pakai kelas .skeleton yang sudah ada di globals.css (pulseSoft halus,
 //     otomatis mati saat pengguna pilih "reduce motion").
-//   - TANPA teks apa pun di area konten; hanya judul section bila di halaman
-//     aslinya ada heading tetap (bukan hasil data). Tidak ada tulisan "loading".
-//   - Placeholder NAVBAR selalu ikut: Navbar dirender per-halaman (bukan di
-//     layout), jadi tanpa ini navbar hilang lalu muncul = halaman melompat.
+//   - TANPA teks konten apa pun. Semua yang di halaman asli berupa teks ditiru
+//     sebagai bar abu. Judul statis pun tidak ditulis, supaya tidak ada tulisan
+//     yang bisa basi/salah saat halaman dimuat.
+//   - loading.jsx mengisi <main> saja. Navbar TIDAK dirender di sini (Navbar
+//     ada di dalam page.jsx). Lihat catatan di Shell soal kenapa.
 //
 // Acuan tiap varian diambil dari struktur nyata:
 //   leaderboard/page.jsx, shop/page.jsx, bank/page.jsx, premium/page.jsx,
-//   components/MeClient.jsx, redeem + admin/Dashboard.jsx
+//   components/MeClient.jsx, redeem, login/page.jsx, admin/login/page.jsx,
+//   privacy-policy/page.jsx, admin/Dashboard.jsx
 
 /* ── Potongan dasar ───────────────────────────────────────────────────── */
 
@@ -29,11 +31,12 @@ function Card({ className = '', children }) {
   );
 }
 
-// Pembungkus halaman: menyamakan latar grid + padding atas/bawah halaman asli.
+// Pembungkus halaman KONTEN (leaderboard/shop/bank/premium/me/redeem/admin):
+// latar grid + padding atas/bawah sama seperti halaman aslinya.
 //
-// PENTING (fix 2026-09-14, halaman dobel): Shell TIDAK lagi merender navbar
-// sendiri. Alasan: Navbar dirender DI DALAM tiap halaman (page.jsx), bukan di
-// layout. Saat transisi route, Next.js sempat mempertahankan DOM halaman lama
+// PENTING (fix 2026-09-14, halaman dobel): Shell TIDAK merender navbar sendiri.
+// Alasan: Navbar dirender DI DALAM tiap halaman (page.jsx), bukan di layout.
+// Saat transisi route, Next.js sempat mempertahankan DOM halaman lama
 // berdampingan dengan loading.jsx, sehingga navbar dari halaman lama + navbar
 // dari Shell skeleton = DUA navbar dan DUA <main> sekaligus (terukur: 2 header,
 // 2 main, 95 skeleton). Sekarang loading.jsx hanya mengisi <main>, jadi tidak
@@ -47,6 +50,29 @@ function Shell({ maxWidth = 'max-w-4xl', children }) {
     >
       <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
       <div className="relative" role="status">
+        <span className="sr-only">Memuat halaman</span>
+        {children}
+      </div>
+    </main>
+  );
+}
+
+// Pembungkus halaman AUTH (login, admin login/verify, no-access).
+//
+// GOTCHA (fix 2026-09-14): halaman-halaman ini memakai layout TERPUSAT
+// (`min-h-screen items-center justify-center`) - kartunya ada di TENGAH layar,
+// bukan di atas seperti halaman konten. Dulu semuanya memakai Shell biasa
+// (pt-32), sehingga kartu skeleton muncul di ATAS lalu MELOMPAT ke tengah saat
+// halaman asli tampil. Terbukti saat pindah dari /login ke /admin/login.
+function AuthShell({ children }) {
+  return (
+    <main
+      className="relative flex min-h-screen flex-col items-center justify-center px-5"
+      aria-busy="true"
+      aria-label="Memuat halaman"
+    >
+      <div className="bg-grid absolute inset-0" aria-hidden="true" />
+      <div className="relative w-full max-w-md" role="status">
         <span className="sr-only">Memuat halaman</span>
         {children}
       </div>
@@ -443,9 +469,15 @@ function RedeemSkeleton() {
  *   kartu grafik "Tren Ekonomi & Aktivitas" + 3 sub-panel
  *   grid 2 kolom: "Top Game Hari Ini" dan "Top Server"
  */
-function AdminSkeleton() {
+// ISI skeleton panel admin (tanpa <main>). Dipakai DUA tempat:
+//  - app/admin/loading.jsx    -> AdminSkeleton (body + Shell)
+//  - components/admin/AdminShell -> saat `data` belum tiba dari /api/admin/data
+// AdminShell sudah punya main+sidebar sendiri, jadi TIDAK boleh pakai Shell lagi.
+// Dulu AdminShell punya skeleton sendiri (2 batang besar) yang bentuknya beda
+// dari loading.jsx -> terlihat seperti skeleton dobel. Sekarang isinya sama.
+export function AdminSkeletonBody() {
   return (
-    <Shell maxWidth="max-w-6xl">
+    <>
       <Bar className="h-7 w-40" />
       <Bar className="mt-3 w-56" />
 
@@ -490,6 +522,15 @@ function AdminSkeleton() {
           </Card>
         ))}
       </div>
+    </>
+  );
+}
+
+// Versi halaman-penuh untuk app/admin/loading.jsx.
+function AdminSkeleton() {
+  return (
+    <Shell maxWidth="max-w-6xl">
+      <AdminSkeletonBody />
     </Shell>
   );
 }
@@ -553,27 +594,29 @@ function HomeSkeleton() {
  */
 function SimpleSkeleton() {
   return (
-    <Shell maxWidth="max-w-md">
-      <div className="mx-auto w-full max-w-md">
-        <Card className="px-8 py-10">
-          <div className="flex justify-center">
-            <div className="skeleton h-12 w-12 rounded-full" />
-          </div>
-          <div className="mt-5 flex justify-center">
-            <div className="skeleton h-7 w-56" />
-          </div>
-          <div className="mx-auto mt-4 space-y-2">
-            <Bar className="w-full" />
-            <Bar className="mx-auto w-4/5" />
-          </div>
-          <div className="mt-7 space-y-4 border-t border-border-soft pt-6">
-            <div className="skeleton h-11 w-full rounded-xl" />
-            <div className="skeleton h-11 w-full rounded-xl" />
-            <div className="skeleton h-12 w-full rounded-xl" />
-          </div>
-        </Card>
-      </div>
-    </Shell>
+    <AuthShell>
+      {/* Tombol back di atas kartu (halaman asli punya BackButton mb-4) */}
+      <div className="skeleton mb-4 h-9 w-24 rounded-lg" />
+      <Card className="px-8 py-10">
+        {/* Logo (NexoLogo 48-52px), di tengah */}
+        <div className="flex justify-center">
+          <div className="skeleton h-12 w-12 rounded-xl" />
+        </div>
+        {/* Judul + deskripsi */}
+        <div className="mt-5 flex justify-center">
+          <div className="skeleton h-7 w-44" />
+        </div>
+        <div className="mx-auto mt-3 space-y-2">
+          <Bar className="w-full" />
+          <Bar className="mx-auto w-4/5" />
+        </div>
+        {/* Tombol utama + baris kecil di bawahnya */}
+        <div className="mt-7 space-y-3">
+          <div className="skeleton h-13 w-full rounded-xl" />
+          <div className="skeleton mx-auto h-3 w-3/4" />
+        </div>
+      </Card>
+    </AuthShell>
   );
 }
 

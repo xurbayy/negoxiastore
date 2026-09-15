@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NexoLogo } from '../ui';
+// Isi skeleton panel yang SAMA dengan app/admin/loading.jsx (anti skeleton dobel).
+import { AdminSkeletonBody } from '../PageSkeleton';
 import Dashboard from './Dashboard';
 import Ekonomi from './Ekonomi';
 import ShopManager from './ShopManager';
@@ -266,9 +268,10 @@ export default function AdminShell({ username, avatar = null }) {
         </div>
 
         {!data ? (
-          <div className="space-y-4">
-            <div className="skeleton h-32 w-full" />
-            <div className="skeleton h-48 w-full" />
+          // Isi skeleton yang SAMA dengan app/admin/loading.jsx supaya peralihan
+          // dari skeleton Next.js ke panel tidak terlihat seperti skeleton dobel.
+          <div aria-busy="true" aria-label="Memuat panel">
+            <AdminSkeletonBody />
           </div>
         ) : (
           <>
