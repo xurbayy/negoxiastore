@@ -54,7 +54,7 @@ export default function Ekonomi({ send }) {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <AmountAction label="Tambah Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('add_points', { userId: uid, amount: v })} />
           <AmountAction label="Kurangi Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('remove_points', { userId: uid, amount: v })} />
-          <AmountAction label="Set Poin" hint="0 sampai 100 juta - DESTRUKTIF" danger disabled={!uid || busy} onSubmit={(v) => submit('set_points', { userId: uid, amount: v }, true)} />
+          <AmountAction label="Set Poin" hint="0 sampai 100 jt - DESTRUKTIF" danger disabled={!uid || busy} onSubmit={(v) => submit('set_points', { userId: uid, amount: v }, true)} />
           <AmountAction label="Set Level" hint="1-1000" disabled={!uid || busy} onSubmit={(v) => submit('set_level', { userId: uid, level: v })} />
           <AmountAction label="Set Daily Streak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_streak', { userId: uid, value: v })} />
           <AmountAction label="Set Winstreak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_winstreak', { userId: uid, value: v })} />

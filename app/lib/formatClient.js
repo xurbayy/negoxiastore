@@ -11,12 +11,12 @@ export function fmt(n) {
  * yang sempit, angka penuh jadi terpotong "10.000.000…" sehingga pemain tidak
  * tahu angka aslinya. Versi ringkas ini selalu muat dan tetap jujur.
  *
- * ATURAN (kata penuh, bukan singkatan - lebih jelas dibaca):
+ * ATURAN (singkatan - hemat ruang, dipakai juga di kartu share gambar):
  *   < 10.000         -> angka apa adanya        (7.500)
- *   >= 10.000        -> "12,5 ribu"             (12.500)
- *   >= 1.000.000     -> "1,2 juta"              (1.234.567)
- *   >= 1.000.000.000 -> "1,2 miliar"            (1.234.567.890)
- *   >= 1e12          -> "1,2 triliun"
+ *   >= 10.000        -> "12,5 rb"               (12.500)
+ *   >= 1.000.000     -> "1,2 jt"                (1.234.567)
+ *   >= 1.000.000.000 -> "1,2 m"                 (1.234.567.890)
+ *   >= 1e12          -> "1,2 t"
  *
  * MAKSIMAL 1 desimal supaya lebarnya bisa diprediksi, koma sebagai desimal
  * (id-ID). Nilai penuh tetap bisa dilihat lewat tooltip (fmtPenuh).
@@ -38,12 +38,12 @@ export function fmtRingkas(n) {
   // Susun satuan dari besar ke kecil; 1 desimal, buang ",0" yang mubazir.
   // PENTING: kalau hasil pembulatan menyentuh 1000 (mis. 999.999.999 -> "1000,0"
   // pada satuan juta), NAIKKAN ke satuan berikutnya. Tanpa ini hasilnya
-  // "1.000 juta" - titik ribuan itu terbaca seperti "seribu juta" dan menyesatkan.
+  // "1.000 jt" - titik ribuan itu terbaca seperti "seribu juta" dan menyesatkan.
   const satuans = [
-    { batas: 1e12, bagi: 1e12, label: ' triliun' },
-    { batas: 1e9, bagi: 1e9, label: ' miliar' },
-    { batas: 1e6, bagi: 1e6, label: ' juta' },
-    { batas: 1e4, bagi: 1e3, label: ' ribu' },
+    { batas: 1e12, bagi: 1e12, label: ' t' },
+    { batas: 1e9, bagi: 1e9, label: ' m' },
+    { batas: 1e6, bagi: 1e6, label: ' jt' },
+    { batas: 1e4, bagi: 1e3, label: ' rb' },
   ];
   for (let i = 0; i < satuans.length; i++) {
     const s = satuans[i];
@@ -57,8 +57,8 @@ export function fmtRingkas(n) {
         const tn = vn.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
         return `${tanda}${tn}${naik.label}`;
       }
-      // Satuan TERBESAR (triliun) dan sudah >= 1000: jangan pakai pemisah
-      // ribuan ("1.000 triliun" terbaca ambigu). Pakai bentuk polos.
+      // Satuan TERBESAR (t) dan sudah >= 1000: jangan pakai pemisah ribuan
+      // ("1.000 t" terbaca ambigu). Pakai bentuk polos.
       return `${tanda}${Math.round(v)}${s.label}`;
     }
     const teks = v.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
