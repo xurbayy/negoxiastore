@@ -21,6 +21,25 @@ export function emojiSrc(name, size = 64) {
   return `${base}?size=${size}&quality=lossless`;
 }
 
+/**
+ * URL emoji sebagai GAMBAR STATIS (PNG) - khusus untuk digambar ke <canvas>.
+ *
+ * KENAPA: emoji animasi ber-ekstensi .gif. Canvas TIDAK bisa menggambar GIF
+ * (yang tergambar cuma frame pertama atau gagal total), sehingga ikon di kartu
+ * bagikan bisa kosong di sebagian browser. Discord CDN menyediakan versi .png
+ * (frame pertama, statis) dengan mengganti ekstensinya - sudah diverifikasi
+ * HTTP 200. Emoji statis tidak berubah.
+ *
+ * Pakai ini untuk KARTU GAMBAR (canvas); untuk tampilan HTML biasa pakai
+ * emojiSrc() supaya animasinya tetap jalan.
+ */
+export function emojiSrcStatis(name, size = 64) {
+  const e = getEmoji(name);
+  if (!e) return null;
+  const base = e.url.split('?')[0].replace(/\.gif$/i, '.png');
+  return `${base}?size=${size}&quality=lossless`;
+}
+
 // Render string Discord-emoji ("<:name:id>" / "<a:name:id>") + teks biasa
 // jadi campuran <img>+span. Untuk admin title, broadcast, dsb di panel.
 export function parseRich(s) {

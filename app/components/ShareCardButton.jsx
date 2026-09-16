@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { emojiSrc } from '../lib/emojisClient';
+import { emojiSrcStatis } from '../lib/emojisClient';
 import { SITE_URL } from '../lib/site';
 import { fmtRingkas } from '../lib/formatClient';
 
@@ -39,7 +39,7 @@ function loadImg(src) {
   });
 }
 
-async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
+async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg }) {
   // TINGGI DINAMIS: kartu member NEXOPASS dapat 4 stat tile (2 baris) sehingga
   // butuh ruang ekstra. Dihitung SEBELUM canvas dibuat supaya tidak ada area
   // kosong di bawah (dulu tinggi dipatok 1350 -> kartu premium kepotong).
@@ -116,19 +116,33 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
     ctx.fillText(rankTxt, px + pw / 2, 98);
     ctx.textAlign = 'left';
   } else if (player.premium) {
-    // Tanpa peringkat (kartu profil) + member NEXOPASS: badge emas di kanan
-    // header - penanda status yang langsung terlihat saat dibagikan.
-    const badge = 'NEXOPASS';
-    ctx.font = '800 32px "Plus Jakarta Sans", system-ui, sans-serif';
-    const bw = ctx.measureText(badge).width + 52;
-    const bx = W - 64 - bw;
-    ctx.fillStyle = ACCENT;
-    roundRect(ctx, bx, 68, bw, 56, 28);
-    ctx.fill();
-    ctx.fillStyle = '#1E1E26';
-    ctx.textAlign = 'center';
-    ctx.fillText(badge, bx + bw / 2, 98);
-    ctx.textAlign = 'left';
+    // Tanpa peringkat (kartu profil) + member NEXOPASS: BADGE status di kanan
+    // header - penanda yang langsung terlihat saat dibagikan.
+    // Utamakan EMOJI RESMI NEXOPASS (gambar, konsisten dengan Discord).
+    // Kalau emoji gagal dimuat (CDN diblokir/offline), JANGAN biarkan header
+    // kosong - jatuh ke badge teks supaya status premium tetap tersampaikan.
+    if (nexopassImg) {
+      const ikon = 56;
+      const pad = 26;
+      const bw = ikon + pad * 2;
+      const bx = W - 64 - bw;
+      ctx.fillStyle = ACCENT;
+      roundRect(ctx, bx, 68, bw, ikon + 16, (ikon + 16) / 2);
+      ctx.fill();
+      ctx.drawImage(nexopassImg, bx + pad, 76, ikon, ikon);
+    } else {
+      const badge = 'NEXOPASS';
+      ctx.font = '800 32px "Plus Jakarta Sans", system-ui, sans-serif';
+      const bw = ctx.measureText(badge).width + 52;
+      const bx = W - 64 - bw;
+      ctx.fillStyle = ACCENT;
+      roundRect(ctx, bx, 68, bw, 56, 28);
+      ctx.fill();
+      ctx.fillStyle = '#1E1E26';
+      ctx.textAlign = 'center';
+      ctx.fillText(badge, bx + bw / 2, 98);
+      ctx.textAlign = 'left';
+    }
   }
 
   // ═══ Avatar besar menumpuk batas header (identik kartu profil) ═══
@@ -165,9 +179,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
   ctx.fillStyle = '#6E6157';
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
   if (dariProfil) {
-    // Kartu profil: tidak ada peringkat. Tampilkan status langganan - ini
-    // pembeda utama antara member NEXOPASS dan pemain biasa saat dibagikan.
-    ctx.fillText(player.premium ? 'Member NEXOPASS  ·  langganan aktif' : 'Pemain NEXO Games', W / 2, avCy + avR + 152);
+    // Kartu profil: tidak ada peringkat. Status NEXOPASS ditandai BADGE emoji
+    // di header (bukan tulisan panjang) - lebih cepat terbaca saat dibagikan.
+    // Sub-judul cukup netral untuk semua pemain.
+    ctx.fillText('Pemain NEXO Games', W / 2, avCy + avR + 152);
   } else {
     ctx.fillText(`Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W / 2, avCy + avR + 152);
   }
@@ -188,13 +203,13 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
   const tiles = duaBaris
     ? [
         { icon: coinImg, label: 'Poin', value: points },
-        { icon: null, label: 'Level', value: String(player.level || 1) },
-        { icon: null, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
-        { icon: null, label: 'Streak', value: String(player.dailyStreak || 0) },
+        { icon: starImg, label: 'Level', value: String(player.level || 1) },
+        { icon: trophyImg, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
+        { icon: streakImg, label: 'Streak', value: String(player.dailyStreak || 0) },
       ]
     : [
         { icon: coinImg, label: 'Poin', value: points },
-        { icon: null, label: 'Level', value: String(player.level || 1) },
+        { icon: starImg, label: 'Level', value: String(player.level || 1) },
       ];
 
   // Grid: 2 kolom. Kalau 4 tile -> 2 baris (jarak lebih rapat, tinggi tetap).
@@ -215,11 +230,17 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg }) {
     roundRect(ctx, tx, ty, tileW, tileH, 28);
     ctx.stroke();
     const tcx = tx + tileW / 2;
-    if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 24, ty + 38, 48, 48);
-    else {
+    if (tiles[i].icon) {
+      // Semua tile memakai EMOJI CUSTOM sebagai GAMBAR (dimuat dari CDN
+      // registry) - bukan teks/karakter, supaya tampilannya sama dengan
+      // emoji yang dipakai bot di Discord.
+      ctx.drawImage(tiles[i].icon, tcx - 24, ty + 38, 48, 48);
+    } else {
+      // Cadangan kalau emoji gagal dimuat (offline/CDN diblokir): jangan
+      // tampilkan kotak kosong, pakai penanda netral.
       ctx.fillStyle = ACCENT;
       ctx.font = '800 44px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText('★', tcx, ty + 64);
+      ctx.fillText('•', tcx, ty + 64);
     }
     ctx.fillStyle = '#2B2118';
     ctx.font = '800 54px "Plus Jakarta Sans", system-ui, sans-serif';
@@ -286,13 +307,24 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
     setBusy(true);
     setNote(null);
     try {
-      const [coinImg, crownImg, medalImg, logoImg] = await Promise.all([
-        loadImg(emojiSrc('goldcoin')),
-        loadImg(emojiSrc('crown')),
-        loadImg(emojiSrc('medal')),
+      // Semua emoji kartu dimuat sebagai PNG STATIS (emojiSrcStatis) - beberapa
+      // di antaranya aslinya GIF dan canvas tidak bisa menggambar GIF.
+      // Nama emoji disamakan dengan MeClient.STAT_ICONS supaya kartu & halaman
+      // profil memakai ikon yang sama.
+      const [coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg] = await Promise.all([
+        loadImg(emojiSrcStatis('goldcoin', 128)),
+        loadImg(emojiSrcStatis('crown', 128)),
+        loadImg(emojiSrcStatis('medal', 128)),
         loadImg('/nexo-logo-256.png'),
+        // download3 = merek NEXOPASS resmi (badge status di header)
+        loadImg(emojiSrcStatis('download3', 128)),
+        // sparkles = Level (konsisten dgn ikon di web), trophy = Menang,
+        // 267042fire = Streak harian (sama seperti STAT_ICONS di MeClient)
+        loadImg(emojiSrcStatis('sparkles', 128)),
+        loadImg(emojiSrcStatis('trophy', 128)),
+        loadImg(emojiSrcStatis('267042fire', 128)),
       ]);
-      const canvas = await renderCard({ player, coinImg, crownImg, medalImg, logoImg });
+      const canvas = await renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
 
