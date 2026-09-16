@@ -28,6 +28,23 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/** Bintang 5 sudut sebagai VEKTOR (bukan emoji/font) - tajam & selalu ada. */
+function gambarBintang(ctx, cx, cy, r, warna) {
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const radius = i % 2 === 0 ? r : r * 0.44;
+    const sudut = (Math.PI / 5) * i - Math.PI / 2;
+    const x = cx + Math.cos(sudut) * radius;
+    const y = cy + Math.sin(sudut) * radius;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = warna;
+  ctx.fill();
+  ctx.restore();
+}
+
 function loadImg(src) {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
@@ -39,7 +56,7 @@ function loadImg(src) {
   });
 }
 
-async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg }) {
+async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg }) {
   // TINGGI DINAMIS, dihitung dari layout SEBELUM canvas dibuat supaya tidak
   // ada area kosong maupun konten kepotong (pernah terjadi: tinggi dipatok
   // sementara isinya bertambah).
@@ -48,7 +65,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   //   - profil NEXO Pass  : + pita member          -> 1450px
   const dariProfilHitung = player.board === 'profil';
   const H = dariProfilHitung
-    ? (player.premium ? 1450 : 1310)
+    ? (player.premium ? 1480 : 1340)
     : 1350;
 
   const canvas = document.createElement('canvas');
@@ -214,6 +231,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   if (dariProfil) {
     const heroY = tileY;
     const heroH = 300;
+    const heroTengah = heroY + heroH / 2;
     // Kartu hero cream-soft dengan aksen oranye di tepi (bukan kotak penuh)
     ctx.fillStyle = '#F4EEDF';
     roundRect(ctx, 64, heroY, W - 128, heroH, 32);
@@ -227,27 +245,48 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     roundRect(ctx, 64, heroY, 10, heroH, 5);
     ctx.fill();
 
-    // Emoji koin besar di kiri hero
-    if (coinImg) ctx.drawImage(coinImg, 116, heroY + heroH / 2 - 44, 88, 88);
+    // ── Emoji koin + angka poin: RAPI & ADAPTIF ──
+    // Dulu posisi teks dipatok (heroY+150 dst) sehingga angka panjang bisa
+    // menabrak tepi kanan. Sekarang ukuran huruf MENYESUAIKAN panjang angka
+    // (maks 96px, mengecil bila perlu) dan blok teks dipusatkan vertikal
+    // terhadap emoji koin - jadi selalu terlihat seimbang.
+    const posKoin = 116;
+    const ukuranKoin = 88;
+    const teksX = posKoin + ukuranKoin + 28;
+    const areaKanan = W - 64 - 32;
+    const lebarTersedia = areaKanan - teksX;
 
-    // Angka poin raksasa
+    let ukFont = 96;
+    ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    while (ctx.measureText(points).width > lebarTersedia && ukFont > 44) {
+      ukFont -= 4;
+      ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    }
+
+    const tinggiBlok = 112;
+    const blokAtas = heroTengah - tinggiBlok / 2;
+
+    if (coinImg) ctx.drawImage(coinImg, posKoin, heroTengah - ukuranKoin / 2, ukuranKoin, ukuranKoin);
+
     ctx.textAlign = 'left';
     ctx.fillStyle = '#2B2118';
-    ctx.font = '800 96px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(points, 232, heroY + heroH / 2 + 12);
+    ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    ctx.fillText(points, teksX, blokAtas + ukFont);
     ctx.fillStyle = '#A99C8E';
-    ctx.font = '700 26px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('TOTAL POIN', 232, heroY + heroH / 2 + 58);
+    ctx.font = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText('TOTAL POIN', teksX, blokAtas + ukFont + 38);
     ctx.textAlign = 'center';
 
     // ── Baris statistik ramping (ikon + label + nilai), bukan grid kotak ──
+    // Level pakai BINTANG VEKTOR (emoji biasa), bukan emoji custom - sesuai
+    // permintaan owner, dan tampilannya lebih netral untuk statistik level.
     const baris = [
-      { icon: starImg, label: 'Level', value: String(player.level || 1) },
+      { bintang: true, label: 'Level', value: String(player.level || 1) },
       { icon: trophyImg, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
       { icon: streakImg, label: 'Streak', value: `${player.dailyStreak || 0} hari` },
     ];
     const rowY = heroY + heroH + 34;
-    const rowH = 96;
+    const rowH = 116;
     const rowW = W - 128;
     const kolW = rowW / baris.length;
     ctx.fillStyle = '#F4EEDF';
@@ -264,20 +303,28 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
         ctx.strokeStyle = '#E3D9C2';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(64 + kolW * i, rowY + 20);
-        ctx.lineTo(64 + kolW * i, rowY + rowH - 20);
+        ctx.moveTo(64 + kolW * i, rowY + 22);
+        ctx.lineTo(64 + kolW * i, rowY + rowH - 22);
         ctx.stroke();
       }
-      if (baris[i].icon) ctx.drawImage(baris[i].icon, cx - 44, rowY + rowH / 2 - 18, 36, 36);
-      ctx.textAlign = 'left';
+      // Tata letak dirapikan: ikon DIPUSATKAN di atas label+nilai, bukan
+      // menempel di kiri seperti sebelumnya (dulu ikon menggantung di sisi
+      // kiri sehingga tiap kolom terlihat tidak seimbang).
+      const ikonY = rowY + 30;
+      if (baris[i].icon) {
+        ctx.drawImage(baris[i].icon, cx - 18, ikonY - 18, 36, 36);
+      } else if (baris[i].bintang) {
+        gambarBintang(ctx, cx, ikonY, 17, ACCENT);
+      }
+      ctx.textAlign = 'center';
       ctx.fillStyle = '#A99C8E';
-      ctx.font = '700 20px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText(baris[i].label.toUpperCase(), cx - 2, rowY + 34);
+      ctx.font = '700 19px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText(baris[i].label.toUpperCase(), cx, rowY + 62);
       ctx.fillStyle = '#2B2118';
       ctx.font = '800 34px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText(baris[i].value, cx - 2, rowY + 72);
-      ctx.textAlign = 'center';
+      ctx.fillText(baris[i].value, cx, rowY + 88);
     }
+    ctx.textAlign = 'center';
 
     // ── Pita status NEXO Pass (khusus member) ──
     let bawahY = rowY + rowH;
@@ -332,7 +379,8 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   const tileH = 240;
   const tiles = [
     { icon: coinImg, label: 'Poin', value: points },
-    { icon: starImg, label: 'Level', value: String(player.level || 1) },
+    // Level pakai BINTANG VEKTOR (emoji biasa), bukan emoji custom.
+    { bintang: true, label: 'Level', value: String(player.level || 1) },
   ];
 
   const kolom = 2;
@@ -352,17 +400,19 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     roundRect(ctx, tx, ty, tileW, tileH, 28);
     ctx.stroke();
     const tcx = tx + tileW / 2;
+    // Ikon di posisi yang SAMA untuk semua tile (bintang & emoji sejajar).
+    const ikonY = ty + 62;
     if (tiles[i].icon) {
-      // Semua tile memakai EMOJI CUSTOM sebagai GAMBAR (dimuat dari CDN
-      // registry) - bukan teks/karakter, supaya tampilannya sama dengan
-      // emoji yang dipakai bot di Discord.
-      ctx.drawImage(tiles[i].icon, tcx - 24, ty + 38, 48, 48);
+      // Emoji custom sebagai GAMBAR (PNG statis dari registry) - tampilannya
+      // sama dengan emoji yang dipakai bot di Discord.
+      ctx.drawImage(tiles[i].icon, tcx - 24, ikonY - 24, 48, 48);
+    } else if (tiles[i].bintang) {
+      gambarBintang(ctx, tcx, ikonY, 23, ACCENT);
     } else {
-      // Cadangan kalau emoji gagal dimuat (offline/CDN diblokir): jangan
-      // tampilkan kotak kosong, pakai penanda netral.
+      // Cadangan kalau ikon gagal dimuat: penanda netral, bukan kotak kosong.
       ctx.fillStyle = ACCENT;
       ctx.font = '800 44px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText('•', tcx, ty + 64);
+      ctx.fillText('•', tcx, ikonY + 15);
     }
     ctx.fillStyle = '#2B2118';
     ctx.font = '800 54px "Plus Jakarta Sans", system-ui, sans-serif';
@@ -433,20 +483,20 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
       // di antaranya aslinya GIF dan canvas tidak bisa menggambar GIF.
       // Nama emoji disamakan dengan MeClient.STAT_ICONS supaya kartu & halaman
       // profil memakai ikon yang sama.
-      const [coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg] = await Promise.all([
+      const [coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg] = await Promise.all([
         loadImg(emojiSrcStatis('goldcoin', 128)),
         loadImg(emojiSrcStatis('crown', 128)),
         loadImg(emojiSrcStatis('medal', 128)),
         loadImg('/nexo-logo-256.png'),
         // download3 = merek NEXO Pass resmi (badge status di header)
         loadImg(emojiSrcStatis('download3', 128)),
-        // sparkles = Level (konsisten dgn ikon di web), trophy = Menang,
-        // 267042fire = Streak harian (sama seperti STAT_ICONS di MeClient)
-        loadImg(emojiSrcStatis('sparkles', 128)),
+        // Level TIDAK memakai emoji custom - digambar sebagai BINTANG VEKTOR
+        // (lihat gambarBintang) supaya sederhana & tajam di semua ukuran.
+        // trophy = Menang, 267042fire = Streak harian.
         loadImg(emojiSrcStatis('trophy', 128)),
         loadImg(emojiSrcStatis('267042fire', 128)),
       ]);
-      const canvas = await renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg });
+      const canvas = await renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
 
