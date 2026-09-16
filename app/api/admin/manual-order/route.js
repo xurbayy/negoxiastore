@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminSession, getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
 import { touchActivity } from '../../../lib/activity';
+import { PLAN_DAYS } from '../../../lib/premiumPlan';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,7 +52,7 @@ export async function POST(request) {
     if (flip.rowsAffected > 0 && order.discord_id) {
       await db.execute({
         sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'admin_manual', 'pending', ?)",
-        args: [JSON.stringify({ userId: order.discord_id, tier: 'pro', days: 30 }), now],
+        args: [JSON.stringify({ userId: order.discord_id, tier: 'pro', days: PLAN_DAYS }), now],
       });
       await db.execute({
         sql: "INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, 'pending', ?)",
@@ -60,7 +61,7 @@ export async function POST(request) {
       // Notifikasi web untuk user: pembayaran diterima
       await db.execute({
         sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-        args: [order.discord_id, `Pembayaran Order #${orderId} Diterima`, 'Bukti transfer kamu sudah kami verifikasi. NEXO Pass 30 hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!', now],
+        args: [order.discord_id, `Pembayaran Order #${orderId} Diterima`, `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, now],
       });
     }
   } else {

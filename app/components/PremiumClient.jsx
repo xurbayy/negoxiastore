@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
+import PremiumBenefits from './PremiumBenefits';
+import { sisaHari, isLifetime } from '../lib/premiumPlan';
 
 function nowMs() {
   return Date.now();
@@ -12,6 +14,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   const [order, setOrder] = useState(initialOrder || null);
   const [error, setError] = useState(null);
   const [premiumActive, setPremiumActive] = useState(initialPremiumActive || false);
+  // Data premium mentah (tier/expiresAt/lifetime) - dipakai untuk menampilkan
+  // SISA HARI KONKRET, bukan angka tetap. Dulu halaman hanya bilang
+  // "Kamu sudah Premium" tanpa menyebut sisa waktunya.
+  const [premium, setPremium] = useState(null);
   
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +45,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           p === true ||
           (p && typeof p === 'object' && (p.lifetime || Number(p.expiresAt) > Date.now()));
         setPremiumActive(Boolean(m.profile?.exists && active));
+        // Simpan objek premium kalau bentuknya memang objek (punya expiresAt).
+        // Kalau bentuknya boolean lama (true), tetap aman - sisa hari tidak
+        // ditampilkan daripada menampilkan angka salah.
+        setPremium(p && typeof p === 'object' ? p : null);
       }
     } catch {}
   }, []);
@@ -129,12 +139,29 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   // / perpanjang lagi - tombol bayar baru muncul setelah pass di lepas admin
   // atau jatuh tempo (lihat userHasPremium).
   if (premiumActive) {
+    // Masa aktif KONKRET: dihitung dari expires_at yang sebenarnya, bukan angka
+    // tetap "30 hari". Kalau lifetime -> "Aktif selamanya".
+    const lt = isLifetime(premium);
+    const hari = !lt && premium?.expiresAt ? sisaHari(premium.expiresAt) : null;
+    const tanggal = !lt && premium?.expiresAt
+      ? new Date(Number(premium.expiresAt)).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null;
+
     return (
-      <div className="mt-8 flex flex-col items-center gap-2">
-        <div className="rounded-xl bg-success px-5 py-3 text-sm font-semibold text-white">
-          Kamu sudah Premium
+      <div className="mt-8 flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-1 rounded-xl bg-success px-5 py-3 text-center text-white">
+          <span className="text-sm font-semibold">NEXO Pass aktif</span>
+          {lt ? (
+            <span className="text-xs opacity-90">Aktif selamanya</span>
+          ) : hari != null ? (
+            <span className="text-xs opacity-90">
+              {hari > 0 ? `Sisa ${hari} hari` : 'Berakhir hari ini'}
+              {tanggal ? ` - sampai ${tanggal}` : ''}
+            </span>
+          ) : null}
         </div>
-        <p className="text-xs text-ink-muted">Semua perk aktif di Discord dan halaman profil.</p>
+        <p className="text-xs text-ink-muted">Semua perk di bawah aktif di Discord dan halaman profil.</p>
+        <PremiumBenefits premium={premium} />
       </div>
     );
   }
@@ -258,6 +285,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           Bayar via QRIS
         </button>
       )}
+
+      {/* Daftar keunggulan: tampil juga untuk yang BELUM berlangganan supaya
+          pembeli tahu persis apa yang dia dapat sebelum membayar. */}
+      <PremiumBenefits premium={null} />
     </div>
   );
 }

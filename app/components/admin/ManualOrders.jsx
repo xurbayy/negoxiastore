@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
+import { PLAN_DAYS } from '../../lib/premiumPlan';
 
 function parseRef(ref) {
   try {
@@ -226,7 +227,7 @@ export default function ManualOrders({ orders, reload }) {
             : 'Hapus SEMUA riwayat pesanan?'
           }
           body={
-            confirm.kind === 'approve' ? 'NEXO Pass 30 hari akan diaktifkan ke pembeli dan notifikasi dikirim. Pastikan nominal di bukti transfer cocok dengan mutasi E-Wallet kamu.'
+            confirm.kind === 'approve' ? `NEXO Pass ${PLAN_DAYS} hari akan diaktifkan ke pembeli dan notifikasi dikirim. Pastikan nominal di bukti transfer cocok dengan mutasi E-Wallet kamu.`
             : confirm.kind === 'reject' ? 'Pesanan ditandai ditolak dan pembeli dapat notifikasi. Mereka bisa submit ulang dengan bukti yang benar.'
             : confirm.kind === 'delete' ? 'Riwayat order ini (termasuk gambar bukti transfernya) dihapus permanen dari panel. Tidak memengaruhi status premium pemain.'
             : 'Semua riwayat pesanan QRIS yang sudah selesai (disetujui, ditolak, atau expired) akan dihapus permanen. Pesanan yang masih pending TIDAK ikut terhapus.'
