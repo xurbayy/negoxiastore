@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import RichText from './RichText';
 import { fmt, fmtRingkas, fmtPenuh } from '../../lib/formatClient';
+// sisaHari: dihitung SAAT DITAMPILKAN, bukan memakai daysLeft dari bot yang
+// dihitung saat push (bisa basi - panel sempat menampilkan "sisa 30 hari"
+// padahal tinggal 28 hari).
+import { sisaHari } from '../../lib/premiumPlan';
 
 // PLAYER LOOKUP: admin memasukkan Discord ID -> profil penuh (dari bot,
 // real-time) + jejak perintah (gift/reward masuk atau belum) + order & klaim.
@@ -108,7 +112,13 @@ export default function PlayerLookup() {
             {premium && (
               <p className="mt-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2 text-xs text-ink">
                 Pass aktif s/d <b>{premium.lifetime ? 'LIFETIME ♾️' : new Date(premium.expiresAt).toLocaleDateString('id-ID')}</b>
-                {premium.daysLeft != null && !premium.lifetime ? ` (sisa ${premium.daysLeft} hari)` : ''} • Beta games: <b>terbuka</b>
+                {!premium.lifetime && ` (sisa ${sisaHari(premium.expiresAt)} hari)`}
+                {/* Beta TIDAK lagi hardcode "terbuka": dihitung dari kondisi
+                    nyata. Bot memang hanya mengirim objek premium kalau belum
+                    kedaluwarsa, tapi menuliskannya sebagai fakta yang dihitung
+                    lebih jujur - kalau suatu saat datanya berubah, panel ikut. */}
+                {' • Beta games: '}
+                <b>{Number(premium.expiresAt) > Date.now() || premium.lifetime ? 'terbuka' : 'tertutup'}</b>
               </p>
             )}
             {p.loan && (

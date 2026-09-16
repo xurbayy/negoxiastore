@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import { fmt } from '../../lib/formatClient';
+// sisaHari + isLifetimePremium: satu sumber dengan bot (threshold 50 tahun).
+import { sisaHari, isLifetime as isLifetimePremium } from '../../lib/premiumPlan';
 
 // NEXO Pass: daftar member premium aktif + grant/revoke.
 export default function Nexopass({ send, data }) {
@@ -68,10 +70,13 @@ export default function Nexopass({ send, data }) {
               <tr><td colSpan="4" className="px-4 py-8 text-center text-ink-muted">Belum ada member premium aktif.</td></tr>
             )}
             {members.map((m) => {
-              const daysLeft = Math.ceil((m.expiresAt - Date.now()) / 86400000);
-              // Web clamp grant ke 3650 hari = "seumur hidup efektif"; Discord
-              // nxadmin bisa pasang lebih besar - tampilkan LIFETIME untuk itu.
-              const isLifetime = !m.expiresAt || daysLeft >= 3650;
+              // Hitung saat render (bukan nilai dari bot yang bisa basi).
+              const daysLeft = sisaHari(m.expiresAt);
+              // Threshold lifetime DISAMAKAN dengan bot (> 50 tahun, lihat
+              // commands/premium.js + utils/webBridge.js). Dulu web pakai
+              // >= 3650 hari (10 tahun) sehingga premium 15 tahun tampil
+              // "LIFETIME" di panel tapi "sisa 5475 hari" di Discord - beda.
+              const isLifetime = !m.expiresAt || isLifetimePremium({ expiresAt: m.expiresAt });
               return (
                 <tr key={m.userId} className="border-b border-border-soft/60 last:border-0">
                   <td className="px-4 py-3">

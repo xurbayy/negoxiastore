@@ -7,6 +7,8 @@ import { emojiSrc } from '../lib/emojisClient';
 // dan gameName. Dulu file ini punya salinan sendiri-sendiri (fmt, stripEmoji,
 // GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
 import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh } from '../lib/formatClient';
+// sisaHari: dihitung SAAT RENDER (bukan daysLeft dari bot yang bisa basi).
+import { sisaHari } from '../lib/premiumPlan';
 import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
 // Isi skeleton profil yang SAMA dengan app/me/loading.jsx (anti skeleton dobel).
 import { MeSkeletonBody } from './PageSkeleton';
@@ -366,7 +368,10 @@ export default function MeClient({ betaGames = null }) {
   const premiumActive = isPremium
     ? p.premium.lifetime
       ? 'LIFETIME'
-      : `sisa ${p.premium.daysLeft ?? Math.max(0, Math.ceil((Number(p.premium.expiresAt) - nowMs()) / 86400000))} hari`
+      // SELALU hitung sendiri saat render - JANGAN pakai daysLeft dari bot
+      // (nilai itu dihitung saat bot push, jadi bisa basi: pernah tampil
+      // "sisa 30 hari" padahal tinggal 28 hari).
+      : `sisa ${sisaHari(p.premium.expiresAt)} hari`
     : null;
   // Premium: riwayat di-paging 10/halaman (tombol next), gratis: tetap 10 terakhir.
   const HISTORY_PER_PAGE = 10;
