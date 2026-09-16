@@ -49,7 +49,7 @@ export default async function PremiumPage() {
       <main className="relative mx-auto max-w-4xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-ink">
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-accent/50 bg-card-cream px-4 py-1.5 text-xs font-extrabold tracking-wide text-ink shadow-sm">
             {emojiSrc('download3') && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={emojiSrc('download3')} alt="" width={16} height={16} className="h-4 w-4" />

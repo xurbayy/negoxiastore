@@ -149,12 +149,21 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
 
     return (
       <div className="mt-8 flex flex-col items-center gap-3">
-        <div className="flex flex-col items-center gap-1 rounded-xl bg-success px-5 py-3 text-center text-white">
-          <span className="text-sm font-semibold">NEXO Pass aktif</span>
+        {/* Badge status aktif: gaya SAMA dengan badge di profil
+            (cream + cincin oranye 50%) - dulu hijau pekat sehingga menyalahi
+            warna merek NEXO dan berbeda dari badge di halaman lain. */}
+        <div className="inline-flex flex-col items-center gap-1 rounded-2xl border border-accent/50 bg-card-cream px-5 py-3 text-center text-ink shadow-sm">
+          <span className="inline-flex items-center gap-2 text-sm font-bold">
+            {emojiSrc('download3') && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={emojiSrc('download3')} alt="" width={16} height={16} className="h-4 w-4" />
+            )}
+            NEXO Pass aktif
+          </span>
           {lt ? (
-            <span className="text-xs opacity-90">Aktif selamanya</span>
+            <span className="text-xs text-ink-muted">Aktif selamanya</span>
           ) : hari != null ? (
-            <span className="text-xs opacity-90">
+            <span className="text-xs text-ink-muted">
               {hari > 0 ? `Sisa ${hari} hari` : 'Berakhir hari ini'}
               {tanggal ? ` - sampai ${tanggal}` : ''}
             </span>

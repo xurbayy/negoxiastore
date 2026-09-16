@@ -610,17 +610,30 @@ export default function MeClient({ betaGames = null }) {
                     Karena itu: di HP sempit tombol TURUN ke barisnya sendiri
                     (memanfaatkan lebar penuh, mudah dijangkau jempol), lalu
                     kembali sejajar harga mulai layar >= 400px. */}
+                {/* Baris 2: harga + tombol.
+                    SUSUNAN FINAL (diperbaiki 2026-09-16):
+                    Versi sebelumnya memaksa `px-5! py-2!` (penting) untuk
+                    menimpa padding .btn-primary. Karena .btn-primary sendiri
+                    sudah punya padding 0.7rem 1.6rem + border-radius pil,
+                    perang !important itu membuat label tombol TERPOTONG
+                    ("NEXO P...") pada layar sempit.
+                    Sekarang: TIDAK memaksa padding sama sekali - cukup
+                    `w-full` di HP (teks otomatis di tengah oleh .btn-primary)
+                    dan lebar mengikuti isi saat layar >= 400px. */}
                 <div className="flex flex-col gap-3 border-t border-border-soft pt-4 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between sm:border-0 sm:pt-0">
                   <div className="shrink-0 min-[400px]:text-right">
                     <p className="font-display text-xl text-ink sm:text-2xl">Rp 20.000</p>
                     <p className="text-xs text-ink-muted">per bulan</p>
                   </div>
-                  <Link href="/premium" className="btn-primary inline-flex w-full shrink-0 items-center justify-center gap-1.5 px-5! py-2! cursor-pointer min-[400px]:w-auto">
+                  <Link
+                    href="/premium"
+                    className="btn-primary w-full min-[400px]:w-auto whitespace-nowrap"
+                  >
                     {emojiSrc('download3') && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                      <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
                     )}
-                    NEXO Pass
+                    <span>NEXO Pass</span>
                   </Link>
                 </div>
               </div>

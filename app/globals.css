@@ -151,6 +151,12 @@ select:focus-visible {
   padding: 0.7rem 1.6rem;
   transition: background 0.15s ease, transform 0.15s ease;
   cursor: pointer;
+  /* JARING PENGAMAN (2026-09-16): label tombol JANGAN pernah terpotong atau
+     terlipat di tengah kata. Sebelumnya label bisa tampil "NEXO P..." karena
+     bentrok dengan utilitas `px-5! py-2!` (perang !important) di layar sempit.
+     whitespace-nowrap = teks tetap satu baris; label pendek seperti
+     "NEXO Pass" tidak akan pernah terbelah lagi. */
+  white-space: nowrap;
 }
 .btn-primary:hover {
   background: var(--accent-hover);
