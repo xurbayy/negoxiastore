@@ -203,8 +203,16 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
             Scan QRIS di bawah ini dengan aplikasi e-wallet atau m-banking kamu seperti GoPay, OVO, DANA, atau BCA sebesar <strong>Rp 20.000</strong>.
           </p>
           
+          {/* QRIS POTRET (600x846). Jangan pakai width/height kotak 200x200 -
+              atribut HTML itu memaksa rasio 1:1 sehingga QR potret ketarik
+              gepeng dan bisa SULIT DI-SCAN. Cukup batasi tinggi, biarkan
+              lebar mengikuti proporsi asli (h-auto). */}
           <div className="bg-white p-2 rounded-xl border-4 border-accent/20 mx-auto w-fit mb-4">
-            <img src="/images/qris.png" alt="QRIS Payment" width={200} height={200} className="rounded-lg object-contain" />
+            <img
+              src="/images/qris.png"
+              alt="QRIS Payment NEXO Pass"
+              className="h-[300px] w-auto rounded-lg object-contain"
+            />
           </div>
 
           <div className="mb-4 rounded-lg border border-border-soft bg-card-cream p-3 text-center">
