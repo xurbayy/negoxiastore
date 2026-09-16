@@ -79,6 +79,27 @@ function gambarBadgeNexoPass(ctx, cx, cy, d, logoImg) {
   }
 }
 
+/**
+ * Potong teks agar MUAT secara lebar (bukan berdasarkan jumlah karakter).
+ *
+ * KENAPA: lebar karakter tidak seragam - "iiii" jauh lebih sempit dari "WWWW".
+ * Dulu nama dipotong pakai name.slice(0,16), sehingga nama 16 huruf KAPITAL
+ * LEBAR bisa melebihi ruang kartu dan MENIMPA elemen lain (mis. badge NEXO Pass
+ * di header). Sekarang diukur dengan measureText: potong bertahap sampai muat,
+ * lalu tambahkan elipsis. Font harus sudah di-set di ctx sebelum memanggil ini.
+ */
+function potongByLebar(ctx, teks, maksLebar) {
+  const t = String(teks || '');
+  if (ctx.measureText(t).width <= maksLebar) return t;
+  let n = t.length;
+  while (n > 1) {
+    n -= 1;
+    const coba = t.slice(0, n) + '…';
+    if (ctx.measureText(coba).width <= maksLebar) return coba;
+  }
+  return '…';
+}
+
 function loadImg(src) {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
@@ -224,12 +245,17 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.textAlign = 'center';
   ctx.fillStyle = '#2B2118';
   ctx.font = '800 68px "Plus Jakarta Sans", system-ui, sans-serif';
-  const name = String(player.username || '?');
-  ctx.fillText(name.length > 17 ? name.slice(0, 16) + '…' : name, W / 2, avCy + avR + 86);
+  // Nama dipotong berdasarkan LEBAR (bukan jumlah karakter) supaya tidak
+  // pernah melebihi kartu / menimpa badge. Kartu profil punya badge di kanan
+  // header, jadi ruangnya sedikit lebih sempit daripada kartu leaderboard.
+  const name = potongByLebar(ctx, player.username || '?', W - 128 - (dariProfil ? 60 : 0));
+  ctx.fillText(name, W / 2, avCy + avR + 86);
   ctx.fillStyle = '#6E6157';
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
   if (!dariProfil) {
-    ctx.fillText(`Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W / 2, avCy + avR + 152);
+    // Sub-judul juga dipotong by-lebar (jaga-jaga kalau rank/teks berubah).
+    const sub = potongByLebar(ctx, `Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W - 128);
+    ctx.fillText(sub, W / 2, avCy + avR + 152);
   }
 
   const points = fmtRingkas(player.points || 0);
@@ -280,18 +306,40 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
     }
 
-    const tinggiBlok = 112;
+    // ── TINGGI BLOK DIHITUNG DARI METRIK FONT (bukan angka patokan) ──
+    // BUG yang diperbaiki: dulu tinggiBlok dipatok 112px, SEDANGKAN font angka
+    // bisa sampai 96px. Untuk angka yang punya descender (mis. "999.999.999"),
+    // bagian bawah angka turun melewati label "TOTAL POIN" -> teks saling
+    // MENIMPA dan terlihat berantakan di kartu yang dibagikan.
+    // Sekarang: ukur tinggi angka + tinggi label + jarak, lalu susun dari situ.
+    const fontAngka = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
+    const fontLabel = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
+    const jarakAngkaLabel = 16; // jarak aman antara angka dan label
+
+    ctx.font = fontAngka;
+    const mA = ctx.measureText(points);
+    const ascA = mA.actualBoundingBoxAscent || ukFont * 0.72;
+    const descA = mA.actualBoundingBoxDescent || ukFont * 0.25;
+    ctx.font = fontLabel;
+    const mL = ctx.measureText('TOTAL POIN');
+    const ascL = mL.actualBoundingBoxAscent || 17;
+    const descL = mL.actualBoundingBoxDescent || 6;
+
+    const tinggiBlok = ascA + descA + jarakAngkaLabel + ascL + descL;
     const blokAtas = heroTengah - tinggiBlok / 2;
+
+    const baselineAngka = blokAtas + ascA;
+    const baselineLabel = baselineAngka + descA + jarakAngkaLabel + ascL;
 
     if (coinImg) ctx.drawImage(coinImg, posKoin, heroTengah - ukuranKoin / 2, ukuranKoin, ukuranKoin);
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#2B2118';
-    ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
-    ctx.fillText(points, teksX, blokAtas + ukFont);
+    ctx.font = fontAngka;
+    ctx.fillText(points, teksX, baselineAngka);
     ctx.fillStyle = '#A99C8E';
-    ctx.font = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('TOTAL POIN', teksX, blokAtas + ukFont + 38);
+    ctx.font = fontLabel;
+    ctx.fillText('TOTAL POIN', teksX, baselineLabel);
     ctx.textAlign = 'center';
 
     // ── Baris statistik ramping (ikon + label + nilai), bukan grid kotak ──
@@ -357,7 +405,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.fillStyle = INK;
     ctx.font = '700 36px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(
-      player.premium ? 'Gabung juga di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?',
+      potongByLebar(ctx, player.premium ? 'Gabung juga di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?', W - 160),
       W / 2, ctaY + 58
     );
     const isDev = typeof window !== 'undefined' && window.location.host.includes('localhost');
