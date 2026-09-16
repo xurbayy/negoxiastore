@@ -45,6 +45,40 @@ function gambarBintang(ctx, cx, cy, r, warna) {
   ctx.restore();
 }
 
+/**
+ * Badge NEXO Pass: LINGKARAN dengan latar CREAM CERAH + logo di tengahnya.
+ *
+ * KENAPA CREAM, BUKAN ORANYE: badge ini duduk di atas header gelap (#1E1E26).
+ * Latar oranye membuat logo tenggelam (kurang kontras) sehingga statusnya
+ * tidak "menonjol". Cream cerah (#FBF7EC) memberi kontras tinggi terhadap
+ * header gelap - logo langsung terbaca dan terlihat elegan. Sama seperti
+ * desain kartu profil.
+ *
+ * Dipakai KONSISTEN di kartu leaderboard maupun kartu profil (satu tampilan
+ * untuk satu makna) supaya user tidak melihat dua gaya badge berbeda.
+ *
+ * @param {number} cx - titik tengah X
+ * @param {number} cy - titik tengah Y
+ * @param {number} d  - diameter lingkaran
+ * @param {Image} logoImg - logo/emoji NEXO Pass (sudah dimuat)
+ */
+function gambarBadgeNexoPass(ctx, cx, cy, d, logoImg) {
+  const r = d / 2;
+  // cincin tipis oranye di luar + isi cream → tetap ada aksen merek, tanpa
+  // mengorbankan keterbacaan logo.
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = '#FBF7EC';
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = ACCENT;
+  ctx.stroke();
+  if (logoImg) {
+    const ikon = d * 0.68; // sisakan padding di dalam lingkaran
+    ctx.drawImage(logoImg, cx - ikon / 2, cy - ikon / 2, ikon, ikon);
+  }
+}
+
 function loadImg(src) {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
@@ -61,12 +95,12 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   // ada area kosong maupun konten kepotong (pernah terjadi: tinggi dipatok
   // sementara isinya bertambah).
   //   - leaderboard      : grid 2 tile          -> 1350px (rasio 4:5)
-  //   - profil biasa     : hero + baris statistik -> 1310px
-  //   - profil NEXO Pass  : + pita member          -> 1450px
+  //   - profil           : hero + baris statistik -> 1340px
+  //     (premium & biasa sama; status premium = badge logo di header)
+  // Pita teks member sudah dihapus -> kartu profil premium & non-premium
+  // sekarang TINGGINYA SAMA (status premium cukup ditandai badge di header).
   const dariProfilHitung = player.board === 'profil';
-  const H = dariProfilHitung
-    ? (player.premium ? 1480 : 1340)
-    : 1350;
+  const H = dariProfilHitung ? 1340 : 1350;
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -145,8 +179,9 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.fillText(rankTxt, px + pw / 2, 98);
     ctx.textAlign = 'left';
     if (adaBadge) {
-      // Emoji NEXO Pass di kanan pill peringkat, sejajar tengahnya (pill 60..132).
-      ctx.drawImage(nexopassImg, px + pw + jarakBadge, (60 + 132 - ikonBadge) / 2, ikonBadge, ikonBadge);
+      // Badge NEXO Pass (lingkaran cream cerah + logo) di kanan pill peringkat,
+      // sejajar tengah pill (60..132). Sama persis dengan badge di kartu profil.
+      gambarBadgeNexoPass(ctx, px + pw + jarakBadge + ikonBadge / 2, (60 + 132) / 2, ikonBadge, nexopassImg);
     }
   } else if (player.premium) {
     // Tanpa peringkat (kartu profil) + member NEXO Pass: BADGE status di kanan
@@ -154,28 +189,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     // Utamakan EMOJI RESMI NEXO Pass (gambar, konsisten dengan Discord).
     // Kalau emoji gagal dimuat (CDN diblokir/offline), JANGAN biarkan header
     // kosong - jatuh ke badge teks supaya status premium tetap tersampaikan.
-    if (nexopassImg) {
-      const ikon = 56;
-      const pad = 26;
-      const bw = ikon + pad * 2;
-      const bx = W - 64 - bw;
-      ctx.fillStyle = ACCENT;
-      roundRect(ctx, bx, 68, bw, ikon + 16, (ikon + 16) / 2);
-      ctx.fill();
-      ctx.drawImage(nexopassImg, bx + pad, 76, ikon, ikon);
-    } else {
-      const badge = 'NEXO Pass';
-      ctx.font = '800 32px "Plus Jakarta Sans", system-ui, sans-serif';
-      const bw = ctx.measureText(badge).width + 52;
-      const bx = W - 64 - bw;
-      ctx.fillStyle = ACCENT;
-      roundRect(ctx, bx, 68, bw, 56, 28);
-      ctx.fill();
-      ctx.fillStyle = '#1E1E26';
-      ctx.textAlign = 'center';
-      ctx.fillText(badge, bx + bw / 2, 98);
-      ctx.textAlign = 'left';
-    }
+    // Badge IDENTIK dengan kartu leaderboard: lingkaran cream cerah + logo,
+    // ukuran sama supaya satu makna = satu tampilan di seluruh situs.
+    const d = 48;
+    gambarBadgeNexoPass(ctx, W - 64 - d / 2, 96, d, nexopassImg);
   }
 
   // ═══ Avatar besar menumpuk batas header (identik kartu profil) ═══
@@ -326,29 +343,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     }
     ctx.textAlign = 'center';
 
-    // ── Pita status NEXO Pass (khusus member) ──
-    let bawahY = rowY + rowH;
-    if (player.premium) {
-      const pitaY = bawahY + 30;
-      const pitaH = 104;
-      ctx.fillStyle = '#1E1E26';
-      roundRect(ctx, 64, pitaY, W - 128, pitaH, 24);
-      ctx.fill();
-      // garis aksen oranye tipis di kiri pita
-      ctx.fillStyle = ACCENT;
-      roundRect(ctx, 64, pitaY, 8, pitaH, 4);
-      ctx.fill();
-      if (nexopassImg) ctx.drawImage(nexopassImg, 96, pitaY + (pitaH - 56) / 2, 56, 56);
-      ctx.textAlign = 'left';
-      ctx.fillStyle = INK;
-      ctx.font = '800 34px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText('MEMBER NEXO Pass', 176, pitaY + 46);
-      ctx.fillStyle = 'rgba(169,156,142,1)';
-      ctx.font = '500 24px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText('Inventori unlimited · kuota +5.000 · akses game beta', 176, pitaY + 78);
-      ctx.textAlign = 'center';
-      bawahY = pitaY + pitaH;
-    }
+    // PITA TEKS "MEMBER NEXO Pass" DIHAPUS (permintaan owner).
+    // Status premium cukup ditandai BADGE LOGO di header (sama seperti kartu
+    // leaderboard) - tanpa tulisan tambahan, hasilnya lebih bersih & elegan.
+    // Kartu jadi lebih ringkas juga: tidak ada baris pita yang memakan tinggi.
+    const bawahY = rowY + rowH;
 
     // ── Strip ajakan (dark, selaras header) ──
     const ctaY = bawahY + 40;
