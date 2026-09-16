@@ -40,11 +40,16 @@ function loadImg(src) {
 }
 
 async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, starImg, trophyImg, streakImg }) {
-  // TINGGI DINAMIS: kartu member NEXOPASS dapat 4 stat tile (2 baris) sehingga
-  // butuh ruang ekstra. Dihitung SEBELUM canvas dibuat supaya tidak ada area
-  // kosong di bawah (dulu tinggi dipatok 1350 -> kartu premium kepotong).
-  const kartuPremium = Boolean(player.premium && player.board === 'profil');
-  const H = kartuPremium ? 1350 + 220 : 1350;
+  // TINGGI DINAMIS, dihitung dari layout SEBELUM canvas dibuat supaya tidak
+  // ada area kosong maupun konten kepotong (pernah terjadi: tinggi dipatok
+  // sementara isinya bertambah).
+  //   - leaderboard      : grid 2 tile          -> 1350px (rasio 4:5)
+  //   - profil biasa     : hero + baris statistik -> 1310px
+  //   - profil NEXOPASS  : + pita member          -> 1450px
+  const dariProfilHitung = player.board === 'profil';
+  const H = dariProfilHitung
+    ? (player.premium ? 1450 : 1310)
+    : 1350;
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -99,7 +104,14 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     const rankTxt = `#${rank}`;
     ctx.font = '800 44px "Plus Jakarta Sans", system-ui, sans-serif';
     const pw = ctx.measureText(rankTxt).width + 68;
-    const px = W - 64 - pw;
+    // Member NEXOPASS: emoji resmi ikut di sebelah pill peringkat (permintaan
+    // owner) supaya statusnya terlihat langsung di kartu leaderboard, bukan
+    // cuma di kartu profil. Dihitung dulu supaya pill+tema tidak menabrak logo.
+    const adaBadge = Boolean(player.premium && nexopassImg);
+    const ikonBadge = 48;
+    const jarakBadge = 14;
+    const totalW = pw + (adaBadge ? ikonBadge + jarakBadge : 0);
+    const px = W - 64 - totalW;
     if (isPodium) {
       ctx.fillStyle = ACCENT;
       roundRect(ctx, px, 60, pw, 72, 36);
@@ -115,6 +127,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.textAlign = 'center';
     ctx.fillText(rankTxt, px + pw / 2, 98);
     ctx.textAlign = 'left';
+    if (adaBadge) {
+      // Emoji NEXOPASS di kanan pill peringkat, sejajar tengahnya (pill 60..132).
+      ctx.drawImage(nexopassImg, px + pw + jarakBadge, (60 + 132 - ikonBadge) / 2, ikonBadge, ikonBadge);
+    }
   } else if (player.premium) {
     // Tanpa peringkat (kartu profil) + member NEXOPASS: BADGE status di kanan
     // header - penanda yang langsung terlihat saat dibagikan.
@@ -178,41 +194,147 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.fillText(name.length > 17 ? name.slice(0, 16) + '…' : name, W / 2, avCy + avR + 86);
   ctx.fillStyle = '#6E6157';
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
-  if (dariProfil) {
-    // Kartu profil: tidak ada peringkat. Status NEXOPASS ditandai BADGE emoji
-    // di header (bukan tulisan panjang) - lebih cepat terbaca saat dibagikan.
-    // Sub-judul cukup netral untuk semua pemain.
-    ctx.fillText('Pemain NEXO Games', W / 2, avCy + avR + 152);
-  } else {
+  if (!dariProfil) {
     ctx.fillText(`Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W / 2, avCy + avR + 152);
   }
 
-  // ═══ Stat tile cream-soft, gaya kartu profil ═══
-  // Angka RINGKAS (fmtRingkas): poin bisa ratusan juta dan di kartu gambar
-  // tidak ada tooltip - kalau kepanjangan akan keluar batas tile. Ringkas =
-  // selalu muat, dan tetap jujur (1,2 jt) bukan terpotong.
-  //
-  // ISI TILE MENYESUAIKAN STATUS (pintar):
-  //   - member NEXOPASS : Poin + Level + Menang + Streak (4 tile, 2x2)
-  //   - pemain biasa    : Poin + Level (2 tile, seperti kartu leaderboard)
-  //   - kartu leaderboard: selalu Poin + Level (tidak berubah)
   const points = fmtRingkas(player.points || 0);
+  // Sisa ruang setelah nama dipakai bersama oleh kedua jenis kartu.
   const tileY = avCy + avR + 208;
-  const tileH = player.premium && dariProfil ? 200 : 240;
-  const duaBaris = Boolean(player.premium && dariProfil);
-  const tiles = duaBaris
-    ? [
-        { icon: coinImg, label: 'Poin', value: points },
-        { icon: starImg, label: 'Level', value: String(player.level || 1) },
-        { icon: trophyImg, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
-        { icon: streakImg, label: 'Streak', value: String(player.dailyStreak || 0) },
-      ]
-    : [
-        { icon: coinImg, label: 'Poin', value: points },
-        { icon: starImg, label: 'Level', value: String(player.level || 1) },
-      ];
 
-  // Grid: 2 kolom. Kalau 4 tile -> 2 baris (jarak lebih rapat, tinggi tetap).
+  // ═══════════════════════════════════════════════════════════════════
+  // KARTU PROFIL - DESAIN SENGAJA BERBEDA dari kartu leaderboard.
+  // Dulu keduanya memakai grid kotak yang sama sehingga tidak ada bedanya.
+  // Kartu profil kini lebih PERSONAL:
+  //   1. HERO besar: poin sebagai bintang utama (angka raksasa + emoji koin)
+  //   2. Baris statistik ramping di bawahnya (bukan kotak-kotak)
+  //   3. Member NEXOPASS dapat baris tambahan + pita "MEMBER NEXOPASS"
+  //   4. Kalimat personal + tanggal bergabung (kalau ada)
+  // ═══════════════════════════════════════════════════════════════════
+  if (dariProfil) {
+    const heroY = tileY;
+    const heroH = 300;
+    // Kartu hero cream-soft dengan aksen oranye di tepi (bukan kotak penuh)
+    ctx.fillStyle = '#F4EEDF';
+    roundRect(ctx, 64, heroY, W - 128, heroH, 32);
+    ctx.fill();
+    ctx.strokeStyle = '#E3D9C2';
+    ctx.lineWidth = 2;
+    roundRect(ctx, 64, heroY, W - 128, heroH, 32);
+    ctx.stroke();
+    // strip aksen kiri di dalam hero
+    ctx.fillStyle = ACCENT;
+    roundRect(ctx, 64, heroY, 10, heroH, 5);
+    ctx.fill();
+
+    // Emoji koin besar di kiri hero
+    if (coinImg) ctx.drawImage(coinImg, 116, heroY + heroH / 2 - 44, 88, 88);
+
+    // Angka poin raksasa
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#2B2118';
+    ctx.font = '800 96px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText(points, 232, heroY + heroH / 2 + 12);
+    ctx.fillStyle = '#A99C8E';
+    ctx.font = '700 26px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText('TOTAL POIN', 232, heroY + heroH / 2 + 58);
+    ctx.textAlign = 'center';
+
+    // ── Baris statistik ramping (ikon + label + nilai), bukan grid kotak ──
+    const baris = [
+      { icon: starImg, label: 'Level', value: String(player.level || 1) },
+      { icon: trophyImg, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
+      { icon: streakImg, label: 'Streak', value: `${player.dailyStreak || 0} hari` },
+    ];
+    const rowY = heroY + heroH + 34;
+    const rowH = 96;
+    const rowW = W - 128;
+    const kolW = rowW / baris.length;
+    ctx.fillStyle = '#F4EEDF';
+    roundRect(ctx, 64, rowY, rowW, rowH, 24);
+    ctx.fill();
+    ctx.strokeStyle = '#E3D9C2';
+    ctx.lineWidth = 2;
+    roundRect(ctx, 64, rowY, rowW, rowH, 24);
+    ctx.stroke();
+    for (let i = 0; i < baris.length; i++) {
+      const cx = 64 + kolW * i + kolW / 2;
+      // pemisah antar kolom
+      if (i > 0) {
+        ctx.strokeStyle = '#E3D9C2';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(64 + kolW * i, rowY + 20);
+        ctx.lineTo(64 + kolW * i, rowY + rowH - 20);
+        ctx.stroke();
+      }
+      if (baris[i].icon) ctx.drawImage(baris[i].icon, cx - 44, rowY + rowH / 2 - 18, 36, 36);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#A99C8E';
+      ctx.font = '700 20px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText(baris[i].label.toUpperCase(), cx - 2, rowY + 34);
+      ctx.fillStyle = '#2B2118';
+      ctx.font = '800 34px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText(baris[i].value, cx - 2, rowY + 72);
+      ctx.textAlign = 'center';
+    }
+
+    // ── Pita status NEXOPASS (khusus member) ──
+    let bawahY = rowY + rowH;
+    if (player.premium) {
+      const pitaY = bawahY + 30;
+      const pitaH = 104;
+      ctx.fillStyle = '#1E1E26';
+      roundRect(ctx, 64, pitaY, W - 128, pitaH, 24);
+      ctx.fill();
+      // garis aksen oranye tipis di kiri pita
+      ctx.fillStyle = ACCENT;
+      roundRect(ctx, 64, pitaY, 8, pitaH, 4);
+      ctx.fill();
+      if (nexopassImg) ctx.drawImage(nexopassImg, 96, pitaY + (pitaH - 56) / 2, 56, 56);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = INK;
+      ctx.font = '800 34px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText('MEMBER NEXOPASS', 176, pitaY + 46);
+      ctx.fillStyle = 'rgba(169,156,142,1)';
+      ctx.font = '500 24px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText('Inventori unlimited · kuota +5.000 · akses game beta', 176, pitaY + 78);
+      ctx.textAlign = 'center';
+      bawahY = pitaY + pitaH;
+    }
+
+    // ── Strip ajakan (dark, selaras header) ──
+    const ctaY = bawahY + 40;
+    ctx.fillStyle = '#1E1E26';
+    roundRect(ctx, 64, ctaY, W - 128, 150, 28);
+    ctx.fill();
+    ctx.fillStyle = INK;
+    ctx.font = '700 36px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText(
+      player.premium ? 'Gabung juga di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?',
+      W / 2, ctaY + 58
+    );
+    const isDev = typeof window !== 'undefined' && window.location.host.includes('localhost');
+    const domainTxt = isDev
+      ? 'NEXO Games  ·  xurbaybase'
+      : `NEXO Games  ·  ${String(SITE_URL).replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
+    ctx.fillStyle = 'rgba(169,156,142,1)';
+    ctx.font = '500 26px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText(domainTxt, W / 2, ctaY + 108);
+    ctx.textAlign = 'left';
+    return canvas;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // KARTU LEADERBOARD - tetap grid kotak (ciri khas kartu peringkat).
+  // Member NEXOPASS dapat emoji di sebelah pill peringkat (lihat header).
+  // ═══════════════════════════════════════════════════════════════════
+  const tileH = 240;
+  const tiles = [
+    { icon: coinImg, label: 'Poin', value: points },
+    { icon: starImg, label: 'Level', value: String(player.level || 1) },
+  ];
+
   const kolom = 2;
   const gap = 24;
   const tileW = (W - 128 - gap * (kolom - 1)) / kolom;
@@ -247,10 +369,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.fillText(tiles[i].value, tcx, ty + 148);
     ctx.fillStyle = '#A99C8E';
     ctx.font = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(tiles[i].label.toUpperCase(), tcx, ty + 198 - (duaBaris ? 10 : 0));
+    ctx.fillText(tiles[i].label.toUpperCase(), tcx, ty + 198);
   }
-  // Geser Y strip ajakan kalau tile-nya 2 baris.
-  const tinggiTiles = duaBaris ? tileH * 2 + gap : tileH;
+  // Kartu leaderboard selalu 1 baris tile (2 kotak).
+  const tinggiTiles = tileH;
 
   // ═══ Strip ajakan (dark, selaras header) ═══
   const ctaY = tileY + tinggiTiles + 48;
