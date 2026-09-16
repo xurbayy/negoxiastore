@@ -54,7 +54,7 @@ export default function RedeemManager({ send, data }) {
             <option value="points">points</option>
             <option value="item">item, isi dengan itemKey</option>
             <option value="title">title</option>
-            <option value="premium">NEXOPASS, isi jumlah hari</option>
+            <option value="premium">NEXO Pass, isi jumlah hari</option>
           </select>
         </div>
         <div>
@@ -98,7 +98,7 @@ export default function RedeemManager({ send, data }) {
                 <tr key={c.code} className="border-b border-border-soft/60 last:border-0">
                   <td className="px-4 py-3 font-mono font-bold text-ink">{c.code}</td>
                   <td className="px-4 py-3 text-ink">
-                    {c.rewardType === 'points' ? `${fmtRingkas(c.rewardValue)} pts` : c.rewardType === 'premium' ? `NEXOPASS ${c.rewardValue} hari` : `${c.rewardType}: ${c.rewardValue}`}
+                    {c.rewardType === 'points' ? `${fmtRingkas(c.rewardValue)} pts` : c.rewardType === 'premium' ? `NEXO Pass ${c.rewardValue} hari` : `${c.rewardType}: ${c.rewardValue}`}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

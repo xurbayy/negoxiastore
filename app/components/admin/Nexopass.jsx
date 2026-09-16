@@ -6,7 +6,7 @@ import { fmt, planName } from '../../lib/formatClient';
 // sisaHari + isLifetimePremium: satu sumber dengan bot (threshold 50 tahun).
 import { sisaHari, isLifetime as isLifetimePremium } from '../../lib/premiumPlan';
 
-// NEXOPASS: daftar member premium aktif + grant/revoke.
+// NEXO Pass: daftar member premium aktif + grant/revoke.
 export default function Nexopass({ send, data }) {
   const members = data.snapshot?.premiumMembers || [];
   const [confirm, setConfirm] = useState(null); // { action, payload, label }
@@ -35,7 +35,7 @@ export default function Nexopass({ send, data }) {
 
   return (
     <div className="space-y-5">
-      <h2 className="font-display text-xl text-ink">NEXOPASS: {members.length} Member Aktif</h2>
+      <h2 className="font-display text-xl text-ink">NEXO Pass: {members.length} Member Aktif</h2>
 
       {/* Form grant */}
       <form onSubmit={grant} className="nx-card flex flex-wrap items-end gap-3 px-5 py-5">

@@ -132,7 +132,7 @@ export default function Navbar({ session, premiumActive = false }) {
                   ? 'inline-flex items-center gap-1.5 rounded-lg border border-success/50 bg-white px-3.5 py-1.5 text-sm font-semibold text-success shadow-sm transition hover:-translate-y-px hover:bg-success hover:text-white active:translate-y-0 active:shadow-none cursor-pointer'
                   : 'inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer'}
               >
-                {/* Emoji resmi NEXOPASS (download3) - sama seperti tombol di
+                {/* Emoji resmi NEXO Pass (download3) - sama seperti tombol di
                     dalam game & halaman premium. */}
                 {emojiSrc('download3') && (
                   // eslint-disable-next-line @next/next/no-img-element

@@ -174,7 +174,7 @@ export default function Dashboard({ data }) {
     { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
     { label: 'Total Users (all)', value: fmt(m.totalUsersAll), pick: null },
     { label: 'Poin Beredar', value: fmt(m.totalMoney), pick: (s) => s.totalMoney, color: '#C74B3C' },
-    { label: 'Member NEXOPASS', value: fmt(m.premiumCount), pick: null },
+    { label: 'Member NEXO Pass', value: fmt(m.premiumCount), pick: null },
     { label: 'Game Hari Ini', value: fmt(m.gamesToday), pick: (s) => s.gamesToday },
     { label: 'Game 7 Hari', value: fmt(m.gamesWeek), pick: null },
     { label: 'Sesi LIVE', value: fmt(liveTotal), pick: null },

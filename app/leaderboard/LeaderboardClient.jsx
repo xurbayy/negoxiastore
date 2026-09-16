@@ -11,7 +11,7 @@ import ShareCardButton from '../components/ShareCardButton';
 // (60 dtk), ganti PP di Discord otomatis kebaca <=60 dtk tanpa request tambahan.
 // Share (wajib login): tiap baris punya tombol yang merender kartu peringkat
 // 4:5 di canvas lalu dibagikan via Web Share API (HP) / unduh (desktop).
-// Pemegang NEXOPASS (premiumIds dari snapshot bot) dapat badge logo kecil.
+// Pemegang NEXO Pass (premiumIds dari snapshot bot) dapat badge logo kecil.
 // `children` = bagian Guild Terkuat (server component).
 export default function LeaderboardClient({ players, myId, loggedIn, premiumIds = [], children }) {
   const [selected, setSelected] = useState(null);
@@ -19,8 +19,8 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
   const hasPass = (id) => premiumIds.includes(String(id));
   const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
 
-  // hasPass ikut dikirim ke kartu profil: pemegang NEXOPASS dapat sel
-  // tambahan (emoji + tulisan "NEXOPASS"), non-premium tetap 3 kolom.
+  // hasPass ikut dikirim ke kartu profil: pemegang NEXO Pass dapat sel
+  // tambahan (emoji + tulisan "NEXO Pass"), non-premium tetap 3 kolom.
   const openCard = (row, board) => setSelected({ ...row, board, hasPass: hasPass(row.userId) });
 
   return (
@@ -82,14 +82,14 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                         )}
                         <span className="truncate">{p.username}</span>
                         {hasPass(p.userId) && (
-                          // Badge NEXOPASS: custom emoji :NEXOPASS: milik kita
+                          // Badge NEXO Pass: custom emoji :NEXO Pass: milik kita
                           // (server xurbaybase, id 1548184905018507306) langsung
                           // dari CDN Discord - bukan logo generik.
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src="https://cdn.discordapp.com/emojis/1548184905018507306.png?size=64&quality=lossless"
-                            alt="Pemegang NEXOPASS"
-                            title="Pemegang NEXOPASS"
+                            alt="Pemegang NEXO Pass"
+                            title="Pemegang NEXO Pass"
                             width={18}
                             height={18}
                             className="h-4.5 w-4.5 shrink-0"
@@ -101,7 +101,7 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                       </button>
                       <ShareCardButton
                         // hasPass WAJIB diteruskan: dipakai kartu untuk
-                        // menaruh emoji NEXOPASS di samping peringkat.
+                        // menaruh emoji NEXO Pass di samping peringkat.
                         // Dulu props-nya cuma `p` mentah -> status premium
                         // tidak pernah sampai ke kartu.
                         player={{ ...p, premium: hasPass(p.userId) }}

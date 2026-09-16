@@ -23,7 +23,7 @@ export default async function LeaderboardPage() {
   const snap = await getLatestSnapshot();
   const players = snap?.leaderboard || [];
   const guilds = snap?.guildBoard || [];
-  // Pemegang NEXOPASS aktif (dari premiumMembers snapshot bot) -> badge logo
+  // Pemegang NEXO Pass aktif (dari premiumMembers snapshot bot) -> badge logo
   // kecil di ujung nama pemain yang beli pass.
   const premiumIds = (snap?.premiumMembers || []).map((m) => String(m.userId));
 

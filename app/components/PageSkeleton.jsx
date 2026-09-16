@@ -261,12 +261,12 @@ function BankSkeleton() {
 
 /**
  * PREMIUM - halaman asli (rata tengah):
- *   pill "NEXOPASS" (bg-accent) + h1 + harga besar "Rp 20.000 /bulan"
+ *   pill "NEXO Pass" (bg-accent) + h1 + harga besar "Rp 20.000 /bulan"
  *   + paragraf max-w-lg, lalu kartu pembelian (PremiumClient)
  */
 /**
  * PREMIUM - halaman asli (rata tengah):
- *   pill "NEXOPASS" + judul + harga besar + paragraf, lalu kartu QRIS.
+ *   pill "NEXO Pass" + judul + harga besar + paragraf, lalu kartu QRIS.
  * CATATAN: skeleton TIDAK menampilkan teks konten apa pun (dulu di sini ada
  * "Satu Pass, Semua Perk" yang ikut terlihat) - teks ditiru sebagai bar abu
  * supaya tidak ada tulisan yang bisa basi atau salah saat halaman dimuat.

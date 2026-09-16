@@ -12,9 +12,9 @@ function isBotOnline(snap) {
 }
 
 export const metadata = {
-  title: 'NEXOPASS Premium',
+  title: 'NEXO Pass Premium',
   description:
-    'NEXOPASS: kuota main ekstra, inventori unlimited, bunga bank +10%, prioritas render, dan akses game beta. Rp 20.000/bulan.',
+    'NEXO Pass: kuota main ekstra, inventori unlimited, bunga bank +10%, prioritas render, dan akses game beta. Rp 20.000/bulan.',
   alternates: { canonical: '/premium' },
 };
 
@@ -54,7 +54,7 @@ export default async function PremiumPage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={emojiSrc('download3')} alt="" width={16} height={16} className="h-4 w-4" />
             )}
-            NEXOPASS
+            NEXO Pass
           </div>
           <h1 className="mt-5 font-display text-3xl text-ink md:text-5xl">
             Satu Pass, <span className="font-display text-ink">Semua Perk</span>
@@ -64,7 +64,7 @@ export default async function PremiumPage() {
             <span className="pb-2 text-ink-muted">/bulan</span>
           </div>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-ink-muted">
-            NEXOPASS, satu paket tanpa tingkatan. Bayar dengan scan QRIS menggunakan aplikasi e-wallet seperti GoPay, OVO, DANA, ShopeePay, atau m-banking. Proses verifikasi dilakukan secara manual oleh Admin dengan cepat.
+            NEXO Pass, satu paket tanpa tingkatan. Bayar dengan scan QRIS menggunakan aplikasi e-wallet seperti GoPay, OVO, DANA, ShopeePay, atau m-banking. Proses verifikasi dilakukan secara manual oleh Admin dengan cepat.
           </p>
 
         <PremiumClient 

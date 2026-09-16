@@ -70,14 +70,14 @@ export async function POST(request) {
   const gatewayRef = JSON.stringify({ senderName, receiptBase64, receiptName: safeReceiptName });
 
   const res = await db.execute({
-    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, 'NEXOPASS', ?, 'manual', 'pending', ?, ?)",
+    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, 'NEXO Pass', ?, 'manual', 'pending', ?, ?)",
     args: [session.discordId, PRICE, gatewayRef, created],
   });
 
   const orderId = Number(res.lastInsertRowid);
 
   // Kirim command ke bot untuk DM admin (termasuk lampiran bukti transfer)
-  const dmMsg = `Ada pembayaran NEXOPASS baru! (Order #${orderId})\nUser: <@${session.discordId}> (ID: ${session.discordId})\nPengirim: **${senderName}**\n\nSegera cek dan setujui di Admin Panel Web!`;
+  const dmMsg = `Ada pembayaran NEXO Pass baru! (Order #${orderId})\nUser: <@${session.discordId}> (ID: ${session.discordId})\nPengirim: **${senderName}**\n\nSegera cek dan setujui di Admin Panel Web!`;
   await db.execute({
     sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('dm_admin', ?, 'web', 'pending', ?)",
     args: [JSON.stringify({ adminId: '836383639439671366', message: dmMsg, fileName: safeReceiptName, fileBase64: receiptBase64 }), created],

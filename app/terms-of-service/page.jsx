@@ -26,16 +26,16 @@ const SECTIONS = [
     title: 'Aturan main dan sanksinya.',
     list: [
       'Satu orang, satu akun. Membuat akun ganda untuk farming hadiah, klaim promo berlipat, atau mengelabui matchmaking sangat dilarang.',
-      'Jangan main-main dengan NEXOPASS. Bukti transfer palsu, nominal dicekrik, atau spam pesanan tanpa benar-benar membayar adalah penipuan, dan sanksinya langsung berlaku tanpa peringatan.',
+      'Jangan main-main dengan NEXO Pass. Bukti transfer palsu, nominal dicekrik, atau spam pesanan tanpa benar-benar membayar adalah penipuan, dan sanksinya langsung berlaku tanpa peringatan.',
       'Sanksi Timeout. Akun disetop sementara kalau kamu spam command secara brutal yang memberatkan bot, atau dengan sengaja mengganggu jalannya game pemain lain.',
       'Sanksi Banned. Akun diblokir permanen kalau terbukti menipu pemain lain, mengeksploitasi bug demi untung pribadi tanpa melapor, atau melakukan toxic SARA dan doxing parah.',
       'Sanksi Reset Data. Kalau pelanggaranmu sangat merugikan ekonomi game, misalnya sengaja menduplikasi uang lewat eksploitasi atau script otomatis, seluruh progres dan hartamu direset jadi nol seperti player baru.',
     ],
   },
   {
-    title: 'NEXOPASS dan pembayaran manual.',
+    title: 'NEXO Pass dan pembayaran manual.',
     body: [
-      'NEXOPASS adalah langganan opsional Rp 20.000 per bulan untuk kenyamanan ekstra, seperti inventori unlimited, kuota harian tambahan, dan akses beta. Pass tidak menjual kekuatan dalam game, hasil game tetap soal keberuntungan dan strategi.',
+      'NEXO Pass adalah langganan opsional Rp 20.000 per bulan untuk kenyamanan ekstra, seperti inventori unlimited, kuota harian tambahan, dan akses beta. Pass tidak menjual kekuatan dalam game, hasil game tetap soal keberuntungan dan strategi.',
       'Pembayarannya manual lewat QRIS dari e-wallet atau m-banking mana pun. Setelah kamu transfer dan mengunggah buktinya, admin memeriksa mutasi lalu mengaktifkan Pass-mu. Jam prosesnya pukul 08.00 sampai 22.00 WIB, transfer di luar jam itu tetap aman, hanya kemungkinan diproses esok hari.',
       'Jujur adalah syarat utamanya. Bukti transfer palsu atau hasil suntingan, klaim sudah transfer padahal tidak ada uang masuk, bukti milik orang lain, dan spam pesanan demi memancing pass aktif tanpa bayar semuanya kami golongkan penipuan.',
       'Sanksinya berjenjang. Pertama, pesanan ditolak dan akun di-timeout. Pelaku berulang atau yang terlanjur enak memakai pass hasil penipuan di-ban permanen dari bot dan web, pass dicabut saat itu juga, tanpa pengembalian akses maupun dana.',

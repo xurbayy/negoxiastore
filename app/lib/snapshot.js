@@ -96,7 +96,7 @@ export function stripEmojiToken(str) {
 // Apakah user ini sedang premium? DUA sumber, yang terbaru menang:
 //  1. premiumMembers di snapshot bot (segar tiap 60 detik dari push)
 //  2. data_requests profil terakhir (ACK LIVE ~5-10 detik setelah grant)
-// Ini bikin badge NEXOPASS muncul cepat setelah pembayaran, tanpa menunggu
+// Ini bikin badge NEXO Pass muncul cepat setelah pembayaran, tanpa menunggu
 // push snapshot berikutnya. Aman kalau DB error -> false.
 export async function userHasPremium(discordId) {
   if (!discordId) return false;

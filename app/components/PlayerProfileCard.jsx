@@ -124,7 +124,7 @@ export default function PlayerProfileCard({ player, onClose }) {
 // pernah terpotong jadi "10.000…". `truncate` tetap dipertahankan sebagai jaring
 // terakhir (mis. nama pemain di sel status), tapi nilai penuh selalu bisa
 // dibaca lewat tooltip (`full`) - pemain yang mau angka persisnya tinggal hover.
-// `accent` = varian sel NEXOPASS (border & latar oranye tipis).
+// `accent` = varian sel NEXO Pass (border & latar oranye tipis).
 function Stat({ icon, label, value, full, accent = false }) {
   return (
     <div
@@ -142,12 +142,12 @@ function Stat({ icon, label, value, full, accent = false }) {
   );
 }
 
-// Sel khusus pemegang NEXOPASS. Emoji premium resmi diambil dari registry
+// Sel khusus pemegang NEXO Pass. Emoji premium resmi diambil dari registry
 // ("download3", id 1548184905018507306) - sama persis dengan badge di baris
 // leaderboard, jadi tidak hardcode CDN. Strukturnya SENGAJA identik dengan
 // Stat (emoji / nilai / label) supaya tinggi dan posisi barisnya sejajar
 // dengan sel lain, bukan cuma mirip. Tidak ada embel-embel "Premium": cukup
-// tulisan NEXOPASS sebagai nilainya.
+// tulisan NEXO Pass sebagai nilainya.
 function PassStat() {
-  return <Stat icon="download3" label="Status" value="NEXOPASS" accent />;
+  return <Stat icon="download3" label="Status" value="NEXO Pass" accent />;
 }

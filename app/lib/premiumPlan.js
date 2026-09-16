@@ -1,5 +1,5 @@
 // ==========================================
-// KONSTANTA NEXOPASS (premium) - SATU SUMBER KEBENARAN
+// KONSTANTA NEXO Pass (premium) - SATU SUMBER KEBENARAN
 // ==========================================
 // KENAPA DIJADIKAN SATU FILE:
 //   Dulu durasi "30 hari" ditulis manual di beberapa tempat (grant, notifikasi
@@ -12,10 +12,10 @@
 //   yang benar-benar tersimpan (expires_at), supaya yang ditampilkan ke pemain
 //   SELALU sama dengan yang benar-benar berlaku.
 
-/** Durasi default satu pembelian NEXOPASS (hari). */
+/** Durasi default satu pembelian NEXO Pass (hari). */
 export const PLAN_DAYS = 30;
 
-/** Harga NEXOPASS dalam Rupiah. */
+/** Harga NEXO Pass dalam Rupiah. */
 export const PLAN_PRICE = 20000;
 
 /** Ambang "lifetime" - sisa waktu di atas ini dianggap seumur hidup. */

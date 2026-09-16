@@ -6,7 +6,7 @@ import LoginConsent from '../components/LoginConsent';
 
 export const metadata = {
   title: 'Login',
-  description: 'Login ke NEXO Games dengan Discord untuk melihat profil, redeem kode, dan beli NEXOPASS.',
+  description: 'Login ke NEXO Games dengan Discord untuk melihat profil, redeem kode, dan beli NEXO Pass.',
   robots: { index: false },
 };
 
@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }) {
           {session ? (
             <div className="mt-7">
               <p className="text-sm text-success">Sudah login sebagai <strong>{session.username}</strong>.</p>
-              <Link href={returnTo} className="btn-primary mt-4 inline-flex cursor-pointer">{returnTo === '/premium' ? 'Beli NEXOPASS' : 'Buka Profil'}</Link>
+              <Link href={returnTo} className="btn-primary mt-4 inline-flex cursor-pointer">{returnTo === '/premium' ? 'Beli NEXO Pass' : 'Buka Profil'}</Link>
             </div>
           ) : (
             <LoginConsent returnTo={returnTo} />

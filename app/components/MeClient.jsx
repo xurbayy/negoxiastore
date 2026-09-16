@@ -391,7 +391,7 @@ export default function MeClient({ betaGames = null }) {
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             {/* Tombol bagikan: kartu gambar dengan desain SAMA seperti di
                 leaderboard (konsisten). Isi kartu menyesuaikan status pemain
-                (member NEXOPASS dapat stat lebih lengkap + badge emas). */}
+                (member NEXO Pass dapat stat lebih lengkap + badge emas). */}
             {p && (
               <ShareCardButton
                 variant="label"
@@ -463,7 +463,7 @@ export default function MeClient({ betaGames = null }) {
                       )}
                     </span>
                   )}
-                  {/* STATUS NEXOPASS - standardized nx-badge */}
+                  {/* STATUS NEXO Pass - standardized nx-badge */}
                   {isPremium ? (
                     <span className="nx-badge bg-success px-3 py-1 text-white shadow-sm">
                       {emojiSrc('download3') && (
@@ -596,7 +596,7 @@ export default function MeClient({ betaGames = null }) {
                     <img src={emojiSrc('download3')} alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
                   )}
                   <div className="min-w-0">
-                    <p className="font-display text-base leading-snug text-ink sm:text-lg">Buka semua fitur dengan NEXOPASS.</p>
+                    <p className="font-display text-base leading-snug text-ink sm:text-lg">Buka semua fitur dengan NEXO Pass.</p>
                     <p className="mt-1 text-sm leading-relaxed text-ink-muted">
                       Statistik lengkap, riwayat 25 game, inventori unlimited, kuota +5.000, dan akses game beta.
                     </p>
@@ -620,7 +620,7 @@ export default function MeClient({ betaGames = null }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
                     )}
-                    NEXOPASS
+                    NEXO Pass
                   </Link>
                 </div>
               </div>
@@ -727,7 +727,7 @@ export default function MeClient({ betaGames = null }) {
               )}
               {!isPremium && (p.history || []).length > 10 && (
                 <p className="mt-3 text-center text-xs text-ink-faint">
-                  Riwayat lengkap 25 game terlihat dengan NEXOPASS.
+                  Riwayat lengkap 25 game terlihat dengan NEXO Pass.
                 </p>
               )}
             </div>
@@ -861,10 +861,10 @@ export default function MeClient({ betaGames = null }) {
                     Terkunci
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-                    Coba game baru sebelum rilis publik, khusus member NEXOPASS.
+                    Coba game baru sebelum rilis publik, khusus member NEXO Pass.
                   </p>
                   <Link href="/premium" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-accent-hover underline-offset-2 hover:underline cursor-pointer">
-                    Lihat NEXOPASS →
+                    Lihat NEXO Pass →
                   </Link>
                 </div>
               </>

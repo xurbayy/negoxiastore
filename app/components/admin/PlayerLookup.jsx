@@ -94,7 +94,7 @@ export default function PlayerLookup() {
                   {p.titleInfo && <RichText text={p.titleInfo.label} />}{' '}
                   {premium && (
                     <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 align-middle text-[0.65rem] font-bold uppercase tracking-wider text-ink!">
-                      <RichText text="<:download3:1548184905018507306>" size={12} /> NEXOPASS
+                      <RichText text="<:download3:1548184905018507306>" size={12} /> NEXO Pass
                     </span>
                   )}
                 </p>

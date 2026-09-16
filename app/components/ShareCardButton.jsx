@@ -7,8 +7,8 @@ import { fmtRingkas } from '../lib/formatClient';
 
 // Kartu "Sharing" - dipakai DUA konteks dengan desain yang SAMA (konsisten):
 //   1. Leaderboard : peringkat pemain (#N) + poin + level
-//   2. Profil Saya : kartu pemain sendiri + status NEXOPASS
-// 1080x? (rasio 4:5 utk kartu biasa, lebih tinggi kalau member NEXOPASS karena
+//   2. Profil Saya : kartu pemain sendiri + status NEXO Pass
+// 1080x? (rasio 4:5 utk kartu biasa, lebih tinggi kalau member NEXO Pass karena
 // dapat 4 stat tile) dengan palet resmi tema Warm Cream Studio (card-dark
 // #1E1E26 / cream #FBF7EC / accent #F19A1A), logo NEXO, dan custom emoji
 // in-game dari registry. Dibagikan lewat Web Share API (HP) atau diunduh
@@ -45,7 +45,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   // sementara isinya bertambah).
   //   - leaderboard      : grid 2 tile          -> 1350px (rasio 4:5)
   //   - profil biasa     : hero + baris statistik -> 1310px
-  //   - profil NEXOPASS  : + pita member          -> 1450px
+  //   - profil NEXO Pass  : + pita member          -> 1450px
   const dariProfilHitung = player.board === 'profil';
   const H = dariProfilHitung
     ? (player.premium ? 1450 : 1310)
@@ -104,7 +104,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     const rankTxt = `#${rank}`;
     ctx.font = '800 44px "Plus Jakarta Sans", system-ui, sans-serif';
     const pw = ctx.measureText(rankTxt).width + 68;
-    // Member NEXOPASS: emoji resmi ikut di sebelah pill peringkat (permintaan
+    // Member NEXO Pass: emoji resmi ikut di sebelah pill peringkat (permintaan
     // owner) supaya statusnya terlihat langsung di kartu leaderboard, bukan
     // cuma di kartu profil. Dihitung dulu supaya pill+tema tidak menabrak logo.
     const adaBadge = Boolean(player.premium && nexopassImg);
@@ -128,13 +128,13 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.fillText(rankTxt, px + pw / 2, 98);
     ctx.textAlign = 'left';
     if (adaBadge) {
-      // Emoji NEXOPASS di kanan pill peringkat, sejajar tengahnya (pill 60..132).
+      // Emoji NEXO Pass di kanan pill peringkat, sejajar tengahnya (pill 60..132).
       ctx.drawImage(nexopassImg, px + pw + jarakBadge, (60 + 132 - ikonBadge) / 2, ikonBadge, ikonBadge);
     }
   } else if (player.premium) {
-    // Tanpa peringkat (kartu profil) + member NEXOPASS: BADGE status di kanan
+    // Tanpa peringkat (kartu profil) + member NEXO Pass: BADGE status di kanan
     // header - penanda yang langsung terlihat saat dibagikan.
-    // Utamakan EMOJI RESMI NEXOPASS (gambar, konsisten dengan Discord).
+    // Utamakan EMOJI RESMI NEXO Pass (gambar, konsisten dengan Discord).
     // Kalau emoji gagal dimuat (CDN diblokir/offline), JANGAN biarkan header
     // kosong - jatuh ke badge teks supaya status premium tetap tersampaikan.
     if (nexopassImg) {
@@ -147,7 +147,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.fill();
       ctx.drawImage(nexopassImg, bx + pad, 76, ikon, ikon);
     } else {
-      const badge = 'NEXOPASS';
+      const badge = 'NEXO Pass';
       ctx.font = '800 32px "Plus Jakarta Sans", system-ui, sans-serif';
       const bw = ctx.measureText(badge).width + 52;
       const bx = W - 64 - bw;
@@ -208,7 +208,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   // Kartu profil kini lebih PERSONAL:
   //   1. HERO besar: poin sebagai bintang utama (angka raksasa + emoji koin)
   //   2. Baris statistik ramping di bawahnya (bukan kotak-kotak)
-  //   3. Member NEXOPASS dapat baris tambahan + pita "MEMBER NEXOPASS"
+  //   3. Member NEXO Pass dapat baris tambahan + pita "MEMBER NEXO Pass"
   //   4. Kalimat personal + tanggal bergabung (kalau ada)
   // ═══════════════════════════════════════════════════════════════════
   if (dariProfil) {
@@ -279,7 +279,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.textAlign = 'center';
     }
 
-    // ── Pita status NEXOPASS (khusus member) ──
+    // ── Pita status NEXO Pass (khusus member) ──
     let bawahY = rowY + rowH;
     if (player.premium) {
       const pitaY = bawahY + 30;
@@ -295,7 +295,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.textAlign = 'left';
       ctx.fillStyle = INK;
       ctx.font = '800 34px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText('MEMBER NEXOPASS', 176, pitaY + 46);
+      ctx.fillText('MEMBER NEXO Pass', 176, pitaY + 46);
       ctx.fillStyle = 'rgba(169,156,142,1)';
       ctx.font = '500 24px "Plus Jakarta Sans", system-ui, sans-serif';
       ctx.fillText('Inventori unlimited · kuota +5.000 · akses game beta', 176, pitaY + 78);
@@ -327,7 +327,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
 
   // ═══════════════════════════════════════════════════════════════════
   // KARTU LEADERBOARD - tetap grid kotak (ciri khas kartu peringkat).
-  // Member NEXOPASS dapat emoji di sebelah pill peringkat (lihat header).
+  // Member NEXO Pass dapat emoji di sebelah pill peringkat (lihat header).
   // ═══════════════════════════════════════════════════════════════════
   const tileH = 240;
   const tiles = [
@@ -381,7 +381,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.fill();
   ctx.fillStyle = INK;
   ctx.font = '700 38px "Plus Jakarta Sans", system-ui, sans-serif';
-  // Ajakan menyesuaikan status: member NEXOPASS diajak main, pemain biasa
+  // Ajakan menyesuaikan status: member NEXO Pass diajak main, pemain biasa
   // ditawari ikut (biar kartu yang dibagikan juga jadi promosi halus).
   ctx.fillText(
     player.premium ? 'Main bareng di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?',
@@ -409,7 +409,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
  * @param {object} props
  * @param {object} props.player - data pemain. Field yang dipakai:
  *        username, avatarUrl, points, level, rank? (leaderboard),
- *        premium? (true bila NEXOPASS aktif), totalWon?, dailyStreak?,
+ *        premium? (true bila NEXO Pass aktif), totalWon?, dailyStreak?,
  *        board? ('profil' untuk kartu profil, kosong/undefined untuk leaderboard)
  * @param {boolean} props.loggedIn
  * @param {'icon'|'label'} [props.variant] - 'icon' (default, tombol bulat kecil)
@@ -438,7 +438,7 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
         loadImg(emojiSrcStatis('crown', 128)),
         loadImg(emojiSrcStatis('medal', 128)),
         loadImg('/nexo-logo-256.png'),
-        // download3 = merek NEXOPASS resmi (badge status di header)
+        // download3 = merek NEXO Pass resmi (badge status di header)
         loadImg(emojiSrcStatis('download3', 128)),
         // sparkles = Level (konsisten dgn ikon di web), trophy = Menang,
         // 267042fire = Streak harian (sama seperti STAT_ICONS di MeClient)
@@ -456,11 +456,11 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
         ? 'nexo-profil.png'
         : `nexo-rank-${player.rank}.png`;
       const judul = dariProfil
-        ? (player.premium ? `Profil NEXOPASS ${player.username}` : `Profil ${player.username} - NEXO Games`)
+        ? (player.premium ? `Profil NEXO Pass ${player.username}` : `Profil ${player.username} - NEXO Games`)
         : `Peringkat #${player.rank} NEXO Games`;
       const teks = dariProfil
         ? (player.premium
-            ? 'Aku member NEXOPASS di NEXO Games!'
+            ? 'Aku member NEXO Pass di NEXO Games!'
             : 'Aku main di NEXO Games, keseruan gratisnya kebangetan!')
         : `Aku lagi di peringkat #${player.rank} leaderboard NEXO Games!`;
 
