@@ -568,34 +568,60 @@ export default function MeClient({ betaGames = null }) {
         </div>
       ) : (
         !upsellDismissed && (
-          <div className="overflow-hidden rounded-2xl border border-border-soft bg-card-cream">
+          <div className="relative overflow-hidden rounded-2xl border border-border-soft bg-card-cream">
             {/* Accent strip kiri */}
-            <div className="flex">
-              <div className="w-1.5 shrink-0 bg-accent" aria-hidden="true" />
-              <div className="flex flex-1 flex-wrap items-center justify-between gap-4 px-6 py-6">
-                <div className="flex items-center gap-4">
+            <div className="absolute inset-y-0 left-0 w-1.5 bg-accent" aria-hidden="true" />
+
+            {/* SUSUNAN MOBILE-FIRST (revisi): dulu flex-wrap justify-between
+                membuat teks, harga, tombol, dan tombol tutup berdesakan di
+                layar sempit (harga kejauhan dari tombol, teks jadi sempit).
+                Sekarang menumpuk rapi ke bawah di HP, baru menyamping di
+                layar >= sm. */}
+            <div className="pl-1.5">
+              {/* Tombol tutup dipatok di pojok - tidak lagi ikut menggeser baris */}
+              <button
+                type="button"
+                onClick={hideUpsell}
+                aria-label="Sembunyikan tawaran"
+                className="absolute right-2.5 top-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full text-ink-faint transition hover:bg-black/5 hover:text-ink cursor-pointer"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+
+              <div className="flex flex-col gap-4 px-5 py-5 pr-10 sm:flex-row sm:items-center sm:justify-between sm:gap-5 sm:px-6 sm:py-6 sm:pr-12">
+                {/* Baris 1: ikon emoji + judul + penjelasan */}
+                <div className="flex items-start gap-3.5">
                   {emojiSrc('download3') && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('download3')} alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
                   )}
-                  <div>
-                    <p className="font-display text-lg text-ink">Buka semua fitur dengan NEXOPASS.</p>
-                    <p className="mt-0.5 max-w-sm text-sm text-ink-muted">
+                  <div className="min-w-0">
+                    <p className="font-display text-base leading-snug text-ink sm:text-lg">Buka semua fitur dengan NEXOPASS.</p>
+                    <p className="mt-1 text-sm leading-relaxed text-ink-muted">
                       Statistik lengkap, riwayat 25 game, inventori unlimited, kuota +5.000, dan akses game beta.
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="font-display text-2xl text-ink">Rp 20.000</p>
+
+                {/* Baris 2: harga + tombol.
+                    DIUKUR (bukan dikira-kira): di HP 320-360px (iPhone SE lama,
+                    Android murah) harga + tombol + gap butuh ~237px sedangkan
+                    ruangnya cuma 194-234px -> MELEBAR keluar kartu.
+                    Karena itu: di HP sempit tombol TURUN ke barisnya sendiri
+                    (memanfaatkan lebar penuh, mudah dijangkau jempol), lalu
+                    kembali sejajar harga mulai layar >= 400px. */}
+                <div className="flex flex-col gap-3 border-t border-border-soft pt-4 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between sm:border-0 sm:pt-0">
+                  <div className="shrink-0 min-[400px]:text-right">
+                    <p className="font-display text-xl text-ink sm:text-2xl">Rp 20.000</p>
                     <p className="text-xs text-ink-muted">per bulan</p>
                   </div>
-                  <Link href="/premium" className="btn-primary cursor-pointer">
+                  <Link href="/premium" className="btn-primary inline-flex w-full shrink-0 items-center justify-center gap-1.5 px-5! py-2! cursor-pointer min-[400px]:w-auto">
+                    {emojiSrc('download3') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                    )}
                     NEXOPASS
                   </Link>
-                  <button type="button" onClick={hideUpsell} aria-label="Sembunyikan" className="text-ink-faint transition hover:text-ink cursor-pointer">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                  </button>
                 </div>
               </div>
             </div>

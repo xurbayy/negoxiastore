@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { NexoLogo, DiscordIcon } from './ui';
 import Notifications from './Notifications';
 import FeedbackButton from './FeedbackButton';
+import { emojiSrc } from '../lib/emojisClient';
 
 const LINKS_GUEST = [
   { href: '/#games', label: 'Game' },
@@ -131,7 +132,16 @@ export default function Navbar({ session, premiumActive = false }) {
                   ? 'inline-flex items-center gap-1.5 rounded-lg border border-success/50 bg-white px-3.5 py-1.5 text-sm font-semibold text-success shadow-sm transition hover:-translate-y-px hover:bg-success hover:text-white active:translate-y-0 active:shadow-none cursor-pointer'
                   : 'inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer'}
               >
-                {showPremium ? '✓ NEXOPASS' : 'NEXOPASS'}
+                {/* Emoji resmi NEXOPASS (download3) - sama seperti tombol di
+                    dalam game & halaman premium. */}
+                {emojiSrc('download3') && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                )}
+                {showPremium && (
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                )}
+                NEXOPASS
               </Link>
             </li>
           )}
@@ -212,15 +222,26 @@ export default function Navbar({ session, premiumActive = false }) {
             ))}
             {!session && (
               <li>
-                <Link href="/premium" onClick={() => setOpen(false)} className="block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
+                <Link href="/premium" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
+                  {emojiSrc('download3') && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                  )}
                   NEXOPASS
                 </Link>
               </li>
             )}
             {session && (
               <li>
-                <Link href="/premium" onClick={() => setOpen(false)} className={showPremium ? 'block rounded-lg border border-success/50 bg-white px-3 py-2.5 text-sm font-semibold text-success shadow-sm cursor-pointer' : 'block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer'}>
-                  {showPremium ? '✓ NEXOPASS' : 'NEXOPASS'}
+                <Link href="/premium" onClick={() => setOpen(false)} className={showPremium ? 'flex items-center gap-2 rounded-lg border border-success/50 bg-white px-3 py-2.5 text-sm font-semibold text-success shadow-sm cursor-pointer' : 'flex items-center gap-2 rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer'}>
+                  {emojiSrc('download3') && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                  )}
+                  {showPremium && (
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                  )}
+                  NEXOPASS
                 </Link>
               </li>
             )}
