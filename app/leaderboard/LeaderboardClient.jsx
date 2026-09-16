@@ -99,7 +99,14 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                           <span className="rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Kamu</span>
                         )}
                       </button>
-                      <ShareCardButton player={p} loggedIn={loggedIn} />
+                      <ShareCardButton
+                        // hasPass WAJIB diteruskan: dipakai kartu untuk
+                        // menaruh emoji NEXOPASS di samping peringkat.
+                        // Dulu props-nya cuma `p` mentah -> status premium
+                        // tidak pernah sampai ke kartu.
+                        player={{ ...p, premium: hasPass(p.userId) }}
+                        loggedIn={loggedIn}
+                      />
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
