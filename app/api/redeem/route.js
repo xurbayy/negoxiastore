@@ -4,6 +4,7 @@ import { reserveSlot, releaseSlot, GONE_MSG, STOLEN_MSG } from '../../lib/promo-
 import { json, ready } from '../../lib/api-helpers';
 import { touchActivity } from '../../lib/activity';
 import { verifyTurnstile } from '../../lib/turnstile';
+import { getLatestSnapshot } from '../../lib/snapshot';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,7 +54,37 @@ export async function POST(request) {
   await ready();
   const db = getDb();
 
-  // 4. Sudah klaim? (yang sudah 'failed' boleh dicoba lagi)
+  // 4. KODE MASIH ADA? - dicek PALING AWAL, sebelum "sudah klaim".
+  //    Perbaikan 2026-09-16: dulu cek "sudah klaim" duluan, jadi akun yang
+  //    pernah klaim lalu kodenya DIHAPUS admin tetap disambut "Kamu sudah
+  //    klaim kode ini" - menyesatkan, karena kodenya sendiri sudah tidak ada
+  //    di database. Pesan yang jujur: "sudah tidak tersedia".
+  //    Sumber kebenaran = promoCodes pada snapshot bot terbaru; flag
+  //    exhausted di cache saja tidak bisa membedakan "dihapus" vs "habis".
+  const snap = await getLatestSnapshot();
+  if (snap) {
+    const snapCode = (snap.promoCodes || []).find(
+      (p) => String(p.code || '').toUpperCase() === code,
+    );
+    if (!snapCode) {
+      return json({ ok: false, reason: 'Kode ini sudah tidak tersedia.' }, 400);
+    }
+    if (Number(snapCode.quota) > 0 && Number(snapCode.claimed) >= Number(snapCode.quota)) {
+      return json({ ok: false, reason: 'Kode ini sudah habis.' }, 400);
+    }
+  } else {
+    // Snapshot belum ada (bot belum pernah push) - tetap lewat cache saja.
+    const cacheRow = await db.execute({
+      sql: 'SELECT exhausted FROM web_promo_cache WHERE code = ?',
+      args: [code],
+    });
+    if (!cacheRow.rows.length || Number(cacheRow.rows[0].exhausted) === 1) {
+      return json({ ok: false, reason: GONE_MSG }, 400);
+    }
+  }
+
+  // 5. Sudah klaim pada INKARNASI kode ini? (yang 'failed' boleh dicoba lagi;
+  //    klaim dari kode versi lama sudah dibersihkan syncPromoCache)
   const claimed = await db.execute({
     sql: "SELECT status FROM web_redeem_claims WHERE discord_id = ? AND code = ?",
     args: [session.discordId, code],
@@ -68,7 +99,7 @@ export async function POST(request) {
     });
   }
 
-  // 5. Stok dari web_promo_cache (real-time, TANPA nanya bot):
+  // 6. Stok dari web_promo_cache (real-time, TANPA nanya bot):
   //    kode tidak terdaftar / exhausted -> tolak tanpa claim/antrean.
   const cacheRow = await db.execute({
     sql: 'SELECT exhausted FROM web_promo_cache WHERE code = ?',
@@ -78,13 +109,13 @@ export async function POST(request) {
     return json({ ok: false, reason: GONE_MSG }, 400);
   }
 
-  // 6. RESERVASI ATOMIK: kunci satu slot (anti over-claim saat ramai).
+  // 7. RESERVASI ATOMIK: kunci satu slot (anti over-claim saat ramai).
   const got = await reserveSlot(db, code);
   if (!got) {
     return json({ ok: false, reason: STOLEN_MSG }, 400);
   }
 
-  // 7. Lolos reservasi: INSERT CLAIM DULU (audit S2) - PK (discord_id, code)
+  // 8. Lolos reservasi: INSERT CLAIM DULU (audit S2) - PK (discord_id, code)
   //    menjamin race user sama terblokir SEBELUM command dibuat, jadi tidak
   //    pernah ada "command yatim" yang bisa memaksa bot ack 'sudah menukarkan'
   //    -> exhausted palsu. Baru setelah itu antrekan command + refresh profil.
