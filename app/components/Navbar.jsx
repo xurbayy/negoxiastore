@@ -173,6 +173,12 @@ export default function Navbar({ session, premiumActive = false }) {
                 href="/premium"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer"
               >
+                {/* Emoji resmi NEXO Pass - juga untuk pengunjung yang BELUM
+                    login, supaya tombolnya konsisten di semua keadaan. */}
+                {emojiSrc('download3') && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                )}
                 NEXO Pass
               </Link>
               <Link href="/login" className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
