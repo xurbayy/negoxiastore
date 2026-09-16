@@ -109,28 +109,38 @@ export async function GET() {
         });
       }
     }
-    // d) Kode redeem belum diklaim user - sisa stok dari web_promo_cache
+    // d) Kode redeem belum diklaim user.
+    //
+    // PENTING (perbaikan 2026-09-16): sumbernya web_promo_cache - BUKAN
+    // snap.promoCodes. Dulu notif diambil dari snapshot push bot (tiap 60 dtk),
+    // sedangkan claim divalidasi dari cache. Akibatnya ada JENDELA ~60 detik
+    // saat admin baru menghapus kode: notif masih tampil ("kode tersedia"),
+    // user klik, tapi bot sudah tidak punya kodenya -> user kecewa karena
+    // ditolak padahal baru lihat notifnya.
+    //
+    // Sekarang keduanya memakai sumber yang SAMA (cache), dan cache ditandai
+    // exhausted=1 begitu kode hilang dari daftar bot. Jadi notif dan tombol
+    // claim selalu sejalan - tidak mungkin "ada di notif tapi sudah tidak bisa".
     const claimed = await db.execute({
       sql: "SELECT code FROM web_redeem_claims WHERE discord_id = ? AND status != 'failed'",
       args: [session.discordId],
     });
     const claimedSet = new Set(claimed.rows.map((r) => String(r.code).toUpperCase()));
-    const cacheRows = await db.execute('SELECT code, rewardType, rewardValue, quota, reserved, exhausted FROM web_promo_cache');
-    const cacheByCode = {};
-    for (const c of cacheRows.rows) cacheByCode[String(c.code).toUpperCase()] = c;
-    for (const p of snap.promoCodes || []) {
-      const code = String(p.code).toUpperCase();
+    const cacheRows = await db.execute(
+      'SELECT code, rewardType, rewardValue, quota, reserved, exhausted FROM web_promo_cache'
+    );
+    for (const c of cacheRows.rows) {
+      const code = String(c.code).toUpperCase();
       const did = `d:code:${code}`;
       if (claimedSet.has(code) || dismissed.has(did)) continue;
-      const c = cacheByCode[code];
-      if (!c || Number(c.exhausted) === 1) continue;
+      if (Number(c.exhausted) === 1) continue;
       const remaining = Math.max(0, Number(c.quota) - Number(c.reserved));
       if (remaining <= 0) continue;
-      const reward = p.rewardType === 'points'
-        ? `${Number(p.rewardValue).toLocaleString('id-ID')} poin`
-        : p.rewardType === 'item'
-          ? `item ${p.rewardValue}`
-          : String(p.rewardValue);
+      const reward = c.rewardType === 'points'
+        ? `${Number(c.rewardValue).toLocaleString('id-ID')} poin`
+        : c.rewardType === 'item'
+          ? `item ${c.rewardValue}`
+          : String(c.rewardValue);
       notifications.push({
         id: did,
         type: 'token',
