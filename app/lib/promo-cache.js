@@ -4,7 +4,8 @@
 import { getDb, schemaReady } from './db';
 
 // Panggil tiap snapshot bot masuk (POST /api/bot/stats).
-// reserved = MAX(reserved, claimed_bot) supaya klaim via Discord ikut terhitung.
+// reserved = MAX(klaim-web-aktif, claimed_bot) supaya klaim via Discord ikut
+// terhitung TANPA dihitung dua kali.
 // exhausted SELALU dihitung ulang dari angka snapshot bot (claimed >= quota):
 // flag tidak boleh sticky. Dulu exhausted yang sudah 1 tidak pernah kembali 0
 // walau bot mengirim data baru bahwa kuota masih sisa -> kode hidup tampil
@@ -23,13 +24,42 @@ export async function syncPromoCache(db, promoCodes) {
     const quota = Number(p.quota) || 0;
     const claimed = Number(p.claimed) || 0;
 
+    // === RESET KLAIM LAMA DARI INKARNASI LAMA KODE (2026-09-16) ===
+    // Bot: admin hapus kode -> promo_claims bot IKUT terhapus -> user bisa
+    // claim lagi di Discord. Web: riwayat web_redeem_claims tidak pernah ikut
+    // dihapus, jadi setelah kode dibuat ulang user yang sama DITOLAK dengan
+    // "Kamu sudah klaim kode ini" padahal di Discord bisa. Tidak sinkron.
+    //
+    // Sinyal: promo_codes.created_at bot di-update saat kode dibuat ulang
+    // (INSERT OR REPLACE). Klaim web dengan claimed_at SEBELUM waktu pembuatan
+    // inkarnasi ini = peninggalan kode versi lama -> dihapus. Klaim yang lebih
+    // baru dari inkarnasi aktif TIDAK tersentuh (termasuk yang masih pending),
+    // jadi tidak ada risiko double-claim: bot tetap validator final.
+    // Untuk kode yang tidak pernah dibuat ulang, created_at lama -> DELETE
+    // selalu no-op.
+    const createdMs = Number(p.createdAtMs) || 0;
+    if (createdMs > 0) {
+      await db.execute({
+        sql: 'DELETE FROM web_redeem_claims WHERE code = ? AND claimed_at < ?',
+        args: [code, createdMs],
+      });
+    }
+
+    // reserved dihitung ulang dari klaim web AKTIF (sisa setelah reset di atas),
+    // digabung dengan angka bot (klaim via Discord). Ini menggantikan curReserved
+    // lama yang bisa tertinggal dari inkarnasi kode sebelumnya.
+    const cnt = await db.execute({
+      sql: "SELECT COUNT(*) c FROM web_redeem_claims WHERE code = ? AND status != 'failed'",
+      args: [code],
+    });
+    const reservedWeb = Number(cnt.rows[0]?.c || 0);
+    const reserved = Math.max(reservedWeb, Math.min(claimed, Math.max(quota, 0)));
+    const exhausted = quota > 0 && claimed >= quota ? 1 : 0;
+
     const cur = await db.execute({
       sql: 'SELECT reserved FROM web_promo_cache WHERE code = ?',
       args: [code],
     });
-    const curReserved = cur.rows.length ? Number(cur.rows[0].reserved) : 0;
-    const reserved = Math.max(curReserved, Math.min(claimed, Math.max(quota, 0)));
-    const exhausted = quota > 0 && claimed >= quota ? 1 : 0;
 
     if (cur.rows.length) {
       await db.execute({
