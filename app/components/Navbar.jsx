@@ -131,7 +131,7 @@ export default function Navbar({ session, premiumActive = false }) {
                   ? 'inline-flex items-center gap-1.5 rounded-lg border border-success/50 bg-white px-3.5 py-1.5 text-sm font-semibold text-success shadow-sm transition hover:-translate-y-px hover:bg-success hover:text-white active:translate-y-0 active:shadow-none cursor-pointer'
                   : 'inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer'}
               >
-                {showPremium ? '✓ Premium Aktif' : '✦ Premium'}
+                {showPremium ? '✓ NEXOPASS' : 'NEXOPASS'}
               </Link>
             </li>
           )}
@@ -163,7 +163,7 @@ export default function Navbar({ session, premiumActive = false }) {
                 href="/premium"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer"
               >
-                ✦ Premium
+                NEXOPASS
               </Link>
               <Link href="/login" className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
                 <DiscordIcon className="h-4 w-4" />
@@ -213,14 +213,14 @@ export default function Navbar({ session, premiumActive = false }) {
             {!session && (
               <li>
                 <Link href="/premium" onClick={() => setOpen(false)} className="block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
-                  ✦ Premium
+                  NEXOPASS
                 </Link>
               </li>
             )}
             {session && (
               <li>
                 <Link href="/premium" onClick={() => setOpen(false)} className={showPremium ? 'block rounded-lg border border-success/50 bg-white px-3 py-2.5 text-sm font-semibold text-success shadow-sm cursor-pointer' : 'block rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer'}>
-                  {showPremium ? '✓ Premium Aktif' : '✦ Premium'}
+                  {showPremium ? '✓ NEXOPASS' : 'NEXOPASS'}
                 </Link>
               </li>
             )}

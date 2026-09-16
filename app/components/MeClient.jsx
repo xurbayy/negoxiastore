@@ -7,6 +7,7 @@ import { emojiSrc } from '../lib/emojisClient';
 // dan gameName. Dulu file ini punya salinan sendiri-sendiri (fmt, stripEmoji,
 // GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
 import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh } from '../lib/formatClient';
+import ShareCardButton from './ShareCardButton';
 // sisaHari: dihitung SAAT RENDER (bukan daysLeft dari bot yang bisa basi).
 import { sisaHari } from '../lib/premiumPlan';
 import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
@@ -388,6 +389,25 @@ export default function MeClient({ betaGames = null }) {
         <div className="nx-dark-header flex items-center justify-between gap-2 px-4 py-3 sm:gap-3 sm:px-6">
           <span className="truncate font-mono text-xs uppercase tracking-wider text-ink-faint">profil pemain</span>
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            {/* Tombol bagikan: kartu gambar dengan desain SAMA seperti di
+                leaderboard (konsisten). Isi kartu menyesuaikan status pemain
+                (member NEXOPASS dapat stat lebih lengkap + badge emas). */}
+            {p && (
+              <ShareCardButton
+                variant="label"
+                loggedIn
+                player={{
+                  username: freshName || p.username || state.user?.username,
+                  avatarUrl: freshAvatar || p.avatarUrl,
+                  points: p.points,
+                  level: p.level,
+                  premium: Boolean(isPremium),
+                  totalWon: p.totalWon,
+                  dailyStreak: p.dailyStreak,
+                  board: 'profil',
+                }}
+              />
+            )}
             <a
               href="/api/auth/logout"
               className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-danger/40 bg-white px-2.5 py-1.5 text-[11px] font-semibold whitespace-nowrap text-danger shadow-sm transition hover:-translate-y-px hover:bg-danger hover:text-white active:translate-y-0 active:shadow-none cursor-pointer sm:px-3.5 sm:text-xs"
@@ -571,7 +591,7 @@ export default function MeClient({ betaGames = null }) {
                     <p className="text-xs text-ink-muted">per bulan</p>
                   </div>
                   <Link href="/premium" className="btn-primary cursor-pointer">
-                    Upgrade
+                    NEXOPASS
                   </Link>
                   <button type="button" onClick={hideUpsell} aria-label="Sembunyikan" className="text-ink-faint transition hover:text-ink cursor-pointer">
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
