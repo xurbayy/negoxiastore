@@ -30,7 +30,7 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
     try {
       const res = await fetch('/api/me', { cache: 'no-store' });
       const d = await res.json();
-      const ok = d.authenticated && d.profile?.registered === true && d.profile?.needsOnboarding !== true;
+      const ok = d.authenticated && d.profile?.exists === true && d.profile?.needsOnboarding !== true;
       setReg(ok ? 'ok' : 'onboarding');
       return ok;
     } catch {
