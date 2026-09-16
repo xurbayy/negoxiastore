@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import PremiumBenefits from './PremiumBenefits';
 import { sisaHari, isLifetime } from '../lib/premiumPlan';
+import { emojiSrc } from '../lib/emojisClient';
 
 function nowMs() {
   return Date.now();
