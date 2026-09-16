@@ -443,17 +443,17 @@ export default function MeClient({ betaGames = null }) {
                       )}
                     </span>
                   )}
-                  {/* STATUS NEXO PASS - standardized nx-badge */}
+                  {/* STATUS NEXOPASS - standardized nx-badge */}
                   {isPremium ? (
                     <span className="nx-badge bg-success px-3 py-1 text-white shadow-sm">
                       {emojiSrc('download3') && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={emojiSrc('download3')} alt="" width={12} height={12} className="h-3 w-3" />
                       )}
-                      NEXO Pass · {premiumActive}
+                      NEXOPASS · {premiumActive}
                     </span>
                   ) : (
-                    <span className="nx-badge bg-card-dark-2 px-3 py-1 text-ink-faint">NEXO Pass · Belum aktif</span>
+                    <span className="nx-badge bg-card-dark-2 px-3 py-1 text-ink-faint">NEXOPASS · Belum aktif</span>
                   )}
                 </div>
                 <p className="mt-1.5 text-sm text-ink-faint">
@@ -522,7 +522,7 @@ export default function MeClient({ betaGames = null }) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {emojiSrc('dice') && <img src={emojiSrc('dice')} alt="" width={13} height={13} className="ml-2 mr-1 inline h-3 w-3" />} Total Bet · statistik lengkap
                 </span>
-                <span className="nx-badge bg-accent px-2.5 py-0.5 font-extrabold text-ink">NEXO Pass</span>
+                <span className="nx-badge bg-accent px-2.5 py-0.5 font-extrabold text-ink">NEXOPASS</span>
               </div>
             )}
           </dl>
@@ -534,7 +534,7 @@ export default function MeClient({ betaGames = null }) {
         <div className="glow-success flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-success/40 bg-success/10 px-6 py-5">
           <div>
             <p className="font-display text-lg text-ink">
-              Akun Premium · NEXO Pass
+              Akun Premium · NEXOPASS
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
               {premiumActive === 'LIFETIME' ? 'Berlaku LIFETIME' : `Aktif sampai ${new Date(Number(p.premium.expiresAt)).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`}
@@ -559,7 +559,7 @@ export default function MeClient({ betaGames = null }) {
                     <img src={emojiSrc('download3')} alt="" width={40} height={40} className="h-10 w-10 shrink-0" />
                   )}
                   <div>
-                    <p className="font-display text-lg text-ink">Buka semua fitur dengan NEXO Pass.</p>
+                    <p className="font-display text-lg text-ink">Buka semua fitur dengan NEXOPASS.</p>
                     <p className="mt-0.5 max-w-sm text-sm text-ink-muted">
                       Statistik lengkap, riwayat 25 game, inventori unlimited, kuota +5.000, dan akses game beta.
                     </p>
@@ -681,7 +681,7 @@ export default function MeClient({ betaGames = null }) {
               )}
               {!isPremium && (p.history || []).length > 10 && (
                 <p className="mt-3 text-center text-xs text-ink-faint">
-                  Riwayat lengkap 25 game terlihat dengan NEXO Pass.
+                  Riwayat lengkap 25 game terlihat dengan NEXOPASS.
                 </p>
               )}
             </div>
@@ -815,10 +815,10 @@ export default function MeClient({ betaGames = null }) {
                     Terkunci
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-                    Coba game baru sebelum rilis publik, khusus member NEXO Pass.
+                    Coba game baru sebelum rilis publik, khusus member NEXOPASS.
                   </p>
                   <Link href="/premium" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-accent-hover underline-offset-2 hover:underline cursor-pointer">
-                    Lihat NEXO Pass →
+                    Lihat NEXOPASS →
                   </Link>
                 </div>
               </>

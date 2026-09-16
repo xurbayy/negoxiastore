@@ -61,7 +61,7 @@ export async function POST(request) {
       // Notifikasi web untuk user: pembayaran diterima
       await db.execute({
         sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-        args: [order.discord_id, `Pembayaran Order #${orderId} Diterima`, `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, now],
+        args: [order.discord_id, `Pembayaran Order #${orderId} Diterima`, `Bukti transfer kamu sudah kami verifikasi. NEXOPASS ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, now],
       });
     }
   } else {

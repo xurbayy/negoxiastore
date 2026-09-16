@@ -1,7 +1,7 @@
 export const FAQS = [
   {
     q: 'Apakah NEXO Games gratis?',
-    a: 'Ya, semua 25+ game dan fitur inti (ekonomi, guild, bank, shop, leaderboard) bisa dimainkan gratis. Premium NEXO Pass hanya menambah kenyamanan: kuota ekstra, inventori unlimited, dan prioritas render.',
+    a: 'Ya, semua 25+ game dan fitur inti (ekonomi, guild, bank, shop, leaderboard) bisa dimainkan gratis. Premium NEXOPASS hanya menambah kenyamanan: kuota ekstra, inventori unlimited, dan prioritas render.',
   },
   {
     q: 'Bagaimana cara menambahkan bot ke server saya?',
@@ -21,7 +21,7 @@ export const FAQS = [
   },
   {
     q: 'Kenapa web ini memakai cookie?',
-    a: 'Hanya untuk cookie fungsional, bukan pelacak. Cookie menyimpan sesi login kamu supaya tidak perlu masuk Discord berulang kali, menjaga status NEXO Pass dan notifikasi tetap terbawa saat pindah halaman, serta mengunci keamanan 2FA panel admin. Tidak ada analitik, tidak ada iklan, tidak ada cookie pihak ketiga, dan keputusanmu pada banner cookie cukup disimpan sekali di perangkat.',
+    a: 'Hanya untuk cookie fungsional, bukan pelacak. Cookie menyimpan sesi login kamu supaya tidak perlu masuk Discord berulang kali, menjaga status NEXOPASS dan notifikasi tetap terbawa saat pindah halaman, serta mengunci keamanan 2FA panel admin. Tidak ada analitik, tidak ada iklan, tidak ada cookie pihak ketiga, dan keputusanmu pada banner cookie cukup disimpan sekali di perangkat.',
   },
   {
     q: 'Bagaimana jika saya ingin semua data game saya dihapus?',

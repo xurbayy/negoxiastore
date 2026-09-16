@@ -128,3 +128,17 @@ export function gameName(key) {
   const k = String(key || '').toLowerCase();
   return GAME_NAMES[k] || key || '-';
 }
+
+/**
+ * Nama plan order untuk TAMPILAN.
+ * Order lama tersimpan sebagai 'nexo_pass_monthly' (nilai DB), order baru
+ * 'NEXOPASS'. Ditampilkan seragam supaya admin tidak melihat dua ejaan
+ * berbeda untuk produk yang sama. Nilai di DB TIDAK diubah (data historis
+ * aman) - hanya terjemahan saat dirender.
+ */
+export function planName(plan) {
+  const p = String(plan || '').trim();
+  if (!p) return '-';
+  if (/^nexo[ _]?pass/i.test(p)) return 'NEXOPASS';
+  return p;
+}

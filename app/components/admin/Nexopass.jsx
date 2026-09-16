@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
-import { fmt } from '../../lib/formatClient';
+import { fmt, planName } from '../../lib/formatClient';
 // sisaHari + isLifetimePremium: satu sumber dengan bot (threshold 50 tahun).
 import { sisaHari, isLifetime as isLifetimePremium } from '../../lib/premiumPlan';
 
-// NEXO Pass: daftar member premium aktif + grant/revoke.
+// NEXOPASS: daftar member premium aktif + grant/revoke.
 export default function Nexopass({ send, data }) {
   const members = data.snapshot?.premiumMembers || [];
   const [confirm, setConfirm] = useState(null); // { action, payload, label }
@@ -35,7 +35,7 @@ export default function Nexopass({ send, data }) {
 
   return (
     <div className="space-y-5">
-      <h2 className="font-display text-xl text-ink">NEXO Pass: {members.length} Member Aktif</h2>
+      <h2 className="font-display text-xl text-ink">NEXOPASS: {members.length} Member Aktif</h2>
 
       {/* Form grant */}
       <form onSubmit={grant} className="nx-card flex flex-wrap items-end gap-3 px-5 py-5">
@@ -118,7 +118,7 @@ export default function Nexopass({ send, data }) {
             )}
             {(data.orders || []).map((o) => (
               <tr key={o.id} className="border-b border-border-soft/60 last:border-0">
-                <td className="px-4 py-3 font-mono text-xs text-ink-muted">#{o.id} {o.plan}</td>
+                <td className="px-4 py-3 font-mono text-xs text-ink-muted">#{o.id} {planName(o.plan)}</td>
                 <td className="px-4 py-3 font-mono text-xs">{o.discordId}</td>
                 <td className="px-4 py-3 text-right">Rp {fmt(o.amount)}</td>
                 <td className="px-4 py-3">

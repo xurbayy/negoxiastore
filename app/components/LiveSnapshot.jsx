@@ -25,7 +25,7 @@ export default async function LiveSnapshot() {
   const stats = [
     { label: 'Player Terdaftar', value: m.totalUsers, emoji: 'people' },
     { label: 'Poin Beredar', value: m.totalMoney, emoji: 'goldcoin' },
-    { label: 'Member NEXO Pass', value: m.premiumCount, emoji: 'crown' },
+    { label: 'Member NEXOPASS', value: m.premiumCount, emoji: 'crown' },
     { label: 'Game Hari Ini', value: m.gamesToday, emoji: 'dice' },
   ];
 

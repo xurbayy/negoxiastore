@@ -26,7 +26,7 @@ export default function Premium() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('download3')} alt="" width={16} height={16} className="h-4 w-4" />
                   )}
-                  NEXO Pass
+                  NEXOPASS
                 </div>
                 <h2 className="mt-5 font-display text-3xl leading-snug text-ink md:text-4xl">
                   Level Up dengan Premium.
@@ -46,7 +46,7 @@ export default function Premium() {
                     rel="noopener noreferrer"
                     className="btn-primary"
                   >
-                    Dapatkan NEXO Pass
+                    Dapatkan NEXOPASS
                   </a>
                   <code className="inline-flex items-center rounded-lg border border-border-soft bg-bg-soft px-4 py-2.5 font-mono text-sm text-ink">
                     nxpremium

@@ -97,7 +97,7 @@ export async function GET() {
             sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
             args: [
               session.discordId,
-              'NEXO Pass kamu AKTIF!',
+              'NEXOPASS kamu AKTIF!',
               'Semua perk premium sudah jalan in-game: inventori unlimited, bonus kuota, dan prioritas render.',
               now,
             ],
@@ -113,7 +113,7 @@ export async function GET() {
             sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'info', ?, ?, ?)",
             args: [
               session.discordId,
-              'Langganan NEXO Pass berakhir',
+              'Langganan NEXOPASS berakhir',
               'Inventori kembali dibatasi 5 unit per item. Aktifkan lagi kapan saja di halaman Premium.',
               now,
             ],
@@ -123,7 +123,7 @@ export async function GET() {
             sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
             args: [
               session.discordId,
-              'Aktifkan lagi NEXO Pass',
+              'Aktifkan lagi NEXOPASS',
               'Beli ulang kapan saja - Rp 20.000/bulan, semua perk balik lagi.',
               now + 1,
             ],

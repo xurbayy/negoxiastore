@@ -40,7 +40,7 @@ const SECTIONS = [
   {
     title: 'DM dari bot, kapan dan kenapa',
     body: [
-      'Bot bisa mengirim pesan langsung ke Discord kamu, tapi hanya berupa notifikasi sistem searah, bukan percakapan. Isinya terbatas pada hal yang menyangkut akun kamu, contohnya status pembelian NEXO Pass, kode promo yang berhasil diklaim, atau pemberitahuan sanksi beserta alasannya.',
+      'Bot bisa mengirim pesan langsung ke Discord kamu, tapi hanya berupa notifikasi sistem searah, bukan percakapan. Isinya terbatas pada hal yang menyangkut akun kamu, contohnya status pembelian NEXOPASS, kode promo yang berhasil diklaim, atau pemberitahuan sanksi beserta alasannya.',
       'Bot tidak pernah membaca atau menyimpan balasan DM kamu. Pesan yang dikirim bot juga tidak disimpan sebagai riwayat percakapan. Begitu terkirim, selesai.',
       'DM hanya berisi informasi akun kamu sendiri, dan tidak pernah dibagikan ke member server atau pihak lain. Kalau kamu memilih menutup DM dari anggota server di pengaturan Discord, notifikasi sanksi tetap muncul saat kamu memakai bot di server.',
     ],

@@ -4,7 +4,7 @@ import { emojiSrc } from '../lib/emojisClient';
 import { labelMasaAktif, PLAN_DAYS, PLAN_PRICE } from '../lib/premiumPlan';
 
 // ==========================================
-// KARTU KEUNGGULAN NEXO PASS
+// KARTU KEUNGGULAN NEXOPASS
 // ==========================================
 // Menampilkan SEMUA perk premium dengan emoji custom resmi (dari registry web,
 // bukan emoji Unicode) supaya konsisten dengan bot.
@@ -97,7 +97,7 @@ export default function PremiumBenefits({ premium = null, compact = false }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={emojiSrc('download3')} alt="" width={20} height={20} className="h-5 w-5" />
           )}
-          Keunggulan NEXO Pass
+          Keunggulan NEXOPASS
         </h2>
         {aktif && (
           <span className="rounded-full bg-success/15 px-3 py-1 text-xs font-semibold text-success">

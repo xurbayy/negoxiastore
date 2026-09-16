@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import RichText from './RichText';
-import { fmt, fmtRingkas, fmtPenuh } from '../../lib/formatClient';
+import { fmt, fmtRingkas, fmtPenuh, planName } from '../../lib/formatClient';
 // sisaHari: dihitung SAAT DITAMPILKAN, bukan memakai daysLeft dari bot yang
 // dihitung saat push (bisa basi - panel sempat menampilkan "sisa 30 hari"
 // padahal tinggal 28 hari).
@@ -94,7 +94,7 @@ export default function PlayerLookup() {
                   {p.titleInfo && <RichText text={p.titleInfo.label} />}{' '}
                   {premium && (
                     <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-accent/20 px-2 py-0.5 align-middle text-[0.65rem] font-bold uppercase tracking-wider text-ink!">
-                      <RichText text="<:download3:1548184905018507306>" size={12} /> NEXO PASS
+                      <RichText text="<:download3:1548184905018507306>" size={12} /> NEXOPASS
                     </span>
                   )}
                 </p>
@@ -202,7 +202,7 @@ export default function PlayerLookup() {
             <div className="nx-card px-5 py-5">
               <h3 className="font-display text-ink">Riwayat Order Premium</h3>
               {data.orders.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum pernah order.</p> : (
-                <ul className="mt-2 space-y-1 text-sm">{data.orders.map((o) => <li key={o.id} className="flex justify-between"><span>{o.plan} • {fmt(o.amount)}</span><span className="text-ink-muted">{o.status} • {new Date(o.createdAt).toLocaleDateString('id-ID')}</span></li>)}</ul>
+                <ul className="mt-2 space-y-1 text-sm">{data.orders.map((o) => <li key={o.id} className="flex justify-between"><span>{planName(o.plan)} • {fmt(o.amount)}</span><span className="text-ink-muted">{o.status} • {new Date(o.createdAt).toLocaleDateString('id-ID')}</span></li>)}</ul>
               )}
             </div>
             <div className="nx-card px-5 py-5">

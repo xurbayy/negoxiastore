@@ -150,7 +150,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
     return (
       <div className="mt-8 flex flex-col items-center gap-3">
         <div className="flex flex-col items-center gap-1 rounded-xl bg-success px-5 py-3 text-center text-white">
-          <span className="text-sm font-semibold">NEXO Pass aktif</span>
+          <span className="text-sm font-semibold">NEXOPASS aktif</span>
           {lt ? (
             <span className="text-xs opacity-90">Aktif selamanya</span>
           ) : hari != null ? (
@@ -210,13 +210,13 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           <div className="bg-white p-2 rounded-xl border-4 border-accent/20 mx-auto w-fit mb-4">
             <img
               src="/images/qris.png"
-              alt="QRIS Payment NEXO Pass"
+              alt="QRIS Payment NEXOPASS"
               className="h-[300px] w-auto rounded-lg object-contain"
             />
           </div>
 
           <div className="mb-4 rounded-lg border border-border-soft bg-card-cream p-3 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">NEXO Pass akan diaktifkan ke Discord ID kamu</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">NEXOPASS akan diaktifkan ke Discord ID kamu</p>
             <p className="mt-0.5 font-mono text-sm font-bold text-ink select-all">{discordId}</p>
           </div>
 
