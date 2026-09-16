@@ -180,7 +180,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     // owner) supaya statusnya terlihat langsung di kartu leaderboard, bukan
     // cuma di kartu profil. Dihitung dulu supaya pill+tema tidak menabrak logo.
     const adaBadge = Boolean(player.premium && nexopassImg);
-    const ikonBadge = 48;
+    const ikonBadge = 76;
     const jarakBadge = 14;
     const totalW = pw + (adaBadge ? ikonBadge + jarakBadge : 0);
     const px = W - 64 - totalW;
@@ -212,7 +212,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     // kosong - jatuh ke badge teks supaya status premium tetap tersampaikan.
     // Badge IDENTIK dengan kartu leaderboard: lingkaran cream cerah + logo,
     // ukuran sama supaya satu makna = satu tampilan di seluruh situs.
-    const d = 48;
+    const d = 76;
     gambarBadgeNexoPass(ctx, W - 64 - d / 2, 96, d, nexopassImg);
   }
 
