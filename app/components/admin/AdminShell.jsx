@@ -23,7 +23,7 @@ import ManualOrders from './ManualOrders';
 const TAB_GROUPS = [
   { label: 'Pantau', tabs: [['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
   { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
-  { label: 'Member', tabs: [['nexopass', 'NEXOPASS'], ['titles', 'Titles']] },
+  { label: 'Member', tabs: [['nexopass', 'NEXO Pass'], ['titles', 'Titles']] },
   { label: 'Komunitas', tabs: [['broadcast', 'Broadcast'], ['moderasi', 'Sanksi & Moderasi'], ['feedback', 'Feedback']] },
 ];
 

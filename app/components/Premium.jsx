@@ -21,7 +21,7 @@ export default function Premium() {
 
             <div className="relative grid items-center gap-12 lg:grid-cols-2">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-ink">
+                <div className="inline-flex items-center gap-2 rounded-full border border-accent/50 bg-card-cream px-4 py-1.5 text-xs font-extrabold tracking-wide text-ink shadow-sm">
                   {emojiSrc('download3') && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('download3')} alt="" width={16} height={16} className="h-4 w-4" />

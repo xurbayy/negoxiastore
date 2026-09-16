@@ -141,7 +141,7 @@ export default function Navbar({ session, premiumActive = false }) {
                 {showPremium && (
                   <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                 )}
-                NEXOPASS
+                NEXO Pass
               </Link>
             </li>
           )}
@@ -173,7 +173,7 @@ export default function Navbar({ session, premiumActive = false }) {
                 href="/premium"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer"
               >
-                NEXOPASS
+                NEXO Pass
               </Link>
               <Link href="/login" className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
                 <DiscordIcon className="h-4 w-4" />
@@ -227,7 +227,7 @@ export default function Navbar({ session, premiumActive = false }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
                   )}
-                  NEXOPASS
+                  NEXO Pass
                 </Link>
               </li>
             )}
@@ -241,7 +241,7 @@ export default function Navbar({ session, premiumActive = false }) {
                   {showPremium && (
                     <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                   )}
-                  NEXOPASS
+                  NEXO Pass
                 </Link>
               </li>
             )}

@@ -15,7 +15,7 @@ const NAV_MEMBER = [
   { href: '/me', label: 'Profil Saya' },
   { href: '/shop', label: 'Shop' },
   { href: '/redeem', label: 'Redeem' },
-  { href: '/premium', label: 'NEXOPASS' },
+  { href: '/premium', label: 'NEXO Pass' },
 ];
 const NAV_LEGAL = [
   { href: '/privacy-policy', label: 'Kebijakan Privasi' },

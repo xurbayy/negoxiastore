@@ -465,15 +465,15 @@ export default function MeClient({ betaGames = null }) {
                   )}
                   {/* STATUS NEXO Pass - standardized nx-badge */}
                   {isPremium ? (
-                    <span className="nx-badge bg-success px-3 py-1 text-white shadow-sm">
+                    <span className="nx-badge border border-accent/50 bg-card-cream px-3 py-1 normal-case tracking-normal text-ink shadow-sm">
                       {emojiSrc('download3') && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={emojiSrc('download3')} alt="" width={12} height={12} className="h-3 w-3" />
+                        <img src={emojiSrc('download3')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
                       )}
-                      NEXOPASS · {premiumActive}
+                      NEXO Pass · {premiumActive}
                     </span>
                   ) : (
-                    <span className="nx-badge bg-card-dark-2 px-3 py-1 text-ink-faint">NEXOPASS · Belum aktif</span>
+                    <span className="nx-badge bg-card-dark-2 px-3 py-1 normal-case tracking-normal text-ink-faint">NEXO Pass · Belum aktif</span>
                   )}
                 </div>
                 <p className="mt-1.5 text-sm text-ink-faint">
@@ -542,7 +542,7 @@ export default function MeClient({ betaGames = null }) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {emojiSrc('dice') && <img src={emojiSrc('dice')} alt="" width={13} height={13} className="ml-2 mr-1 inline h-3 w-3" />} Total Bet · statistik lengkap
                 </span>
-                <span className="nx-badge bg-accent px-2.5 py-0.5 font-extrabold text-ink">NEXOPASS</span>
+                <span className="nx-badge bg-accent px-2.5 py-0.5 font-extrabold normal-case tracking-normal text-ink">NEXO Pass</span>
               </div>
             )}
           </dl>
@@ -554,7 +554,7 @@ export default function MeClient({ betaGames = null }) {
         <div className="glow-success flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-success/40 bg-success/10 px-6 py-5">
           <div>
             <p className="font-display text-lg text-ink">
-              Akun Premium · NEXOPASS
+              Akun Premium · NEXO Pass
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
               {premiumActive === 'LIFETIME' ? 'Berlaku LIFETIME' : `Aktif sampai ${new Date(Number(p.premium.expiresAt)).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`}
