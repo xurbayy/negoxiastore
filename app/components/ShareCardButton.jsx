@@ -14,7 +14,6 @@ import { fmtRingkas } from '../lib/formatClient';
 // in-game dari registry. Dibagikan lewat Web Share API (HP) atau diunduh
 // (desktop). Tanpa library.
 
-const W = 1080;
 const INK = '#FBF7EC';      // teks terang di atas dark card
 const ACCENT = '#F19A1A';
 
@@ -112,21 +111,10 @@ function loadImg(src) {
 }
 
 async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg }) {
-  // TINGGI DINAMIS, dihitung dari layout SEBELUM canvas dibuat supaya tidak
-  // ada area kosong maupun konten kepotong (pernah terjadi: tinggi dipatok
-  // sementara isinya bertambah).
-  //   - leaderboard : header gelap + avatar + 2 tile grid -> 1350px (4:5)
-  //   - profil      : kartu ID gaya terang (pita nama + data + 3 stat) -> 1340px
-  //     Keduanya 4:5, tapi SANGAT berbeda secara visual (gelap vs terang).
-  // Pita teks member sudah dihapus -> kartu profil premium & non-premium
-  // sekarang TINGGINYA SAMA (status premium cukup ditandai badge di header).
   const dariProfilHitung = player.board === 'profil';
-  // TINGGI DIHITUNG DARI LAYOUT, bukan angka bulat yang ditebak.
-  // Dulu leaderboard dipatok 1350px padahal kontennya cuma butuh 1126px ->
-  // ada ~224px ruang kosong di bawah sehingga kartu terlihat "pincang".
-  // Leaderboard tetap 1350px (rasio 4:5 = 0.8, ukuran ideal untuk dibagikan),
-  // TAPI ruang kosongnya DIISI (dulu 224px kosong -> kartu terlihat pincang).
-  const H = dariProfilHitung ? 1340 : 1350;
+  // Leaderboard portrait 4:5 (1080x1350), Profil Banner landscape (1200x630)
+  const W = dariProfilHitung ? 1200 : 1080;
+  const H = dariProfilHitung ? 630 : 1350;
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -155,184 +143,152 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
 
   if (dariProfil) {
     // ══════════════════════════════════════════════════════════════
-    // KARTU PROFIL PREMIUM - WATERMARK, MINIMALIS, ELEGAN
+    // KARTU PROFIL BANNER (Landscape 1200x630)
     // ══════════════════════════════════════════════════════════════
-    ctx.fillStyle = '#FBF7EC';
+    ctx.fillStyle = '#FBF7EC'; // Panel kanan (terang)
     ctx.fillRect(0, 0, W, H);
 
-    // ── Watermark Logo (Sangat Transparan) ──
+    // Watermark di panel kanan
     if (logoImg) {
       ctx.save();
-      ctx.globalAlpha = 0.04; // 4% opacity
-      // Gambar raksasa memotong pojok kanan bawah
-      ctx.drawImage(logoImg, W - 650, H - 750, 900, 900);
+      ctx.globalAlpha = 0.04;
+      ctx.drawImage(logoImg, W - 600, H - 600, 700, 700);
       ctx.restore();
     }
 
-    // ── Kepala: logo kecil + wordmark ──
-    let hx = 64;
+    // ── Panel Kiri (Gelap - Identitas) ──
+    const leftW = 420;
+    ctx.fillStyle = '#1E1E26';
+    ctx.fillRect(0, 0, leftW, H);
+    // Aksen vertikal oranye di ujung kiri banget
+    ctx.fillStyle = ACCENT;
+    ctx.fillRect(0, 0, 10, H);
+
+    // ── Header Panel Kiri ──
+    let hx = 48;
     if (logoImg) {
-      ctx.drawImage(logoImg, 64, 52, 64, 64);
-      hx = 144;
+      ctx.drawImage(logoImg, 48, 48, 48, 48);
+      hx = 112;
     }
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#2B2118';
-    ctx.font = '800 34px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('NEXO GAMES', hx, 76);
-    ctx.fillStyle = '#A99C8E';
-    ctx.font = '700 22px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(player.premium ? 'KARTU VIP MEMBER' : 'KARTU PEMAIN', hx, 106);
-
-    // ── Ornamen Ujung Kanan Atas ──
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#A99C8E';
+    ctx.fillStyle = '#FBF7EC';
+    ctx.font = '800 24px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText('NEXO GAMES', hx, 64);
+    ctx.fillStyle = 'rgba(169,156,142,1)';
     ctx.font = '700 16px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('EST. 2024', W - 64, 76);
-    ctx.fillText('OFFICIAL ACCOUNT', W - 64, 100);
-    ctx.textAlign = 'left';
+    ctx.fillText('AKUN MEMBER', hx, 88);
 
-    // ── PITA NAMA (Kartu ID) ──
-    const pitaY = 152;
-    const pitaH = 168;
-    ctx.save();
-    roundRect(ctx, 64, pitaY, W - 128, pitaH, 28);
-    ctx.fillStyle = '#1E1E26';
-    ctx.fill();
-    ctx.clip(); // Memastikan aksen oranye tidak keluar dari sudut membulat pita
-    
-    // Aksen vertikal oranye di ujung kiri pita
-    ctx.fillStyle = ACCENT;
-    ctx.fillRect(64, pitaY, 14, pitaH);
-    ctx.restore();
-
-    // avatar bulat
-    const avR = 54;
-    const avCx = 64 + 14 + 34 + avR;
-    const avCy = pitaY + pitaH / 2;
+    // ── Avatar (Tengah Panel Kiri) ──
+    const avR = 80;
+    const avCx = leftW / 2;
+    const avCy = 260;
     ctx.save();
     ctx.beginPath(); ctx.arc(avCx, avCy, avR, 0, Math.PI * 2); ctx.clip();
     ctx.fillStyle = '#EFE7D3'; ctx.fillRect(avCx - avR, avCy - avR, avR * 2, avR * 2);
     if (av) ctx.drawImage(av, avCx - avR, avCy - avR, avR * 2, avR * 2);
     ctx.restore();
     
-    // Cincin avatar elegan (multi-ring)
+    // Cincin
     ctx.strokeStyle = '#1E1E26'; ctx.lineWidth = 6;
     ctx.beginPath(); ctx.arc(avCx, avCy, avR + 3, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = ACCENT; ctx.lineWidth = 2;
+    ctx.strokeStyle = ACCENT; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(avCx, avCy, avR + 8, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(241,154,26,0.3)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(avCx, avCy, avR + 14, 0, Math.PI * 2); ctx.stroke();
 
-    const teksKiri = avCx + avR + 38;
-    const ruangNama = (W - 64) - teksKiri - (player.premium ? 100 : 20);
+    // Nama & ID
+    ctx.textAlign = 'center';
     ctx.fillStyle = '#FBF7EC';
-    ctx.font = '800 56px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(potongByLebar(ctx, player.username || '?', ruangNama), teksKiri, avCy - 12);
-    ctx.fillStyle = 'rgba(169,156,142,1)';
-    ctx.font = '600 24px "Plus Jakarta Sans", system-ui, sans-serif';
-    const idTxt = player.discordId ? `ID ${String(player.discordId).slice(-6)}` : 'PEMAIN NEXO';
-    ctx.fillText(potongByLebar(ctx, idTxt, ruangNama), teksKiri, avCy + 34);
-
-    if (player.premium) {
-      const bd = 76;
-      gambarBadgeNexoPass(ctx, W - 64 - 28 - bd / 2, avCy, bd, nexopassImg);
-    }
+    ctx.font = '800 42px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText(potongByLebar(ctx, player.username || '?', leftW - 80), avCx, avCy + avR + 60);
     
-    // ── TOTAL POIN ──
-    let y = pitaY + pitaH + 90;
-    ctx.fillStyle = '#A99C8E';
-    ctx.font = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('TOTAL POIN', 72, y);
+    ctx.fillStyle = 'rgba(169,156,142,1)';
+    ctx.font = '600 20px "Plus Jakarta Sans", system-ui, sans-serif';
+    const idTxt = player.discordId ? `ID ${String(player.discordId).slice(-6)}` : 'PEMAIN NEXO';
+    ctx.fillText(idTxt, avCx, avCy + avR + 94);
 
-    let ukFont = 114;
+    // Nexo Pass Badge
+    if (player.premium && nexopassImg) {
+      gambarBadgeNexoPass(ctx, avCx, avCy + avR + 164, 68, nexopassImg);
+    }
+
+    // ── Data di Panel Kanan (Terang) ──
+    const rightX = leftW + 60;
+    
+    // TOTAL POIN
+    let y = 110;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#A99C8E';
+    ctx.font = '700 22px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText('TOTAL POIN', rightX, y);
+
+    let ukFont = 100;
     ctx.fillStyle = '#2B2118';
-    const maksAngka = (W - 64) - 72;
+    const maksAngka = (W - rightX) - 80;
     ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
-    while (ctx.measureText(points).width > maksAngka && ukFont > 48) {
+    while (ctx.measureText(points).width > maksAngka && ukFont > 40) {
       ukFont -= 4;
       ctx.font = `800 ${ukFont}px "Plus Jakarta Sans", system-ui, sans-serif`;
     }
-    ctx.fillText(points, 72, y + ukFont);
+    ctx.fillText(points, rightX, y + ukFont);
     if (coinImg) {
       const wAngka = ctx.measureText(points).width;
-      const posX = Math.min(72 + wAngka + 24, W - 64 - 64);
-      ctx.drawImage(coinImg, posX, y + ukFont - 82, 76, 76);
+      const posX = Math.min(rightX + wAngka + 20, W - 80);
+      ctx.drawImage(coinImg, posX, y + ukFont - 74, 68, 68);
     }
-    y += ukFont + 110;
 
-    // ── Blok statistik: Satu Border Tipis dengan Pembatas Vertikal ──
+    // Blok Statistik
+    y += ukFont + 60;
     const stat = [
       { bintang: true, label: 'LEVEL', value: String(player.level || 1) },
       { icon: trophyImg, label: 'MENANG', value: fmtRingkas(player.totalWon || 0) },
       { icon: streakImg, label: 'STREAK', value: `${player.dailyStreak || 0}H` },
     ];
     
-    const boxW = W - 128;
-    const boxH = 160;
-    ctx.strokeStyle = 'rgba(169,156,142,0.4)'; // border coklat tipis tembus pandang
+    const boxW = W - rightX - 60;
+    const boxH = 130;
+    ctx.strokeStyle = 'rgba(169,156,142,0.4)';
     ctx.lineWidth = 2;
-    roundRect(ctx, 64, y, boxW, boxH, 20);
+    roundRect(ctx, rightX, y, boxW, boxH, 20);
     ctx.stroke();
 
-    // Gambar pembatas vertikal
     ctx.beginPath();
-    ctx.moveTo(64 + boxW / 3, y + 30);
-    ctx.lineTo(64 + boxW / 3, y + boxH - 30);
-    ctx.moveTo(64 + (boxW / 3) * 2, y + 30);
-    ctx.lineTo(64 + (boxW / 3) * 2, y + boxH - 30);
+    ctx.moveTo(rightX + boxW / 3, y + 24);
+    ctx.lineTo(rightX + boxW / 3, y + boxH - 24);
+    ctx.moveTo(rightX + (boxW / 3) * 2, y + 24);
+    ctx.lineTo(rightX + (boxW / 3) * 2, y + boxH - 24);
     ctx.stroke();
 
     ctx.textAlign = 'center';
     for (let i = 0; i < stat.length; i++) {
-      const cx = 64 + (boxW / 3) * i + (boxW / 6);
-      if (stat[i].icon) ctx.drawImage(stat[i].icon, cx - 20, y + 24, 40, 40);
-      else if (stat[i].bintang) gambarBintang(ctx, cx, y + 44, 19, ACCENT);
+      const cx = rightX + (boxW / 3) * i + (boxW / 6);
+      if (stat[i].icon) ctx.drawImage(stat[i].icon, cx - 18, y + 16, 36, 36);
+      else if (stat[i].bintang) gambarBintang(ctx, cx, y + 34, 17, ACCENT);
       
       ctx.fillStyle = '#2B2118';
-      ctx.font = '800 48px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText(stat[i].value, cx, y + 112);
+      ctx.font = '800 40px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText(stat[i].value, cx, y + 94);
       ctx.fillStyle = '#A99C8E';
-      ctx.font = '700 18px "Plus Jakarta Sans", system-ui, sans-serif';
-      ctx.fillText(stat[i].label, cx, y + 142);
+      ctx.font = '700 16px "Plus Jakarta Sans", system-ui, sans-serif';
+      ctx.fillText(stat[i].label, cx, y + 118);
     }
-    ctx.textAlign = 'left';
-    y += boxH + 110;
 
-    // ── Strip ajakan: Bikin lebih eksklusif ──
+    // ── Strip Ajakan ──
+    y += boxH + 46;
     ctx.fillStyle = '#1E1E26';
-    roundRect(ctx, 64, y, W - 128, 140, 24);
+    roundRect(ctx, rightX, y, boxW, 80, 16);
     ctx.fill();
-    ctx.fillStyle = INK;
-    ctx.textAlign = 'center';
-    ctx.font = '700 32px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillStyle = '#FBF7EC';
+    ctx.textAlign = 'left';
+    ctx.font = '700 20px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(
-      potongByLebar(ctx, player.premium ? 'Gabung juga di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?', W - 160),
-      W / 2, y + 66
+      player.premium ? 'Gabung juga di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?',
+      rightX + 24, y + 46
     );
-    const isDevP = typeof window !== 'undefined' && window.location.host.includes('localhost');
-    const domP = isDevP ? 'NEXO Games  ·  xurbaybase' : `NEXO Games  ·  ${String(SITE_URL).replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
+    const domP = typeof window !== 'undefined' && window.location.host.includes('localhost') 
+      ? 'xurbaybase' : String(SITE_URL).replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    ctx.textAlign = 'right';
     ctx.fillStyle = ACCENT;
-    ctx.font = '600 22px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(domP, W / 2, y + 108);
-
-    // ── Detail Barcode / Aesthetic Bawah ──
-    y += 140 + 90;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(169,156,142,0.8)';
-    ctx.font = '600 16px "Plus Jakarta Sans", system-ui, sans-serif';
-    
-    // Gambar garis-garis ala barcode tipis di ujung kiri & kanan
-    const bcy = y - 12;
-    ctx.fillStyle = 'rgba(169,156,142,0.3)';
-    for(let i = 0; i < 18; i++) {
-      ctx.fillRect(64 + i * 6, bcy, i % 3 === 0 ? 3 : 1, 14);
-    }
-    for(let i = 0; i < 18; i++) {
-      ctx.fillRect(W - 64 - 18 * 6 + i * 6, bcy, i % 4 === 0 ? 3 : 1, 14);
-    }
-    
-    ctx.fillStyle = 'rgba(169,156,142,0.8)';
-    ctx.fillText(`AUTH: ${player.discordId || '000000'}  •  NEXO GAMES STUDIO  •  VERIFIED`, W / 2, y);
+    ctx.font = '600 18px "Plus Jakarta Sans", system-ui, sans-serif';
+    ctx.fillText(domP, rightX + boxW - 24, y + 46);
 
     ctx.textAlign = 'left';
     return canvas;
