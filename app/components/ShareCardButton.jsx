@@ -354,10 +354,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.fillStyle = INK;
     }
     ctx.textAlign = 'center';
-    ctx.fillText(rankTxt, pxLb + pw / 2, 110);
+    // Kembalikan ke 98 karena Plus Jakarta Sans punya ascender unik
+    ctx.fillText(rankTxt, pxLb + pw / 2, 98);
     ctx.textAlign = 'left';
     if (adaBadgeLb) {
-      gambarBadgeNexoPass(ctx, pxLb + pw + jarakBadgeLb + ikonBadgeLb / 2, 96, ikonBadgeLb, nexopassImg);
+      gambarBadgeNexoPass(ctx, pxLb + pw + jarakBadgeLb + ikonBadgeLb / 2, (60 + 132) / 2, ikonBadgeLb, nexopassImg);
     }
   }
 
@@ -390,10 +391,9 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText(potongByLebar(ctx, `Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W - 128), W / 2, avCyLb + avRLb + 152);
 
-  const tileY = avCyLb + avRLb + 252;
-  // 4 TILE (2x2): mengisi ruang yang dulu kosong sehingga kartu tidak
-  // lagi "pincang", sekaligus memberi informasi lebih banyak ke yang melihat
-  // kartu hasil share. Level pakai BINTANG VEKTOR (emoji biasa).
+  // Perbaikan gap supaya pas untuk tinggi layar 1350
+  const tileY = avCyLb + avRLb + 205; // 645
+  
   const tileH = 212;
   const tiles = [
     { icon: coinImg, label: 'Poin', value: points },
@@ -440,11 +440,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.font = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(tiles[i].label.toUpperCase(), tcx, ty + 178);
   }
-  // Kartu leaderboard selalu 1 baris tile (2 kotak).
-  const tinggiTiles = tileH;
+  // Kartu leaderboard memiliki 2 baris tile. Total tinggi grid:
+  const tinggiTiles = (tileH * 2) + gap; // 212 * 2 + 24 = 448
 
   // ═══ Strip ajakan (dark, selaras header) ═══
-  const ctaY = tileY + tinggiTiles + 148;
+  const ctaY = tileY + tinggiTiles + 53; // 645 + 448 + 53 = 1146
   ctx.fillStyle = '#1E1E26';
   roundRect(ctx, 64, ctaY, W - 128, 150, 28);
   ctx.fill();
