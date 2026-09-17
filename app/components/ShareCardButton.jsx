@@ -28,22 +28,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-/** Bintang 5 sudut sebagai VEKTOR (bukan emoji/font) - tajam & selalu ada. */
-function gambarBintang(ctx, cx, cy, r, warna) {
-  ctx.save();
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const radius = i % 2 === 0 ? r : r * 0.44;
-    const sudut = (Math.PI / 5) * i - Math.PI / 2;
-    const x = cx + Math.cos(sudut) * radius;
-    const y = cy + Math.sin(sudut) * radius;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.closePath();
-  ctx.fillStyle = warna;
-  ctx.fill();
-  ctx.restore();
-}
+
 
 /**
  * Badge NEXO Pass: LINGKARAN dengan latar CREAM CERAH + logo di tengahnya.
@@ -248,9 +233,9 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
 
     // ── Blok statistik berlabel (kotak-kotak kecil rapi) ──
     const stat = [
-      { bintang: true, label: 'LEVEL', value: String(player.level || 1) },
+      { emoji: '⭐', label: 'LEVEL', value: String(player.level || 1) },
       { icon: trophyImg, label: 'MENANG', value: fmtRingkas(player.totalWon || 0) },
-      { icon: streakImg, label: 'STREAK', value: `${player.dailyStreak || 0}h` },
+      { icon: streakImg, label: 'STREAK', value: `${player.dailyStreak || 0} hari` },
     ];
     const gapS = 20;
     const lebarS = (W - 128 - gapS * 2) / 3;
@@ -266,7 +251,12 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.stroke();
       const cx = bx + lebarS / 2;
       if (stat[i].icon) ctx.drawImage(stat[i].icon, cx - 20, y + 24, 40, 40);
-      else if (stat[i].bintang) gambarBintang(ctx, cx, y + 44, 19, ACCENT);
+      else if (stat[i].emoji) {
+        ctx.fillStyle = '#2B2118';
+        ctx.font = '36px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(stat[i].emoji, cx, y + 54);
+      }
       ctx.textAlign = 'center';
       ctx.fillStyle = '#2B2118';
       ctx.font = '800 44px "Plus Jakarta Sans", system-ui, sans-serif';
@@ -385,11 +375,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   const tileY = avCyLb + avRLb + 208;
   // 4 TILE (2x2): mengisi ruang yang dulu kosong 224px sehingga kartu tidak
   // lagi "pincang", sekaligus memberi informasi lebih banyak ke yang melihat
-  // kartu hasil share. Level pakai BINTANG VEKTOR (emoji biasa).
+  // kartu hasil share. Level pakai emoji bintang.
   const tileH = 212;
   const tiles = [
     { icon: coinImg, label: 'Poin', value: points },
-    { bintang: true, label: 'Level', value: String(player.level || 1) },
+    { emoji: '⭐', label: 'Level', value: String(player.level || 1) },
     { icon: trophyImg, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
     { icon: streakImg, label: 'Streak', value: `${player.dailyStreak || 0} hari` },
   ];
@@ -417,8 +407,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       // Emoji custom sebagai GAMBAR (PNG statis dari registry) - tampilannya
       // sama dengan emoji yang dipakai bot di Discord.
       ctx.drawImage(tiles[i].icon, tcx - 24, ikonY - 24, 48, 48);
-    } else if (tiles[i].bintang) {
-      gambarBintang(ctx, tcx, ikonY, 23, ACCENT);
+    } else if (tiles[i].emoji) {
+      ctx.fillStyle = '#2B2118';
+      ctx.font = '40px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+      ctx.fillText(tiles[i].emoji, tcx, ikonY + 15);
     } else {
       // Cadangan kalau ikon gagal dimuat: penanda netral, bukan kotak kosong.
       ctx.fillStyle = ACCENT;
@@ -501,8 +493,7 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
         loadImg('/nexo-logo-256.png'),
         // download3 = merek NEXO Pass resmi (badge status di header)
         loadImg(emojiSrcStatis('download3', 128)),
-        // Level TIDAK memakai emoji custom - digambar sebagai BINTANG VEKTOR
-        // (lihat gambarBintang) supaya sederhana & tajam di semua ukuran.
+        // Level menggunakan emoji bintang bawaan ('⭐')
         // trophy = Menang, 267042fire = Streak harian.
         loadImg(emojiSrcStatis('trophy', 128)),
         loadImg(emojiSrcStatis('267042fire', 128)),

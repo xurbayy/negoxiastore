@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }) {
     <main className="relative flex min-h-screen flex-col items-center justify-center px-5">
       <div className="bg-grid absolute inset-0" aria-hidden="true" />
       <div className="relative w-full max-w-md">
-        <BackButton className="mb-4" />
+        <BackButton href="/" className="mb-4" />
         <div className="nx-card px-8 py-10 text-center">
           <div className="mx-auto w-fit">
             <NexoLogo size={52} />
