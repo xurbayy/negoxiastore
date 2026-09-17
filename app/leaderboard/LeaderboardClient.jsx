@@ -118,11 +118,7 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                       {fmtRingkas(p.points)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-ink-muted">
-                    <span className="inline-flex items-center gap-1.5">
-                      ⭐ {p.level}
-                    </span>
-                  </td>
+                  <td className="px-4 py-3 text-right text-ink-muted">{p.level}</td>
                 </tr>
               ))}
             </tbody>

@@ -250,7 +250,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     const stat = [
       { bintang: true, label: 'LEVEL', value: String(player.level || 1) },
       { icon: trophyImg, label: 'MENANG', value: fmtRingkas(player.totalWon || 0) },
-      { icon: streakImg, label: 'STREAK', value: `${player.dailyStreak || 0} hari` },
+      { icon: streakImg, label: 'STREAK', value: `${player.dailyStreak || 0}h` },
     ];
     const gapS = 20;
     const lebarS = (W - 128 - gapS * 2) / 3;
