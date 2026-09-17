@@ -40,7 +40,7 @@ export default function PlayerProfileCard({ player, onClose }) {
       full: fmtPenuh(player.points),
     },
   ];
-  if (player.level != null) stats.push({ key: 'level', icon: 'star', label: 'Level', value: String(player.level) });
+  if (player.level != null) stats.push({ key: 'level', emojiChar: '⭐', label: 'Level', value: String(player.level) });
   if (player.wins != null) stats.push({ key: 'wins', icon: 'trophy', label: 'Menang', value: String(player.wins) });
   if (player.level == null && player.wins == null) {
     stats.push({
@@ -103,7 +103,7 @@ export default function PlayerProfileCard({ player, onClose }) {
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
         >
           {cells.map((c) =>
-            c.pass ? <PassStat key={c.key} /> : <Stat key={c.key} icon={c.icon} label={c.label} value={c.value} full={c.full} />
+            c.pass ? <PassStat key={c.key} /> : <Stat key={c.key} icon={c.icon} emojiChar={c.emojiChar} label={c.label} value={c.value} full={c.full} />
           )}
         </div>
 
@@ -125,17 +125,19 @@ export default function PlayerProfileCard({ player, onClose }) {
 // terakhir (mis. nama pemain di sel status), tapi nilai penuh selalu bisa
 // dibaca lewat tooltip (`full`) - pemain yang mau angka persisnya tinggal hover.
 // `accent` = varian sel NEXO Pass (border & latar oranye tipis).
-function Stat({ icon, label, value, full, accent = false }) {
+function Stat({ icon, emojiChar, label, value, full, accent = false }) {
   return (
     <div
       className={`flex min-w-0 flex-col items-center justify-center rounded-xl border px-2 py-2.5 text-center ${
         accent ? 'border-accent/40 bg-accent/10' : 'border-border-soft bg-white/60'
       }`}
     >
-      {emojiSrc(icon) && (
+      {emojiSrc(icon) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={emojiSrc(icon)} alt="" width={16} height={16} className="mb-1 h-4 w-4 shrink-0" />
-      )}
+      ) : emojiChar ? (
+        <span className="mb-1 text-[16px] leading-none" aria-hidden="true">{emojiChar}</span>
+      ) : null}
       <p className="w-full truncate font-display text-sm leading-tight text-ink" title={full || String(value)}>{value}</p>
       <p className="mt-auto w-full truncate pt-0.5 text-[0.6rem] uppercase tracking-wider text-ink-muted">{label}</p>
     </div>
