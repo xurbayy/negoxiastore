@@ -353,8 +353,9 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.fillStyle = INK;
     }
     ctx.textAlign = 'center';
-    // Kembalikan ke 98 karena Plus Jakarta Sans punya ascender unik
-    ctx.fillText(rankTxt, pxLb + pw / 2, 98);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(rankTxt, pxLb + pw / 2, 60 + 72 / 2); // Center vertically in the 72px tall pill
+    ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
     if (adaBadgeLb) {
       gambarBadgeNexoPass(ctx, pxLb + pw + jarakBadgeLb + ikonBadgeLb / 2, (60 + 132) / 2, ikonBadgeLb, nexopassImg);
@@ -390,15 +391,13 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText(potongByLebar(ctx, `Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W - 128), W / 2, avCyLb + avRLb + 152);
 
-  // Perbaikan gap supaya pas untuk tinggi layar 1350
-  const tileY = avCyLb + avRLb + 205; // 645
+  // Perbaikan gap untuk 1 baris tile di layar tinggi 1350
+  const tileY = avCyLb + avRLb + 252; // 692
   
   const tileH = 212;
   const tiles = [
     { icon: coinImg, label: 'Poin', value: points },
     { bintang: true, label: 'Level', value: String(player.level || 1) },
-    { icon: trophyImg, label: 'Menang', value: fmtRingkas(player.totalWon || 0) },
-    { icon: streakImg, label: 'Streak', value: `${player.dailyStreak || 0} hari` },
   ];
 
   const kolom = 2;
@@ -439,11 +438,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.font = '700 24px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(tiles[i].label.toUpperCase(), tcx, ty + 178);
   }
-  // Kartu leaderboard memiliki 2 baris tile. Total tinggi grid:
-  const tinggiTiles = (tileH * 2) + gap; // 212 * 2 + 24 = 448
+  // Kartu leaderboard kembali ke 1 baris tile.
+  const tinggiTiles = tileH;
 
   // ═══ Strip ajakan (dark, selaras header) ═══
-  const ctaY = tileY + tinggiTiles + 53; // 645 + 448 + 53 = 1146
+  const ctaY = tileY + tinggiTiles + 148;
   ctx.fillStyle = '#1E1E26';
   roundRect(ctx, 64, ctaY, W - 128, 150, 28);
   ctx.fill();
