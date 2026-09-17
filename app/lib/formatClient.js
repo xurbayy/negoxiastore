@@ -40,10 +40,10 @@ export function fmtRingkas(n) {
   // pada satuan juta), NAIKKAN ke satuan berikutnya. Tanpa ini hasilnya
   // "1.000 jt" - titik ribuan itu terbaca seperti "seribu juta" dan menyesatkan.
   const satuans = [
-    { batas: 1e12, bagi: 1e12, label: ' t' },
-    { batas: 1e9, bagi: 1e9, label: ' m' },
-    { batas: 1e6, bagi: 1e6, label: ' jt' },
-    { batas: 1e4, bagi: 1e3, label: ' rb' },
+    { batas: 1e12, bagi: 1e12, label: '\u00A0t' },
+    { batas: 1e9, bagi: 1e9, label: '\u00A0m' },
+    { batas: 1e6, bagi: 1e6, label: '\u00A0jt' },
+    { batas: 1e4, bagi: 1e3, label: '\u00A0rb' },
   ];
   for (let i = 0; i < satuans.length; i++) {
     const s = satuans[i];
