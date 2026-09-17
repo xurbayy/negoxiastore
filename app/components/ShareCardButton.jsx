@@ -160,8 +160,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     // Latar cream penuh + garis aksen oranye di tepi atas (bukan header blok).
     ctx.fillStyle = '#FBF7EC';
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = ACCENT;
-    ctx.fillRect(0, 0, W, 14);
+    // Garis aksen oranye dihapus sesuai permintaan user
 
     // ── Kepala: logo kecil + wordmark, rata kiri (BUKAN header gelap) ──
     let hx = 64;
