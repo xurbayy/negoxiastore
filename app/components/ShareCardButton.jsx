@@ -165,18 +165,28 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.fillRect(0, 0, 10, H);
 
     // ── Header Panel Kiri ──
-    let hx = 48;
-    if (logoImg) {
-      ctx.drawImage(logoImg, 48, 48, 48, 48);
-      hx = 112;
+    let currentX = 48;
+
+    // 1. Nexo Pass Badge (Jika Premium) - di sebelah kiri logo
+    if (player.premium && nexopassImg) {
+      gambarBadgeNexoPass(ctx, currentX + 24, 48 + 24, 48, nexopassImg);
+      currentX += 48 + 16;
     }
+
+    // 2. Logo Nexo Games
+    if (logoImg) {
+      ctx.drawImage(logoImg, currentX, 48, 48, 48);
+      currentX += 48 + 16;
+    }
+
+    // 3. Teks Header
     ctx.textAlign = 'left';
     ctx.fillStyle = '#FBF7EC';
     ctx.font = '800 24px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('NEXO GAMES', hx, 64);
+    ctx.fillText('NEXO GAMES', currentX, 64);
     ctx.fillStyle = 'rgba(169,156,142,1)';
     ctx.font = '700 16px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('AKUN MEMBER', hx, 88);
+    ctx.fillText('AKUN MEMBER', currentX, 88);
 
     // ── Avatar (Tengah Panel Kiri) ──
     const avR = 80;
@@ -204,11 +214,6 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.font = '600 20px "Plus Jakarta Sans", system-ui, sans-serif';
     const idTxt = player.discordId ? `ID ${String(player.discordId).slice(-6)}` : 'PEMAIN NEXO';
     ctx.fillText(idTxt, avCx, avCy + avR + 94);
-
-    // Nexo Pass Badge
-    if (player.premium && nexopassImg) {
-      gambarBadgeNexoPass(ctx, avCx, avCy + avR + 164, 68, nexopassImg);
-    }
 
     // ── Data di Panel Kanan (Terang) ──
     const rightX = leftW + 60;
