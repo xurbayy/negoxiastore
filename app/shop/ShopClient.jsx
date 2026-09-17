@@ -99,9 +99,7 @@ export default function ShopClient({ items, cats, titles, discountMap }) {
   // Filter items
   const filteredItems = items.filter(it => 
     !q || 
-    it.name.toLowerCase().includes(q) || 
-    it.description?.toLowerCase().includes(q) || 
-    it.itemKey.toLowerCase().includes(q)
+    it.name.toLowerCase().includes(q)
   );
   
   // Filter titles
@@ -109,7 +107,7 @@ export default function ShopClient({ items, cats, titles, discountMap }) {
     if (!q) return true;
     const m = /^(<a?:[A-Za-z0-9_]+:\d+>)\s*(.*)$/.exec(String(t.emoji || t.label || ''));
     const label = (m ? m[2] : String(t.label || t.key)).toLowerCase();
-    return label.includes(q) || t.key.toLowerCase().includes(q);
+    return label.includes(q);
   });
 
   const byCat = {};
