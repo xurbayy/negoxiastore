@@ -285,19 +285,18 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.font = '700 34px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(
       potongByLebar(ctx, player.premium ? 'Gabung juga di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?', W - 160),
-      W / 2, y + 56
+      W / 2, y + 64
     );
     const isDevP = typeof window !== 'undefined' && window.location.host.includes('localhost');
     const domP = isDevP ? 'NEXO Games  ·  xurbaybase'
       : `NEXO Games  ·  ${String(SITE_URL).replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
     ctx.fillStyle = 'rgba(169,156,142,1)';
     ctx.font = '500 24px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(domP, W / 2, y + 100);
+    ctx.fillText(domP, W / 2, y + 108);
     ctx.textAlign = 'left';
     return canvas;
   }
 
-  // ═══════════════════════════════════════════════════════════════════
   // ═══════════════════════════════════════════════════════════════════
   // KARTU LEADERBOARD - tetap grid kotak (ciri khas kartu peringkat).
   // Member NEXO Pass dapat emoji di sebelah pill peringkat (lihat header).
@@ -305,7 +304,16 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   // (Blok ini sempat ikut terhapus saat kartu profil dirombak - sekarang
   //  dipulihkan: header gelap + wordmark + pill peringkat + badge + avatar
   //  menumpuk + ornamen mahkota/medali untuk podium.)
+  
+  // Isi background seluruh canvas dengan cream
+  ctx.fillStyle = '#FBF7EC';
+  ctx.fillRect(0, 0, W, H);
+
   const HDR_LB = 320;
+  // Header gelap
+  ctx.fillStyle = '#1E1E26';
+  ctx.fillRect(0, 0, W, HDR_LB);
+
   const avRLb = 120;
   const avCxLb = W / 2;
   const avCyLb = HDR_LB;
@@ -318,10 +326,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.textAlign = 'left';
   ctx.fillStyle = INK;
   ctx.font = '800 44px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText('NEXO GAMES', hxLb, 82);
+  ctx.fillText('NEXO GAMES', hxLb, 94);
   ctx.fillStyle = 'rgba(169,156,142,1)';
   ctx.font = '600 24px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText('LEADERBOARD  ·  TOP PLAYERS', hxLb, 126);
+  ctx.fillText('LEADERBOARD  ·  TOP PLAYERS', hxLb, 134);
 
   // pill peringkat + badge NEXO Pass di kanan header
   if (rank > 0) {
@@ -346,10 +354,10 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
       ctx.fillStyle = INK;
     }
     ctx.textAlign = 'center';
-    ctx.fillText(rankTxt, pxLb + pw / 2, 98);
+    ctx.fillText(rankTxt, pxLb + pw / 2, 110);
     ctx.textAlign = 'left';
     if (adaBadgeLb) {
-      gambarBadgeNexoPass(ctx, pxLb + pw + jarakBadgeLb + ikonBadgeLb / 2, (60 + 132) / 2, ikonBadgeLb, nexopassImg);
+      gambarBadgeNexoPass(ctx, pxLb + pw + jarakBadgeLb + ikonBadgeLb / 2, 96, ikonBadgeLb, nexopassImg);
     }
   }
 
@@ -382,8 +390,8 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText(potongByLebar(ctx, `Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W - 128), W / 2, avCyLb + avRLb + 152);
 
-  const tileY = avCyLb + avRLb + 208;
-  // 4 TILE (2x2): mengisi ruang yang dulu kosong 224px sehingga kartu tidak
+  const tileY = avCyLb + avRLb + 252;
+  // 4 TILE (2x2): mengisi ruang yang dulu kosong sehingga kartu tidak
   // lagi "pincang", sekaligus memberi informasi lebih banyak ke yang melihat
   // kartu hasil share. Level pakai BINTANG VEKTOR (emoji biasa).
   const tileH = 212;
@@ -436,7 +444,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   const tinggiTiles = tileH;
 
   // ═══ Strip ajakan (dark, selaras header) ═══
-  const ctaY = tileY + tinggiTiles + 48;
+  const ctaY = tileY + tinggiTiles + 148;
   ctx.fillStyle = '#1E1E26';
   roundRect(ctx, 64, ctaY, W - 128, 150, 28);
   ctx.fill();
@@ -446,7 +454,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   // ditawari ikut (biar kartu yang dibagikan juga jadi promosi halus).
   ctx.fillText(
     player.premium ? 'Main bareng di NEXO Games, gratis!' : 'Main gratis di Discord, kamu mau nyusul?',
-    W / 2, ctaY + 56
+    W / 2, ctaY + 66
   );
   // Domain di kartu SELALU domain resmi (SITE_URL dari env NEXT_PUBLIC_SITE_URL),
   // BUKAN location.host - dulu kartu ikut menampilkan domain tempat pemain
@@ -458,7 +466,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     : `NEXO Games  ·  ${String(SITE_URL).replace(/^https?:\/\//, '').replace(/\/+$/, '')}`;
   ctx.fillStyle = 'rgba(169,156,142,1)';
   ctx.font = '500 26px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText(domainTxt, W / 2, ctaY + 106);
+  ctx.fillText(domainTxt, W / 2, ctaY + 116);
   ctx.textAlign = 'left';
 
   return canvas;
