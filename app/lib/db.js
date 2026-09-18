@@ -60,7 +60,8 @@ export async function ensureSchema() {
         status TEXT DEFAULT 'pending',
         result TEXT,
         created_at INTEGER NOT NULL,
-        executed_at INTEGER
+        executed_at INTEGER,
+        claimed_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_bc_status ON bot_commands(status, created_at);
     CREATE TABLE IF NOT EXISTS data_requests (
@@ -69,7 +70,8 @@ export async function ensureSchema() {
         status TEXT DEFAULT 'pending',
         data TEXT,
         created_at INTEGER NOT NULL,
-        filled_at INTEGER
+        filled_at INTEGER,
+        claimed_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_dr_status ON data_requests(status, created_at);
     CREATE TABLE IF NOT EXISTS monitor_snapshots (
@@ -175,6 +177,15 @@ export async function ensureSchema() {
   } catch {}
   try {
     await db.execute('ALTER TABLE web_redeem_claims ADD COLUMN fail_reason TEXT');
+  } catch {}
+
+  // claimed_at: dipakai claim atomik antrean (cegah perintah dieksekusi 2x
+  // saat bot restart / ada 2 bot). Lihat app/api/bot/queue/route.js.
+  try {
+    await db.execute('ALTER TABLE bot_commands ADD COLUMN claimed_at INTEGER');
+  } catch {}
+  try {
+    await db.execute('ALTER TABLE data_requests ADD COLUMN claimed_at INTEGER');
   } catch {}
 }
 
