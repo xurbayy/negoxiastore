@@ -21,15 +21,20 @@ export async function GET(request, { params }) {
   const id = Number(resolvedParams.id);
   if (!id || isNaN(id)) return json({ ok: false, error: 'invalid id' }, 400);
 
-  await ready();
-  const db = getDb();
-  const res = await db.execute({
-    sql: 'SELECT status, result FROM bot_commands WHERE id = ? LIMIT 1',
-    args: [id],
-  });
+  try {
+    await ready();
+    const db = getDb();
+    const res = await db.execute({
+      sql: 'SELECT status, result FROM bot_commands WHERE id = ? LIMIT 1',
+      args: [id],
+    });
 
-  if (!res.rows.length) return json({ ok: false, error: 'not found' }, 404);
-  const row = res.rows[0];
-  
-  return json({ ok: true, status: row.status, result: row.result });
+    if (!res.rows.length) return json({ ok: false, error: 'not found' }, 404);
+    const row = res.rows[0];
+
+    return json({ ok: true, status: row.status, result: row.result });
+  } catch (e) {
+    console.error('[admin/command:id] gagal:', (e && e.message) || e);
+    return json({ ok: false, error: 'Gagal membaca status perintah.' }, 503);
+  }
 }

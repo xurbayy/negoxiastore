@@ -26,36 +26,43 @@ export async function POST() {
     return json({ ok: false, error: 'Terlalu sering refresh. Tunggu beberapa menit ya.', retryAfterMs: 60_000 }, 429);
   }
 
-  await ready();
-  const db = getDb();
-  const now = Date.now();
+  // DB bisa gagal sesaat (blip Turso). Balas error yang rapi + pesan ramah,
+  // bukan 500 mentah yang bikin UI menampilkan "Something went wrong".
+  try {
+    await ready();
+    const db = getDb();
+    const now = Date.now();
 
-  // Lapis 2: dedup DB. Cek permintaan pending terbaru + yang baru selesai.
-  const recent = await db.execute({
-    sql: `SELECT id, status, created_at, filled_at FROM data_requests
-          WHERE discord_id = ? AND (status = 'pending' OR filled_at > ?)
-          ORDER BY id DESC LIMIT 1`,
-    args: [session.discordId, now - COOLDOWN_MS],
-  });
+    // Lapis 2: dedup DB. Cek permintaan pending terbaru + yang baru selesai.
+    const recent = await db.execute({
+      sql: `SELECT id, status, created_at, filled_at FROM data_requests
+            WHERE discord_id = ? AND (status = 'pending' OR filled_at > ?)
+            ORDER BY id DESC LIMIT 1`,
+      args: [session.discordId, now - COOLDOWN_MS],
+    });
 
-  if (recent.rows.length) {
-    const r = recent.rows[0];
-    const base = r.status === 'pending' ? Number(r.created_at) : Number(r.filled_at);
-    const age = now - base;
-    if (age < COOLDOWN_MS) {
-      return json({
-        ok: true,
-        reused: true,
-        retryAfterMs: Math.max(0, COOLDOWN_MS - age),
-        message: 'Data baru saja disegarkan. Tunggu sebentar sebelum refresh lagi.',
-      });
+    if (recent.rows.length) {
+      const r = recent.rows[0];
+      const base = r.status === 'pending' ? Number(r.created_at) : Number(r.filled_at);
+      const age = now - base;
+      if (age < COOLDOWN_MS) {
+        return json({
+          ok: true,
+          reused: true,
+          retryAfterMs: Math.max(0, COOLDOWN_MS - age),
+          message: 'Data baru saja disegarkan. Tunggu sebentar sebelum refresh lagi.',
+        });
+      }
     }
+
+    await db.execute({
+      sql: 'INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, ?, ?)',
+      args: [session.discordId, 'pending', now],
+    });
+
+    return json({ ok: true });
+  } catch (e) {
+    console.error('[me/refresh] gagal:', (e && e.message) || e);
+    return json({ ok: false, error: 'Gagal meminta refresh. Coba lagi sebentar lagi.' }, 503);
   }
-
-  await db.execute({
-    sql: 'INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, ?, ?)',
-    args: [session.discordId, 'pending', now],
-  });
-
-  return json({ ok: true });
 }
