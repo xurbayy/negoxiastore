@@ -50,7 +50,11 @@ export const metadata = {
         url: absoluteUrl('/nexo-og.png'),
         width: 1200,
         height: 630,
-        alt: 'NEXO Games | Bot Discord Game',
+        // `type` + `secureUrl` membantu crawler (Google/Discord/WhatsApp)
+        // memvalidasi gambar tanpa perlu fetch dulu -> lebih cepat tampil.
+        type: 'image/png',
+        secureUrl: absoluteUrl('/nexo-og.png'),
+        alt: 'NEXO Games | Bot Discord Game, Ekonomi & Guild Indonesia',
       },
     ],
   },
@@ -58,7 +62,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'NEXO Games | 25+ Game Seru Langsung di Discord',
     description: SITE_DESCRIPTION,
-    images: [absoluteUrl('/nexo-og.png')],
+    images: [{ url: absoluteUrl('/nexo-og.png'), alt: 'NEXO Games | Bot Discord Game' }],
   },
   robots: {
     index: true,
@@ -68,12 +72,21 @@ export const metadata = {
       follow: true,
       'max-image-preview': 'large',
       'max-snippet': -1,
+      'max-video-preview': -1,
     },
   },
   icons: {
-    icon: '/nexo-logo-256.png',
-    shortcut: '/nexo-logo-256.png',
-    apple: '/nexo-logo-256.png',
+    // favicon.ico WAJIB ada dan didaftarkan paling depan: ini yang dipakai
+    // Google Search, tab browser, dan preview link (Discord/WhatsApp/Telegram).
+    // Sebelumnya file ini tidak ada (404) sehingga ikon situs jatuh ke globe
+    // default. PNG tetap disertakan sebagai fallback kualitas tinggi.
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/nexo-logo-256.png', type: 'image/png', sizes: '256x256' },
+      { url: '/nexo-logo-256.png', type: 'image/png', sizes: '192x192' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [{ url: '/nexo-logo-256.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -91,7 +104,23 @@ const jsonLd = {
       operatingSystem: 'Discord',
       description: SITE_DESCRIPTION,
       url: SITE_URL,
-      image: absoluteUrl('/nexo-og.png'),
+      // ImageObject (bukan string biasa): memberi Google informasi TAMBAHAN
+      // (ukuran + tipe) sehingga gambar situs lebih mungkin ditampilkan di
+      // hasil pencarian & knowledge panel. Ini sinyal yang sering terlewat
+      // sampai Google jatuh ke globe default.
+      image: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/nexo-og.png'),
+        width: 1200,
+        height: 630,
+        caption: 'NEXO Games',
+      },
+      logo: {
+        '@type': 'ImageObject',
+        url: absoluteUrl('/nexo-logo-256.png'),
+        width: 256,
+        height: 256,
+      },
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'IDR' },
       author: { '@type': 'Organization', name: 'xurbaybase' },
     },
@@ -100,7 +129,12 @@ const jsonLd = {
       name: SITE_NAME,
       url: SITE_URL,
       inLanguage: 'id-ID',
-      publisher: { '@type': 'Organization', name: 'xurbaybase', url: SITE_URL },
+      publisher: {
+        '@type': 'Organization',
+        name: 'xurbaybase',
+        url: SITE_URL,
+        logo: { '@type': 'ImageObject', url: absoluteUrl('/nexo-logo-256.png'), width: 256, height: 256 },
+      },
     },
     {
       '@type': 'FAQPage',
