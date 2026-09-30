@@ -28,6 +28,42 @@ const NAV_LEGAL = [
   { href: SUPPORT_INVITE, label: 'Server Discord', external: true },
 ];
 
+// Ukuran + gaya hover SATU tempat supaya link internal dan tautan luar
+// tidak pernah berbeda perilaku (dulu keduanya menulis class sendiri-sendiri).
+//
+// KENAPA HOVER-NYA DULU TERASA TIDAK JALAN (laporan pemilik 2026-09-30):
+//   Garis bawah ditaruh di <li> sehingga area hover-nya SELUAR BARIS, bukan
+//   selebar tulisannya - dan gerakan 1px pada <li> membawa seluruh kalimat
+//   maju-mundur. Sekarang animasinya dipasang di LINK-nya sendiri:
+//   warna berubah + garis bawah tumbuh dari kiri, tanpa menggeser tata letak.
+const GAYA_LINK =
+  'group relative inline-flex w-fit items-center gap-1.5 text-sm text-ink-muted ' +
+  'transition-colors duration-200 hover:text-ink ' +
+  'after:absolute after:-bottom-0.5 after:left-0 after:h-px after:w-full ' +
+  'after:origin-left after:scale-x-0 after:bg-accent after:transition-transform ' +
+  'after:duration-200 hover:after:scale-x-100 cursor-pointer';
+
+// Penanda kecil untuk tautan yang membuka tab baru.
+function PanahKeluar() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="shrink-0 opacity-60 transition-opacity duration-200 group-hover:opacity-100"
+    >
+      <path d="M7 17 17 7" />
+      <path d="M8 7h9v9" />
+    </svg>
+  );
+}
+
 export default async function Footer() {
   const session = await getSession();
   const NAV = [
@@ -51,25 +87,32 @@ export default async function Footer() {
             </p>
           </div>
 
-          <nav aria-label="Navigasi footer">
+          <nav aria-label="Navigasi footer" className="w-full md:w-auto">
             <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">{session ? 'Akun' : 'Jelajahi'}</h3>
-            <ul className="mt-4 space-y-2.5">
+            {/* w-fit: daftar link hanya selebar LINK-nya, bukan selebar kolom.
+                Sebelumnya <ul> melebar penuh di layar sempit sehingga area
+                hover terasa "melenceng" dari tulisannya. */}
+            <ul className="mt-4 w-fit space-y-2.5">
               {NAV.map((l) => (
-                <li key={l.href}>
+                // w-fit di <li>: elemen list-item secara default melebar
+                // sepanjang barisnya (126px), padahal tulisannya cuma 70px.
+                // Akibatnya area yang "terasa" bisa di-hover melenceng jauh dari
+                // teksnya. w-fit menyusutkan <li> tepat selebar isinya.
+                <li key={l.href} className="w-fit">
                   {l.external ? (
                     <a
                       href={l.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-ink-muted transition-colors hover:text-ink cursor-pointer"
+                      /* Tautan luar (Server Discord) sengaja TIDAK same-origin,
+                         jadi tidak bisa dicek oleh pengawas tautan internal. */
+                      className={GAYA_LINK}
                     >
                       {l.label}
+                      <PanahKeluar />
                     </a>
                   ) : (
-                    <Link
-                      href={l.href}
-                      className="text-sm text-ink-muted transition-colors hover:text-ink cursor-pointer"
-                    >
+                    <Link href={l.href} className={GAYA_LINK}>
                       {l.label}
                     </Link>
                   )}
