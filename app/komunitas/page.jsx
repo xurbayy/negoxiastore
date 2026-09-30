@@ -23,12 +23,20 @@ export const dynamic = 'force-dynamic';
  * permanen TIDAK ditampilkan. Jadi daftar ini sudah tersaring - setiap
  * server di sini pasti bisa di-join.
  *
+ * LOKASI DATA (penting - jangan diubah sembarangan):
+ *   Bot menaruh `servers` dan `invites` di DALAM `monitor` (hasil
+ *   collectMonitorStats di utils/webBridge.js), BUKAN di level atas snapshot.
+ *   Membaca `snap.servers` akan selalu undefined -> halaman kosong selamanya.
+ *   Fallback ke level atas dipertahankan untuk snapshot lama/eksperimen.
+ *
  * Bot sudah mengurutkan berdasarkan: pemain -> game -> poin. Web tidak
  * mengurutkan ulang supaya peringkat konsisten dengan yang bot hitung.
  */
 function siapkanServer(snap) {
-  const daftar = Array.isArray(snap?.servers) ? snap.servers : [];
-  const invites = snap?.invites && typeof snap.invites === 'object' ? snap.invites : {};
+  const mon = snap?.monitor || {};
+  const daftar = Array.isArray(mon.servers) ? mon.servers : (Array.isArray(snap?.servers) ? snap.servers : []);
+  const mentah = mon.invites || snap?.invites;
+  const invites = mentah && typeof mentah === 'object' ? mentah : {};
 
   return daftar
     .map((s) => {
