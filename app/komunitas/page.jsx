@@ -19,9 +19,14 @@ export const dynamic = 'force-dynamic';
 /**
  * Gabungkan data server dari snapshot bot dengan invite permanennya.
  *
- * ATURAN PENTING (kebijakan pemilik): server yang TIDAK punya invite
- * permanen TIDAK ditampilkan. Jadi daftar ini sudah tersaring - setiap
- * server di sini pasti bisa di-join.
+ * PERUBAHAN KEBIJAKAN (permintaan pemilik 2026-09-30):
+ *   Sebelumnya server TANPA invite disembunyikan sepenuhnya. Pemilik memutuskan
+ *   server tetap DITAMPILKAN walau invite-nya belum siap - yang hilang cuma
+ *   tombol "Gabung"-nya. Daftar server tetap berguna sebagai papan peringkat,
+ *   dan lebih baik daripada halaman kosong tanpa penjelasan.
+ *
+ *   Tombol Gabung tetap hanya muncul kalau invite benar-benar ada, jadi tidak
+ *   ada tautan mati.
  *
  * LOKASI DATA (penting - jangan diubah sembarangan):
  *   Bot menaruh `servers` dan `invites` di DALAM `monitor` (hasil
@@ -32,12 +37,8 @@ export const dynamic = 'force-dynamic';
  * Bot sudah mengurutkan berdasarkan: pemain -> game -> poin. Web tidak
  * mengurutkan ulang supaya peringkat konsisten dengan yang bot hitung.
  *
- * Mengembalikan juga `total` dan `tanpaInvite` sebagai DIAGNOSA: kalau bot
- * sudah mengirim server tapi nol yang punya invite, halaman menampilkan
- * penyebabnya (izin Create Instant Invite / modul invite belum ter-deploy)
- * alih-alih cuma bilang "Belum ada server" - pertanyaan pertama pemilik
- * selalu "kenapa servernya tidak keluar", dan tanpa angka ini mustahil
- * dibedakan dari "bot belum push apa-apa".
+ * Mengembalikan `tanpaInvite` sebagai diagNosa: berapa server yang belum
+ * punya link invite (tombolnya kosong), supaya bisa ditampilkan apa adanya.
  */
 function siapkanServer(snap) {
   const mon = snap?.monitor || {};
@@ -45,27 +46,22 @@ function siapkanServer(snap) {
   const mentah = mon.invites || snap?.invites;
   const invites = mentah && typeof mentah === 'object' ? mentah : {};
 
-  const denganInvite = daftar
-    .map((s) => {
-      const inv = invites[s.guildId];
-      if (!inv || !inv.url) return null; // tanpa invite -> tidak ditampilkan
-      return {
-        guildId: s.guildId,
-        name: s.name,
-        iconUrl: s.iconUrl || null,
-        players: Number(s.players) || 0,
-        games: Number(s.games) || 0,
-        points: Number(s.points) || 0,
-        members: Number(s.members) || 0,
-        invite: inv.url,
-      };
-    })
-    .filter(Boolean);
+  // Semua server tetap masuk daftar; invite hanya pelengkap.
+  const semua = daftar.map((s) => ({
+    guildId: s.guildId,
+    name: s.name,
+    iconUrl: s.iconUrl || null,
+    players: Number(s.players) || 0,
+    games: Number(s.games) || 0,
+    points: Number(s.points) || 0,
+    members: Number(s.members) || 0,
+    invite: invites[s.guildId]?.url || null, // null = tombol Gabung tidak tampil
+  }));
 
   return {
-    daftar: denganInvite.slice(0, 100), // maksimal 100 server
+    daftar: semua.slice(0, 100), // maksimal 100 server
     total: daftar.length,
-    tanpaInvite: daftar.length - denganInvite.length,
+    tanpaInvite: semua.filter((s) => !s.invite).length,
   };
 }
 
@@ -74,11 +70,10 @@ export default async function KomunitasPage() {
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
   const snap = await getLatestSnapshot();
   const { daftar, total, tanpaInvite } = siapkanServer(snap);
-  // Server sudah masuk tapi nol yang punya invite = masalah di sisi bot
-  // (izin Create Instant Invite / modul invite belum ter-deploy), bukan
-  // "bot belum push". Tanpa pesan ini pemilik hanya melihat "Belum ada
-  // server" dan menyimpulkan servernya tidak kebaca.
-  const semuaTanpaInvite = snap && total > 0 && tanpaInvite === total;
+  // Sebagian/total server belum punya link invite. Server TETAP ditampilkan
+  // (permintaan pemilik 2026-09-30) - yang hilang hanya tombol Gabung-nya.
+  // Keterangan ini murni penjelasan, bukan alasan menyembunyikan daftar.
+  const adaTanpaInvite = snap && total > 0 && tanpaInvite > 0;
 
   // Diagnosa dari bot (monitor.inviteDiag) - dirakit di utils/webBridge.js
   // sehingga tetap terkirim walau utils/guildInvite.js sendiri gagal dimuat.
@@ -109,14 +104,13 @@ export default async function KomunitasPage() {
             </p>
           )}
 
-          {semuaTanpaInvite && (
-            <div className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs leading-relaxed text-ink">
-              {diag ? (
+          {adaTanpaInvite && (
+            <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-ink">
+              {diag && diag.gagal > 0 ? (
                 <>
                   <p>
-                    ⚠ Bot sudah mengirim <strong>{total} server</strong>, tetapi{' '}
-                    <strong>{diag.gagal}</strong> gagal dibuatkan link invite
-                    {diag.ok ? ` (${diag.ok} berhasil)` : ''}.
+                    <strong>{tanpaInvite} dari {total} server</strong> belum punya link invite,
+                    jadi tombol Gabung-nya belum muncul. Servernya tetap ditampilkan di daftar.
                   </p>
                   {alasannya.length > 0 && (
                     <ul className="mt-1.5 list-disc space-y-1 pl-4">
@@ -141,12 +135,10 @@ export default async function KomunitasPage() {
                 </>
               ) : (
                 <p>
-                  ⚠ Bot sudah mengirim <strong>{total} server</strong>, tetapi belum ada satu pun
-                  link invite. Bot kamu belum mengirim keterangan penyebabnya (kode lama). Setelah
-                  bot di-restart dengan versi terbaru, bagian ini akan menyebut sebabnya dan
-                  server mana saja yang belum memberi izin. Sementara itu: pastikan bot diberi izin{' '}
-                  <strong>Create Instant Invite</strong> dan file{' '}
-                  <strong>utils/guildInvite.js</strong> ada di hosting.
+                  <strong>{tanpaInvite} dari {total} server</strong> belum punya link invite.
+                  Penyebab tersering: bot belum diberi izin{' '}
+                  <strong>Create Instant Invite</strong> di server itu. Servernya tetap
+                  ditampilkan di daftar, hanya tombol Gabung-nya yang belum muncul.
                 </p>
               )}
             </div>
