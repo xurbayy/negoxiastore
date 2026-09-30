@@ -158,7 +158,9 @@ function KartuServer({ server, rank }) {
           </a>
         ) : (
           <span
-            className="inline-flex w-full items-center justify-center rounded-full border border-border-soft bg-bg-soft px-5 py-2.5 text-xs text-ink-faint sm:w-auto"
+            /* whitespace-nowrap: teks dua kata ini jangan terlipat di layar
+               sempit - tinggi kartu jadi tidak rata dengan baris lain. */
+            className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full border border-border-soft bg-bg-soft px-5 py-2.5 text-xs text-ink-faint sm:w-auto"
             title="Server ini belum bisa dibuatkan link invite oleh bot."
           >
             Link belum tersedia
