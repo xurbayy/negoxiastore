@@ -10,11 +10,13 @@ import { emojiSrc } from '../lib/emojisClient';
 const LINKS_GUEST = [
   { href: '/#games', label: 'Game' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/komunitas', label: 'Komunitas' },
   { href: '/#cara-main', label: 'Cara Main' },
 ];
 const LINKS_MEMBER = [
   { href: '/#games', label: 'Game' },
   { href: '/leaderboard', label: 'Leaderboard' },
+  { href: '/komunitas', label: 'Komunitas' },
   { href: '/shop', label: 'Shop' },
   { href: '/redeem', label: 'Redeem' },
 ];

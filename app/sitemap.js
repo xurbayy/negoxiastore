@@ -39,6 +39,14 @@ export default function sitemap() {
       changeFrequency: 'daily',
       priority: 0.7,
     },
+    // Halaman Komunitas: daftar 100 server NEXO teratas + link invite.
+    // Isinya berubah terus (peringkat server), jadi changeFrequency daily.
+    {
+      url: absoluteUrl('/komunitas'),
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    },
     // Halaman informasi produk - membantu orang menemukan NEXO lewat
     // pencarian seperti "bot discord premium" / "cara main bot discord game".
     {
