@@ -75,7 +75,10 @@ export default function HowToPlay() {
                   ['np', 'Main game solo', 'np slot · np riddle'],
                   ['nb', 'Main game multiplayer / betting', 'nb autochess · nb rps'],
                   ['nc', 'Main game co-op bareng tim', 'nc bossraid · nc heist'],
-                  ['nxadmin', 'Panel admin server (khusus admin)', 'nxadmin add'],
+                  // CATATAN: prefix `nxadmin` SENGAJA TIDAK didaftarkan di sini.
+                  // Itu perintah admin - aturan project: perintah admin tidak
+                  // dipublikasikan ke user (nxhelp di bot juga menyembunyikannya).
+                  // Halaman ini publik, jadi JANGAN menambah baris admin ke tabel.
                 ].map(([p, f, e]) => (
                   <tr key={p} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
                     <td className="px-5 py-3.5">

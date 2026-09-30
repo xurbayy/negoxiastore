@@ -33,7 +33,7 @@ const SECTIONS = [
   {
     title: 'Apakah bot membaca chat kami?',
     body: [
-      'Tidak membaca obrolan biasa. Bot hanya bereaksi pada pesan yang diawali perintahnya, seperti nx, np, nb, nc, atau nxadmin.',
+      'Tidak membaca obrolan biasa. Bot hanya bereaksi pada pesan yang diawali perintahnya, seperti nx, np, nb, atau nc.',
       'Contohnya saat kamu mengetik "np slot", bot membaca dua kata itu untuk menjalankan game slot. Pesannya diproses sesaat di memori lalu dibuang. Kalau kamu mengetik "makan siang yuk", bot sama sekali tidak memprosesnya.',
     ],
   },
