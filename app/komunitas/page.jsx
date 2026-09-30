@@ -122,7 +122,7 @@ export default async function KomunitasPage() {
                     <ul className="mt-1.5 list-disc space-y-1 pl-4">
                       {alasannya.map((a, i) => (
                         <li key={i}>
-                          <strong>{a.teks}</strong> — {a.jumlah} server
+                          <strong>{a.teks}</strong> - {a.jumlah} server
                           {a.server?.length > 0 && (
                             <span className="text-ink-muted">
                               {' '}({a.server.join(', ')}{a.sisa ? `, +${a.sisa} lagi` : ''})

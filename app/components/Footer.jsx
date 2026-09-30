@@ -4,8 +4,12 @@ import { NexoLogo } from './ui';
 import { SUPPORT_INVITE } from '../lib/site';
 
 // Jelajahi (belum login) vs Akun (sudah login) - footer menyesuaikan status.
+// Komunitas ada di KEDUA daftar: halaman itu berguna untuk tamu maupun member,
+// jadi jangan sampai hilang begitu orang login. Ditaruh tepat setelah Game
+// supaya tetap konsisten dengan urutan di navbar.
 const NAV_GUEST = [
   { href: '/#games', label: 'Game' },
+  { href: '/komunitas', label: 'Komunitas' },
   { href: '/#fitur', label: 'Fitur' },
   { href: '/#cara-main', label: 'Cara Main' },
   { href: '/#premium', label: 'Premium' },
@@ -13,6 +17,7 @@ const NAV_GUEST = [
 ];
 const NAV_MEMBER = [
   { href: '/me', label: 'Profil Saya' },
+  { href: '/komunitas', label: 'Komunitas' },
   { href: '/shop', label: 'Shop' },
   { href: '/redeem', label: 'Redeem' },
   { href: '/premium', label: 'NEXO Pass' },
