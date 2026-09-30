@@ -67,21 +67,12 @@ export default async function KomunitasPage() {
             Komunitas <span className="font-display text-ink">NEXO</span>
           </h1>
 
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-muted">
-            Cari server Discord yang paling ramai main NEXO? Di sini daftar{' '}
-            <strong className="text-ink">100 server teratas</strong>, diurutkan dari{' '}
-            <strong className="text-ink">pemain terbanyak</strong>, lalu{' '}
-            <strong className="text-ink">game paling sering dimainkan</strong>, dan{' '}
-            <strong className="text-ink">total poin tertinggi</strong>. Klik{' '}
-            <strong className="text-ink">Gabung</strong> untuk langsung masuk.
-          </p>
-
           {snap ? (
-            <p className="mt-2 text-xs text-ink-muted">
+            <p className="mt-3 text-xs text-ink-muted">
               Diperbarui {timeAgo(snap.ts)} · data live dari bot
             </p>
           ) : (
-            <p className="mt-2 text-xs text-danger">
+            <p className="mt-3 text-xs text-danger">
               ⚠ Bot belum mengirim data. Daftar akan muncul setelah bot online.
             </p>
           )}
