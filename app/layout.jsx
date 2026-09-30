@@ -76,17 +76,30 @@ export const metadata = {
     },
   },
   icons: {
-    // favicon.ico WAJIB ada dan didaftarkan paling depan: ini yang dipakai
-    // Google Search, tab browser, dan preview link (Discord/WhatsApp/Telegram).
-    // Sebelumnya file ini tidak ada (404) sehingga ikon situs jatuh ke globe
-    // default. PNG tetap disertakan sebagai fallback kualitas tinggi.
+    // favicon.ico didaftarkan PALING DEPAN: ini yang dipakai Google Search,
+    // tab browser, dan preview link (Discord/WhatsApp/Telegram). Sebelumnya
+    // file ini tidak ada (404) sehingga ikon situs jatuh ke globe default.
+    //
+    // UKURAN PNG TERPISAH (16/32/48/96) mengikuti rekomendasi resmi Google:
+    // Google lebih suka favicon persegi kelipatan 48px. Menyediakan beberapa
+    // ukuran membuat ikon tetap tajam di semua perangkat dan mempercepat
+    // proses validasi saat crawl - tidak perlu mengecilkan dari 256px.
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/favicon-48x48.png', type: 'image/png', sizes: '48x48' },
+      { url: '/favicon-96x96.png', type: 'image/png', sizes: '96x96' },
+      { url: '/android-chrome-192x192.png', type: 'image/png', sizes: '192x192' },
       { url: '/nexo-logo-256.png', type: 'image/png', sizes: '256x256' },
-      { url: '/nexo-logo-256.png', type: 'image/png', sizes: '192x192' },
+      { url: '/android-chrome-512x512.png', type: 'image/png', sizes: '512x512' },
     ],
     shortcut: '/favicon.ico',
-    apple: [{ url: '/nexo-logo-256.png', sizes: '180x180', type: 'image/png' }],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    other: [
+      { rel: 'mask-icon', url: '/nexo-logo-512.png', color: '#F4EEE1' },
+      { rel: 'manifest', url: '/site.webmanifest' },
+    ],
   },
 };
 
@@ -127,6 +140,11 @@ const jsonLd = {
     {
       '@type': 'WebSite',
       name: SITE_NAME,
+      // alternateName = alias yang Google pakai untuk mengenali situs saat
+      // orang mencari "NEXO" saja (tanpa "Games"). Tanpa ini, pencarian
+      // "NEXO" bisa jatuh ke situs lain bernama serupa. Nama tampil tetap
+      // SITE_NAME ("NEXO Games") - alternateName hanya membantu pencocokan.
+      alternateName: ['NEXO', 'Nexo Games', 'Nexo Games Indonesia', 'NEXO Bot Discord'],
       url: SITE_URL,
       inLanguage: 'id-ID',
       publisher: {
