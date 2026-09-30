@@ -19,14 +19,16 @@ export const dynamic = 'force-dynamic';
 /**
  * Gabungkan data server dari snapshot bot dengan invite permanennya.
  *
- * PERUBAHAN KEBIJAKAN (permintaan pemilik 2026-09-30):
- *   Sebelumnya server TANPA invite disembunyikan sepenuhnya. Pemilik memutuskan
- *   server tetap DITAMPILKAN walau invite-nya belum siap - yang hilang cuma
- *   tombol "Gabung"-nya. Daftar server tetap berguna sebagai papan peringkat,
- *   dan lebih baik daripada halaman kosong tanpa penjelasan.
+ * ATURAN DAFTAR (permintaan pemilik 2026-09-30):
+ *   Hanya server yang BENAR-BENAR ADA PEMAINNYA yang ditampilkan.
+ *   Server dengan pemain 0 disembunyikan seluruhnya - supaya daftar ini
+ *   akurat sebagai papan "server paling ramai main NEXO", bukan campuran
+ *   server yang bot-nya baru masuk dan belum dipakai siapa pun.
+ *   (Data live: 44 server bot, 24 di antaranya masih 0 pemain.)
  *
- *   Tombol Gabung tetap hanya muncul kalau invite benar-benar ada, jadi tidak
- *   ada tautan mati.
+ *   Untuk server YANG TAMPIL, invite hanya pelengkap: kalau link-nya belum
+ *   bisa dibuat bot, tombol Gabung diganti keterangan - server tetap muncul
+ *   karena pemainnya sudah ada. Tidak pernah ada tautan mati.
  *
  * LOKASI DATA (penting - jangan diubah sembarangan):
  *   Bot menaruh `servers` dan `invites` di DALAM `monitor` (hasil
@@ -36,9 +38,7 @@ export const dynamic = 'force-dynamic';
  *
  * Bot sudah mengurutkan berdasarkan: pemain -> game -> poin. Web tidak
  * mengurutkan ulang supaya peringkat konsisten dengan yang bot hitung.
- *
- * Mengembalikan `tanpaInvite` sebagai diagNosa: berapa server yang belum
- * punya link invite (tombolnya kosong), supaya bisa ditampilkan apa adanya.
+ * Karena yang pemain-0 sudah dibuang, urutan bot tetap terjaga apa adanya.
  */
 function siapkanServer(snap) {
   const mon = snap?.monitor || {};
@@ -46,7 +46,6 @@ function siapkanServer(snap) {
   const mentah = mon.invites || snap?.invites;
   const invites = mentah && typeof mentah === 'object' ? mentah : {};
 
-  // Semua server tetap masuk daftar; invite hanya pelengkap.
   const semua = daftar.map((s) => ({
     guildId: s.guildId,
     name: s.name,
@@ -58,10 +57,14 @@ function siapkanServer(snap) {
     invite: invites[s.guildId]?.url || null, // null = tombol Gabung tidak tampil
   }));
 
+  // Buang server tanpa pemain. Dibandingkan dengan angka, bukan string,
+  // supaya '0' dari JSON tidak lolos sebagai truthy.
+  const adaPemain = semua.filter((s) => s.players > 0);
+
   return {
-    daftar: semua.slice(0, 100), // maksimal 100 server
-    total: daftar.length,
-    tanpaInvite: semua.filter((s) => !s.invite).length,
+    daftar: adaPemain.slice(0, 100), // maksimal 100 server
+    total: adaPemain.length,          // jumlah yang BENAR-BENAR tampil
+    tanpaInvite: adaPemain.filter((s) => !s.invite).length,
   };
 }
 

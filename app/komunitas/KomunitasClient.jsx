@@ -238,15 +238,18 @@ export default function KomunitasClient({ servers = [] }) {
     return arr;
   }, [halamanAman, totalHalaman]);
 
-  // Belum ada data sama sekali
+  // Tidak ada satu pun server yang punya pemain.
+  // Daftar ini HANYA memuat server yang sudah ada pemainnya (permintaan
+  // pemilik 2026-09-30), jadi kosong di sini berarti belum ada server yang
+  // dipakai bermain - bukan error.
   if (!servers.length) {
     return (
       <div className="nx-card mt-8 p-8 text-center">
-        <p className="font-display text-lg text-ink">Belum ada server yang terdaftar</p>
+        <p className="font-display text-lg text-ink">Belum ada server yang bermain</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
-          Server akan muncul di sini setelah bot bergabung dan pemainnya mulai bermain.
-          {/* Penyebab spesifik (server masuk tapi tanpa invite) dijelaskan halaman
-              page.jsx di atas - jangan diulang di sini. */}
+          Halaman ini hanya menampilkan server yang sudah ada pemainnya. Server akan
+          muncul otomatis begitu pemainnya mulai bermain NEXO - tidak perlu didaftarkan
+          manual.
         </p>
       </div>
     );
