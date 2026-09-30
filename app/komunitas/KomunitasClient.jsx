@@ -15,7 +15,8 @@
 //   pemilik: invite wajib ada). Jadi di sini tidak perlu saring lagi.
 // ==========================================
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { emojiSrc } from '../lib/emojisClient';
 
 // ==========================================
 // STATE PENCARIAN & HALAMAN
@@ -42,12 +43,31 @@ function fmtRingkas(n) {
   return String(v);
 }
 
-// Warna medali untuk 3 teratas.
-function gayaMedali(rank) {
-  if (rank === 1) return { bg: 'bg-accent/20', border: 'border-accent/60', teks: 'text-accent-hover', label: '1' };
-  if (rank === 2) return { bg: 'bg-ink-steel/15', border: 'border-ink-steel/50', teks: 'text-ink-muted', label: '2' };
-  if (rank === 3) return { bg: 'bg-warning/15', border: 'border-warning/50', teks: 'text-warning', label: '3' };
-  return { bg: 'bg-bg-soft', border: 'border-border-soft', teks: 'text-ink-muted', label: String(rank) };
+// Peringkat - gaya PERSIS halaman Leaderboard: angka polos berfont-display,
+// 3 teratas diberi ikon mahkota/medal. TANPA chip berwarna semi transparan
+// seperti sebelumnya (permintaan pemilik 2026-09-30).
+//
+// Lebar dikunci (w-9) supaya logo server semua baris tetap sejajar walau
+// panjang angkanya beda (1 vs 100).
+function Peringkat({ rank }) {
+  const crown = rank === 1 ? emojiSrc('crown') : null;
+  const medal = rank > 1 && rank <= 3 ? emojiSrc('medal') : null;
+  return (
+    <span
+      className="flex w-9 shrink-0 items-center justify-center gap-1 font-display text-lg font-bold leading-none text-ink"
+      aria-label={`Peringkat ${rank}`}
+    >
+      {crown && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={crown} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+      )}
+      {medal && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={medal} alt="" width={16} height={16} className="h-4 w-[16px]" />
+      )}
+      {rank}
+    </span>
+  );
 }
 
 // Avatar server: pakai logo kalau ada, kalau tidak pakai inisial nama.
@@ -84,23 +104,11 @@ function ServerLogo({ name, iconUrl, size = 52 }) {
 
 // Satu kartu server.
 function KartuServer({ server, rank }) {
-  const m = gayaMedali(rank);
-  const isTop3 = rank <= 3;
-
   return (
-    <li
-      className={`nx-card flex flex-col gap-4 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(43,33,24,0.12)] sm:flex-row sm:items-center sm:gap-5 sm:p-5 ${
-        isTop3 ? m.border : ''
-      }`}
-    >
+    <li className="nx-card flex flex-col gap-4 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(43,33,24,0.12)] sm:flex-row sm:items-center sm:gap-5 sm:p-5">
       {/* Peringkat + logo */}
       <div className="flex items-center gap-4 sm:gap-5">
-        <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border font-display text-sm font-bold ${m.bg} ${m.border} ${m.teks}`}
-          aria-label={`Peringkat ${rank}`}
-        >
-          {m.label}
-        </span>
+        <Peringkat rank={rank} />
         <ServerLogo name={server.name} iconUrl={server.iconUrl} />
       </div>
 
@@ -153,6 +161,8 @@ function KartuServer({ server, rank }) {
 export default function KomunitasClient({ servers = [] }) {
   const [cari, setCari] = useState('');
   const [halaman, setHalaman] = useState(1);
+  const daftarRef = useRef(null);
+  const baruPindahHalaman = useRef(false);
 
   // Reset ke halaman 1 setiap kali pencarian berubah - tanpa ini, user bisa
   // berada di halaman 5 padahal hasil cari cuma 1 halaman (tampak kosong).
@@ -167,8 +177,31 @@ export default function KomunitasClient({ servers = [] }) {
   }
 
   function ubahHalaman(n) {
+    if (n === halaman) return;
+    baruPindahHalaman.current = true;
     setHalaman(n);
   }
+
+  // ============================================================
+  // PERBAIKAN: layar terlempar ke bawah saat ganti halaman
+  // ============================================================
+  // Masalah yang dilaporkan (2026-09-30): klik halaman 3 -> layar langsung
+  // lompat ke bawah, bukan menampilkan daftar halaman 3.
+  //
+  // Penyebab: pindah halaman mengubah jumlah kartu (mis. 10 -> 3), jadi
+  // tinggi dokumen MENYUSUT tajam (diuji: -770px). Browser lalu meng-CLAMP
+  // posisi scroll ke maksimum barunya (mis. 1018 -> 540). Paginasi yang
+  // tadi di tengah layar ikut terdorong ke atas dan sisa layar penuh kartu
+  // "Punya server sendiri?" + footer = terlihat seperti melompat ke bawah.
+  //
+  // Solusi: setelah daftar ter-render ulang, gulir ke atas daftar. Efek ini
+  // berjalan SETELAH commit, jadi tinggi baru sudah pasti terpakai. Dijaga
+  // ref supaya tidak ikut jalan saat mount / saat user mengetik pencarian.
+  useEffect(() => {
+    if (!baruPindahHalaman.current) return;
+    baruPindahHalaman.current = false;
+    daftarRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [halaman]);
 
   const hasil = useMemo(() => {
     const q = cari.trim().toLowerCase();
@@ -206,7 +239,11 @@ export default function KomunitasClient({ servers = [] }) {
   }
 
   return (
-    <div className="mt-8">
+    // ref + scroll-mt-20: dipakai efek pindah halaman di atas. Kontainer ini
+    // selalu ada (tidak seperti <ul> yang hilang saat hasil kosong), jadi
+    // gulir selalu mendarat di atas kotak pencarian + daftar. scroll-mt
+    // menghitung sendiri offset navbar fixed (57px) - tanpa angka hardcoded.
+    <div ref={daftarRef} className="mt-8 scroll-mt-20">
       {/* Pencarian */}
       <div className="relative">
         <svg
