@@ -31,6 +31,13 @@ export const dynamic = 'force-dynamic';
  *
  * Bot sudah mengurutkan berdasarkan: pemain -> game -> poin. Web tidak
  * mengurutkan ulang supaya peringkat konsisten dengan yang bot hitung.
+ *
+ * Mengembalikan juga `total` dan `tanpaInvite` sebagai DIAGNOSA: kalau bot
+ * sudah mengirim server tapi nol yang punya invite, halaman menampilkan
+ * penyebabnya (izin Create Instant Invite / modul invite belum ter-deploy)
+ * alih-alih cuma bilang "Belum ada server" - pertanyaan pertama pemilik
+ * selalu "kenapa servernya tidak keluar", dan tanpa angka ini mustahil
+ * dibedakan dari "bot belum push apa-apa".
  */
 function siapkanServer(snap) {
   const mon = snap?.monitor || {};
@@ -38,7 +45,7 @@ function siapkanServer(snap) {
   const mentah = mon.invites || snap?.invites;
   const invites = mentah && typeof mentah === 'object' ? mentah : {};
 
-  return daftar
+  const denganInvite = daftar
     .map((s) => {
       const inv = invites[s.guildId];
       if (!inv || !inv.url) return null; // tanpa invite -> tidak ditampilkan
@@ -53,15 +60,25 @@ function siapkanServer(snap) {
         invite: inv.url,
       };
     })
-    .filter(Boolean)
-    .slice(0, 100); // maksimal 100 server
+    .filter(Boolean);
+
+  return {
+    daftar: denganInvite.slice(0, 100), // maksimal 100 server
+    total: daftar.length,
+    tanpaInvite: daftar.length - denganInvite.length,
+  };
 }
 
 export default async function KomunitasPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
   const snap = await getLatestSnapshot();
-  const servers = siapkanServer(snap);
+  const { daftar, total, tanpaInvite } = siapkanServer(snap);
+  // Server sudah masuk tapi nol yang punya invite = masalah di sisi bot
+  // (izin Create Instant Invite / modul invite belum ter-deploy), bukan
+  // "bot belum push". Tanpa pesan ini pemilik hanya melihat "Belum ada
+  // server" dan menyimpulkan servernya tidak kebaca.
+  const semuaTanpaInvite = snap && total > 0 && tanpaInvite === total;
 
   return (
     <>
@@ -85,7 +102,17 @@ export default async function KomunitasPage() {
             </p>
           )}
 
-          <KomunitasClient servers={servers} />
+          {semuaTanpaInvite && (
+            <p className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs leading-relaxed text-ink">
+              ⚠ Bot sudah mengirim <strong>{total} server</strong>, tetapi belum ada satu pun
+              link invite. Penyebabnya salah satu dari dua ini: bot belum diberi izin{' '}
+              <strong>Create Instant Invite</strong> di server tersebut, atau file{' '}
+              <strong>utils/guildInvite.js</strong> belum ikut ter-deploy ke hosting.
+              Server baru tampil setelah invite berhasil dibuat.
+            </p>
+          )}
+
+          <KomunitasClient servers={daftar} />
 
           {/* Catatan untuk pemilik server */}
           <div className="nx-card mt-10 p-5">

@@ -232,7 +232,8 @@ export default function KomunitasClient({ servers = [] }) {
         <p className="font-display text-lg text-ink">Belum ada server yang terdaftar</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
           Server akan muncul di sini setelah bot bergabung dan pemainnya mulai bermain.
-          Pastikan bot sudah diberi izin <strong className="text-ink">Create Instant Invite</strong> di server kamu.
+          {/* Penyebab spesifik (server masuk tapi tanpa invite) dijelaskan halaman
+              page.jsx di atas - jangan diulang di sini. */}
         </p>
       </div>
     );
