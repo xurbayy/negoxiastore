@@ -80,6 +80,13 @@ export default async function KomunitasPage() {
   // server" dan menyimpulkan servernya tidak kebaca.
   const semuaTanpaInvite = snap && total > 0 && tanpaInvite === total;
 
+  // Diagnosa dari bot (monitor.inviteDiag) - dirakit di utils/webBridge.js
+  // sehingga tetap terkirim walau utils/guildInvite.js sendiri gagal dimuat.
+  // Kalau ada, halaman bisa menyebut PENYEBAB PASTINYA + server mana saja,
+  // bukan cuma menduga dua kemungkinan.
+  const diag = snap?.monitor?.inviteDiag || null;
+  const alasannya = Array.isArray(diag?.alasan) ? diag.alasan : [];
+
   return (
     <>
       <Navbar session={session} premiumActive={premiumActive} />
@@ -103,13 +110,46 @@ export default async function KomunitasPage() {
           )}
 
           {semuaTanpaInvite && (
-            <p className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs leading-relaxed text-ink">
-              ⚠ Bot sudah mengirim <strong>{total} server</strong>, tetapi belum ada satu pun
-              link invite. Penyebabnya salah satu dari dua ini: bot belum diberi izin{' '}
-              <strong>Create Instant Invite</strong> di server tersebut, atau file{' '}
-              <strong>utils/guildInvite.js</strong> belum ikut ter-deploy ke hosting.
-              Server baru tampil setelah invite berhasil dibuat.
-            </p>
+            <div className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs leading-relaxed text-ink">
+              {diag ? (
+                <>
+                  <p>
+                    ⚠ Bot sudah mengirim <strong>{total} server</strong>, tetapi{' '}
+                    <strong>{diag.gagal}</strong> gagal dibuatkan link invite
+                    {diag.ok ? ` (${diag.ok} berhasil)` : ''}.
+                  </p>
+                  {alasannya.length > 0 && (
+                    <ul className="mt-1.5 list-disc space-y-1 pl-4">
+                      {alasannya.map((a, i) => (
+                        <li key={i}>
+                          <strong>{a.teks}</strong> — {a.jumlah} server
+                          {a.server?.length > 0 && (
+                            <span className="text-ink-muted">
+                              {' '}({a.server.join(', ')}{a.sisa ? `, +${a.sisa} lagi` : ''})
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {diag.modulHilang && (
+                    <p className="mt-1.5">
+                      Modul invite gagal dimuat: <code>{diag.modulHilang}</code>. Pastikan file{' '}
+                      <strong>utils/guildInvite.js</strong> ada di folder bot hosting.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p>
+                  ⚠ Bot sudah mengirim <strong>{total} server</strong>, tetapi belum ada satu pun
+                  link invite. Bot kamu belum mengirim keterangan penyebabnya (kode lama). Setelah
+                  bot di-restart dengan versi terbaru, bagian ini akan menyebut sebabnya dan
+                  server mana saja yang belum memberi izin. Sementara itu: pastikan bot diberi izin{' '}
+                  <strong>Create Instant Invite</strong> dan file{' '}
+                  <strong>utils/guildInvite.js</strong> ada di hosting.
+                </p>
+              )}
+            </div>
           )}
 
           <KomunitasClient servers={daftar} />
