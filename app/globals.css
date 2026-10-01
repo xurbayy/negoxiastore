@@ -5,6 +5,10 @@
   --font-body: var(--font-body), sans-serif;
   --font-mono: var(--font-mono), monospace;
 
+  /* Breakpoint custom: xs = layar sangat kecil (<375px). Dipakai di admin
+     dashboard supaya kartu metrik 1 kolom dulu, baru 2 kolom di >=375px. */
+  --breakpoint-xs: 375px;
+
   /* Warm Cream Studio - design tokens */
   --color-bg: #F4EEDF;
   --color-bg-soft: #EFE7D3;

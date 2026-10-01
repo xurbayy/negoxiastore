@@ -229,33 +229,25 @@ export default function Dashboard({ data }) {
         </p>
       </div>
 
-      {/* Kartu metrik: angka + delta 24 jam + sparkline.
-          auto-rows-fr: semua BARIS grid dipaksa sama tinggi. Tanpa ini,
-          baris yang memuat kartu "Item Terjual" (punya baris keterangan
-          tambahan) jadi lebih tinggi sendiri sehingga grid terlihat tidak
-          rata - h-full pada kartu saja tidak cukup, karena h-full mengikuti
-          tinggi baris, sedangkan barisnya yang perlu disamakan. */}
-      <div className="grid auto-rows-fr grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {/* Kartu metrik: 2 kolom mobile, 3 kolom sm, 4 kolom lg.
+          min-w-0 wajib agar konten panjang tidak menarik kolom keluar layar.
+          truncate pada teks panjang (label, sub, delta) supaya kartu tidak
+          meluber di layar sempit. */}
+      <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
         {cards.map((c) => {
           const d = c.pick ? delta24(fullSeries, c.pick) : null;
-          // h-full: kartu mengisi tinggi baris grid, sehingga semua kartu sama
-          // tinggi walau ada yang punya baris keterangan tambahan. Sebelumnya
-          // kartu "Item Terjual" lebih tinggi sendiri (134 vs 82) sehingga
-          // baris grid terlihat tidak rata.
           return (
-            <div key={c.label} className="nx-card flex h-full min-w-0 flex-col px-4 py-4 sm:px-5 sm:py-5">
-              <div className="font-display text-xl text-ink">{c.value}</div>
-              <div className="mt-1 text-xs text-ink-muted">{c.label}</div>
-              {/* Keterangan tambahan (mis. "3 hari ini · 12.000 poin" pada
-                  kartu Item Terjual) - membuat satu kartu menjawab lebih dari
-                  satu pertanyaan tanpa menambah kartu baru. */}
-              {c.sub && <div className="mt-0.5 text-[0.65rem] text-ink-faint">{c.sub}</div>}
+            <div key={c.label} className="nx-card flex h-full min-w-0 flex-col px-3 py-3 sm:px-4 sm:py-4">
+              <div className="truncate font-display text-lg leading-tight text-ink sm:text-xl">{c.value}</div>
+              <div className="mt-0.5 truncate text-xs text-ink-muted">{c.label}</div>
+              {c.sub && (
+                <div className="mt-0.5 truncate text-[0.62rem] text-ink-faint" title={c.sub}>{c.sub}</div>
+              )}
               {d != null && (
-                <div className={`mt-0.5 text-[0.65rem] font-bold ${d > 0 ? 'text-success' : 'text-danger'}`} title="Perubahan 24 jam">
+                <div className={`mt-0.5 text-[0.62rem] font-bold ${d > 0 ? 'text-success' : 'text-danger'}`} title="Perubahan 24 jam">
                   {d > 0 ? '▲' : '▼'} {fmtRingkas(Math.abs(d))} <span className="font-normal">/24 jam</span>
                 </div>
               )}
-              {/* mt-auto: grafik selalu menempel di dasar kartu. */}
               {c.pick && (
                 <div className="mt-auto pt-1">
                   <Spark series={fullSeries} pick={c.pick} color={c.color || '#D98510'} />

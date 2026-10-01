@@ -263,43 +263,47 @@ export default function AdminShell({ username, avatar = null }) {
         dvh (bukan vh) supaya akurat di browser mobile yang punya bilah alamat.
       */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-border-soft bg-bg-soft p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] transition-transform md:sticky md:top-20 md:z-auto md:max-h-[calc(100dvh-5.5rem)] md:w-60 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-border-soft bg-bg-soft transition-transform md:sticky md:top-20 md:z-auto md:max-h-[calc(100dvh-5.5rem)] md:w-56 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Identitas panel: logo + nama sebaris (compact), lalu baris admin. */}
-        <div className="mb-4 shrink-0 border-b border-border-soft pb-3.5">
-          <div className="flex items-center gap-2.5">
-            <span className="flex shrink-0 items-center"><NexoLogo size={34} /></span>
-            <div className="min-w-0 leading-tight">
-              <p className="truncate font-display text-sm font-bold tracking-tight text-ink">NEXO Games</p>
-              <p className="text-[0.6rem] uppercase tracking-widest text-ink-muted">Admin Panel</p>
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-2.5">
+        {/* Header sidebar hanya di mobile (bar atas fixed sudah menampilkan
+            identitas). Di mobile sidebar perlu header agar user tahu ini menu
+            siapa & ada tombol tutup. Di desktop header ini disembunyikan karena
+            informasi yang sama sudah ada di bar atas. */}
+        <div className="flex shrink-0 items-center justify-between border-b border-border-soft px-4 py-3 md:hidden">
+          <div className="flex items-center gap-2">
             {avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatar} alt="" width={36} height={36} className="h-9 w-9 shrink-0 rounded-full border border-border-soft" />
+              <img src={avatar} alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded-full border border-border-soft" />
             ) : (
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover">
                 {(username || '?').slice(0, 2).toUpperCase()}
               </span>
             )}
-            <p className="min-w-0 truncate text-sm font-semibold text-ink">{username}</p>
+            <span className="min-w-0 truncate text-sm font-semibold text-ink">{username}</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-bg hover:text-ink cursor-pointer"
+            aria-label="Tutup menu"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
         </div>
-        <nav aria-label="Menu admin" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2 md:overflow-y-auto">
+        <nav aria-label="Menu admin" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
           {TAB_GROUPS.map((g) => (
-            <div key={g.label} className="mb-2.5">
-              <p className="px-3 pb-0.5 text-[0.6rem] font-bold uppercase tracking-widest text-ink-muted/70">{g.label}</p>
+            <div key={g.label} className="mb-3">
+              <p className="mb-1 px-2 text-[0.6rem] font-bold uppercase tracking-widest text-ink-muted/60">{g.label}</p>
               <ul className="space-y-0.5">
                 {g.tabs.map(([id, label]) => (
                   <li key={id}>
                     <button
                       type="button"
                       onClick={() => { setTab(id); setMenuOpen(false); }}
-                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors cursor-pointer ${
-                        tab === id ? 'bg-accent/25 text-ink' : 'text-ink-muted hover:bg-bg hover:text-ink'
+                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors cursor-pointer ${
+                        tab === id ? 'bg-accent/20 text-ink' : 'text-ink-muted hover:bg-bg-soft hover:text-ink'
                       }`}
                       aria-current={tab === id ? 'page' : undefined}
                     >
@@ -316,7 +320,12 @@ export default function AdminShell({ username, avatar = null }) {
             </div>
           ))}
         </nav>
-        <a href="/api/auth/logout" className="mt-4 flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border-soft bg-bg-soft px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:border-danger/40 hover:bg-danger/10 hover:text-danger cursor-pointer">Keluar Panel</a>
+        <div className="shrink-0 border-t border-border-soft px-3 py-3">
+          <a href="/api/auth/logout" className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-ink-muted transition hover:bg-danger/10 hover:text-danger cursor-pointer">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Keluar Panel
+          </a>
+        </div>
       </aside>
 
       {/* Konten */}
