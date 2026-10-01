@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 // POST /api/bot/stats - bot push snapshot tiap 60 detik.
 export async function POST(request) {
-  const denied = verifyBearer(request);
+  const denied = verifyBearer(request, 'write');
   if (denied) return denied;
 
   let body;

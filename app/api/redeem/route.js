@@ -5,6 +5,7 @@ import { json, ready } from '../../lib/api-helpers';
 import { touchActivity } from '../../lib/activity';
 import { verifyTurnstile } from '../../lib/turnstile';
 import { getLatestSnapshot } from '../../lib/snapshot';
+import { rateLimitPersistent } from '../../lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +49,13 @@ export async function POST(request) {
 
   // 3. Rate limit
   if (rateLimited(session.discordId)) {
+    return json({ ok: false, reason: 'Terlalu banyak percobaan. Tunggu sebentar.' }, 429);
+  }
+  // Lapis KEDUA lintas-instance (audit keamanan 2026-10-01): limiter di atas
+  // hanya per-proses, sehingga di Vercel penebakan kode bisa lolos batas.
+  // Batas persistent 10/menit per user - lebih longgar dari 5 (biar tidak
+  // menghukum salah ketik), tapi tetap memotong brute force kode redeem.
+  if (!(await rateLimitPersistent(`redeem:${session.discordId}`, 10, 60_000))) {
     return json({ ok: false, reason: 'Terlalu banyak percobaan. Tunggu sebentar.' }, 429);
   }
 

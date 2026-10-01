@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 // POST /api/bot/ack - bot laporkan hasil eksekusi commands + dataRequests.
 export async function POST(request) {
-  const denied = verifyBearer(request);
+  const denied = verifyBearer(request, 'read');
   if (denied) return denied;
 
   let body;

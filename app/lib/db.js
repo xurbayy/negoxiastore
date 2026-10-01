@@ -160,6 +160,24 @@ export async function ensureSchema() {
         dismissed_at INTEGER NOT NULL,
         PRIMARY KEY (discord_id, key)
     );
+
+    -- RATE LIMIT PERSISTENT (audit keamanan 2026-10-01).
+    -- Sebelumnya rate limiter hanya di MEMORI proses. Di Vercel, satu request
+    -- bisa mendarat di instance berbeda sehingga hitungannya terpisah -
+    -- penyerang yang "beruntung" bisa melewati batas karena tiap instance
+    -- menganggap dirinya baru menerima 1 request.
+    --
+    -- Tabel ini menyimpan hitungan di DB (dibagi semua instance), khusus untuk
+    -- endpoint PALING sensitif: login admin (brute force) dan redeem kode
+    -- (penebakan kode). Endpoint lain tetap pakai in-memory (lebih murah,
+    -- dan risikonya kecil).
+    CREATE TABLE IF NOT EXISTS rate_limit (
+        bucket       TEXT NOT NULL,
+        window_start INTEGER NOT NULL,
+        hits         INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (bucket, window_start)
+    );
+    CREATE INDEX IF NOT EXISTS idx_rate_limit_window ON rate_limit(window_start);
   `);
 
   // Migrasi aman: kolom/tabel baru pada DB lama (lewatii error "duplicate column")

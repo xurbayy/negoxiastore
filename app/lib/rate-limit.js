@@ -108,3 +108,53 @@ export function getClientIp(request) {
   }
   return request.headers.get('x-real-ip') || 'local';
 }
+
+// ==========================================
+// RATE LIMIT PERSISTENT (audit keamanan 2026-10-01)
+// ==========================================
+//
+// KENAPA PERLU:
+//   Fungsi rateLimit() di atas menyimpan hitungan di MEMORI proses. Di Vercel,
+//   satu request bisa mendarat di instance berbeda, sehingga tiap instance
+//   punya hitungan sendiri - batas jadi longgar tanpa sengaja.
+//
+//   Dipakai HANYA untuk endpoint paling sensitif (login admin & redeem kode),
+//   karena setiap panggilan = 1 query DB. Endpoint lain tetap in-memory.
+//
+// CARA KERJA:
+//   Hitungan disimpan per (bucket, jendela waktu). Jendela dihitung dari
+//   waktu dibulatkan ke bawah sesuai ukuran jendela, sehingga semua instance
+//   memakai jendela yang sama.
+export async function rateLimitPersistent(bucket, batas, windowMs) {
+  try {
+    const { getDb, schemaReady } = await import('./db');
+    await schemaReady();
+    const db = getDb();
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+
+    // UPSERT atomik: kalau baris jendela ini sudah ada, tambah hitungan.
+    // RETURNING hits memberi nilai SETELAH penambahan, jadi keputusannya
+    // konsisten walau ada request bersamaan dari instance berbeda.
+    const res = await db.execute({
+      sql: `INSERT INTO rate_limit (bucket, window_start, hits)
+            VALUES (?, ?, 1)
+            ON CONFLICT(bucket, window_start) DO UPDATE SET hits = hits + 1
+            RETURNING hits`,
+      args: [bucket, windowStart],
+    });
+
+    const hits = Number(res.rows?.[0]?.hits ?? res.rows?.[0]?.[0] ?? 1);
+
+    // Bersihkan jendela lama sesekali (jangan tiap request - mahal).
+    if (Math.random() < 0.01) {
+      db.execute({ sql: 'DELETE FROM rate_limit WHERE window_start < ?', args: [now - 10 * windowMs] }).catch(() => {});
+    }
+
+    return hits <= batas;
+  } catch {
+    // DB bermasalah -> JANGAN blokir user. Keamanan lapis ini opsional;
+    // lapisan in-memory di atas tetap berjalan.
+    return true;
+  }
+}

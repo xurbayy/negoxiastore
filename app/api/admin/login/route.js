@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { createAdminSession, destroyAdminSession } from '../../../lib/session';
-import { rateLimit, isLockedOut, recordFail, clearFails, lockoutRemaining, getClientIp } from '../../../lib/rate-limit';
+import { rateLimit, rateLimitPersistent, isLockedOut, recordFail, clearFails, lockoutRemaining, getClientIp } from '../../../lib/rate-limit';
 import { verifyTurnstile } from '../../../lib/turnstile';
 import { totpConfigured, createPending2fa, clearTrustedDevice, hasTrustedDevice } from '../../../lib/admin-2fa';
 
@@ -24,6 +24,17 @@ export async function POST(request) {
     );
   }
   if (!rateLimit(`login:${ip}`, MAX_FAIL, WINDOW_MS)) {
+    return NextResponse.json(
+      { ok: false, error: 'Terlalu banyak percobaan. Tunggu sebentar.' },
+      { status: 429 }
+    );
+  }
+  // Lapis KEDUA yang dibagi lintas-instance (audit keamanan 2026-10-01):
+  // rate limiter in-memory di atas hanya berlaku per-proses, sehingga di
+  // Vercel (banyak instance) batasnya bisa lolos. Batas persistent ini
+  // menyimpan hitungan di DB. Batasnya lebih longgar (10/menit) supaya tidak
+  // menghukum admin yang salah ketik, tapi tetap memotong brute force.
+  if (!(await rateLimitPersistent(`admin-login:${ip}`, 10, 60_000))) {
     return NextResponse.json(
       { ok: false, error: 'Terlalu banyak percobaan. Tunggu sebentar.' },
       { status: 429 }

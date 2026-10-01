@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 const LEASE_MS = 2 * 60 * 1000;
 
 export async function GET(request) {
-  const denied = verifyBearer(request);
+  const denied = verifyBearer(request, 'read');
   if (denied) return denied;
 
   await ready();

@@ -4,7 +4,7 @@ import { getDb } from '../../../lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  const denied = verifyBearer(request);
+  const denied = verifyBearer(request, 'write');
   if (denied) return denied;
 
   let body;
