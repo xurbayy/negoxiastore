@@ -243,7 +243,7 @@ export default function Dashboard({ data }) {
           // kartu "Item Terjual" lebih tinggi sendiri (134 vs 82) sehingga
           // baris grid terlihat tidak rata.
           return (
-            <div key={c.label} className="nx-card flex h-full flex-col px-4 py-4 sm:px-5 sm:py-5">
+            <div key={c.label} className="nx-card flex h-full min-w-0 flex-col px-4 py-4 sm:px-5 sm:py-5">
               <div className="font-display text-xl text-ink">{c.value}</div>
               <div className="mt-1 text-xs text-ink-muted">{c.label}</div>
               {/* Keterangan tambahan (mis. "3 hari ini · 12.000 poin" pada
@@ -267,7 +267,7 @@ export default function Dashboard({ data }) {
       </div>
 
       {/* Grafik besar + pemilih rentang */}
-      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+      <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display text-ink">Tren Ekonomi & Aktivitas</h3>
           <div className="flex gap-1.5">
@@ -292,9 +292,16 @@ export default function Dashboard({ data }) {
         </div>
       </div>
 
-      {/* Top games (bar relatif) + top servers */}
+      {/* Top games (bar relatif) + top servers + item terlaris + pengundang.
+          min-w-0 WAJIB pada tiap grid item: grid/flex item defaultnya punya
+          `min-width: auto`, sehingga konten panjang (mis. "Rock Paper Scissors
+          (Seri)" atau nama server) tidak boleh menyusut di bawah lebar
+          minimumnya dan MENARIK kolom grid melebar keluar layar. Gejalanya
+          terlihat di 374x667: kartu jadi 403px padahal ruangnya cuma 333px,
+          sehingga halaman bisa digulir ke samping. min-w-0 mematikan batas
+          minimum itu supaya konten mengikuti lebar kolom, bukan sebaliknya. */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
           <h3 className="font-display text-ink">Top Game Hari Ini</h3>
           {(m.topGamesToday || []).length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">Belum ada game hari ini.</p>
@@ -304,8 +311,8 @@ export default function Dashboard({ data }) {
                 const gd = gameDisplay(String(g.game_type).toLowerCase(), betaMap);
                 return (
                   <li key={g.game_type}>
-                    <div className="flex justify-between">
-                      <span className="flex items-center gap-2 text-ink">
+                    <div className="flex justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2 text-ink">
                         {/* Emoji game dikembalikan (permintaan pemilik
                             2026-09-30). "Rock Paper Scissors (Seri)" memakai
                             emoji RPS yang sama karena bot mencatat seri dengan
@@ -318,9 +325,9 @@ export default function Dashboard({ data }) {
                             {gd.name.slice(0, 2).toUpperCase()}
                           </span>
                         )}
-                        {gd.name}
+                        <span className="truncate">{gd.name}</span>
                         {gd.beta && (
-                          <span className="rounded-full bg-accent px-2 py-0.5 text-[0.55rem] font-extrabold uppercase tracking-wider text-ink" title="Game beta - belum dirilis publik">
+                          <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.55rem] font-extrabold uppercase tracking-wider text-ink" title="Game beta - belum dirilis publik">
                             Beta
                           </span>
                         )}
@@ -341,7 +348,7 @@ export default function Dashboard({ data }) {
             Sumbernya transaksi asli (kolom item_key), bukan tebakan dari teks.
             Menampilkan 10 terlaris sepanjang masa + jumlah hari ini, supaya
             kelihatan item mana yang masih laku dan mana yang sudah dingin. */}
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="font-display text-ink">Item Paling Sering Dibeli</h3>
             <span className="text-[0.65rem] text-ink-faint">{fmt(totalItemTerjual)} total</span>
@@ -441,7 +448,7 @@ export default function Dashboard({ data }) {
             Permintaan pemilik 2026-09-30: tampilkan 10 orang yang paling
             banyak mengundang lewat referral, lengkap dengan namanya.
             Nama sudah di-JOIN di sisi bot, jadi di sini tinggal ditampilkan. */}
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="font-display text-ink">Pengundang Terbanyak</h3>
             <span className="text-[0.65rem] text-ink-faint">
@@ -507,7 +514,7 @@ export default function Dashboard({ data }) {
           })()}
         </div>
 
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
           <h3 className="font-display text-ink">Top Server</h3>
           {(m.servers || m.topServers || []).length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">Belum ada data server.</p>

@@ -138,12 +138,12 @@ export default function Navbar({ session, premiumActive = false }) {
                     dalam game & halaman premium. */}
                 {emojiSrc('download3') && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                  <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
                 )}
                 {showPremium && (
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                  <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                 )}
-                NEXO Pass
+                <span className="whitespace-nowrap">NEXO Pass</span>
               </Link>
             </li>
           )}
@@ -179,9 +179,9 @@ export default function Navbar({ session, premiumActive = false }) {
                     login, supaya tombolnya konsisten di semua keadaan. */}
                 {emojiSrc('download3') && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                  <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
                 )}
-                NEXO Pass
+                <span className="whitespace-nowrap">NEXO Pass</span>
               </Link>
               <Link href="/login" className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
                 <DiscordIcon className="h-4 w-4" />
@@ -233,9 +233,9 @@ export default function Navbar({ session, premiumActive = false }) {
                 <Link href="/premium" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
                   {emojiSrc('download3') && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                    <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
                   )}
-                  NEXO Pass
+                  <span className="whitespace-nowrap">NEXO Pass</span>
                 </Link>
               </li>
             )}
@@ -244,12 +244,12 @@ export default function Navbar({ session, premiumActive = false }) {
                 <Link href="/premium" onClick={() => setOpen(false)} className={showPremium ? 'flex items-center gap-2 rounded-lg border border-success/50 bg-white px-3 py-2.5 text-sm font-semibold text-success shadow-sm cursor-pointer' : 'flex items-center gap-2 rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer'}>
                   {emojiSrc('download3') && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+                    <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
                   )}
                   {showPremium && (
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                    <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                   )}
-                  NEXO Pass
+                  <span className="whitespace-nowrap">NEXO Pass</span>
                 </Link>
               </li>
             )}
