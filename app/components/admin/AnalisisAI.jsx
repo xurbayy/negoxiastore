@@ -550,7 +550,11 @@ export default function AnalisisAI() {
               <button
                 key={p.id}
                 type="button"
-                onClick={() => setProvider(p.id)}
+                onClick={() => {
+                  setProvider(p.id);
+                  // Auto-ganti modelInput ke default model provider baru
+                  if (p.model) setModelInput(p.model);
+                }}
                 className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
                   provider === p.id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
                 }`}

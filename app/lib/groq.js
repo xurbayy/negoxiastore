@@ -42,6 +42,8 @@ const PROVIDERS = {
 
 function resolveProvider(nama) {
   if (nama && PROVIDERS[nama]) return nama;
+  // AI_PROVIDER env harus prioritas atas AI_BASE_URL (legacy)
+  if (process.env.AI_PROVIDER && PROVIDERS[process.env.AI_PROVIDER]) return process.env.AI_PROVIDER;
   if (process.env.AI_BASE_URL) return 'custom';
   return 'groq';
 }
