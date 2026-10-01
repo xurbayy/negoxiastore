@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NexoLogo } from '../ui';
 // Isi skeleton panel yang SAMA dengan app/admin/loading.jsx (anti skeleton dobel).
-import { AdminSkeletonBody } from '../PageSkeleton';
+import { AdminSkeletonBody, AdminAiSkeletonBody } from '../PageSkeleton';
 import Dashboard from './Dashboard';
 import AnalisisAI from './AnalisisAI';
 import Ekonomi from './Ekonomi';
@@ -298,10 +298,16 @@ export default function AdminShell({ username, avatar = null }) {
             karena isinya ada di atas. */}
         <div ref={kontenRef} id="konten-admin" className="scroll-mt-4">
         {!data ? (
-          // Isi skeleton yang SAMA dengan app/admin/loading.jsx supaya peralihan
-          // dari skeleton Next.js ke panel tidak terlihat seperti skeleton dobel.
+          // Kerangka menyesuaikan TAB yang sedang dimuat.
+          //
+          // Sebelumnya SELALU AdminSkeletonBody - itu bentuk Dashboard (8 kartu
+          // metrik + grafik + 2 panel). Untuk tab Analisis AI bentuk itu tidak
+          // nyambung dan terlihat seperti memuat halaman lain.
+          //
+          // Tab Analisis AI tidak butuh `data` (komponennya mengambil statusnya
+          // sendiri), jadi skeleton ini murni kerangka tampilan.
           <div aria-busy="true" aria-label="Memuat panel">
-            <AdminSkeletonBody />
+            {tab === 'ai' ? <AdminAiSkeletonBody /> : <AdminSkeletonBody />}
           </div>
         ) : (
           <>

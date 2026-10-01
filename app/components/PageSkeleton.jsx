@@ -586,6 +586,62 @@ export function AdminSkeletonBody() {
   );
 }
 
+/**
+ * Isi tab ANALISIS AI (bukan Dashboard).
+ *
+ * KENAPA DIPISAH: AdminShell dulu selalu memakai AdminSkeletonBody (kerangka
+ * Dashboard: 8 kartu metrik, grafik, 2 panel) untuk SEMUA tab. Saat tab yang
+ * sedang dimuat adalah Analisis AI, kerangkanya jadi tidak nyambung - terlihat
+ * seperti memuat halaman lain.
+ *
+ * Bentuk yang ditiru (components/admin/AnalisisAI.jsx):
+ *   - kartu kepala: judul kiri + badge status kanan + satu baris keterangan
+ *   - kartu kedua: label bagian + 7 tombol pintasan (melingkar) + kotak tanya
+ *   - kotak hasil kosong
+ */
+export function AdminAiSkeletonBody() {
+  return (
+    <>
+      {/* Kartu kepala */}
+      <Card className="px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Bar className="h-5 w-28" />
+          <div className="skeleton h-6 w-40 rounded-full" />
+        </div>
+        <Bar className="mt-3 h-3 w-full" />
+        <Bar className="mt-1.5 h-3 w-4/5" />
+      </Card>
+
+      {/* Kartu pintasan + kotak tanya */}
+      <Card className="mt-5 px-5 py-4">
+        <Bar className="h-3 w-28" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div
+              key={i}
+              className="skeleton h-7 rounded-full"
+              // Lebar bervariasi supaya menyerupai label tombol yang panjangnya
+              // berbeda-beda, bukan deretan kotak seragam yang terlihat palsu.
+              style={{ width: `${72 + (i % 4) * 26}px` }}
+            />
+          ))}
+        </div>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <div className="skeleton h-11 w-full rounded-xl" />
+          <div className="skeleton h-11 w-full shrink-0 rounded-xl sm:w-28" />
+        </div>
+      </Card>
+
+      {/* Kotak hasil (keadaan kosong) */}
+      <Card className="mt-5 px-5 py-8">
+        <div className="mx-auto max-w-xs space-y-2 text-center">
+          <Bar className="mx-auto h-4 w-3/4" />
+        </div>
+      </Card>
+    </>
+  );
+}
+
 // Versi halaman-penuh untuk app/admin/loading.jsx.
 function AdminSkeleton() {
   return (
