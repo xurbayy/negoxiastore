@@ -149,8 +149,17 @@ export default function AnalisisAI() {
   // ("ingetin gw pas Halloween mau masang promo"), dan panel menampilkannya
   // sebagai notifikasi sampai ditandai selesai.
   const [pengingat, setPengingat] = useState([]);
+  // Panel pengingat hanya terbuka saat tombol Notif diklik - supaya tidak
+  // memakan ruang saat tidak dibutuhkan. Tombolnya sendiri selalu terlihat.
+  const [bukaPengingat, setBukaPengingat] = useState(false);
   const kotakHasil = useRef(null);
   const ujungChat = useRef(null);
+
+  // Angka untuk tombol Notif: berapa pengingat aktif & berapa yang sudah
+  // jatuh tempo. Dipakai untuk menentukan warna tombol (merah kalau ada).
+  const pengingatAktif = pengingat.filter((p) => !p.selesai);
+  const jumlahPengingat = pengingatAktif.length;
+  const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
   // Muat percakapan terakhir dari localStorage supaya TIDAK HILANG saat
   // refresh - perilaku yang diharapkan dari sebuah chat.
@@ -386,16 +395,12 @@ export default function AnalisisAI() {
   return (
     <div className="space-y-4">
       {/* ==========================================
-          NOTIFIKASI PENGINGAT
+          PANEL PENGINGAT (muncul saat tombol lonceng diklik)
           ==========================================
-          Permintaan pemilik: "AI juga pintar bisa jadi pengingat buat gw,
-          jadi pada halaman AI ini ada notif... kalo gw suruh ingetin gw nanti
-          pas Halloween soalnya gw mau masang promo".
-
-          Tampil paling atas supaya langsung terlihat saat membuka halaman.
-          Pengingat yang sudah jatuh tempo diberi warna berbeda dan tanda
-          "SEKARANG" supaya tidak terlewat. */}
-      {pengingat.filter((p) => !p.selesai).length > 0 && (
+          Permintaan pemilik: tombol notif di halaman Analisis AI, menyala
+          MERAH kalau ada pengingat. Panelnya hanya terbuka saat diklik -
+          tidak memakan ruang saat tidak dibutuhkan. */}
+      {bukaPengingat && (
         <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-display text-ink">
@@ -404,50 +409,81 @@ export default function AnalisisAI() {
                 ({pengingat.filter((p) => !p.selesai).length} aktif)
               </span>
             </h3>
-            {pengingat.some((p) => p.jatuhTempo) && (
-              <span className="rounded-full bg-danger px-3 py-1 text-[0.7rem] font-bold text-white">
-                {pengingat.filter((p) => p.jatuhTempo).length} sudah waktunya!
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => setBukaPengingat(false)}
+              className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:text-ink cursor-pointer"
+            >
+              Tutup
+            </button>
           </div>
-          <ul className="mt-3 space-y-2">
-            {pengingat.filter((p) => !p.selesai).map((p) => (
-              <li
-                key={p.id}
-                className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border px-3.5 py-3 ${
-                  p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink">{p.teks}</p>
-                  <p className={`mt-0.5 text-xs ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
-                    {p.jatuhTempo ? 'SEKARANG - ' : ''}{p.waktuTeks}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => tandaiSelesai(p.id, true)}
-                    className="rounded-lg border border-success/40 px-2.5 py-1 text-[0.7rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
-                    title="Tandai sudah dikerjakan"
-                  >
-                    Selesai
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => hapusPengingat(p.id)}
-                    className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-                    title="Hapus pengingat"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2.5 text-[0.7rem] text-ink-muted">
-            Cara membuat: tulis di Diskusi, mis. "ingetin gw pas Halloween mau masang promo". AI akan menyimpannya di sini dengan waktu WIB.
-          </p>
+
+          {pengingat.filter((p) => !p.selesai).length === 0 ? (
+            <p className="mt-3 text-sm text-ink-muted">
+              Belum ada pengingat. Tulis di mode Diskusi, mis. "ingetin gw pas Halloween mau masang promo" -
+              AI akan menyimpannya di sini dengan waktu WIB.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {pengingat.filter((p) => !p.selesai).map((p) => (
+                <li
+                  key={p.id}
+                  className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border px-3.5 py-3 ${
+                    p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-ink">{p.teks}</p>
+                    <p className={`mt-0.5 text-xs ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
+                      {p.jatuhTempo ? 'SEKARANG - ' : ''}{p.waktuTeks}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => tandaiSelesai(p.id, true)}
+                      className="rounded-lg border border-success/40 px-2.5 py-1 text-[0.7rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
+                      title="Tandai sudah dikerjakan"
+                    >
+                      Selesai
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => hapusPengingat(p.id)}
+                      className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                      title="Hapus pengingat"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Riwayat yang sudah selesai - disembunyikan di balik tombol supaya
+              daftar utama tetap ringkas. */}
+          {pengingat.filter((p) => p.selesai).length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-semibold text-ink-muted hover:text-ink">
+                Selesai ({pengingat.filter((p) => p.selesai).length})
+              </summary>
+              <ul className="mt-2 space-y-1.5">
+                {pengingat.filter((p) => p.selesai).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg bg-bg-soft/30 px-3 py-2">
+                    <span className="min-w-0 truncate text-xs text-ink-muted line-through">{p.teks}</span>
+                    <button
+                      type="button"
+                      onClick={() => hapusPengingat(p.id)}
+                      className="shrink-0 text-[0.65rem] font-bold text-ink-faint transition hover:text-danger cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
@@ -455,11 +491,44 @@ export default function AnalisisAI() {
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display text-ink">Analisis AI</h3>
-          {/* Dua mode dengan keunggulan berbeda (permintaan pemilik):
-              - Analisis: laporan tersusun TEMUAN/SARAN/RISIKO
-              - Diskusi : chat 2 arah untuk berpikir bersama
-              Keduanya memakai DATA yang sama. */}
-          <div className="flex rounded-xl border border-border-soft bg-bg-soft/50 p-1">
+          <div className="flex items-center gap-2">
+            {/* ==========================================
+                TOMBOL NOTIF PENGINGAT (permintaan pemilik)
+                ==========================================
+                Menyala MERAH kalau ada pengingat aktif - supaya langsung
+                terlihat tanpa perlu membuka panelnya. Titik kecil di pojok
+                menunjukkan jumlah pengingat yang sudah jatuh tempo. */}
+            <button
+              type="button"
+              onClick={() => setBukaPengingat((v) => !v)}
+              className={`relative flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition cursor-pointer ${
+                jumlahPengingat > 0
+                  ? 'border-danger bg-danger text-white hover:bg-danger/90'
+                  : 'border-border-soft text-ink-muted hover:border-accent/50 hover:text-ink'
+              }`}
+              title={jumlahPengingat > 0 ? `${jumlahPengingat} pengingat aktif` : 'Belum ada pengingat'}
+              aria-label={`Pengingat: ${jumlahPengingat} aktif`}
+            >
+              {/* Ikon lonceng */}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span>Notif</span>
+              {jumlahPengingat > 0 && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none ${
+                  jumlahJatuhTempo > 0 ? 'bg-white text-danger' : 'bg-white/25 text-white'
+                }`}>
+                  {jumlahPengingat}
+                </span>
+              )}
+            </button>
+
+            {/* Dua mode dengan keunggulan berbeda (permintaan pemilik):
+                - Analisis: laporan tersusun TEMUAN/SARAN/RISIKO
+                - Diskusi : chat 2 arah untuk berpikir bersama
+                Keduanya memakai DATA yang sama. */}
+            <div className="flex rounded-xl border border-border-soft bg-bg-soft/50 p-1">
             {[
               ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
               ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
@@ -476,6 +545,7 @@ export default function AnalisisAI() {
                 {label}
               </button>
             ))}
+            </div>
           </div>
         </div>
         <p className="mt-2 text-xs leading-relaxed text-ink-muted">
