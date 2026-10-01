@@ -277,11 +277,17 @@ export default function AnalisisAI() {
     }
 
     try {
+      // Client-side timeout 45 detik - kalau API stuck (semua kunci rate-limited
+      // dan retry satu-satu), user dapat error cepat bukan loading tanpa batas.
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 45000);
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined }),
+        signal: ac.signal,
       });
+      clearTimeout(timer);
       const d = await res.json();
 
       // Kalau AI membuat pengingat, tampilkan konfirmasi + muat ulang daftar.
@@ -313,10 +319,13 @@ export default function AnalisisAI() {
         setBukaLaporan(0);
       }
     } catch (e) {
+      const pesanError = e?.name === 'AbortError'
+        ? 'Timeout 45 detik - AI terlalu lama merespons. Coba lagi atau ganti provider.'
+        : 'Gagal menghubungi server: ' + (e?.message || e);
       if (modeKirim === 'diskusi') {
-        setPesan((p) => [...p, { peran: 'ai', error: true, isi: 'Gagal menghubungi server: ' + e.message, waktu: Date.now() }]);
+        setPesan((p) => [...p, { peran: 'ai', error: true, isi: pesanError, waktu: Date.now() }]);
       } else {
-        setLaporan((l) => [{ judul, error: 'Gagal menghubungi server: ' + e.message, waktu: Date.now() }, ...l]);
+        setLaporan((l) => [{ judul, error: pesanError, waktu: Date.now() }, ...l]);
       }
     } finally {
       setJalan(false);
@@ -640,7 +649,7 @@ export default function AnalisisAI() {
 
           {jalan && (
             <div className="nx-card px-4 py-4 sm:px-5 sm:py-5 text-sm text-ink-muted">
-              <span className="pulse-dot" aria-hidden="true" /> AI sedang membaca data, bisa 5-30 detik.
+              <span className="pulse-dot" aria-hidden="true" /> AI ({(status.providers || []).find((p) => p.id === provider)?.label || provider || 'Groq'}) sedang membaca data, bisa 5-30 detik.
             </div>
           )}
 
@@ -753,7 +762,7 @@ export default function AnalisisAI() {
             {jalan && (
               <li className="flex justify-start">
                 <div className="rounded-2xl bg-bg-soft/60 px-4 py-2.5 text-sm text-ink-muted">
-                  <span className="pulse-dot" aria-hidden="true" /> AI sedang membaca data, bisa 5-30 detik...
+                  <span className="pulse-dot" aria-hidden="true" /> AI ({(status.providers || []).find((p) => p.id === provider)?.label || provider || 'Groq'}) sedang membaca data, bisa 5-30 detik...
                 </div>
               </li>
             )}
