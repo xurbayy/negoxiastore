@@ -181,6 +181,10 @@ export default function Dashboard({ data }) {
   // jumlah item yang sudah dibeli pemain. Sesi LIVE diukur dari `live` yang
   // hampir selalu 0 di jam sepi, sehingga kartunya jarang memberi informasi;
   // angka item terjual selalu bergerak dan langsung berguna.
+  // botKirimItem: apakah bot SUDAH memuat kode rekap item. Kalau false, angka 0
+  // berarti "belum ada datanya", BUKAN "tidak ada penjualan" - dua hal yang
+  // harus dibedakan supaya tidak terlihat seperti kerusakan.
+  const botKirimItem = m.itemTerjualAll !== undefined;
   const totalItemTerjual = m.totalItemTerjual ?? 0;
   const totalPoinBelanja = m.totalPoinBelanja ?? 0;
   const itemHariIni = (m.itemTerjualToday || []).reduce((a, b) => a + (b.kali || 0), 0);
@@ -194,10 +198,12 @@ export default function Dashboard({ data }) {
     { label: 'Game 7 Hari', value: fmt(m.gamesWeek), pick: null },
     {
       label: 'Item Terjual',
-      value: fmt(totalItemTerjual),
+      value: botKirimItem ? fmt(totalItemTerjual) : '-',
       // Keterangan tambahan di bawah angka: hari ini + poin yang dibelanjakan,
       // supaya satu kartu menjawab "berapa banyak" dan "berapa nilainya".
-      sub: `${fmt(itemHariIni)} hari ini · ${fmt(totalPoinBelanja)} poin`,
+      sub: botKirimItem
+        ? `${fmt(itemHariIni)} hari ini · ${fmt(totalPoinBelanja)} poin`
+        : 'bot belum kirim data ini',
       pick: null,
     },
     { label: 'Loans Aktif', value: fmt(m.loans?.count), pick: null },
@@ -339,7 +345,32 @@ export default function Dashboard({ data }) {
           {(() => {
             const daftar = m.itemTerjualAll || [];
             if (daftar.length === 0) {
-              return <p className="mt-3 text-sm text-ink-muted">Belum ada pembelian item yang tercatat.</p>;
+              // BEDAKAN dua sebab yang berbeda (fix 2026-09-30).
+              //
+              // Keluhan nyata: kartu menulis "Belum ada pembelian item yang
+              // tercatat" padahal toko sudah jalan - sehingga terlihat seperti
+              // fiturnya rusak. Penyebabnya BOT BELUM memuat kode baru, jadi
+              // kolom itemTerjualAll tidak ada sama sekali di snapshot.
+              // Tanpa pembedaan ini, "bot belum kirim" dan "memang belum ada
+              // penjualan" tampil dengan kalimat yang sama.
+              const botBelumKirim = m.itemTerjualAll === undefined;
+              return (
+                <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                  {botBelumKirim ? (
+                    <>
+                      Bot belum mengirim data penjualan item. Jalankan ulang bot
+                      dengan versi terbaru - rekapnya mulai terisi sejak saat itu,
+                      karena pembelian lama tidak punya penanda item.
+                    </>
+                  ) : (
+                    <>
+                      Belum ada pembelian item sejak bot diperbarui. Pembelian
+                      SEBELUM pembaruan tidak ikut terhitung, jadi rekapnya mulai
+                      kosong dan terisi begitu pemain membeli item baru.
+                    </>
+                  )}
+                </p>
+              );
             }
             // Peta "hari ini" untuk anotasi tiap baris.
             const hariIni = new Map((m.itemTerjualToday || []).map((x) => [x.itemKey, x.kali]));
