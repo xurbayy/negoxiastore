@@ -598,10 +598,12 @@ export function susunKonteks(snap, panel = {}) {
   // mempertahankan bagian depan (ringkasan, server, game, toko, penjualan) yang
   // paling sering dipakai untuk analisis.
   //
-  // Batas 20000 karakter ~ 5000 token (perkiraan kasar 4 char/token untuk
-  // bahasa Indonesia). Sisa ~3000 token cukup untuk prompt sistem + riwayat
-  // percakapan + jawaban, di bawah batas 8000 TPM Groq.
-  const BATAS_KONTEKS = 20000;
+  // Batas 12000 karakter ~ 3000 token (perkiraan 4 char/token untuk bahasa
+  // Indonesia). Diturunkan dari 20000 (fix 2026-10-01) karena Groq menghitung
+  // TOTAL token per menit: konteks 5000 token + max_tokens 4000 = 9000, sudah
+  // MELEBIHI batas 8000 TPM akun gratis. Dengan 12000 karakter + output 2000,
+  // total ~5000-6000 token - masih ada sisa untuk percakapan lanjutan.
+  const BATAS_KONTEKS = 12000;
   let teks = L.join('\n');
   if (teks.length > BATAS_KONTEKS) {
     // Buang bagian belakang sampai muat. Setiap bagian dipisah '### '.

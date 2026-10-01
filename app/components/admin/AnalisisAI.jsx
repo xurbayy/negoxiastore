@@ -225,7 +225,22 @@ export default function AnalisisAI() {
   // Kirim satu permintaan. `muatan` = { tanya } atau { pintasan }.
   // Di mode DISKUSI riwayat percakapan ikut dikirim supaya AI nyambung.
   // Di mode ANALISIS jawaban disimpan sebagai laporan (bukan gelembung chat).
+  //
+  // JEDA MINIMUM (fix 2026-10-01): Groq menghitung KUOTA PER MENIT. Dua klik
+  // berturut-turut (mis. tombol 'Saran Promo' lalu 'Item & Game Sepi') dalam
+  // satu menit akan menghabiskan kuota dan request kedua ditolak dengan
+  // 'Request too large'. Diberi jeda 20 detik supaya kuota sempat pulih.
+  const [tungguSampai, setTungguSampai] = useState(0);
   const jalankan = useCallback(async (muatan, judul, teksTampil) => {
+    const sisaTunggu = tungguSampai - Date.now();
+    if (sisaTunggu > 0) {
+      setPesan((p) => [...p, {
+        peran: 'ai', error: true, waktu: Date.now(),
+        isi: `Tunggu ${Math.ceil(sisaTunggu / 1000)} detik lagi ya. Kuota AI dihitung per menit, jadi dua permintaan beruntun bikin yang kedua ditolak.`,
+      }]);
+      return;
+    }
+    setTungguSampai(Date.now() + 20000);
     setJalan(true);
     const modeKirim = mode;
 
@@ -290,7 +305,7 @@ export default function AnalisisAI() {
         else kotakHasil.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }, 80);
     }
-  }, [mode]);
+  }, [mode, tungguSampai]);
 
   const kirimBebas = (e) => {
     e.preventDefault();

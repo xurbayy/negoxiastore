@@ -36,9 +36,19 @@ export function modelGroq() {
   return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 }
 
+// Batas token OUTPUT yang diminta ke Groq.
+//
+// PENTING (fix 2026-10-01): Groq menghitung TOTAL token per menit (TPM) =
+// input + output yang diminta. Dengan konteks ~5000 token + max_tokens 4000,
+// satu request sudah ~9000 token - MELEBIHI batas 8000 TPM akun gratis.
+// Akibatnya muncul error 'Request too large' walau konteksnya sudah dipangkas.
+//
+// Default diturunkan 4000 -> 2000. Jawaban analisis yang rapi biasanya
+// 400-900 token, jadi 2000 tetap lebih dari cukup, sementara total request
+// turun ke ~7000 token - aman di bawah 8000.
 function maksToken() {
   const n = parseInt(process.env.GROQ_MAX_TOKENS, 10);
-  return Number.isFinite(n) && n > 0 ? n : 4000;
+  return Number.isFinite(n) && n > 0 ? n : 2000;
 }
 
 /**
