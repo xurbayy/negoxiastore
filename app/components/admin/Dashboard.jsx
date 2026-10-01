@@ -497,7 +497,10 @@ export default function Dashboard({ data }) {
             <p className="mt-3 text-sm text-ink-muted">Belum ada data server.</p>
           ) : (
             <ul className="mt-3 space-y-2 text-sm">
-              {(m.servers || m.topServers).slice(0, 10).map((s) => {
+              {/* 5 server di HP, 10 di layar lebar. Di HP daftar 10 baris
+                  bikin halaman sangat panjang dan mendorong kartu lain jauh
+                  ke bawah - padahal admin biasanya cuma perlu lihat teratas. */}
+              {(m.servers || m.topServers).slice(0, 5).map((s) => {
                 // Invite permanen dari bot. Server yang bot-nya belum bisa
                 // membuat invite (izin Create Instant Invite kurang) TIDAK
                 // punya entri -> tombol tidak ditampilkan, bukan link mati.

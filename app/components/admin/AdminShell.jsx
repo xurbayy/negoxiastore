@@ -296,7 +296,10 @@ export default function AdminShell({ username, avatar = null }) {
             gulir - kalau admin sedang di bawah (mis. daftar panjang di
             Dashboard), panel tab baru terbuka di tengah dan terlihat kosong
             karena isinya ada di atas. */}
-        <div ref={kontenRef} id="konten-admin" className="scroll-mt-4">
+        {/* pb-10: jarak ke footer. Sebelumnya area ini TIDAK punya padding
+            bawah, sehingga kartu terakhir menempel langsung ke footer -
+            terlihat sesak di HP. */}
+        <div ref={kontenRef} id="konten-admin" className="scroll-mt-4 pb-10">
         {!data ? (
           // Kerangka menyesuaikan TAB yang sedang dimuat.
           //
