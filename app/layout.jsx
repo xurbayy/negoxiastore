@@ -38,6 +38,12 @@ export const metadata = {
   applicationName: SITE_NAME,
   category: 'Games',
   alternates: { canonical: '/' },
+  // Verifikasi kepemilikan situs untuk Google AdSense (metode "tag meta").
+  // Dicantumkan sebagai CADANGAN di samping ads.txt di public/ads.txt dan
+  // script AdSense di <body> - supaya Google punya 3 jalur pembuktian.
+  other: {
+    'google-adsense-account': 'ca-pub-2706837395470018',
+  },
   openGraph: {
     type: 'website',
     locale: 'id_ID',
