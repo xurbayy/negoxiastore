@@ -5,6 +5,7 @@ import { NexoLogo } from '../ui';
 // Isi skeleton panel yang SAMA dengan app/admin/loading.jsx (anti skeleton dobel).
 import { AdminSkeletonBody } from '../PageSkeleton';
 import Dashboard from './Dashboard';
+import AnalisisAI from './AnalisisAI';
 import Ekonomi from './Ekonomi';
 import ShopManager from './ShopManager';
 import BankManager from './BankManager';
@@ -21,7 +22,7 @@ import ManualOrders from './ManualOrders';
 // Sidebar dikelompokkan per area kerja + badge angka live (dari data yang
 // sudah di-poll - tanpa API baru). Visual saja, alur data tidak berubah.
 const TAB_GROUPS = [
-  { label: 'Pantau', tabs: [['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
+  { label: 'Pantau', tabs: [['ai', 'Analisis AI'], ['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
   { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
   { label: 'Member', tabs: [['nexopass', 'NEXO Pass'], ['titles', 'Titles']] },
   { label: 'Komunitas', tabs: [['broadcast', 'Broadcast'], ['moderasi', 'Sanksi & Moderasi'], ['feedback', 'Feedback']] },
@@ -304,6 +305,7 @@ export default function AdminShell({ username, avatar = null }) {
           </div>
         ) : (
           <>
+            {tab === 'ai' && <AnalisisAI />}
             {tab === 'dashboard' && <Dashboard data={data} />}
             {tab === 'ekonomi' && <Ekonomi send={send} data={data} />}
             {tab === 'shop' && <ShopManager send={send} data={data} />}
