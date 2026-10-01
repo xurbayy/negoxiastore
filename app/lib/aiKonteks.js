@@ -87,6 +87,48 @@ export function susunKonteks(snap, panel = {}) {
   L.push('### GAME');
   L.push(`Top game HARI INI: ${JSON.stringify(m.topGamesToday || [])}`);
   L.push(`Game beta aktif: ${(snap.betaGames || []).map((b) => `${b.name} (${b.mode})`).join(', ') || '-'}`);
+
+  // DAFTAR LENGKAP GAME YANG SUDAH ADA (fix 2026-10-01).
+  //
+  // KENAPA PENTING: pemilik meminta AI memberi ide game BARU yang inovatif.
+  // Tanpa daftar ini, AI tidak tahu apa yang sudah dibuat - dan bisa
+  // menyarankan hal yang sudah ada (mis. "bikin game tebak-tebakan" padahal
+  // Fun Riddle sudah ada). Daftar ini juga jadi bahan AI untuk MENCARI CELAH:
+  // genre apa yang belum ada, mekanik apa yang belum dipakai.
+  //
+  // Sumber: kategori toko (yang mencerminkan game yang punya item) + katalog
+  // misi (game yang dipakai di misi harian). Digabung supaya lengkap.
+  const gameDariKategori = (snap.shopCategories || []).map((c) => c.label || c.value);
+  const gameDariMisi = [...new Set((snap.missionCatalog || []).map((x) => x.game).filter(Boolean))];
+  const gameDariTop = [...new Set((m.topGamesToday || []).map((g) => g.game_type).filter(Boolean))];
+  const semuaGame = [...new Set([...gameDariKategori, ...gameDariMisi, ...gameDariTop])];
+  if (semuaGame.length) {
+    L.push(`GAME YANG SUDAH ADA (${semuaGame.length} - JANGAN sarankan yang sudah ada): ${semuaGame.join(', ')}`);
+  }
+
+  // PREFERENSI PEMAIN: game mana yang benar-benar dimainkan, dari dua sudut:
+  //   1. game_scores (berapa kali dimainkan) - minat bermain
+  //   2. item terjual per game - kesediaan membelanjakan poin
+  // Gabungan keduanya menunjukkan game mana yang "hidup" dan layak
+  // dikembangkan/ditiru mekaniknya untuk ide baru.
+  const gameDimainkan = [...(m.topGamesToday || [])]
+    .sort((a, b) => (b.plays || 0) - (a.plays || 0));
+  if (gameDimainkan.length) {
+    L.push('Game paling sering dimainkan (hari ini): ' +
+      gameDimainkan.map((g) => `${g.game_type}(${g.plays}x)`).join(', '));
+  }
+  // Item terjual dikelompokkan per game_type - minat BERBELANJA per game.
+  const itemPerGame = {};
+  for (const it of (m.itemTerjualAll || [])) {
+    const kat = (snap.shopItems || []).find((s) => s.itemKey === it.itemKey);
+    const g = kat?.gameType || '(tanpa game)';
+    itemPerGame[g] = (itemPerGame[g] || 0) + (it.kali || 0);
+  }
+  const gameLaku = Object.entries(itemPerGame).sort((a, b) => b[1] - a[1]);
+  if (gameLaku.length) {
+    L.push('Item terjual per game (minat berbelanja): ' +
+      gameLaku.slice(0, 12).map(([g, n]) => `${g}=${n}x`).join(', '));
+  }
   L.push('');
 
   // ---------- Toko ----------
@@ -557,6 +599,26 @@ export const PINTASAN = [
     id: 'error',
     label: 'Log Error',
     tanya: 'Baca bagian LOG ERROR. Sebutkan error mana yang paling sering muncul, sejak kapan, dan bagian mana yang terdampak (game, invite, izin, dsb). Pisahkan error yang berbahaya dari yang tidak berbahaya, lalu beri urutan perbaikan dari yang paling mendesak. Kalau log-nya kosong atau bot belum mengirimnya, katakan apa adanya.',
+  },
+  {
+    id: 'idegame',
+    label: 'Ide Game Baru',
+    tanya: [
+      'Usulkan 3 ide GAME BARU yang INOVATIF dan out of the box untuk NEXO Games.',
+      '',
+      'ATURAN WAJIB:',
+      '1. JANGAN menyarankan game yang sudah ada di daftar "GAME YANG SUDAH ADA".',
+      '   Cek daftar itu dulu - kalau idemu mirip salah satunya, buang dan cari lain.',
+      '2. Ide harus NYAMBUNG dengan data: jelaskan kenapa ide ini cocok dengan',
+      '   minat pemain (sebut game yang paling sering dimainkan dan game yang',
+      '   itemnya paling laku sebagai bukti).',
+      '3. Setiap ide harus punya MEKANIK INTI yang belum dipakai game NEXO saat',
+      '   ini - sebutkan mekaniknya secara spesifik, bukan cuma tema.',
+      '4. Sebutkan: nama game, cara main singkat (2-3 baris), mekanik pembeda,',
+      '   dan alasan berbasis angka kenapa ini cocok.',
+      '5. Kalau ide mirip game yang sudah ada, jelaskan APA YANG BERBEDA -',
+      '   jangan menyamarkan game lama dengan nama baru.',
+    ].join('\n'),
   },
   {
     id: 'guild',
