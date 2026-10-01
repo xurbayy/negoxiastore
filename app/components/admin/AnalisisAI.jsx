@@ -140,7 +140,9 @@ export default function AnalisisAI() {
         setRiwayat((r) => [{
           judul,
           jawaban: d.jawaban,
-          info: `${d.model} | kunci ke-${d.kunciDipakai} dari ${d.totalKunci} | konteks ${d.ukuranKonteks.toLocaleString('id-ID')} karakter`,
+          // Info teknis (nama model, kunci ke berapa, panjang konteks) SENGAJA
+          // tidak ditampilkan - itu urusan internal, bukan informasi untuk
+          // pemakai panel.
         }, ...r]);
       }
     } catch (e) {
@@ -188,17 +190,6 @@ export default function AnalisisAI() {
       <div className="nx-card px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-ink">Analisis AI</h3>
-          {/* Badge status: LATAR PADAT, bukan semi transparan.
-              Sebelumnya bg-bg-soft (krem) di atas kartu krem sehingga batasnya
-              nyaris tidak terlihat, dan tidak konsisten dengan badge admin lain
-              yang memakai latar penuh (bg-accent, bg-success, bg-danger).
-              border-ink/15 memberi tepi tegas saat latarnya menumpuk kartu
-              berpigmen sama. */}
-          <span className="nx-badge border border-ink/15 bg-accent text-ink">
-            {status.jumlahKunci} kunci
-            <span className="opacity-50">&middot;</span>
-            {status.model}
-          </span>
         </div>
         <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
           AI membaca seluruh data snapshot bot (server, game, toko, ekonomi, misi,
