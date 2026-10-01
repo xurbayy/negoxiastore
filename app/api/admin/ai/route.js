@@ -70,8 +70,11 @@ async function prosesPengingat(jawaban) {
       jawabanBersih,
       pengingat: { id: Number(res.lastInsertRowid ?? 0), teks, waktuIngat, waktuTeks: formatWib(waktuIngat) },
     };
-  } catch {
-    // Gagal simpan pengingat TIDAK boleh menggagalkan jawaban AI.
+  } catch (e) {
+    // Gagal simpan pengingat TIDAK boleh menggagalkan jawaban AI, tapi
+    // errornya harus TERCATAT (bukan senyap) supaya bisa ditelusuri
+    // mengapa pengingat tidak masuk.
+    console.error('[AI] Gagal simpan pengingat:', e?.message || e);
     return { jawabanBersih, pengingat: null };
   }
 }

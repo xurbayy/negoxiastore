@@ -393,8 +393,10 @@ export default function AdminShell({ username, avatar = null }) {
               )}
             </summary>
 
-            {/* Dropdown daftar pengingat */}
-            <div className="invisible absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
+            {/* Dropdown daftar pengingat.
+                Di mobile: right-0 + max-w-full -> menyesuaikan layar kecil,
+                tidak melebar keluar layar. Di desktop: right-0 + w-80 normal. */}
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100 sm:max-w-none">
               <p className="px-2 py-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">
                 Pengingat {jumlahPengingat > 0 ? `(${jumlahPengingat})` : ''}
               </p>
