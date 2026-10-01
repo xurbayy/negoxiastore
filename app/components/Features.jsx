@@ -24,6 +24,13 @@ const FEATURES = [
     desc: 'Bangun guild, rekrut member, kumpulkan poin guild, dan taklukkan server lain di Guild War.',
   },
   {
+    // Fitur yang sebelumnya tidak disebut di web padahal jadi andalan bot.
+    // Ikonnya diambil dari emoji bot yang sama supaya identik dengan Discord.
+    emoji: 'chemistry',
+    title: 'Chemistry & Partner',
+    desc: 'Cari partner, bangun ikatan Chemistry lewat main bareng, dan lihat siapa teman co-op paling cocok buat kamu.',
+  },
+  {
     emoji: 'trophy',
     title: 'Leaderboard Global',
     desc: 'Naik ke puncak ranking poin, winstreak, dan level. Tunjukkan siapa bos di server-mu.',
@@ -42,6 +49,16 @@ const FEATURES = [
     emoji: '267042fire',
     title: 'Streak & Winstreak',
     desc: 'Rantai kemenangan dan daily streak memberi bonus makin gede. Jangan sampai putus!',
+  },
+  {
+    emoji: 'titles',
+    title: 'Gelar & Title',
+    desc: 'Koleksi title eksklusif dari nxshop dan pasang di profilmu. Ada title langka yang cuma bisa didapat dari event.',
+  },
+  {
+    emoji: 'download3',
+    title: 'NEXO Pass & Game Beta',
+    desc: 'Akses game beta lebih dulu, kuota misi ekstra, dan badge eksklusif di profil. Main co-op tanpa batas harian.',
   },
   {
     emoji: 'shield',
