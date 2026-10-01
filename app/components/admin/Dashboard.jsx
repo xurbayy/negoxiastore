@@ -305,15 +305,13 @@ export default function Dashboard({ data }) {
                 return (
                   <li key={g.game_type}>
                     <div className="flex justify-between">
+                      {/* Top Game: NAMA SAJA, tanpa ikon (permintaan pemilik
+                          2026-09-30). Sebelumnya tiap baris memakai emoji game
+                          dan fallback inisial dua huruf - keduanya dihapus.
+
+                          `gd.icon` sengaja tidak dipakai lagi. Kalau nanti mau
+                          dikembalikan, cukup pasang blok <img> di sini. */}
                       <span className="flex items-center gap-2 text-ink">
-                        {gd.icon ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={gd.icon} alt="" width={18} height={18} className="h-4.5 w-4.5 shrink-0" />
-                        ) : (
-                          <span className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded bg-accent/15 text-[0.55rem] font-bold text-accent-hover">
-                            {gd.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        )}
                         {gd.name}
                         {gd.beta && (
                           <span className="rounded-full bg-accent px-2 py-0.5 text-[0.55rem] font-extrabold uppercase tracking-wider text-ink" title="Game beta - belum dirilis publik">

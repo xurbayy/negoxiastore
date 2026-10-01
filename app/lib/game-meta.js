@@ -28,6 +28,14 @@ export const GAME_META = {
   quickdraw: { name: 'Quick Draw', emoji: 'quickdraw', fb: 'quickdraw' },
   racing: { name: 'Racing', emoji: 'racing', fb: 'racing' },
   rps: { name: 'Rock Paper Scissors', emoji: 'rps', fb: 'rps' },
+  // Bot mencatat hasil SERI dengan game_type terpisah: 'rps_draw' (lihat
+  // games/multiplayer/rps.js). Tanpa pemetaan ini, dashboard menampilkan
+  // "rps_draw" MENTAH - huruf kecil semua dan tanpa nama yang enak dibaca.
+  'rps_draw': { name: 'Rock Paper Scissors (Seri)', emoji: 'rps', fb: 'rps' },
+  // Jenis lain yang juga dipakai bot untuk RPS, supaya tidak ada yang bocor
+  // tampil mentah kalau muncul di rekap.
+  'rps_win': { name: 'Rock Paper Scissors (Menang)', emoji: 'rps', fb: 'rps' },
+  'rps_refund': { name: 'Rock Paper Scissors (Refund)', emoji: 'rps', fb: 'rps' },
   russianroulette: { name: 'Russian Roulette', emoji: 'rr', fb: 'rr' },
   snakeladder: { name: 'Snakes & Ladders', emoji: 'sl', fb: 'sl' },
   bombsquad: { name: 'Bomb Squad', emoji: 'bombsquad', fb: 'bombsquad' },
