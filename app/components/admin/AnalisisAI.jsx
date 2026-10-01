@@ -172,7 +172,7 @@ export default function AnalisisAI() {
 
   if (!status?.aktif) {
     return (
-      <div className="nx-card px-6 py-8">
+      <div className="nx-card px-4 py-6 sm:px-6 sm:py-8">
         <h3 className="font-display text-ink">Analisis AI belum aktif</h3>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           Isi <strong className="text-ink">GROQ_API_KEY</strong> di environment
@@ -187,7 +187,7 @@ export default function AnalisisAI() {
   return (
     <div className="space-y-5">
       {/* Kepala */}
-      <div className="nx-card px-5 py-4">
+      <div className="nx-card px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-ink">Analisis AI</h3>
         </div>
@@ -246,12 +246,12 @@ export default function AnalisisAI() {
       {/* Hasil */}
       <div ref={kotakHasil} className="scroll-mt-4 space-y-4" />
       {riwayat.length === 0 && !jalan && (
-        <div className="nx-card px-5 py-8 text-center text-sm text-ink-muted">
+        <div className="nx-card px-4 py-6 sm:px-5 sm:py-8 text-center text-sm text-ink-muted">
           Belum ada analisis. Klik salah satu tombol di atas untuk mulai.
         </div>
       )}
       {riwayat.map((r, i) => (
-        <div key={i} className="nx-card px-5 py-4">
+        <div key={i} className="nx-card px-4 py-4 sm:px-5">
           <div className="mb-2 flex items-center gap-2 border-b border-border-soft pb-2">
             <span className="font-display text-sm font-bold text-ink">{r.judul}</span>
             {r.info && <span className="ml-auto text-[0.65rem] text-ink-faint">{r.info}</span>}

@@ -267,7 +267,7 @@ export default function Dashboard({ data }) {
       </div>
 
       {/* Grafik besar + pemilih rentang */}
-      <div className="nx-card px-5 py-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display text-ink">Tren Ekonomi & Aktivitas</h3>
           <div className="flex gap-1.5">
@@ -294,7 +294,7 @@ export default function Dashboard({ data }) {
 
       {/* Top games (bar relatif) + top servers */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="nx-card px-5 py-5">
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <h3 className="font-display text-ink">Top Game Hari Ini</h3>
           {(m.topGamesToday || []).length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">Belum ada game hari ini.</p>
@@ -337,7 +337,7 @@ export default function Dashboard({ data }) {
             Sumbernya transaksi asli (kolom item_key), bukan tebakan dari teks.
             Menampilkan 10 terlaris sepanjang masa + jumlah hari ini, supaya
             kelihatan item mana yang masih laku dan mana yang sudah dingin. */}
-        <div className="nx-card px-5 py-5">
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="font-display text-ink">Item Paling Sering Dibeli</h3>
             <span className="text-[0.65rem] text-ink-faint">{fmt(totalItemTerjual)} total</span>
@@ -425,7 +425,7 @@ export default function Dashboard({ data }) {
             Permintaan pemilik 2026-09-30: tampilkan 10 orang yang paling
             banyak mengundang lewat referral, lengkap dengan namanya.
             Nama sudah di-JOIN di sisi bot, jadi di sini tinggal ditampilkan. */}
-        <div className="nx-card px-5 py-5">
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex items-baseline justify-between gap-2">
             <h3 className="font-display text-ink">Pengundang Terbanyak</h3>
             <span className="text-[0.65rem] text-ink-faint">
@@ -491,7 +491,7 @@ export default function Dashboard({ data }) {
           })()}
         </div>
 
-        <div className="nx-card px-5 py-5">
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <h3 className="font-display text-ink">Top Server</h3>
           {(m.servers || m.topServers || []).length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">Belum ada data server.</p>
