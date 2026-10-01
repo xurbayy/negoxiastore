@@ -10,6 +10,7 @@ import HowToPlay from './components/HowToPlay';
 import Faq from './components/Faq';
 import Footer from './components/Footer';
 import AutoRefresh from './components/AutoRefresh';
+import ScrollKeAnchor from './components/ScrollKeAnchor';
 import WelcomeBack from './components/WelcomeBack';
 
 // Landing pintar: halaman pertama tetap landing page, tapi isinya menyesuaikan
@@ -24,6 +25,7 @@ export default async function Page() {
     <>
       <ScrollProgress />
       <AutoRefresh />
+      <ScrollKeAnchor />
       <Navbar session={session} premiumActive={premiumActive} />
       <main>
         <Hero loggedIn={loggedIn} />
@@ -31,8 +33,17 @@ export default async function Page() {
         <LiveSnapshot />
         <Games />
         <Features />
-        {!loggedIn && <HowToPlay />}
-        {!loggedIn && <Faq />}
+        {/* "Cara Main" dan "FAQ" dulu HANYA dirender untuk tamu. Akibatnya
+            link navbar /#cara-main gagal untuk member: section-nya tidak ada,
+            jadi browser cuma pindah halaman lalu berhenti di atas - terlihat
+            seperti "ke halaman game yang awal", bukan ke Cara Main.
+
+            Sekarang selalu dirender. Isinya memang lebih relevan untuk
+            pemain baru, tapi member pun sesekali perlu mengeceknya - dan yang
+            lebih penting: tautan yang ada di UI TIDAK BOLEH menuju ke tempat
+            yang tidak ada. */}
+        <HowToPlay />
+        <Faq />
       </main>
       <Footer />
     </>
