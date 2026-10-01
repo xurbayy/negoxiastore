@@ -1,4 +1,4 @@
-import { getLatestSnapshot, stripEmojiToken, timeAgo } from '../lib/snapshot';
+import { getLatestSnapshot, stripEmojiToken } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { emojiSrc } from '../lib/emojis';
@@ -41,11 +41,10 @@ export default async function LeaderboardPage() {
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Leaderboard <span className="font-display text-ink">NEXO</span>
           </h1>
-          {snap ? (
-            <p className="mt-2 text-sm text-ink-muted">
-              Diperbarui {timeAgo(snap.ts)} · data live dari bot
-            </p>
-          ) : (
+          {/* Baris "Diperbarui X · data live dari bot" DIHAPUS (permintaan
+              pemilik 2026-10-01) - sudah ada indikator mengambang di kanan
+              bawah (AutoRefresh). Peringatan bot offline TETAP ada. */}
+          {!snap && (
             <p className="mt-2 text-sm text-danger">
               ⚠ Bot belum mengirim data. Leaderboard akan muncul setelah bot online.
             </p>

@@ -1,4 +1,4 @@
-import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
+import { getLatestSnapshot } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import { emojiSrc } from '../lib/emojis';
@@ -33,9 +33,11 @@ export default async function BankPage() {
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Bank <span className="font-display text-ink">Watch</span>
           </h1>
-          {snap ? (
-            <p className="mt-2 text-sm text-ink-muted">Diperbarui {timeAgo(snap.ts)} · data live dari bot</p>
-          ) : (
+          {/* Baris "Diperbarui X · data live dari bot" DIHAPUS (permintaan
+              pemilik 2026-10-01) - sudah ada indikator mengambang di kanan
+              bawah (AutoRefresh). Peringatan bot offline TETAP ada supaya
+              pengunjung tahu datanya belum masuk. */}
+          {!snap && (
             <p className="mt-2 text-sm text-danger">⚠ Bot belum mengirim data bank.</p>
           )}
 

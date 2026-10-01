@@ -1,4 +1,4 @@
-import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
+import { getLatestSnapshot } from '../lib/snapshot';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 
 // LiveSnapshot: strip statistik nyata dari snapshot bot terakhir.
@@ -41,14 +41,16 @@ export default async function LiveSnapshot() {
           </div>
         ))}
       </div>
-      <p className="mt-3 text-center text-xs text-ink-muted">
-        {stale ? (
-          <span className="text-danger">⚠ Bot terakhir terlihat lebih dari 3 menit lalu.</span>
-        ) : (
-          <span className="pulse-dot" aria-hidden="true" />
-        )}
-        {' '}Diperbarui {timeAgo(snap.ts)} · data diperbarui tiap 1 menit
-      </p>
+      {/* Baris "Diperbarui X lalu · data diperbarui tiap 1 menit" DIHAPUS
+          (permintaan pemilik 2026-10-01). Sudah ada indikator kecil mengambang
+          di kanan bawah (AutoRefresh) yang berdenyut dan bisa diklik - baris
+          ini hanya mengulang informasi yang sama. Yang tersisa hanya peringatan
+          kalau bot benar-benar sudah lama tidak terlihat. */}
+      {stale && (
+        <p className="mt-3 text-center text-xs text-danger">
+          ⚠ Bot terakhir terlihat lebih dari 3 menit lalu.
+        </p>
+      )}
     </div>
   );
 }
