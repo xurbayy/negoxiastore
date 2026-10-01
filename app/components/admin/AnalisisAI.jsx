@@ -126,6 +126,16 @@ export default function AnalisisAI() {
   // Keduanya berbasis DATA yang sama; mode hanya mengubah BENTUK jawaban.
   const [mode, setMode] = useState('analisis');
 
+  // Percakapan mode DISKUSI (chat 2 arah): daftar pesan bergantian.
+  // Struktur satu pesan: { peran: 'gw' | 'ai', isi, waktu, error? }
+  //
+  // CATATAN (fix 2026-10-01): deklarasi ini SEMPAT HILANG saat menambahkan
+  // mode kedua - akibatnya halaman AI crash total ("Ada yang error di halaman
+  // ini") karena `pesan` dipakai di banyak tempat tapi tidak pernah
+  // dideklarasikan. Build tetap lolos karena JS menganggapnya variabel global
+  // yang tidak ada; errornya baru muncul saat runtime.
+  const [pesan, setPesan] = useState([]);
+
   // Hasil mode ANALISIS (searah): daftar laporan TEMUAN/SARAN/RISIKO.
   // Terpisah dari `pesan` supaya dua mode tidak saling mengotori tampilan.
   const [laporan, setLaporan] = useState([]);
