@@ -216,7 +216,7 @@ export default function Dashboard({ data }) {
   const maxPlays = Math.max(...(m.topGamesToday || []).map((g) => g.plays), 1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Bridge status: pita solid - status sistem jangan samar */}
       <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-white ${stale ? 'bg-danger' : 'bg-success'}`}>
         <p className="text-sm font-bold">
@@ -235,7 +235,7 @@ export default function Dashboard({ data }) {
           tambahan) jadi lebih tinggi sendiri sehingga grid terlihat tidak
           rata - h-full pada kartu saja tidak cukup, karena h-full mengikuti
           tinggi baris, sedangkan barisnya yang perlu disamakan. */}
-      <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid auto-rows-fr grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {cards.map((c) => {
           const d = c.pick ? delta24(fullSeries, c.pick) : null;
           // h-full: kartu mengisi tinggi baris grid, sehingga semua kartu sama
@@ -243,7 +243,7 @@ export default function Dashboard({ data }) {
           // kartu "Item Terjual" lebih tinggi sendiri (134 vs 82) sehingga
           // baris grid terlihat tidak rata.
           return (
-            <div key={c.label} className="nx-card flex h-full flex-col px-4 py-4">
+            <div key={c.label} className="nx-card flex h-full flex-col px-4 py-4 sm:px-5 sm:py-5">
               <div className="font-display text-xl text-ink">{c.value}</div>
               <div className="mt-1 text-xs text-ink-muted">{c.label}</div>
               {/* Keterangan tambahan (mis. "3 hari ini · 12.000 poin" pada
@@ -285,7 +285,7 @@ export default function Dashboard({ data }) {
             ))}
           </div>
         </div>
-        <div className="mt-4 grid gap-6 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
           <Chart series={series} pick={(s) => s.totalMoney} color="#C74B3C" label="Poin beredar" unit="pts" />
           <Chart series={series} pick={(s) => s.gamesToday} color="#2B2118" label="Game dimainkan hari ini" unit="main" />
           <Chart series={series} pick={(s) => s.totalUsers} color="#7BA05B" label="Player terdaftar" unit="orang" />
