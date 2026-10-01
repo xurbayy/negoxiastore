@@ -120,7 +120,15 @@ export async function tanyaGroq(pesan) {
       // bahwa penyebabnya bisa model - bukan cuma kunci.
       const kode = res.status;
       let rangkai = pesanErr || ('HTTP ' + kode);
-      if (kode === 403) {
+      // TOKEN TERLALU BANYAK (kejadian nyata 2026-10-01): Groq menolak dengan
+      // pesan 'Request too large ... tokens per minute (TPM)'. Pesannya panjang
+      // dan menyebut hal teknis (organization, service tier) yang tidak berguna
+      // bagi admin. Diganti pesan singkat yang menyebut PENYEBAB dan SOLUSI.
+      if (/too large|TPM|tokens per minute/i.test(rangkai)) {
+        rangkai = 'Data yang dikirim ke AI terlalu panjang untuk batas kuota Groq. ' +
+          'Konteks sudah dipangkas otomatis; coba lagi sebentar lagi (kuota dihitung per menit). ' +
+          'Kalau sering terjadi, kurangi riwayat percakapan atau naikkan tier Groq.';
+      } else if (kode === 403) {
         rangkai += ' [penyebab lazim: nama MODEL tidak dikenal. Cek GROQ_MODEL - ' +
           'daftar model yang tersedia untuk akun ini bisa dilihat di console.groq.com]';
       } else if (kode === 401) {

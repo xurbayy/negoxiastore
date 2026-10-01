@@ -67,8 +67,8 @@ export function susunKonteks(snap, panel = {}) {
   L.push(`Member NEXO Pass aktif: ${m.premiumCount ?? '-'}`);
   L.push(`Game dimainkan hari ini: ${m.gamesToday ?? '-'}`);
   L.push(`Game dimainkan 7 hari: ${m.gamesWeek ?? '-'}`);
-  L.push(`Sesi sedang berjalan: ${JSON.stringify(m.live || {})}`);
-  L.push(`Pinjaman bank: ${JSON.stringify(m.loans || {})}`);
+  L.push(`Sesi sedang berjalan: ${Object.entries(m.live || {}).map(([k, v]) => k + "=" + v).join(", ") || "-"}`);
+  L.push(`Pinjaman bank: ${Object.entries(m.loans || {}).map(([k, v]) => k + "=" + v).join(", ") || "-"}`);
   L.push(`Pemain terbanned: ${(m.bannedUsers || []).length}`);
   L.push('');
 
@@ -111,7 +111,7 @@ export function susunKonteks(snap, panel = {}) {
 
   // ---------- Game ----------
   L.push('### GAME');
-  L.push(`Top game HARI INI: ${JSON.stringify(m.topGamesToday || [])}`);
+  L.push(`Top game HARI INI: ${(m.topGamesToday || []).map((g) => g.game_type + "(" + g.plays + "x)").join(", ") || "-"}`);
   L.push(`Game beta aktif: ${(snap.betaGames || []).map((b) => `${b.name} (${b.mode})`).join(', ') || '-'}`);
 
   // DAFTAR LENGKAP GAME YANG SUDAH ADA (fix 2026-10-01).
@@ -235,7 +235,7 @@ export function susunKonteks(snap, panel = {}) {
 
   // ---------- Promo & diskon ----------
   L.push('### PROMO');
-  L.push(`Kode promo aktif: ${JSON.stringify(snap.promoCodes || [])}`);
+  L.push(`Kode promo aktif: ${(snap.promoCodes || []).map((p) => p.code + "(" + (p.claimed || 0) + "/" + (p.quota || 0) + ")").join(", ") || "-"}`);
   L.push(`Flash sale aktif: ${(snap.flashSales || []).length}`);
   L.push(`Diskon aktif: ${(snap.discounts || []).length}`);
   L.push('');
@@ -251,10 +251,23 @@ export function susunKonteks(snap, panel = {}) {
   L.push('');
 
   // ---------- Ekonomi ----------
+  //
+  // FORMAT RINGKAS (fix 2026-10-01). Sebelumnya bagian ini memakai
+  // JSON.stringify mentah. Untuk daftar 10 guild, JSON menghasilkan
+  // {"name":"...","points":...,"warWins":...} - puluhan karakter teknis yang
+  // tidak menambah informasi bagi AI, tapi ikut memakan jatah token. Groq
+  // menolak permintaan kalau melebihi batas TPM (kejadian nyata: 8564 dari
+  // 8000 token), sehingga panel AI menampilkan error.
+  //
+  // Sekarang ditulis sebagai daftar ringkas "nama(nilai)" - informasi yang
+  // sama, jauh lebih pendek.
   L.push('### EKONOMI');
-  L.push(`Pemain terkaya: ${JSON.stringify((snap.richest || []).slice(0, 5))}`);
-  L.push(`Leaderboard: ${JSON.stringify((snap.leaderboard || []).slice(0, 5))}`);
-  L.push(`Guild terkuat: ${JSON.stringify(snap.guildBoard || [])}`);
+  const fmtDaftar = (arr, ambil, maks = 5) =>
+    (arr || []).slice(0, maks).map(ambil).join(', ') || '-';
+  L.push('Pemain terkaya: ' + fmtDaftar(snap.richest, (x) => `${x.username}(${rupiah(x.points)})`));
+  L.push('Leaderboard: ' + fmtDaftar(snap.leaderboard, (x) => `${x.username}(${rupiah(x.points)})`));
+  // GuildBoard: dibatasi 8 (dulu TANPA batas - sumber pembengkakan terbesar).
+  L.push('Guild terkuat: ' + fmtDaftar(snap.guildBoard, (x) => `${x.name}(${rupiah(x.points)}${x.warWins ? ', ' + x.warWins + ' war' : ''})`, 8));
   L.push(`Member premium (tier): ` +
     ((snap.premiumMembers || []).length + ' orang'));
   L.push(`Judul admin dipegang: ${(m.adminTitleHolders || []).length}`);
@@ -568,7 +581,36 @@ export function susunKonteks(snap, panel = {}) {
     }
   }
 
-  return L.join('\n');
+  // ==========================================
+  // PENGAMAN UKURAN KONTEKS (fix 2026-10-01)
+  // ==========================================
+  //
+  // KENAPA PERLU: Groq menolak permintaan yang melebihi batas token per menit
+  // (kejadian nyata: "Limit 8000, Requested 8564"). Saat itu terjadi, panel AI
+  // menampilkan error dan pemilik tidak bisa memakai AI sama sekali.
+  //
+  // Semua bagian di atas sudah dibatasi satu per satu, tapi TOTAL-nya tetap
+  // bisa membengkak kalau data pemain bertambah banyak. Pengaman ini memastikan
+  // konteks SELALU di bawah batas, apa pun isi datanya.
+  //
+  // Cara kerja: kalau kepanjangan, bagian-bagian dipangkas dari yang PALING
+  // BELAKANG (paling tidak penting: tren titik data, log error, dsb), sambil
+  // mempertahankan bagian depan (ringkasan, server, game, toko, penjualan) yang
+  // paling sering dipakai untuk analisis.
+  //
+  // Batas 20000 karakter ~ 5000 token (perkiraan kasar 4 char/token untuk
+  // bahasa Indonesia). Sisa ~3000 token cukup untuk prompt sistem + riwayat
+  // percakapan + jawaban, di bawah batas 8000 TPM Groq.
+  const BATAS_KONTEKS = 20000;
+  let teks = L.join('\n');
+  if (teks.length > BATAS_KONTEKS) {
+    // Buang bagian belakang sampai muat. Setiap bagian dipisah '### '.
+    const potong = teks.slice(0, BATAS_KONTEKS);
+    const akhirBagian = potong.lastIndexOf('\n### ');
+    teks = (akhirBagian > BATAS_KONTEKS * 0.5 ? potong.slice(0, akhirBagian) : potong)
+      + '\n\n(Catatan: sebagian data dipangkas karena terlalu panjang. Kalau perlu detail bagian yang tidak terlihat, tanya bagian spesifiknya.)';
+  }
+  return teks;
 }
 
 // Instruksi format TERPISAH dari instruksi tugas, supaya bisa dipakai semua
