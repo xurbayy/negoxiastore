@@ -435,8 +435,7 @@ export default function AnalisisAI() {
 
           {pengingat.filter((p) => !p.selesai).length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">
-              Belum ada pengingat. Tulis di mode Diskusi, mis. "ingetin gw pas Halloween mau masang promo" -
-              AI akan menyimpannya di sini dengan waktu WIB.
+              Belum ada. Contoh: "ingetin gw pas Halloween mau masang promo".
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
@@ -563,13 +562,13 @@ export default function AnalisisAI() {
             </div>
           </div>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-          {mode === 'analisis' ? (
-            <>Mode <strong className="text-ink">Analisis</strong>: AI membaca seluruh data bot lalu menyusun laporan TEMUAN, SARAN, dan RISIKO. Cocok untuk keputusan cepat yang butuh pertimbangan risiko.</>
-          ) : (
-            <>Mode <strong className="text-ink">Diskusi</strong>: ngobrol dua arah dengan AI, bisa ditanya lanjut dan AI ingat percakapan sebelumnya. Cocok untuk membahas arah pengembangan ke depan.</>
-          )}
-          {' '}Keduanya berbasis data yang sama - angka yang tidak ada di data tidak akan dikarang.
+        {/* Satu baris singkat saja - penjelasan panjang dihapus (permintaan
+            pemilik 2026-10-01: 'terlalu banyak text dan pusing'). Keterangan
+            cara pakai sudah ada di tombol (title) dan di pesan kosong. */}
+        <p className="mt-2 text-xs text-ink-muted">
+          {mode === 'analisis'
+            ? 'Pilih topik atau tulis sendiri - hasilnya: Temuan, Saran, Risiko.'
+            : 'Ngobrol bebas, AI ingat percakapan sebelumnya.'}
         </p>
       </div>
 
@@ -625,7 +624,7 @@ export default function AnalisisAI() {
 
           {laporan.length === 0 && !jalan && (
             <div className="nx-card px-4 py-6 sm:px-5 sm:py-8 text-center text-sm text-ink-muted">
-              Belum ada analisis. Klik salah satu tombol di atas untuk mulai.
+              Belum ada analisis. Pilih topik di atas.
             </div>
           )}
 
@@ -688,8 +687,7 @@ export default function AnalisisAI() {
 
         {pesan.length === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">
-            Mulai percakapan: klik salah satu tombol pintasan di atas, atau ketik pertanyaanmu di kolom bawah.
-            Percakapan bisa dilanjutkan berkali-kali dan tidak hilang saat halaman di-refresh.
+            Ketik pertanyaanmu di kolom bawah untuk mulai.
           </p>
         ) : (
           <ul className="mt-3 space-y-3">
@@ -767,32 +765,30 @@ export default function AnalisisAI() {
       {/* ==========================================
           ARSIP JAWABAN TERSIMPAN
           ==========================================
-          Permintaan pemilik: "jawaban AI bisa gw simpan bisa gw hapus,
-          jadi bisa aja ada masukkan bagus gw simpan jadi jawabannya selalu
-          ada, bisa juga dihapus kalo udah ga relevan". */}
+          Permintaan pemilik: "jawaban AI bisa gw simpan bisa gw hapus".
+
+          KARTU INI HANYA MUNCUL KALAU ADA ISINYA (fix 2026-10-01). Sebelumnya
+          selalu tampil - walau kosong - dan ikut menyumbang kesan "terlalu
+          banyak text" di halaman. Pesan kosongnya juga dihapus; kalau belum
+          ada arsip, tidak ada yang perlu ditampilkan. */}
+      {arsip.length > 0 && (
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-ink">
-            Arsip Jawaban {arsip.length > 0 && <span className="text-sm font-normal text-ink-muted">({arsip.length})</span>}
+            Arsip Jawaban <span className="text-sm font-normal text-ink-muted">({arsip.length})</span>
           </h3>
-          {arsip.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setBukaArsip((v) => !v)}
-              className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink cursor-pointer"
-            >
-              {bukaArsip ? 'Sembunyikan' : 'Tampilkan'}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setBukaArsip((v) => !v)}
+            className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink cursor-pointer"
+          >
+            {bukaArsip ? 'Sembunyikan' : 'Tampilkan'}
+          </button>
         </div>
 
         {pesanSimpan && <p className="mt-2 text-xs font-semibold text-success">{pesanSimpan}</p>}
 
-        {arsip.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            Belum ada jawaban tersimpan. Klik "Simpan" pada jawaban yang berguna - catatannya akan tersimpan di sini dan bisa dibaca kapan saja.
-          </p>
-        ) : bukaArsip ? (
+        {bukaArsip ? (
           <ul className="mt-3 space-y-3">
             {arsip.map((a) => (
               <li key={a.id} className="rounded-xl border border-border-soft bg-bg-soft/40 px-4 py-3">
@@ -820,9 +816,10 @@ export default function AnalisisAI() {
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-xs text-ink-muted">{arsip.length} catatan tersimpan. Klik "Tampilkan" untuk membacanya.</p>
+          <p className="mt-2 text-xs text-ink-muted">{arsip.length} catatan tersimpan.</p>
         )}
       </div>
+      )}
     </div>
   );
 }
