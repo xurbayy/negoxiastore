@@ -125,6 +125,9 @@ export default function AnalisisAI() {
   //
   // Keduanya berbasis DATA yang sama; mode hanya mengubah BENTUK jawaban.
   const [mode, setMode] = useState('analisis');
+  // Provider & model AI (toggle di panel admin).
+  const [provider, setProvider] = useState('');
+  const [modelInput, setModelInput] = useState('');
 
   // Percakapan mode DISKUSI (chat 2 arah): daftar pesan bergantian.
   // Struktur satu pesan: { peran: 'gw' | 'ai', isi, waktu, error? }
@@ -212,7 +215,11 @@ export default function AnalisisAI() {
       try {
         const res = await fetch('/api/admin/ai', { cache: 'no-store' });
         const d = await res.json();
-        if (!batal) setStatus(d);
+        if (!batal) {
+          setStatus(d);
+          if (d.provider) setProvider(d.provider);
+          if (d.model) setModelInput(d.model);
+        }
       } catch {
         if (!batal) setStatus({ ok: false, aktif: false });
       } finally {
@@ -260,7 +267,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined }),
       });
       const d = await res.json();
 
@@ -533,6 +540,32 @@ export default function AnalisisAI() {
             ))}
             </div>
           </div>
+        </div>
+        {/* Toggle provider + input model manual (permintaan pemilik
+            2026-10-01: "tombol toggle openrouter dan groq, nama model
+            bisa masukkin manual"). */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl border border-border-soft bg-bg-soft/50 p-1">
+            {(status.providers || []).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setProvider(p.id)}
+                className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
+                  provider === p.id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            value={modelInput}
+            onChange={(e) => setModelInput(e.target.value)}
+            placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
+            className="flex-1 min-w-[200px] rounded-xl border border-border-soft bg-bg-soft/50 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
+          />
         </div>
         {/* Satu baris singkat saja - penjelasan panjang dihapus (permintaan
             pemilik 2026-10-01: 'terlalu banyak text dan pusing'). Keterangan

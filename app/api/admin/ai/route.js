@@ -1,7 +1,7 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getLatestSnapshot } from '../../../lib/snapshot';
 import { susunKonteks, PINTASAN, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
-import { tanyaGroq, adaGroq, jumlahKunci, modelGroq } from '../../../lib/groq';
+import { tanyaGroq, adaGroq, jumlahKunci, modelGroq, infoProvider } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
 import { cariHariLibur } from '../../../lib/hariLibur';
@@ -371,7 +371,11 @@ export async function POST(request) {
     { role: 'user', content: penandaTugas + '\n\nPERTANYAAN: ' + instruksi },
   ];
 
-  const hasil = await tanyaGroq(pesan);
+  // Provider & model dari UI (toggle di panel admin AI).
+  const providerPilihan = String(body?.provider || '').trim();
+  const modelPilihan = String(body?.model || '').trim();
+
+  const hasil = await tanyaGroq(pesan, { provider: providerPilihan || undefined, model: modelPilihan || undefined });
   if (!hasil.ok) {
     return json({
       ok: false,
@@ -406,11 +410,15 @@ export async function POST(request) {
 // "AI siap dipakai" atau peringatan konfigurasi, tanpa memanggil Groq).
 export async function GET() {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
+  const info = infoProvider();
   return json({
     ok: true,
     aktif: adaGroq(),
     jumlahKunci: jumlahKunci(),
     model: modelGroq(),
+    provider: info.aktif,
+    providerLabel: info.label,
+    providers: info.tersedia,
     pintasan: PINTASAN.map((p) => ({ id: p.id, label: p.label })),
   });
 }
