@@ -183,6 +183,71 @@ export function susunKonteks(snap) {
   L.push('Guild: ' + (gs.total ?? 0) + ' dibuat, ' + (gs.adaAnggota ?? 0) +
     ' punya anggota, ' + (gs.warSelesai ?? 0) + ' war selesai');
 
+  // ---------- PROFIL MENDALAM PEMAIN TERATAS ----------
+  // Permintaan pemilik 2026-09-30: "data sweetsucidial kurang lengkap, gw mau
+  // selengkap mungkin". Sebelumnya hanya rank + poin + level; sekarang bot
+  // mengirim profil utuh 5 pemain teratas (inventory, transaksi, premium,
+  // misi, guild, pinjaman, title).
+  L.push('');
+  L.push('### PROFIL MENDALAM PEMAIN TERATAS');
+  const profil = m.profilTeratas || [];
+  if (!profil.length) {
+    L.push('Bot belum mengirim profil mendalam (kode lama).');
+  } else {
+    for (const orang of profil) {
+      const p = orang?.profile;
+      if (!p) continue;
+      L.push('');
+      L.push(`-- ${p.username} (rank global ${p.globalRank ?? '-'}) --`);
+      L.push(`  Level ${p.level} | XP ${p.xp}/${p.xpNext} | poin ${rupiah(p.points)}`);
+      L.push(`  Registered: ${p.registered ? 'ya' : 'belum'} | premium: ${p.premiumStatus}`);
+      if (p.premium?.tier) L.push(`  Premium tier ${p.premium.tier}, berakhir ${new Date(p.premium.expiresAt).toISOString().slice(0, 10)}`);
+      L.push(`  Streak harian: ${p.dailyStreak} hari | winstreak: ${p.winstreak}`);
+      L.push(`  Total menang: ${rupiah(p.totalWon)} | total taruhan: ${rupiah(p.totalBet)}`);
+      if (p.titleInfo?.label) L.push(`  Title: ${String(p.titleInfo.label).replace(/<[^>]+>/g, '')}`);
+      if (p.adminTitle) L.push(`  Judul admin: ${String(p.adminTitle).replace(/<[^>]+>/g, '')}`);
+      if (Array.isArray(p.ownedTitles)) L.push(`  Title dimiliki: ${p.ownedTitles.length}`);
+
+      // Isi tas: apa yang benar-benar dipegang vs hanya dibeli.
+      const tas = Array.isArray(p.inventory) ? p.inventory : [];
+      if (tas.length) {
+        L.push(`  Tas (${tas.length} jenis): ` + tas.slice(0, 10)
+          .map((x) => `${x.name || x.itemKey} x${x.quantity}`).join(', '));
+      } else {
+        L.push('  Tas: kosong');
+      }
+
+      // Misi: apakah pemain ini benar-benar mengerjakan misi harian.
+      const mis = p.missions;
+      if (mis && typeof mis === 'object') {
+        const selesai = Array.isArray(mis.missions)
+          ? mis.missions.filter((x) => x?.done || x?.selesai || x?.claimed).length
+          : (mis.selesai ?? null);
+        L.push(`  Misi: ${selesai ?? '?'}/${Array.isArray(mis.missions) ? mis.missions.length : '?'} selesai` +
+          (mis.claimedAll ? ' (semua diklaim)' : ''));
+      }
+
+      // Aktivitas: berapa sering main dan game apa.
+      const hist = Array.isArray(p.history) ? p.history : [];
+      if (hist.length) {
+        L.push(`  Riwayat main (${hist.length} terakhir): ` + hist.slice(0, 6)
+          .map((x) => `${x.gameType || x.game_type}(${x.points})`).join(', '));
+      }
+
+      // Riwayat transaksi: pola belanja & pemasukan.
+      const tx = Array.isArray(p.transactions) ? p.transactions : [];
+      if (tx.length) {
+        const belanja = tx.filter((x) => x.type === 'spend');
+        const masuk = tx.filter((x) => x.type !== 'spend');
+        L.push(`  Transaksi terakhir: ${tx.length} tercatat (${belanja.length} keluar, ${masuk.length} masuk)`);
+      }
+
+      if (p.guild?.name) L.push(`  Guild: ${p.guild.name} (${p.guild.role || 'member'})`);
+      else L.push('  Guild: tidak ikut guild');
+      if (p.loan) L.push(`  Pinjaman bank: ${rupiah(p.loan.totalDue)} jatuh tempo ${new Date(p.loan.dueDate).toISOString().slice(0, 10)}`);
+    }
+  }
+
   // ---------- LOG ERROR ----------
   // Bagian yang sebelumnya TIDAK PERNAH bisa dibaca AI. Isinya POLA error
   // (jenis + jumlah + waktu), bukan stack trace - lihat utils/logReader.js.

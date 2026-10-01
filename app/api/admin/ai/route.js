@@ -5,6 +5,11 @@ import { tanyaGroq, adaGroq, jumlahKunci, modelGroq } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
+
+// Pemformat angka ringkas - dipakai untuk data pemain yang dicari namanya.
+function rupiahNum(n) {
+  return Number(n || 0).toLocaleString('id-ID');
+}
 // Analisis panjang bisa lewat 10 detik; beri ruang tapi jangan menggantung.
 export const maxDuration = 60;
 
@@ -91,7 +96,59 @@ export async function POST(request) {
     }, 400);
   }
 
-  const konteks = susunKonteks(snap);
+  // ==========================================
+  // DETEKSI PEMAIN YANG DITANYAKAN
+  // ==========================================
+  // Permintaan pemilik: "munculkan data sweetsucidial ... selengkap mungkin".
+  // Snapshot hanya memuat 5 pemain teratas, jadi pemain lain tidak bisa dibahas.
+  //
+  // Di sini nama yang disebut di pertanyaan dicocokkan ke daftar pemain, lalu
+  // profil LENGKAPnya diambil dari data Player Lookup (bukan ditebak).
+  // Pencocokan harus persis (case-insensitive) supaya tidak salah orang -
+  // nama mirip seperti "sweet" dan "sweetsucidial" tidak boleh tertukar.
+  let konteksPemain = '';
+  const daftar = snap.monitor?.daftarPemain || [];
+  if (daftar.length) {
+    // Ambil kata-kata dari pertanyaan, cari yang persis sama dengan username.
+    const teksCari = (instruksi + ' ' + tanyaBebas + ' ' + idPintasan).toLowerCase();
+    const cocok = daftar.filter((u) => u.username && teksCari.includes(String(u.username).toLowerCase()));
+    // Dibatasi 2 supaya konteks tidak meledak kalau banyak nama disebut.
+    for (const u of cocok.slice(0, 2)) {
+      try {
+        const res = await fetch(new URL('/api/admin/player?id=' + encodeURIComponent(u.userId), request.url), {
+          headers: { cookie: request.headers.get('cookie') || '' },
+        });
+        if (!res.ok) continue;
+        const d = await res.json();
+        const p = d?.profile?.profile || d?.profile;
+        if (!p) continue;
+        // Ringkas supaya tidak mengirim objek mentah yang panjang.
+        konteksPemain += '\n\n### DATA LENGKAP PEMAIN: ' + (p.username || u.username) + '\n';
+        konteksPemain += 'ID: ' + (p.userId || u.userId) + '\n';
+        konteksPemain += 'Poin: ' + rupiahNum(p.points) + ' | Level ' + p.level +
+          ' | XP ' + p.xp + '/' + (p.xpNext ?? '-') + ' | Rank global: ' + (p.globalRank ?? '-') + '\n';
+        konteksPemain += 'Registered: ' + (p.registered ? 'ya' : 'belum') +
+          ' | Premium: ' + (p.premiumStatus || 'none') + '\n';
+        konteksPemain += 'Streak harian: ' + p.dailyStreak + ' hari | Winstreak: ' + (p.winstreak || 0) + '\n';
+        konteksPemain += 'Total menang: ' + rupiahNum(p.totalWon) + ' | Total taruhan: ' + rupiahNum(p.totalBet) + '\n';
+        if (p.adminTitle) konteksPemain += 'Judul admin: ' + String(p.adminTitle).replace(/<[^>]+>/g, '') + '\n';
+        const tas = Array.isArray(p.inventory) ? p.inventory : [];
+        konteksPemain += 'Tas (' + tas.length + ' jenis): ' +
+          (tas.length ? tas.map((x) => (x.name || x.itemKey) + ' x' + x.quantity).join(', ') : 'kosong') + '\n';
+        const tx = Array.isArray(p.transactions) ? p.transactions : [];
+        konteksPemain += 'Transaksi terakhir (' + tx.length + '): ' +
+          (tx.length ? tx.slice(0, 10).map((x) => x.type + ' ' + rupiahNum(x.amount)).join(', ') : '-') + '\n';
+        const hist = Array.isArray(p.history) ? p.history : [];
+        konteksPemain += 'Riwayat main (' + hist.length + '): ' +
+          (hist.length ? hist.slice(0, 10).map((x) => (x.gameType || x.game_type) + '=' + x.points).join(', ') : '-') + '\n';
+        if (p.guild?.name) konteksPemain += 'Guild: ' + p.guild.name + ' (' + (p.guild.role || 'member') + ')\n';
+        if (p.loan) konteksPemain += 'Pinjaman: ' + rupiahNum(p.loan.totalDue) + ' jatuh tempo ' + new Date(p.loan.dueDate).toISOString().slice(0, 10) + '\n';
+        konteksPemain += 'Judul dimiliki: ' + (Array.isArray(p.ownedTitles) ? p.ownedTitles.length : 0) + '\n';
+      } catch { /* pemain ini dilewati, yang lain tetap diproses */ }
+    }
+  }
+
+  const konteks = susunKonteks(snap) + konteksPemain;
 
   const pesan = [
     { role: 'system', content: sistemPrompt() },
