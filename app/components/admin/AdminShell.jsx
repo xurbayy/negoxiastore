@@ -113,7 +113,7 @@ export default function AdminShell({ username, avatar = null }) {
 
   useEffect(() => {
     const t = setTimeout(load, 0); 
-    const iv = setInterval(load, 5000);
+    const iv = setInterval(load, 15000);
     function onFocus() { load(); }
     window.addEventListener('focus', onFocus);
     return () => { clearTimeout(t); clearInterval(iv); window.removeEventListener('focus', onFocus); };

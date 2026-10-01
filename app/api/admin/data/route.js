@@ -23,17 +23,17 @@ export async function GET() {
   const db = getDb();
 
   const orders = await db.execute(
-    'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 50'
+    'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 30'
   );
 
   const log = await db.execute(
-    'SELECT id, action, payload, actor_id, status, result, created_at, executed_at FROM bot_commands ORDER BY created_at DESC LIMIT 500'
+    'SELECT id, action, payload, actor_id, status, result, created_at, executed_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'
   );
 
   const promoCache = await getPromoCache().catch(() => []);
 
     const feedback = await db.execute(
-      'SELECT id, discord_id, username, kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 100'
+      'SELECT id, discord_id, username, kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 30'
     );
 
     return json({
