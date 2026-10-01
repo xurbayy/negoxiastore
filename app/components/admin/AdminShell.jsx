@@ -243,10 +243,6 @@ export default function AdminShell({ username, avatar = null }) {
             <span className="hidden font-display text-lg font-bold tracking-tight text-ink sm:inline">
               NEXO Games
             </span>
-            {/* Label khusus admin - satu-satunya pembeda dari navbar user. */}
-            <span className="hidden rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-accent-hover sm:inline">
-              Admin
-            </span>
           </Link>
         </div>
 
