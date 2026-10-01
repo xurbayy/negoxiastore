@@ -31,14 +31,25 @@ export default function AdUnit({ slot, format = 'auto', className = '' }) {
     );
   }
 
+  // Format iklan: 'auto' diganti 'horizontal' supaya slot lebih pendek dan
+  // tidak melebar ke bawah (permintaan pemilik 2026-10-01). Format lain yang
+  // dikirim pemanggil tetap dihormati.
+  const formatEfektif = format === 'auto' ? 'horizontal' : format;
+
   return (
-    <ins
-      className={`adsbygoogle block ${className}`}
-      style={{ display: 'block' }}
-      data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-2706837395470018'}
-      data-ad-slot={slotId}
-      data-ad-format={format}
-      data-full-width-responsive="true"
-    />
+    // Pembungkus dengan tinggi DIBATASI: iklan tidak boleh mendorong judul
+    // terlalu jauh ke bawah. max-h-28 (112px) + overflow-hidden menjaga rapi;
+    // lebar tetap menyesuaikan ruang.
+    <div className={`mx-auto max-h-28 w-full overflow-hidden ${className}`}>
+      <ins
+        className="adsbygoogle block"
+        style={{ display: 'block', width: '100%', height: '100%' }}
+        data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-2706837395470018'}
+        data-ad-slot={slotId}
+        data-ad-format={formatEfektif}
+        // false: jangan paksa lebar penuh, supaya tinggi iklan lebih terkendali.
+        data-full-width-responsive="false"
+      />
+    </div>
   );
 }
