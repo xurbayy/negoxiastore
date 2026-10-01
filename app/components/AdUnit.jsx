@@ -21,11 +21,12 @@ export default function AdUnit({ slot, format = 'auto', className = '' }) {
   const slotId = slot || process.env.NEXT_PUBLIC_ADSENSE_SLOT || '';
 
   // Tanpa slot ID, jangan render <ins> kosong (bikin error di console).
-  // Tampilkan placeholder tipis agar layout tidak berubah drastis.
+  // Placeholder tipis: cukup untuk menjaga layout, tidak mendorong konten
+  // ke bawah terlalu jauh di mobile (360px).
   if (!slotId) {
     return (
-      <div className={`rounded-xl border border-dashed border-border-soft bg-bg-soft/50 px-4 py-6 text-center text-xs text-ink-faint ${className}`}>
-        Slot iklan belum dikonfigurasi (NEXT_PUBLIC_ADSENSE_SLOT)
+      <div className={`flex h-12 items-center justify-center rounded-lg border border-dashed border-border-soft bg-bg-soft/40 text-[0.65rem] text-ink-faint ${className}`}>
+        Slot iklan belum dikonfigurasi
       </div>
     );
   }
