@@ -285,14 +285,11 @@ export default function Dashboard({ data }) {
       </div>
 
       {/* Top games (bar relatif) + top servers + item terlaris + pengundang.
-          min-w-0 WAJIB pada tiap grid item: grid/flex item defaultnya punya
-          `min-width: auto`, sehingga konten panjang (mis. "Rock Paper Scissors
-          (Seri)" atau nama server) tidak boleh menyusut di bawah lebar
-          minimumnya dan MENARIK kolom grid melebar keluar layar. Gejalanya
-          terlihat di 374x667: kartu jadi 403px padahal ruangnya cuma 333px,
-          sehingga halaman bisa digulir ke samping. min-w-0 mematikan batas
-          minimum itu supaya konten mengikuti lebar kolom, bukan sebaliknya. */}
-      <div className="grid gap-4 md:grid-cols-2">
+          Semua panel full-width, konsisten dengan panel Tren Ekonomi di atas.
+          Sebelumnya pakai grid md:grid-cols-2 sehingga ukurannya berbeda
+          dengan Tren Ekonomi yang full-width - pemilik meminta disamakan.
+          min-w-0 tetap dipertahankan sebagai jaga-jaga. */}
+      <div className="space-y-4">
         <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
           <h3 className="font-display text-ink">Top Game Hari Ini</h3>
           {(m.topGamesToday || []).length === 0 ? (
