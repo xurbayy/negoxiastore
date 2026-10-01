@@ -44,4 +44,8 @@ export const GAME_META = {
   dungeon: { name: 'Dungeon Crawler', emoji: 'dungeon', fb: 'dungeon' },
   heist: { name: 'Bank Heist', emoji: 'heist', fb: 'heist' },
   zombiesurvival: { name: 'Zombie Survival', emoji: 'zombie', fb: 'zombie' },
+  // Bot mencatat referral sebagai game_type ('referral_pemberi') di tabel
+  // game_scores. Ini BUKAN game - tanpa pemetaan ini, dashboard menampilkan
+  // "referral_pemberi" MENTAH di daftar Top Game.
+  referral_pemberi: { name: 'Referral', emoji: 'al5roles', fb: 'al5roles' },
 };

@@ -209,38 +209,38 @@ export default function AdminShell({ username, avatar = null }) {
         - Kanan: tautan "Lihat Situs" (kembali ke beranda) + avatar admin.
 
         Konten di bawahnya diberi pt agar tidak tertutup bar yang fixed ini. */}
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-bg/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-3 md:px-6">
-        <div className="flex min-w-0 items-center gap-2.5">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-bg/95 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4">
+        <div className="flex min-w-0 items-center gap-3">
           {/* Tombol Menu hanya untuk mobile (sidebar desktop sudah selalu tampak). */}
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-2 rounded-lg border border-border-soft px-3 py-2 text-ink cursor-pointer md:hidden"
+            className="flex items-center gap-2 rounded-xl border border-border-soft px-3.5 py-2.5 text-ink cursor-pointer md:hidden"
             aria-label="Buka menu admin"
             aria-expanded={menuOpen}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
             <span className="text-sm font-semibold">Menu</span>
           </button>
-          <span className="flex shrink-0 items-center"><NexoLogo size={36} /></span>
+          <span className="flex shrink-0 items-center"><NexoLogo size={40} /></span>
           <span className="min-w-0 leading-tight">
-            <span className="block truncate font-display text-base font-bold tracking-tight text-ink">NEXO Games</span>
-            <span className="block text-[0.65rem] uppercase tracking-widest text-ink-muted">Admin Panel</span>
+            <span className="block truncate font-display text-lg font-bold tracking-tight text-ink">NEXO Games</span>
+            <span className="block text-[0.7rem] uppercase tracking-widest text-ink-muted">Admin Panel</span>
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-2 md:gap-3">
+        <div className="flex shrink-0 items-center gap-2.5 md:gap-3">
           <Link
             href="/"
-            className="hidden rounded-lg border border-border-soft bg-card-cream px-4 py-2 text-sm font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
+            className="hidden rounded-xl border border-border-soft bg-card-cream px-4 py-2 text-sm font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
           >
             Lihat Situs
           </Link>
           {avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt="Admin" width={36} height={36} className="h-9 w-9 rounded-full border border-border-soft" />
+            <img src={avatar} alt="Admin" width={40} height={40} className="h-10 w-10 rounded-full border border-border-soft" />
           ) : (
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/20 text-sm font-bold text-accent-hover" aria-label="Admin">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 text-sm font-bold text-accent-hover" aria-label="Admin">
               {(username || '?').slice(0, 2).toUpperCase()}
             </span>
           )}
@@ -248,7 +248,7 @@ export default function AdminShell({ username, avatar = null }) {
       </div>
     </header>
 
-    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-[4.75rem] md:px-5 md:pt-[5.25rem]">
+    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-[5rem] md:px-5 md:pt-[5.5rem]">
       {/* Sidebar */}
       {/*
         Sidebar desktop: MENEMPEL saat digulir.
