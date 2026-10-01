@@ -135,6 +135,10 @@ export default function AnalisisAI() {
   const [disimpan, setDisimpan] = useState(() => new Set());
   const [bukaArsip, setBukaArsip] = useState(false);
   const [pesanSimpan, setPesanSimpan] = useState(null);
+  // PENGINGAT (permintaan pemilik 2026-10-01): AI bisa menyimpan pengingat
+  // ("ingetin gw pas Halloween mau masang promo"), dan panel menampilkannya
+  // sebagai notifikasi sampai ditandai selesai.
+  const [pengingat, setPengingat] = useState([]);
   const kotakHasil = useRef(null);
   const ujungChat = useRef(null);
 
@@ -165,6 +169,22 @@ export default function AnalisisAI() {
   }, []);
 
   useEffect(() => { muatArsip(); }, [muatArsip]);
+
+  // Muat daftar pengingat + perbarui tiap 60 detik supaya penanda "jatuh tempo"
+  // ikut hidup tanpa pemilik perlu refresh halaman.
+  const muatPengingat = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ai/reminders', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setPengingat(d.reminders || []);
+    } catch { /* gagal muat pengingat tidak menghalangi pemakaian AI */ }
+  }, []);
+
+  useEffect(() => {
+    muatPengingat();
+    const iv = setInterval(muatPengingat, 60000);
+    return () => clearInterval(iv);
+  }, [muatPengingat]);
 
   // Ambil status kesiapan sekali (tanpa memanggil Groq).
   useEffect(() => {
@@ -209,6 +229,13 @@ export default function AnalisisAI() {
         body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim }),
       });
       const d = await res.json();
+
+      // Kalau AI membuat pengingat, tampilkan konfirmasi + muat ulang daftar.
+      if (d.ok && d.pengingat) {
+        setPesanSimpan('Pengingat dibuat: ' + (d.pengingat.waktuTeks || ''));
+        muatPengingat();
+        setTimeout(() => setPesanSimpan(null), 6000);
+      }
 
       if (modeKirim === 'diskusi') {
         if (!d.ok) {
@@ -258,6 +285,25 @@ export default function AnalisisAI() {
   const mulaiBaru = useCallback(() => {
     setPesan([]);
     try { window.localStorage.removeItem('nexo_ai_chat'); } catch { /* abaikan */ }
+  }, []);
+
+  // ==========================================
+  // PENGINGAT: tandai selesai / hapus
+  // ==========================================
+  const tandaiSelesai = useCallback(async (id, selesai = true) => {
+    try {
+      const res = await fetch(`/api/admin/ai/reminders?id=${id}${selesai ? '' : '&selesai=0'}`, { method: 'PATCH' });
+      const d = await res.json();
+      if (d.ok) muatPengingat();
+    } catch { /* abaikan */ }
+  }, [muatPengingat]);
+
+  const hapusPengingat = useCallback(async (id) => {
+    try {
+      const res = await fetch(`/api/admin/ai/reminders?id=${id}`, { method: 'DELETE' });
+      const d = await res.json();
+      if (d.ok) setPengingat((p) => p.filter((x) => x.id !== id));
+    } catch { /* abaikan */ }
   }, []);
 
   // ==========================================
@@ -329,6 +375,72 @@ export default function AnalisisAI() {
 
   return (
     <div className="space-y-4">
+      {/* ==========================================
+          NOTIFIKASI PENGINGAT
+          ==========================================
+          Permintaan pemilik: "AI juga pintar bisa jadi pengingat buat gw,
+          jadi pada halaman AI ini ada notif... kalo gw suruh ingetin gw nanti
+          pas Halloween soalnya gw mau masang promo".
+
+          Tampil paling atas supaya langsung terlihat saat membuka halaman.
+          Pengingat yang sudah jatuh tempo diberi warna berbeda dan tanda
+          "SEKARANG" supaya tidak terlewat. */}
+      {pengingat.filter((p) => !p.selesai).length > 0 && (
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-ink">
+              Pengingat
+              <span className="ml-2 text-sm font-normal text-ink-muted">
+                ({pengingat.filter((p) => !p.selesai).length} aktif)
+              </span>
+            </h3>
+            {pengingat.some((p) => p.jatuhTempo) && (
+              <span className="rounded-full bg-danger px-3 py-1 text-[0.7rem] font-bold text-white">
+                {pengingat.filter((p) => p.jatuhTempo).length} sudah waktunya!
+              </span>
+            )}
+          </div>
+          <ul className="mt-3 space-y-2">
+            {pengingat.filter((p) => !p.selesai).map((p) => (
+              <li
+                key={p.id}
+                className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border px-3.5 py-3 ${
+                  p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ink">{p.teks}</p>
+                  <p className={`mt-0.5 text-xs ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
+                    {p.jatuhTempo ? 'SEKARANG - ' : ''}{p.waktuTeks}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => tandaiSelesai(p.id, true)}
+                    className="rounded-lg border border-success/40 px-2.5 py-1 text-[0.7rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
+                    title="Tandai sudah dikerjakan"
+                  >
+                    Selesai
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hapusPengingat(p.id)}
+                    className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                    title="Hapus pengingat"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2.5 text-[0.7rem] text-ink-muted">
+            Cara membuat: tulis di Diskusi, mis. "ingetin gw pas Halloween mau masang promo". AI akan menyimpannya di sini dengan waktu WIB.
+          </p>
+        </div>
+      )}
+
       {/* Kepala + PEMILIH MODE */}
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

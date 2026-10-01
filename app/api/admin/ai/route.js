@@ -1,10 +1,65 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getLatestSnapshot } from '../../../lib/snapshot';
-import { susunKonteks, PINTASAN, ATURAN_FORMAT } from '../../../lib/aiKonteks';
+import { susunKonteks, PINTASAN, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
 import { tanyaGroq, adaGroq, jumlahKunci, modelGroq } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
+import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
 
 export const dynamic = 'force-dynamic';
+
+// ==========================================
+// PENGINGAT: BACA & SIMPAN DARI JAWABAN AI
+// ==========================================
+// AI menulis baris [[INGATKAN]] tanggal=YYYY-MM-DD | teks=... di akhir
+// jawabannya (lihat ATURAN_PENGINGAT). Fungsi ini:
+//   1. Mengambil baris itu (dan membersihkannya dari jawaban yang ditampilkan
+//      - pemilik tidak perlu melihat perintah teknisnya).
+//   2. Menyimpan pengingatnya ke DB dengan waktu WIB.
+// @returns {{ jawabanBersih: string, pengingat: object|null }}
+async function prosesPengingat(jawaban) {
+  const asli = String(jawaban || '');
+  // Terima beberapa varian penulisan supaya tidak gagal karena spasi/huruf besar.
+  const re = /\[\[\s*INGATKAN\s*\]\]\s*tanggal\s*=\s*(\d{4})-(\d{2})-(\d{2})\s*\|\s*teks\s*=\s*([^\n\r]+)/i;
+  const m = asli.match(re);
+
+  // Baris perintah SELALU dipangkas dari jawaban, walau parsing-nya gagal -
+  // supaya pemilik tidak pernah melihat teks teknisnya.
+  const jawabanBersih = asli.replace(/\[\[\s*INGATKAN\s*\]\][^\n\r]*/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+
+  if (!m) return { jawabanBersih, pengingat: null };
+
+  const tahun = Number(m[1]), bulan = Number(m[2]) - 1, tanggal = Number(m[3]);
+  const teks = m[4].trim().slice(0, 300);
+  if (!teks) return { jawabanBersih, pengingat: null };
+
+  // Jam 09:00 WIB - waktu yang masuk akal untuk pengingat kerja (pemilik
+  // masih sempat menyiapkan promo hari itu).
+  let waktuIngat = wibKeEpoch(tahun, bulan, tanggal, 9, 0);
+  // Kalau tanggal yang ditulis sudah lewat, coba baca momen dari teksnya
+  // (mis. "Halloween") supaya dapat tahun berikutnya.
+  if (!Number.isFinite(waktuIngat) || waktuIngat < Date.now() - 86400000) {
+    const momen = cariMomen(teks) || cariMomen(asli);
+    if (momen) waktuIngat = momen.epoch;
+  }
+  if (!Number.isFinite(waktuIngat)) return { jawabanBersih, pengingat: null };
+
+  try {
+    const { getDb, schemaReady } = await import('../../../lib/db');
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute({
+      sql: 'INSERT INTO ai_reminders (teks, waktu_ingat, selesai, dibuat_at) VALUES (?, ?, 0, ?)',
+      args: [teks, waktuIngat, Date.now()],
+    });
+    return {
+      jawabanBersih,
+      pengingat: { id: Number(res.lastInsertRowid ?? 0), teks, waktuIngat, waktuTeks: formatWib(waktuIngat) },
+    };
+  } catch {
+    // Gagal simpan pengingat TIDAK boleh menggagalkan jawaban AI.
+    return { jawabanBersih, pengingat: null };
+  }
+}
 
 // Pemformat angka ringkas - dipakai untuk data pemain yang dicari namanya.
 function rupiahNum(n) {
@@ -84,6 +139,8 @@ function sistemPrompt() {
     '12. Utamakan INOVASI: mekanik baru yang belum dipakai, bukan tema lama',
     '    dengan nama baru. Sebutkan APA YANG BERBEDA dari yang sudah ada.',
     '13. Boleh out of the box - selama alasannya bisa dilacak ke data.',
+    '',
+    ATURAN_PENGINGAT,
     '',
     'FORMAT JAWABAN:',
     '- Untuk pertanyaan SPESIFIK: jawab langsung, tanpa judul bagian. Contoh:',
@@ -308,10 +365,15 @@ export async function POST(request) {
     }, 502);
   }
 
+  // Simpan pengingat bila AI menuliskannya, dan bersihkan baris perintahnya
+  // dari jawaban yang ditampilkan ke pemilik.
+  const { jawabanBersih, pengingat } = await prosesPengingat(hasil.teks);
+
   return json({
     ok: true,
-    jawaban: hasil.teks,
+    jawaban: jawabanBersih,
     mode,
+    pengingat,
     model: modelGroq(),
     kunciDipakai: hasil.kunciDipakai,
     totalKunci: jumlahKunci(),

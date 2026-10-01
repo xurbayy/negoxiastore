@@ -10,15 +10,41 @@
 //
 // Yang TIDAK dikirim: data pribadi pemain (userId, avatar, dsb). AI hanya
 // butuh AGREGAT. Ini juga menghemat token.
+//
+// Import waktu WIB di level modul (BUKAN require() di dalam fungsi - modul ini
+// ESM, dan require() gagal senyap di sana sehingga bagian "WAKTU SEKARANG"
+// tidak pernah terkirim; itu bug nyata yang ditemukan saat uji 2026-10-01).
+import { formatWib, hariIniWib, wibKeEpoch, MOMEN } from './waktuWib';
 
 const rupiah = (n) => Number(n || 0).toLocaleString('id-ID');
-
 /** Rakit konteks teks dari snapshot. Dipakai baik oleh chat maupun analisis cepat. */
 export function susunKonteks(snap, panel = {}) {
   if (!snap) return 'TIDAK ADA DATA. Bot belum pernah mengirim snapshot.';
 
   const m = snap.monitor || {};
   const L = [];
+
+  // ---------- WAKTU (WIB) ----------
+  // AI perlu tahu TANGGAL HARI INI dan tanggal momen besar supaya bisa
+  // membuat pengingat yang tepat (permintaan pemilik: "ingat pake waktu WIB
+  // di Indonesia Jakarta"). Tanpa ini, AI harus menghitung sendiri - dan
+  // sering salah, terutama untuk tahun depan.
+  try {
+    const ini = hariIniWib();
+    L.push('### WAKTU SEKARANG');
+    L.push(`Sekarang: ${formatWib(Date.now())}`);
+    // Tanggal momen yang akan datang (momen tahun ini kalau belum lewat).
+    const daftarMomen = [];
+    for (const [, mm] of Object.entries(MOMEN)) {
+      if (!mm) continue;
+      let tahun = ini.tahun;
+      const lewat = ini.bulan > mm.bulan || (ini.bulan === mm.bulan && ini.tanggal > mm.tanggal);
+      if (lewat) tahun += 1;
+      daftarMomen.push(`${mm.nama}=${formatWib(wibKeEpoch(tahun, mm.bulan, mm.tanggal, 9, 0), false)}`);
+    }
+    if (daftarMomen.length) L.push('Momen mendatang: ' + [...new Set(daftarMomen)].join(', '));
+    L.push('');
+  } catch (_) { /* kalau modul waktu gagal, AI tetap jalan tanpa bagian ini */ }
 
   // ---------- Ringkasan umum ----------
   L.push('### RINGKASAN');
@@ -560,6 +586,33 @@ export const ATURAN_FORMAT = [
   '- Jangan memakai em dash. Pakai tanda hubung biasa.',
   '- Judul bagian ditulis KAPITAL diikuti titik dua: TEMUAN:, SARAN:, RISIKO:.',
   '- Bahasa Indonesia santai tapi rapi. Langsung ke isi, jangan mengulang data mentah.',
+].join('\n');
+
+// ==========================================
+// PERINTAH PENGINGAT (permintaan pemilik 2026-10-01)
+// ==========================================
+//
+// Pemilik bisa menyuruh AI: "ingetin gw pas Halloween mau masang promo".
+// AI tidak punya akses ke database, jadi caranya: AI menuliskan baris khusus
+// di akhir jawabannya, dan SERVER yang menyimpannya. Formatnya sederhana
+// supaya tidak salah baca, dan TIDAK ditampilkan ke pemilik (dipangkas server).
+//
+// Kenapa pakai baris teks, bukan function calling: setup function calling
+// menambah kerumitan pada penyedia (Groq) dan rawan gagal senyap. Baris teks
+// mudah diperiksa dan tetap jalan walau AI memakai varian format.
+export const ATURAN_PENGINGAT = [
+  'MEMBUAT PENGINGAT:',
+  'Kalau pemilik meminta DIINGATKAN sesuatu ("ingetin gw...", "remind me...",',
+  '"jangan lupa nanti..."), tulis baris ini PALING AKHIR jawabanmu:',
+  '[[INGATKAN]] tanggal=YYYY-MM-DD | teks=isi pengingat',
+  '',
+  'Aturan:',
+  '- tanggal WAJIB format YYYY-MM-DD (pakai daftar "Momen mendatang" di DATA).',
+  '- Jangan menghitung tanggal sendiri kalau momennya ada di daftar itu.',
+  '- Isi pengingat singkat dan jelas (maksimal 200 huruf).',
+  '- Tulis SATU baris saja per permintaan. Kalau tidak diminta mengingatkan,',
+  '  JANGAN tulis baris ini sama sekali.',
+  '- Selain baris itu, tetap jawab pertanyaannya seperti biasa.',
 ].join('\n');
 
 // ==========================================

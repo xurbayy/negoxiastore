@@ -196,6 +196,23 @@ export async function ensureSchema() {
         created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_ai_notes_created ON ai_notes(created_at DESC);
+
+    -- PENGINGAT DARI AI (permintaan pemilik 2026-10-01).
+    -- Pemilik bisa menyuruh AI: "ingetin gw pas Halloween mau masang promo".
+    -- AI mengekstrak tanggalnya, baris ini menyimpan pengingatnya, dan panel
+    -- menampilkannya sebagai notifikasi sampai ditandai selesai.
+    --
+    -- waktu_ingat disimpan sebagai epoch ms (WIB dikonversi ke UTC oleh
+    -- server) supaya perbandingan waktu tidak bergantung zona server.
+    CREATE TABLE IF NOT EXISTS ai_reminders (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        teks        TEXT NOT NULL,
+        waktu_ingat INTEGER NOT NULL,
+        selesai     INTEGER DEFAULT 0,
+        dibuat_at   INTEGER NOT NULL,
+        selesai_at  INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_reminders_waktu ON ai_reminders(selesai, waktu_ingat);
   `);
 
   // Migrasi aman: kolom/tabel baru pada DB lama (lewatii error "duplicate column")
