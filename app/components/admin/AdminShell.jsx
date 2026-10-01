@@ -205,7 +205,9 @@ export default function AdminShell({ username, avatar = null }) {
         type="button"
         aria-label="Tutup menu"
         onClick={() => setMenuOpen(false)}
-        className="fixed inset-0 z-30 bg-ink/40 backdrop-blur-[2px] md:hidden"
+        // z-[60] - DI ATAS navbar (z-50). Dulu z-30 sehingga navbar tetap
+        // terlihat menimpa sidebar saat menu dibuka di mobile.
+        className="fixed inset-0 z-[60] bg-ink/40 backdrop-blur-[2px] md:hidden"
       />
     )}
     {/* Bar atas admin: MENEMPEL di atas seperti navbar halaman lain.
@@ -225,6 +227,12 @@ export default function AdminShell({ username, avatar = null }) {
         scrolled
           ? 'border-b border-border-soft bg-bg/90 py-2.5 backdrop-blur-xl'
           : 'bg-transparent py-4'
+      } ${
+        // Di mobile, saat sidebar dibuka navbar DISEMBUNYIKAN. Tanpa ini,
+        // logo + tombol hamburger tetap tampak dan menimpa panel sidebar
+        // (dulu navbar z-50 > sidebar z-40, jadi selalu di atas).
+        // md:block memastikan di desktop animasi ini tidak berlaku.
+        menuOpen ? 'pointer-events-none -translate-y-full opacity-0 md:translate-y-0 md:opacity-100' : ''
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-5" aria-label="Navigasi admin">
@@ -324,7 +332,7 @@ export default function AdminShell({ username, avatar = null }) {
         dvh (bukan vh) supaya akurat di browser mobile yang punya bilah alamat.
       */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-border-soft bg-bg-soft transition-transform md:sticky md:top-20 md:z-auto md:max-h-[calc(100dvh-5.5rem)] md:w-56 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
+        className={`fixed inset-y-0 left-0 z-[70] flex w-64 transform flex-col border-r border-border-soft bg-bg-soft transition-transform md:sticky md:top-20 md:z-auto md:max-h-[calc(100dvh-5.5rem)] md:w-56 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
