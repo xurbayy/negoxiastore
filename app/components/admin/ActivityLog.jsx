@@ -32,7 +32,7 @@ export default function ActivityLog({ data }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-xl text-ink">Activity Log</h2>
         <div className="flex gap-1.5">
@@ -51,7 +51,7 @@ export default function ActivityLog({ data }) {
         </div>
       </div>
 
-      <TabelGeser className="nx-card">
+      <TabelGeser className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">

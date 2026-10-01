@@ -40,11 +40,11 @@ export default function RedeemManager({ send, data }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <h2 className="font-display text-xl text-ink">Redeem Manager</h2>
 
       {/* Buat kode */}
-      <form onSubmit={create} className="nx-card flex flex-wrap items-end gap-3 px-5 py-5">
+      <form onSubmit={create} className="nx-card flex flex-wrap items-end gap-3 px-4 py-4 sm:px-5 sm:py-5">
         <div>
           <label htmlFor="p-code" className="block text-xs uppercase tracking-wider text-ink-muted">Kode</label>
           <input id="p-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="NEXO2026" maxLength={24} className="mt-1.5 w-40 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm uppercase text-ink focus:border-accent focus:outline-none" />
@@ -164,7 +164,7 @@ function NotifyForm({ codes, onSent }) {
   }
 
   return (
-    <form onSubmit={submit} className="nx-card px-5 py-5">
+    <form onSubmit={submit} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
       <h3 className="font-display text-lg text-ink">Kabari Kode Baru</h3>
       <p className="mt-1 text-xs text-ink-muted">Kirim notifikasi &quot;token&quot; ke lonceng user - tampil dengan kode + tombol Klaim. Untuk broadcast umum seperti info, event, atau maintenance, pakai tab Broadcast.</p>
       <div className="mt-4 flex flex-wrap items-end gap-3">

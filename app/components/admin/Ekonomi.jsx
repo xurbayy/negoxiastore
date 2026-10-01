@@ -36,8 +36,8 @@ export default function Ekonomi({ send }) {
   const uid = userId.trim();
 
   return (
-    <div className="space-y-6">
-      <div className="nx-card px-5 py-5">
+    <div className="space-y-4">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h2 className="font-display text-ink">Cari User</h2>
         <p className="mt-1 text-xs text-ink-muted">Masukkan Discord User ID berupa angka. Profil dari bot bisa dilihat lewat riwayat perintah di Activity Log.</p>
         <input
@@ -49,7 +49,7 @@ export default function Ekonomi({ send }) {
         {uid && uid.length < 5 && <p className="mt-2 text-xs text-danger">ID minimal 5 digit.</p>}
       </div>
 
-      <div className="nx-card px-5 py-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h2 className="font-display text-ink">Aksi Ekonomi</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <AmountAction label="Tambah Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('add_points', { userId: uid, amount: v })} />

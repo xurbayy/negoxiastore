@@ -84,7 +84,7 @@ export default function ManualOrders({ orders, reload }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Pembayaran QRIS</h2>
         <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">

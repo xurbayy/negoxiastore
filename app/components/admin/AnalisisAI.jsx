@@ -172,7 +172,7 @@ export default function AnalisisAI() {
 
   if (!status?.aktif) {
     return (
-      <div className="nx-card px-4 py-6 sm:px-6 sm:py-8">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h3 className="font-display text-ink">Analisis AI belum aktif</h3>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           Isi <strong className="text-ink">GROQ_API_KEY</strong> di environment
@@ -185,9 +185,9 @@ export default function AnalisisAI() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Kepala */}
-      <div className="nx-card px-4 py-4 sm:px-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-ink">Analisis AI</h3>
         </div>
@@ -199,7 +199,7 @@ export default function AnalisisAI() {
       </div>
 
       {/* Tombol pintas */}
-      <div className="nx-card px-4 py-4 sm:px-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
         {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
             "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
@@ -251,7 +251,7 @@ export default function AnalisisAI() {
         </div>
       )}
       {riwayat.map((r, i) => (
-        <div key={i} className="nx-card px-4 py-4 sm:px-5">
+        <div key={i} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <div className="mb-2 flex items-center gap-2 border-b border-border-soft pb-2">
             <span className="font-display text-sm font-bold text-ink">{r.judul}</span>
             {r.info && <span className="ml-auto text-[0.65rem] text-ink-faint">{r.info}</span>}

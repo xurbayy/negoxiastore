@@ -46,8 +46,8 @@ export default function PlayerLookup() {
   const premium = p?.premium;
 
   return (
-    <div className="space-y-5">
-      <div className="nx-card px-5 py-5">
+    <div className="space-y-4">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h2 className="font-display text-ink">Cari Player</h2>
         <p className="mt-1 text-xs text-ink-muted">
           Masukkan Discord User ID. Data profil diambil <b>langsung dari bot</b>;
@@ -70,17 +70,17 @@ export default function PlayerLookup() {
       </div>
 
       {data && data.refreshing && !p && (
-        <div className="nx-card px-5 py-4 text-sm text-ink-muted">Menyegarkan data dari bot… dicek ulang otomatis tiap 3 detik</div>
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5 text-sm text-ink-muted">Menyegarkan data dari bot… dicek ulang otomatis tiap 3 detik</div>
       )}
 
       {data && !data.profile && !data.refreshing && (
-        <div className="nx-card px-5 py-4 text-sm text-ink">Bot tidak mengenali ID ini - user belum pernah memakai bot / ID salah.</div>
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5 text-sm text-ink">Bot tidak mengenali ID ini - user belum pernah memakai bot / ID salah.</div>
       )}
 
       {p && (
         <>
           {/* Kartu utama ala nxp */}
-          <div className="nx-card px-5 py-5">
+          <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-wrap items-center gap-3">
               {p.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -131,7 +131,7 @@ export default function PlayerLookup() {
 
           {/* Inventori + misi */}
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="nx-card px-5 py-5">
+            <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
               <h3 className="font-display text-ink">Inventori</h3>
               {inv.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Kosong.</p> : (
                 <ul className="mt-2 space-y-1 text-sm">
@@ -144,7 +144,7 @@ export default function PlayerLookup() {
                 </ul>
               )}
             </div>
-            <div className="nx-card px-5 py-5">
+            <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
               <h3 className="font-display text-ink">Misi Hari Ini</h3>
               {p.missions?.missions?.length ? (
                 <ul className="mt-2 space-y-1 text-sm">
@@ -159,7 +159,7 @@ export default function PlayerLookup() {
           </div>
 
           {/* Transaksi dari bot (bukti gift/reward masuk) */}
-          <div className="nx-card px-5 py-5">
+          <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <h3 className="font-display text-ink">Riwayat Transaksi</h3>
             {tx.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada log.</p> : (
               <div className="mt-2 overflow-x-auto">
@@ -181,7 +181,7 @@ export default function PlayerLookup() {
           </div>
 
           {/* Jejak perintah ke user ini */}
-          <div className="nx-card px-5 py-5">
+          <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <h3 className="font-display text-ink">Riwayat Perintah Terakhir</h3>
             {data.commands.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada.</p> : (
               <ul className="mt-2 space-y-1.5 text-sm">
@@ -199,13 +199,13 @@ export default function PlayerLookup() {
 
           {/* Order & klaim web */}
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="nx-card px-5 py-5">
+            <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
               <h3 className="font-display text-ink">Riwayat Order Premium</h3>
               {data.orders.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum pernah order.</p> : (
                 <ul className="mt-2 space-y-1 text-sm">{data.orders.map((o) => <li key={o.id} className="flex justify-between"><span>{planName(o.plan)} • {fmt(o.amount)}</span><span className="text-ink-muted">{o.status} • {new Date(o.createdAt).toLocaleDateString('id-ID')}</span></li>)}</ul>
               )}
             </div>
-            <div className="nx-card px-5 py-5">
+            <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
               <h3 className="font-display text-ink">Klaim Redeem Promo</h3>
               {data.claims.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada.</p> : (
                 <ul className="mt-2 space-y-1 text-sm">{data.claims.map((c, i) => <li key={i} className="flex justify-between"><span className="font-mono">{c.code}</span><span className="text-ink-muted">{c.status}{c.failReason ? ` (${c.failReason})` : ''}</span></li>)}</ul>

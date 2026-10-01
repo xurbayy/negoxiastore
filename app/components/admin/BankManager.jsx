@@ -23,12 +23,12 @@ export default function BankManager({ send, data }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <h2 className="font-display text-xl text-ink">Bank Manager</h2>
       {feedback && (
         <p className={`rounded-xl border px-4 py-3 text-sm ${feedback.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{feedback.text}</p>
       )}
-      <TabelGeser className="nx-card">
+      <TabelGeser className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">

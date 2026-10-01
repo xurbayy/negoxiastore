@@ -78,13 +78,13 @@ export default function Moderasi({ send, data }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold text-ink">Sanksi & Moderasi</h2>
         <p className="mt-1 text-sm text-ink-muted">Berikan hukuman kepada pemain yang melanggar aturan.</p>
       </div>
 
-      <div className="nx-card p-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs uppercase tracking-wider text-ink-muted">Target Discord ID</label>
@@ -165,7 +165,7 @@ export default function Moderasi({ send, data }) {
         </div>
       </div>
 
-      <div className="nx-card p-5 mt-6">
+      <div className="nx-card mt-6 px-4 py-4 sm:px-5 sm:py-5">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h3 className="text-lg font-bold text-ink">Daftar Hukuman Aktif</h3>
           <div className="flex gap-2">

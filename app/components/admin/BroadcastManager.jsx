@@ -41,7 +41,7 @@ export default function BroadcastManager({ send, data } = {}) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <h2 className="font-display text-xl text-ink">Broadcast & Notifikasi.</h2>
       <p className="-mt-3 text-sm text-ink-muted">
         Masuk ke lonceng notifikasi user di web. Notifikasi kode redeem dikirim dari tab Redeem.
@@ -50,7 +50,7 @@ export default function BroadcastManager({ send, data } = {}) {
       {/* Pengumuman DISCORD (nxadmin broadcast / shopbroadcast) - dikirim ke bot */}
       <DiscordAnnouncement send={send} data={data} />
 
-      <form onSubmit={submit} className="nx-card px-5 py-5">
+      <form onSubmit={submit} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="block text-xs uppercase tracking-wider text-ink-muted">Target</label>
@@ -100,7 +100,7 @@ export default function BroadcastManager({ send, data } = {}) {
       </form>
 
       {/* Panduan singkat */}
-      <div className="nx-card px-5 py-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h3 className="font-display text-ink">Catatan.</h3>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">
           <li>Broadcast muncul ke semua user dan ditandai terbaca per orang, jadi satu klik tidak mematikan untuk semua.</li>
@@ -108,7 +108,7 @@ export default function BroadcastManager({ send, data } = {}) {
         </ul>
       </div>
 
-      <div className="nx-card px-5 py-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h2 className="font-display text-ink flex items-center justify-between">
           <span>Mode Maintenance Global</span>
           {data?.snapshot?.maintenance?.active ? (
@@ -178,7 +178,7 @@ function DiscordAnnouncement({ send, data }) {
   }
 
   return (
-    <div className="nx-card px-5 py-5">
+    <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
       <h2 className="font-display text-ink">Pengumuman Bot Discord</h2>
       <p className="mt-1 text-xs text-ink-muted">
         Ini bukan notifikasi web - teks ini yang tampil di chat Discord (`nxadmin broadcast` versi web):

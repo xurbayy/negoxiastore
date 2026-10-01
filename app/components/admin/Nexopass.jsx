@@ -34,11 +34,11 @@ export default function Nexopass({ send, data }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <h2 className="font-display text-xl text-ink">NEXO Pass: {members.length} Member Aktif</h2>
 
       {/* Form grant */}
-      <form onSubmit={grant} className="nx-card flex flex-wrap items-end gap-3 px-5 py-5">
+      <form onSubmit={grant} className="nx-card flex flex-wrap items-end gap-3 px-4 py-4 sm:px-5 sm:py-5">
         <div>
           <label htmlFor="g-userid" className="block text-xs uppercase tracking-wider text-ink-muted">Discord User ID</label>
           <input id="g-userid" value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value.replace(/\D/g, '') })} placeholder="83638..." className="mt-1.5 w-52 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm text-ink focus:border-accent focus:outline-none" />
@@ -54,7 +54,8 @@ export default function Nexopass({ send, data }) {
         <p className={`rounded-xl border px-4 py-3 text-sm ${feedback.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{feedback.text}</p>
       )}
 
-      {/* Tabel member */}
+      {/* Tabel member. Kartu ini SENGAJA tanpa padding: sel tabel punya
+          px-4 sendiri supaya garis pemisah baris menyentuh tepi kartu. */}
       <div className="nx-card overflow-x-auto">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>

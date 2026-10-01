@@ -39,10 +39,10 @@ export default function Titles({ send, data }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Beri title katalog */}
-        <form onSubmit={submitTitle} className="nx-card px-5 py-5">
+        <form onSubmit={submitTitle} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <h2 className="font-display text-ink">Beri Title</h2>
           <p className="mt-1 text-xs text-ink-muted">Title permanen dari daftar title resmi; langsung dipakai di nxprofile user.</p>
           <input value={tForm.userId} onChange={(e) => setTForm({ ...tForm, userId: e.target.value.replace(/\D/g, '') })} placeholder="Discord User ID"
@@ -56,7 +56,7 @@ export default function Titles({ send, data }) {
         </form>
 
         {/* Set admin title */}
-        <form onSubmit={submitAdmin} className="nx-card px-5 py-5">
+        <form onSubmit={submitAdmin} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <h2 className="font-display text-ink">Pasang Admin Title</h2>
           <p className="mt-1 text-xs text-ink-muted">
             Boleh mengandung emoji custom, mis. <code className="font-mono">&lt;:badge_dev:…&gt; Owner</code> - bot menyimpan, web mencatat
@@ -75,7 +75,7 @@ export default function Titles({ send, data }) {
       )}
 
       {/* Daftar pemegang admin title (sinkron snapshot) */}
-      <div className="nx-card px-5 py-5">
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h2 className="font-display text-ink">Pemegang Admin Title : {holders.length}</h2>
         <p className="mt-1 text-xs text-ink-muted">Data ikut snapshot bot, jadi baru muncul dalam 60 detik setelah dipasang atau dicabut, termasuk lewat nxadmin Discord.</p>
         {holders.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada.</p> : (
