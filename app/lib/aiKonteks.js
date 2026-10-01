@@ -15,10 +15,14 @@
 // ESM, dan require() gagal senyap di sana sehingga bagian "WAKTU SEKARANG"
 // tidak pernah terkirim; itu bug nyata yang ditemukan saat uji 2026-10-01).
 import { formatWib, hariIniWib, wibKeEpoch, MOMEN } from './waktuWib';
+import { hariLiburMendatang } from './hariLibur';
 
 const rupiah = (n) => Number(n || 0).toLocaleString('id-ID');
-/** Rakit konteks teks dari snapshot. Dipakai baik oleh chat maupun analisis cepat. */
-export function susunKonteks(snap, panel = {}) {
+/** Rakit konteks teks dari snapshot. Dipakai baik oleh chat maupun analisis cepat.
+ *
+ * ASYNC (fix 2026-10-01): perlu mengambil hari libur Indonesia dari Google
+ * Calendar, dan itu operasi jaringan. Pemanggil harus memakai await. */
+export async function susunKonteks(snap, panel = {}) {
   if (!snap) return 'TIDAK ADA DATA. Bot belum pernah mengirim snapshot.';
 
   const m = snap.monitor || {};
@@ -45,6 +49,28 @@ export function susunKonteks(snap, panel = {}) {
     if (daftarMomen.length) L.push('Momen mendatang: ' + [...new Set(daftarMomen)].join(', '));
     L.push('');
   } catch (_) { /* kalau modul waktu gagal, AI tetap jalan tanpa bagian ini */ }
+
+  // ---------- HARI LIBUR INDONESIA (Google Calendar) ----------
+  // Permintaan pemilik: "gw mau ditambah lagi ya halloween terus tahun baru
+  // pokoknya full kalender di Indonesia bisa ga baca semua acaranya".
+  //
+  // Diambil dari feed publik Google Calendar untuk hari libur Indonesia.
+  // Ini melengkapi daftar MOMEN di atas - MOMEN hanya berisi perayaan tetap
+  // (Halloween, Natal, Tahun Baru), sedangkan di sini ada SEMUA hari libur
+  // nasional termasuk yang berbasis Hijriah (Idul Fitri, Idul Adha, Maulid,
+  // Muharram) dan Imlek yang tanggalnya bergeser tiap tahun.
+  try {
+    const libur = await hariLiburMendatang(400);
+    if (libur.length) {
+      L.push('### HARI LIBUR & PERAYAAN INDONESIA (dari Google Calendar)');
+      L.push('Pakai daftar ini untuk pengingat promo/event. Tanggalnya sudah pasti.');
+      for (const h of libur.slice(0, 40)) {
+        L.push(`- ${h.tanggal} | ${h.nama}`);
+      }
+      if (libur.length > 40) L.push(`...dan ${libur.length - 40} hari libur lain dalam setahun ke depan.`);
+      L.push('');
+    }
+  } catch (_) { /* gagal ambil hari libur -> AI tetap jalan tanpa bagian ini */ }
 
   // ---------- Ringkasan umum ----------
   L.push('### RINGKASAN');

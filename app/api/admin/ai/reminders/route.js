@@ -2,6 +2,7 @@ import { getSession, getAdminSession } from '../../../../lib/session';
 import { getDb, schemaReady } from '../../../../lib/db';
 import { json } from '../../../../lib/api-helpers';
 import { wibKeEpoch, cariMomen, formatWib } from '../../../../lib/waktuWib';
+import { cariHariLibur } from '../../../../lib/hariLibur';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,19 @@ export async function POST(request) {
   if (!waktuIngat) {
     const momen = cariMomen(teks);
     if (momen) waktuIngat = momen.epoch;
+  }
+
+  // Lalu cek hari libur Indonesia dari Google Calendar (permintaan pemilik
+  // 2026-10-01) - menangkap libur Hijriah & Imlek, mis. "ingetin gw pas
+  // Idul Fitri" atau "waktu Nyepi".
+  if (!waktuIngat) {
+    try {
+      const libur = await cariHariLibur(teks);
+      if (libur) {
+        const [th, bl, tg] = libur.tanggal.split('-').map(Number);
+        waktuIngat = wibKeEpoch(th, bl - 1, tg, 9, 0);
+      }
+    } catch (_) { /* gagal ambil libur -> lanjut ke default */ }
   }
 
   // Kalau tetap tidak ada, default H+1 jam dari sekarang supaya pengingatnya

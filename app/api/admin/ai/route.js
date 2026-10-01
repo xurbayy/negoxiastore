@@ -4,6 +4,7 @@ import { susunKonteks, PINTASAN, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../.
 import { tanyaGroq, adaGroq, jumlahKunci, modelGroq } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
+import { cariHariLibur } from '../../../lib/hariLibur';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,20 @@ async function prosesPengingat(jawaban) {
   if (!Number.isFinite(waktuIngat) || waktuIngat < Date.now() - 86400000) {
     const momen = cariMomen(teks) || cariMomen(asli);
     if (momen) waktuIngat = momen.epoch;
+  }
+  // Terakhir: cek hari libur Indonesia dari Google Calendar (permintaan pemilik
+  // 2026-10-01). Ini menangkap libur Hijriah & Imlek yang tanggalnya bergeser -
+  // mis. "ingetin gw pas Idul Fitri". Dipakai kalau momen tetap belum ketemu.
+  if (!Number.isFinite(waktuIngat) || waktuIngat < Date.now() - 86400000) {
+    try {
+      const libur = (await cariHariLibur(teks)) || (await cariHariLibur(asli));
+      if (libur) {
+        // libur.tanggal berbentuk 'YYYY-MM-DD' - bulan dikurangi 1 karena
+        // Date.UTC memakai indeks bulan 0-11.
+        const [th, bl, tg] = libur.tanggal.split('-').map(Number);
+        waktuIngat = wibKeEpoch(th, bl - 1, tg, 9, 0);
+      }
+    } catch (_) { /* gagal ambil libur -> pakai nilai sebelumnya */ }
   }
   if (!Number.isFinite(waktuIngat)) return { jawabanBersih, pengingat: null };
 
@@ -328,7 +343,7 @@ export async function POST(request) {
     }
   }
 
-  const konteks = susunKonteks(snap, panel) + konteksPemain;
+  const konteks = (await susunKonteks(snap, panel)) + konteksPemain;
 
   // Tandai jenis tugas supaya AI tahu BENTUK jawaban yang diinginkan.
   // Inilah pembeda dua mode yang diminta pemilik:
