@@ -22,7 +22,18 @@ export function susunKonteks(snap) {
 
   // ---------- Ringkasan umum ----------
   L.push('### RINGKASAN');
-  L.push(`Snapshot dibuat: ${new Date(Number(snap.ts)).toISOString()}`);
+  // KESEGARAN DATA (fix 2026-10-01). AI perlu tahu UMUR data supaya tidak
+  // menganalisis angka kemarin seolah-olah kondisi sekarang. Kalau bot mati
+  // 2 jam, snapshot terakhir tetap ada - dan AI harus menyebut itu, bukan
+  // berpura-pura datanya realtime.
+  const umurMenit = Math.max(0, Math.round((Date.now() - Number(snap.ts)) / 60000));
+  const umurTeks = umurMenit < 1 ? 'baru saja'
+    : umurMenit < 60 ? umurMenit + ' menit lalu'
+    : Math.round(umurMenit / 60) + ' jam lalu';
+  L.push(`Snapshot dibuat: ${new Date(Number(snap.ts)).toISOString()} (${umurTeks})`);
+  if (umurMenit > 3) {
+    L.push(`PERINGATAN: data ini sudah berumur ${umurTeks}. Kalau pertanyaan menyangkut kondisi SEKARANG, sebutkan bahwa angkanya bisa sudah berubah.`);
+  }
   L.push(`Versi bot: ${m.botVersion || '-'}`);
   L.push(`Pemain terdaftar (aktif): ${m.totalUsers ?? '-'}`);
   L.push(`Pemain terdaftar (semua, termasuk tidak aktif): ${m.totalUsersAll ?? '-'}`);
@@ -426,7 +437,7 @@ export const PINTASAN = [
   {
     id: 'komunitas',
     label: 'Pertumbuhan Komunitas',
-    tanya: 'Analisis sisi komunitas: 44 server tapi berapa yang benar-benar aktif, sebaran pemain antar server, guild yang cuma sedikit, link invite yang belum jadi. Apa langkah paling berdampak untuk menumbuhkan komunitas.',
+    tanya: 'Analisis sisi komunitas: berapa server yang benar-benar aktif vs 0 pemain (pakai angka di bagian SERVER), sebaran pemain antar server, guild yang cuma sedikit, link invite yang belum jadi (lihat Diagnosa invite). Apa langkah paling berdampak untuk menumbuhkan komunitas.',
   },
   {
     id: 'error',

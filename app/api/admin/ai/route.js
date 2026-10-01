@@ -109,9 +109,23 @@ export async function POST(request) {
   let konteksPemain = '';
   const daftar = snap.monitor?.daftarPemain || [];
   if (daftar.length) {
-    // Ambil kata-kata dari pertanyaan, cari yang persis sama dengan username.
-    const teksCari = (instruksi + ' ' + tanyaBebas + ' ' + idPintasan).toLowerCase();
-    const cocok = daftar.filter((u) => u.username && teksCari.includes(String(u.username).toLowerCase()));
+    // Pencocokan HARUS kata utuh (fix 2026-10-01).
+    //
+    // BUG YANG DIPERBAIKI: sebelumnya memakai teksCari.includes(username),
+    // sehingga pertanyaan tentang "sweetsucidial" IKUT menarik data pemain
+    // bernama "sweet" (karena "sweet" adalah potongan dari "sweetsucidial").
+    // Akibatnya AI membahas DUA orang sekaligus dan bisa mencampur angkanya -
+    // persis jenis kesalahan yang paling berbahaya untuk pengambilan keputusan.
+    //
+    // Sekarang: pertanyaan dipecah jadi kata, dan username harus SAMA PERSIS
+    // dengan salah satu kata. "sweetsucidial" hanya cocok dengan dirinya sendiri.
+    const kataTanya = new Set(
+      (instruksi + ' ' + tanyaBebas + ' ' + idPintasan)
+        .toLowerCase()
+        .split(/[^a-z0-9_]+/)   // pisah di spasi, tanda baca, dan simbol
+        .filter(Boolean)
+    );
+    const cocok = daftar.filter((u) => u.username && kataTanya.has(String(u.username).toLowerCase()));
     // Dibatasi 2 supaya konteks tidak meledak kalau banyak nama disebut.
     for (const u of cocok.slice(0, 2)) {
       try {
