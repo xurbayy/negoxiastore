@@ -672,7 +672,19 @@ export default function MeClient({ betaGames = null }) {
                               {missionDesc(m)}
                             </span>
                             {m.claimed ? (
-                              <span className="nx-badge bg-success/15 font-extrabold text-success">✓ Dicairkan</span>
+                              // Centang SOLID tanpa teks (permintaan pemilik
+                              // 2026-10-01): dulu "✓ Dicairkan" dengan latar
+                              // semi transparan (bg-success/15) - terlihat
+                              // samar. Sekarang lingkaran hijau pekat berisi
+                              // centang putih: tegas, langsung terbaca, dan
+                              // lebih elegan tanpa perlu kata.
+                              <span
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success text-white shadow-sm"
+                                title="Hadiah sudah dicairkan"
+                                aria-label="Hadiah sudah dicairkan"
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+                              </span>
                             ) : (
                               <span className="rounded-full bg-bg-soft px-2.5 py-0.5 text-xs font-semibold text-ink-muted">{m.progress}/{m.target}</span>
                             )}
