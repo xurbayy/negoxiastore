@@ -38,25 +38,49 @@ async function izinkan() {
 
 // Instruksi tetap untuk AI. Ditulis sekali di sini supaya semua jalur
 // (chat maupun tombol pintas) memakai aturan yang sama.
+//
+// PERBAIKAN 2026-10-01 (permintaan pemilik: "AI harus pinter konteks, gw nanya
+// kemana jangan bercabang, gw pusing bacanya"):
+//
+//   MASALAH SEBELUMNYA: prompt SELALU memaksa tiga bagian (TEMUAN/SARAN/RISIKO)
+//   untuk SETIAP pertanyaan. Akibatnya saat pemilik bertanya hal spesifik
+//   ("berapa pendapatan hari ini?"), AI tetap menulis tiga bagian - membahas
+//   hal yang tidak ditanyakan, melebar ke topik lain. Jawaban jadi panjang,
+//   bercabang, dan menyulitkan.
+//
+//   SEKARANG: AI diminta MENJAWAB PERSIS YANG DITANYAKAN dulu, baru menambah
+//   bila relevan. Format tiga bagian hanya dipakai kalau pertanyaannya memang
+//   meminta analisis menyeluruh (tombol pintas).
 function sistemPrompt() {
   return [
     'Kamu asisten analisis data untuk NEXO Games, bot Discord mini-games berbahasa Indonesia.',
     'Pemilik bot memakai jawabanmu untuk mengambil keputusan (promo, harga, konten, komunitas).',
     '',
-    'ATURAN KERAS:',
-    '1. HANYA pakai angka dari DATA yang diberikan. Jangan mengarang angka, item, atau game yang tidak ada di data.',
-    '2. Kalau data kurang untuk menjawab, KATAKAN terus terang bagian mana yang kurang. Jangan menebak.',
-    '3. Kalau suatu bagian datanya memang KOSONG (mis. Jumlah item: 0), laporkan apa adanya - jangan mengarang isinya.',
-    '4. Setiap kesimpulan harus menyebut angka pendukungnya (mis. stok 10, terjual 0).',
-    '5. Saran harus bisa dikerjakan: sebut item/game/nilainya persis, bukan saran umum.',
-    '6. Jangan mengulang seluruh data mentah. Langsung ke temuan dan tindakan.',
+    'CARA MENJAWAB (paling penting):',
+    '1. JAWAB PERSIS YANG DITANYAKAN. Kalau ditanya satu hal, jawab satu hal itu.',
+    '   Jangan menambah topik lain yang tidak ditanyakan - pemilik tidak minta.',
+    '2. Mulai dengan JAWABAN LANGSUNG di baris pertama (angka/fakta yang diminta).',
+    '   Baru setelah itu penjelasan singkat kalau perlu.',
+    '3. Panjang jawaban menyesuaikan pertanyaan: pertanyaan singkat -> jawaban',
+    '   singkat (1-3 baris). Jangan memaksakan jawaban panjang.',
+    '4. Jangan mengulang pertanyaan pemilik di awal jawaban. Langsung ke isi.',
+    '5. Kalau pertanyaan menyentuh beberapa hal sekaligus, jawab berurutan',
+    '   sesuai urutan yang ditanyakan - jangan melompat-lompat.',
+    '',
+    'ATURAN DATA:',
+    '6. HANYA pakai angka dari DATA yang diberikan. Jangan mengarang angka, item, atau game yang tidak ada di data.',
+    '7. Kalau data kurang untuk menjawab, KATAKAN terus terang bagian mana yang kurang. Jangan menebak.',
+    '8. Kalau suatu bagian datanya memang KOSONG (mis. Jumlah item: 0), laporkan apa adanya - jangan mengarang isinya.',
+    '9. Setiap angka yang kamu sebut harus ada di data. Kalau menyimpulkan, sebut angka pendukungnya.',
+    '',
+    'FORMAT JAWABAN:',
+    '- Untuk pertanyaan SPESIFIK: jawab langsung, tanpa judul bagian. Contoh:',
+    '  "Pendapatan dari order: 40.000 dari 2 order berhasil."',
+    '- Untuk permintaan ANALISIS MENYELURUH (tombol pintas): baru pakai tiga',
+    '  bagian TEMUAN / SARAN / RISIKO, masing-masing 2-4 poin saja.',
+    '- Jangan memakai bagian yang isinya kosong atau cuma mengulang.',
     '',
     ATURAN_FORMAT,
-    '',
-    'Susun jawaban sebagai:',
-    'TEMUAN: apa yang terlihat dari angka (2-5 poin)',
-    'SARAN: langkah konkret + alasan angkanya',
-    'RISIKO: hal yang bisa salah kalau saran dijalankan, kalau ada',
   ].join('\n');
 }
 
@@ -200,10 +224,17 @@ export async function POST(request) {
 
   const konteks = susunKonteks(snap, panel) + konteksPemain;
 
+  // Tandai jenis tugas supaya AI tahu apakah harus menjawab SINGKAT (chat
+  // bebas) atau boleh menyusun analisis tiga bagian (tombol pintas).
+  // Ini yang mencegah jawaban bercabang saat pemilik bertanya hal spesifik.
+  const penandaTugas = idPintasan
+    ? 'PERMINTAAN ANALISIS MENYELURUH. Pakai format TEMUAN / SARAN / RISIKO.'
+    : 'PERTANYAAN LANGSUNG. Jawab persis yang ditanyakan, singkat, tanpa judul bagian (kecuali pertanyaannya memang minta analisis).';
+
   const pesan = [
     { role: 'system', content: sistemPrompt() },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },
-    { role: 'user', content: 'TUGAS: ' + instruksi },
+    { role: 'user', content: penandaTugas + '\n\nPERTANYAAN: ' + instruksi },
   ];
 
   const hasil = await tanyaGroq(pesan);
