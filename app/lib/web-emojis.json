@@ -1074,6 +1074,16 @@
       "animated": false,
       "url": "https://cdn.discordapp.com/emojis/1542155576086233213.png?size=64&quality=lossless",
       "usage": "ui:bank; ui:help"
+    },
+    {
+      "name": "al5roles",
+      "id": "1555097727896002571",
+      "url": "https://cdn.discordapp.com/emojis/1555097727896002571.png?size=64&quality=lossless",
+      "aliases": [
+        "referral",
+        "undang"
+      ],
+      "animated": false
     }
   ]
 }

@@ -248,6 +248,27 @@ export function susunKonteks(snap) {
     }
   }
 
+  // ---------- REFERRAL ----------
+  // Bagian ini menjelaskan apakah program undang-undang BERJALAN: berapa
+  // pendaftaran yang datang dari kode orang lain, dan siapa yang paling
+  // banyak mengundang. Tanpa ini, AI tidak bisa menilai efektivitasnya.
+  L.push('');
+  L.push('### REFERRAL (undang teman)');
+  const ref = m.referral;
+  if (!ref) {
+    L.push('Bot belum mengirim data referral (kode lama).');
+  } else {
+    L.push('Hadiah: pengundang 20.000 poin, yang memakai kode 5.000 poin');
+    L.push('Total pemakaian kode: ' + (ref.total ?? 0) + ' kali');
+    L.push('24 jam terakhir: ' + (ref.hariIni ?? 0) + ' kali');
+    L.push('Total poin dibagikan: ' + rupiah(ref.totalPoin));
+    const top = ref.teratas || [];
+    if (top.length) {
+      L.push('Pengundang terbanyak: ' + top.slice(0, 10)
+        .map((x) => (x.username || x.userId) + '=' + x.jumlah + ' orang/' + rupiah(x.poin)).join(', '));
+    }
+  }
+
   // ---------- LOG ERROR ----------
   // Bagian yang sebelumnya TIDAK PERNAH bisa dibaca AI. Isinya POLA error
   // (jenis + jumlah + waktu), bukan stack trace - lihat utils/logReader.js.

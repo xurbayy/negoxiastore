@@ -3,6 +3,12 @@ import { emojiSrc } from '../lib/emojis';
 
 const FEATURES = [
   {
+    // Ikon referral: emoji statis al5roles (sama dengan tombol di bot).
+    emoji: 'al5roles',
+    title: 'Referral Berhadiah',
+    desc: 'Punya kode undangan sendiri. Teman yang baru masuk pakai kodemu, kalian berdua langsung dapat poin: kamu 20.000, dia 5.000.',
+  },
+  {
     emoji: 'goldcoin',
     title: 'Ekonomi Poin Lengkap',
     desc: 'Daily claim, transfer, betting, sampai pinjaman bank dengan bunga. Poin tersimpan aman di database terenkripsi AES-256.',
