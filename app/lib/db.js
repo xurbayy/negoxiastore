@@ -178,6 +178,24 @@ export async function ensureSchema() {
         PRIMARY KEY (bucket, window_start)
     );
     CREATE INDEX IF NOT EXISTS idx_rate_limit_window ON rate_limit(window_start);
+
+    -- ARSIP JAWABAN AI (permintaan pemilik 2026-10-01).
+    -- Pemilik ingin MENYIMPAN jawaban AI yang bagus supaya bisa dibaca lagi
+    -- kapan saja, dan MENGHAPUS yang sudah tidak relevan. Tanpa tabel ini,
+    -- jawaban hanya ada di layar lalu hilang begitu panel ditutup.
+    --
+    -- Yang disimpan: pertanyaan, jawaban, dan label sumbernya (pintasan/chat)
+    -- supaya mudah dicari. TIDAK menyimpan data pemain atau kunci apa pun.
+    CREATE TABLE IF NOT EXISTS ai_notes (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        judul      TEXT NOT NULL,
+        pertanyaan TEXT,
+        jawaban    TEXT NOT NULL,
+        sumber     TEXT DEFAULT 'chat',
+        model      TEXT,
+        created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_notes_created ON ai_notes(created_at DESC);
   `);
 
   // Migrasi aman: kolom/tabel baru pada DB lama (lewatii error "duplicate column")

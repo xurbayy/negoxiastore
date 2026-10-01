@@ -106,7 +106,26 @@ export default function AnalisisAI() {
   const [jalan, setJalan] = useState(false);
   const [tanya, setTanya] = useState('');
   const [riwayat, setRiwayat] = useState([]); // { judul, jawaban } | { judul, error }
+  // ARSIP JAWABAN (permintaan pemilik 2026-10-01): jawaban yang bagus bisa
+  // DISIMPAN supaya bisa dibaca lagi kapan saja, dan DIHAPUS kalau sudah
+  // tidak relevan. `disimpan` menandai jawaban mana yang sudah masuk arsip
+  // (berdasarkan judul+isi) supaya tombolnya berubah jadi "Tersimpan".
+  const [arsip, setArsip] = useState([]);
+  const [disimpan, setDisimpan] = useState(() => new Set());
+  const [bukaArsip, setBukaArsip] = useState(false);
+  const [pesanSimpan, setPesanSimpan] = useState(null);
   const kotakHasil = useRef(null);
+
+  // Muat daftar arsip saat komponen dibuka.
+  const muatArsip = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ai/notes', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setArsip(d.notes || []);
+    } catch { /* gagal muat arsip tidak boleh menghalangi pemakaian AI */ }
+  }, []);
+
+  useEffect(() => { muatArsip(); }, [muatArsip]);
 
   // Ambil status kesiapan sekali (tanpa memanggil Groq).
   useEffect(() => {
@@ -140,6 +159,10 @@ export default function AnalisisAI() {
         setRiwayat((r) => [{
           judul,
           jawaban: d.jawaban,
+          // Disimpan supaya tombol "Simpan ke arsip" bisa mengirim konteks
+          // pertanyaannya (bukan cuma jawaban) - lihat simpanJawaban().
+          pertanyaan: muatan?.tanya || muatan?.pintasan || judul,
+          sumber: muatan?.pintasan ? 'pintasan:' + muatan.pintasan : 'chat',
           // Info teknis (nama model, kunci ke berapa, panjang konteks) SENGAJA
           // tidak ditampilkan - itu urusan internal, bukan informasi untuk
           // pemakai panel.
@@ -161,6 +184,51 @@ export default function AnalisisAI() {
     setTanya('');
     jalankan({ tanya: t }, t.length > 60 ? t.slice(0, 60) + '...' : t);
   };
+
+  // ==========================================
+  // SIMPAN / HAPUS JAWABAN (permintaan pemilik)
+  // ==========================================
+  // Kunci identitas untuk menandai "sudah disimpan": judul + awal jawaban.
+  // Cukup unik untuk keperluan tampilan, tidak perlu hash.
+  const kunciJawaban = (r) => r.judul + '::' + String(r.jawaban || '').slice(0, 80);
+
+  const simpanJawaban = useCallback(async (r) => {
+    setPesanSimpan(null);
+    try {
+      const res = await fetch('/api/admin/ai/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ judul: r.judul, pertanyaan: r.pertanyaan || r.judul, jawaban: r.jawaban, sumber: r.sumber || 'chat' }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setDisimpan((s) => new Set(s).add(kunciJawaban(r)));
+        setPesanSimpan('Jawaban disimpan ke arsip.');
+        muatArsip();
+      } else {
+        setPesanSimpan('Gagal menyimpan: ' + (d.error || 'tidak diketahui'));
+      }
+    } catch (e) {
+      setPesanSimpan('Gagal menyimpan: ' + e.message);
+    }
+    setTimeout(() => setPesanSimpan(null), 4000);
+  }, [muatArsip]);
+
+  const hapusArsip = useCallback(async (id) => {
+    try {
+      const res = await fetch('/api/admin/ai/notes?id=' + encodeURIComponent(id), { method: 'DELETE' });
+      const d = await res.json();
+      if (d.ok) {
+        setArsip((a) => a.filter((x) => x.id !== id));
+        setPesanSimpan('Catatan dihapus.');
+      } else {
+        setPesanSimpan('Gagal menghapus: catatan tidak ditemukan.');
+      }
+    } catch (e) {
+      setPesanSimpan('Gagal menghapus: ' + e.message);
+    }
+    setTimeout(() => setPesanSimpan(null), 4000);
+  }, []);
 
   if (memuatStatus) {
     return (
@@ -255,6 +323,23 @@ export default function AnalisisAI() {
           <div className="mb-2 flex items-center gap-2 border-b border-border-soft pb-2">
             <span className="font-display text-sm font-bold text-ink">{r.judul}</span>
             {r.info && <span className="ml-auto text-[0.65rem] text-ink-faint">{r.info}</span>}
+            {/* Tombol Simpan: hanya untuk jawaban yang berhasil (bukan error).
+                Kalau sudah tersimpan, tombol berubah jadi penanda pasif supaya
+                tidak bisa tersimpan dua kali. */}
+            {!r.error && (
+              <button
+                type="button"
+                onClick={() => simpanJawaban(r)}
+                disabled={disimpan.has(kunciJawaban(r))}
+                className={`ml-auto shrink-0 rounded-lg border px-2.5 py-1 text-[0.7rem] font-bold transition ${
+                  disimpan.has(kunciJawaban(r))
+                    ? 'border-success/40 bg-success/10 text-success cursor-default'
+                    : 'border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink cursor-pointer'
+                }`}
+              >
+                {disimpan.has(kunciJawaban(r)) ? 'Tersimpan' : 'Simpan'}
+              </button>
+            )}
           </div>
           {r.error ? (
             <p className="text-sm text-danger">{r.error}</p>
@@ -263,6 +348,66 @@ export default function AnalisisAI() {
           )}
         </div>
       ))}
+
+      {/* ==========================================
+          ARSIP JAWABAN TERSIMPAN
+          ==========================================
+          Permintaan pemilik: "jawaban AI bisa gw simpan bisa gw hapus,
+          jadi bisa aja ada masukkan bagus gw simpan jadi jawabannya selalu
+          ada, bisa juga dihapus kalo udah ga relevan". */}
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-display text-ink">
+            Arsip Jawaban {arsip.length > 0 && <span className="text-sm font-normal text-ink-muted">({arsip.length})</span>}
+          </h3>
+          {arsip.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setBukaArsip((v) => !v)}
+              className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink cursor-pointer"
+            >
+              {bukaArsip ? 'Sembunyikan' : 'Tampilkan'}
+            </button>
+          )}
+        </div>
+
+        {pesanSimpan && <p className="mt-2 text-xs font-semibold text-success">{pesanSimpan}</p>}
+
+        {arsip.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">
+            Belum ada jawaban tersimpan. Klik "Simpan" pada jawaban yang berguna - catatannya akan tersimpan di sini dan bisa dibaca kapan saja.
+          </p>
+        ) : bukaArsip ? (
+          <ul className="mt-3 space-y-3">
+            {arsip.map((a) => (
+              <li key={a.id} className="rounded-xl border border-border-soft bg-bg-soft/40 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink" title={a.judul}>{a.judul}</p>
+                    <p className="mt-0.5 text-[0.65rem] text-ink-faint">
+                      {new Date(a.createdAt).toLocaleString('id-ID')} {a.sumber ? '- ' + a.sumber : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => hapusArsip(a.id)}
+                    className="shrink-0 rounded-lg border border-danger/40 px-2.5 py-1 text-[0.7rem] font-bold text-danger transition hover:bg-danger/10 cursor-pointer"
+                    title="Hapus catatan ini"
+                  >
+                    Hapus
+                  </button>
+                </div>
+                {a.pertanyaan && <p className="mt-2 text-xs italic text-ink-muted">Tanya: {a.pertanyaan}</p>}
+                <div className="mt-2">
+                  <Paragraf teks={a.jawaban} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-xs text-ink-muted">{arsip.length} catatan tersimpan. Klik "Tampilkan" untuk membacanya.</p>
+        )}
+      </div>
     </div>
   );
 }

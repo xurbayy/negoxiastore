@@ -30,8 +30,34 @@ const TAB_GROUPS = [
 ];
 
 // Kerangka admin: sidebar + konten. Data snapshot/log di-poll tiap 5 detik.
+// Daftar ID tab yang sah - dipakai untuk memvalidasi tab dari URL/localStorage
+// supaya nilai asing tidak membuat panel menampilkan tab kosong.
+const TAB_VALID = new Set(TAB_GROUPS.flatMap((g) => g.tabs.map(([id]) => id)));
+
 export default function AdminShell({ username, avatar = null }) {
-  const [tab, setTab] = useState('dashboard');
+  // TAB BERTAHAN SAAT REFRESH (permintaan pemilik 2026-10-01).
+  //
+  // Sebelumnya selalu mulai dari 'dashboard', sehingga admin yang sedang di
+  // tab lain (mis. Analisis AI atau Ekonomi) terlempar kembali ke Dashboard
+  // setiap kali me-refresh halaman - menyebalkan dan menghilangkan konteks.
+  //
+  // Sumber urutan prioritas:
+  //   1. Hash URL (#ai) - bisa di-bookmark, dibagikan, dan tahan refresh.
+  //   2. localStorage - pengingat terakhir kalau URL tanpa hash.
+  //   3. 'dashboard' - default.
+  //
+  // Dipakai useState dengan initializer (bukan useEffect) supaya tab yang
+  // benar dipakai sejak render PERTAMA - tidak ada kedipan ke Dashboard dulu.
+  const [tab, setTab] = useState(() => {
+    if (typeof window === 'undefined') return 'dashboard';
+    const dariHash = window.location.hash.replace(/^#/, '');
+    if (dariHash && TAB_VALID.has(dariHash)) return dariHash;
+    try {
+      const simpan = window.localStorage.getItem('nexo_admin_tab');
+      if (simpan && TAB_VALID.has(simpan)) return simpan;
+    } catch (_) { /* localStorage bisa diblokir - abaikan */ }
+    return 'dashboard';
+  });
   const [data, setData] = useState(null); // { snapshot, series, log }
   const [menuOpen, setMenuOpen] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
@@ -86,6 +112,32 @@ export default function AdminShell({ username, avatar = null }) {
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // GANTI TAB: simpan pilihan ke URL hash + localStorage supaya bertahan
+  // saat refresh, dan tombol Back/Forward browser ikut berfungsi.
+  const gantiTab = useCallback((id) => {
+    setTab(id);
+    setMenuOpen(false);
+    try {
+      // Hash (bukan query) supaya tidak memicu navigasi server / reload data.
+      // history.pushState -> tombol Back kembali ke tab sebelumnya, enak dipakai.
+      window.history.pushState(null, '', '#' + id);
+    } catch (_) { /* pushState bisa diblokir - abaikan */ }
+    try { window.localStorage.setItem('nexo_admin_tab', id); } catch (_) {}
+  }, []);
+
+  // Ikuti tombol Back/Forward browser: kalau hash berubah, pindah tab.
+  useEffect(() => {
+    const onHash = () => {
+      const id = window.location.hash.replace(/^#/, '');
+      if (id && TAB_VALID.has(id)) {
+        setTab(id);
+        try { window.localStorage.setItem('nexo_admin_tab', id); } catch (_) {}
+      }
+    };
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   // Lompat ke atas setiap kali TAB DIGANTI.
@@ -370,7 +422,7 @@ export default function AdminShell({ username, avatar = null }) {
                   <li key={id}>
                     <button
                       type="button"
-                      onClick={() => { setTab(id); setMenuOpen(false); }}
+                      onClick={() => gantiTab(id)}
                       className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors cursor-pointer ${
                         tab === id ? 'bg-accent/20 text-ink' : 'text-ink-muted hover:bg-bg-soft hover:text-ink'
                       }`}
