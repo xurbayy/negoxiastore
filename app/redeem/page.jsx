@@ -3,6 +3,7 @@ import { userHasPremium } from '../lib/snapshot';
 import { redirect } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import AdUnit from '../components/AdUnit';
 import RedeemClient from '../components/RedeemClient';
 
 export const metadata = {
@@ -24,6 +25,10 @@ export default async function RedeemPage({ searchParams }) {
       <main className="relative mx-auto max-w-2xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative text-center">
+          {/* Iklan AdSense di atas judul (permintaan pemilik 2026-10-01). */}
+          <div className="mb-4">
+            <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT} format="auto" />
+          </div>
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Redeem <span className="font-display text-ink">Hadiah</span>
           </h1>
