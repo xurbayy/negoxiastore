@@ -1,27 +1,51 @@
 // ==========================================
-// app/lib/groq.js
-// Klien Groq dengan ROTASI KUNCI otomatis.
+// app/lib/groq.js -> AI Klien (OpenAI-compatible)
 // ==========================================
 //
-// KENAPA BANYAK KUNCI:
-//   Kuota Groq dihitung PER KUNCI. Satu kunci cepat mentok (HTTP 429) kalau
-//   dipakai sering. Di sini kunci dicoba berurutan: kena 429 / limit -> pindah
-//   ke kunci berikutnya, bukan langsung gagal.
+// Mendukung DUA penyedia:
+//   1. Groq (default) - https://api.groq.com/openai/v1
+//   2. Endpoint custom - lewat env AI_BASE_URL (mis. proxy lokal Gemini)
+//
+// PEMILIHAN OTOMATIS: kalau AI_BASE_URL di-set, pakai itu. Kalau tidak, pakai
+// Groq (kembali ke perilaku lama).
+//
+// KUNCI: AI_API_KEY untuk provider baru, GROQ_API_KEY untuk Groq (bisa multi
+// dipisah koma untuk rotasi).
 //
 // KEAMANAN:
 //   - Kunci HANYA dibaca di server (file ini tidak pernah diimpor komponen
 //     klien). Jangan pernah menaruhnya di variabel NEXT_PUBLIC_*.
 //   - Kunci TIDAK PERNAH dikembalikan ke pemanggil, apalagi ke browser.
-//   - Pesan error dari Groq bisa memuat cuplikan kunci -> disaring dulu.
-//
-// Semua fungsi di sini server-only.
+//   - Pesan error disaring supaya kunci tidak bocor.
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-/** Daftar kunci dari env (dipisah koma), dibersihkan dari kosong/spasi. */
+/** URL endpoint yang dipakai. */
+function baseUrl() {
+  const custom = (process.env.AI_BASE_URL || '').replace(/\/+$/, '');
+  if (custom) return `${custom}/chat/completions`;
+  return GROQ_URL;
+}
+
+/** Daftar kunci dari env. Provider custom: AI_API_KEY. Groq: GROQ_API_KEY. */
 function daftarKunci() {
-  const mentah = process.env.GROQ_API_KEY || '';
-  return mentah.split(',').map((k) => k.trim()).filter(Boolean);
+  const custom = process.env.AI_API_KEY;
+  if (custom && custom.trim()) return custom.split(',').map((k) => k.trim()).filter(Boolean);
+  const groq = process.env.GROQ_API_KEY || '';
+  return groq.split(',').map((k) => k.trim()).filter(Boolean);
+}
+
+/** Model yang dipakai. Provider custom: AI_MODEL. Groq: GROQ_MODEL. */
+function modelAI() {
+  return process.env.AI_MODEL || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+}
+
+/** Nama provider (untuk tampilan di panel admin). */
+function namaProvider() {
+  if (process.env.AI_BASE_URL) {
+    try { return new URL(process.env.AI_BASE_URL).hostname; } catch (_) { return 'custom'; }
+  }
+  return 'groq';
 }
 
 export function adaGroq() {
@@ -33,39 +57,35 @@ export function jumlahKunci() {
 }
 
 export function modelGroq() {
-  return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  return modelAI();
 }
 
-// Batas token OUTPUT yang diminta ke Groq.
-//
-// PENTING (fix 2026-10-01): Groq menghitung TOTAL token per menit (TPM) =
-// input + output yang diminta. Dengan konteks ~5000 token + max_tokens 4000,
-// satu request sudah ~9000 token - MELEBIHI batas 8000 TPM akun gratis.
-// Akibatnya muncul error 'Request too large' walau konteksnya sudah dipangkas.
-//
-// Default diturunkan 4000 -> 2000. Jawaban analisis yang rapi biasanya
-// 400-900 token, jadi 2000 tetap lebih dari cukup, sementara total request
-// turun ke ~7000 token - aman di bawah 8000.
+export function providerInfo() {
+  return { nama: namaProvider(), model: modelAI(), kunci: jumlahKunci() };
+}
+
+// Batas token OUTPUT. Default 2000 supaya total request tetap di bawah
+// batas kuota provider (Groq 8000 TPM; provider lain biasanya lebih besar).
 function maksToken() {
-  const n = parseInt(process.env.GROQ_MAX_TOKENS, 10);
+  const n = parseInt(process.env.AI_MAX_TOKENS || process.env.GROQ_MAX_TOKENS, 10);
   return Number.isFinite(n) && n > 0 ? n : 2000;
 }
 
 /**
  * Buang kunci kalau tidak sengaja ikut muncul di pesan error.
- * Pesan error Groq kadang menyertakan header permintaan.
  */
 function bersihkanPesan(teks) {
   let out = String(teks || '');
   for (const k of daftarKunci()) {
     if (k) out = out.split(k).join('[kunci-disembunyikan]');
   }
-  // Pola umum kunci Groq yang mungkin lolos.
-  return out.replace(/gsk_[A-Za-z0-9]{20,}/g, '[kunci-disembunyikan]');
+  return out
+    .replace(/gsk_[A-Za-z0-9]{20,}/g, '[kunci-disembunyikan]')
+    .replace(/sk-[A-Za-z0-9\-]{20,}/g, '[kunci-disembunyikan]');
 }
 
 /**
- * Kirim permintaan ke Groq, mencoba tiap kunci sampai ada yang berhasil.
+ * Kirim permintaan ke AI provider, mencoba tiap kunci sampai ada yang berhasil.
  *
  * @param {Array<{role:string, content:string}>} pesan
  * @returns {Promise<{ok:boolean, teks?:string, error?:string, kode?:number, kunciDipakai?:number}>}
@@ -73,89 +93,64 @@ function bersihkanPesan(teks) {
 export async function tanyaGroq(pesan) {
   const kunci = daftarKunci();
   if (!kunci.length) {
-    return { ok: false, error: 'GROQ_API_KEY belum diisi di environment.' };
+    return { ok: false, error: 'AI_API_KEY / GROQ_API_KEY belum diisi di environment.' };
   }
 
+  const url = baseUrl();
   let terakhir = null;
 
   for (let i = 0; i < kunci.length; i++) {
     try {
-      const res = await fetch(GROQ_URL, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${kunci[i]}`,
         },
         body: JSON.stringify({
-          model: modelGroq(),
+          model: modelAI(),
           messages: pesan,
           max_tokens: maksToken(),
-          temperature: 0.4, // agak rendah: analisis data harus konsisten, bukan kreatif
+          temperature: 0.4,
         }),
-        // 60 detik: analisis panjang butuh waktu, tapi jangan menggantung selamanya.
         signal: AbortSignal.timeout(60000),
       });
 
       if (res.ok) {
         const data = await res.json();
+        // Beberapa provider streaming: baca SSE untuk ambil konten.
         const teks = data?.choices?.[0]?.message?.content;
-        if (!teks) {
-          terakhir = { kode: res.status, error: 'Groq mengirim balasan kosong.' };
-          continue; // coba kunci berikutnya
+        if (teks) return { ok: true, teks, kunciDipakai: i + 1 };
+
+        // Fallback: kalau respon bukan JSON biasa (SSE), coba parse.
+        if (!data?.choices) {
+          const teksSse = await bacaSSE(res);
+          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1 };
         }
-        return { ok: true, teks, kunciDipakai: i + 1 };
+
+        terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
+        continue;
       }
 
-      // Baca pesan error Groq untuk diagnosa.
       let pesanErr = '';
-      try {
-        const j = await res.json();
-        pesanErr = j?.error?.message || JSON.stringify(j);
-      } catch {
-        pesanErr = '';
-      }
+      try { const j = await res.json(); pesanErr = j?.error?.message || JSON.stringify(j); } catch { pesanErr = ''; }
 
-      // ---------------------------------------------------------------
-      // RANGKAI PESAN YANG MENYEBUTKAN KODE HTTP (fix 2026-09-30)
-      // ---------------------------------------------------------------
-      // Keluhan nyata: pesan "Invalid API Key" muncul padahal kuncinya VALID
-      // (diuji langsung ke api.groq.com, kelima kunci balas normal).
-      //
-      // Sebabnya Groq memakai 403 dengan pesan generik untuk beberapa kondisi
-      // berbeda, dan satu di antaranya adalah MODEL yang tidak dikenal. Kalau
-      // pesan Groq diteruskan mentah-mentah, admin dikirim mengejar masalah
-      // yang salah (memeriksa kunci) padahal yang perlu diperbaiki nama model.
-      //
-      // Karena itu kode HTTP selalu ditulis, dan untuk 403 ditambah pengingat
-      // bahwa penyebabnya bisa model - bukan cuma kunci.
       const kode = res.status;
       let rangkai = pesanErr || ('HTTP ' + kode);
-      // TOKEN TERLALU BANYAK (kejadian nyata 2026-10-01): Groq menolak dengan
-      // pesan 'Request too large ... tokens per minute (TPM)'. Pesannya panjang
-      // dan menyebut hal teknis (organization, service tier) yang tidak berguna
-      // bagi admin. Diganti pesan singkat yang menyebut PENYEBAB dan SOLUSI.
       if (/too large|TPM|tokens per minute/i.test(rangkai)) {
-        rangkai = 'Data yang dikirim ke AI terlalu panjang untuk batas kuota Groq. ' +
-          'Konteks sudah dipangkas otomatis; coba lagi sebentar lagi (kuota dihitung per menit). ' +
-          'Kalau sering terjadi, kurangi riwayat percakapan atau naikkan tier Groq.';
+        rangkai = 'Data terlalu panjang untuk batas kuota provider. Konteks sudah dipangkas otomatis; coba lagi sebentar.';
       } else if (kode === 403) {
-        rangkai += ' [penyebab lazim: nama MODEL tidak dikenal. Cek GROQ_MODEL - ' +
-          'daftar model yang tersedia untuk akun ini bisa dilihat di console.groq.com]';
+        rangkai += ' [kunci ditolak atau nama MODEL salah. Cek AI_MODEL/GROQ_MODEL]';
       } else if (kode === 401) {
-        rangkai += ' [kunci ditolak: periksa nama variabel GROQ_API_KEY dan pastikan ' +
-          'nilainya tidak terpotong]';
+        rangkai += ' [kunci ditolak: periksa AI_API_KEY]';
       } else if (kode === 429) {
-        rangkai += ' [kuota kunci ini habis]';
+        rangkai += ' [kuota kunci ini habis - coba lagi nanti]';
       }
       terakhir = { kode, error: bersihkanPesan(rangkai) };
-
-      // 400/404 = permintaan salah (termasuk model tidak ada) -> kunci lain
-      // tidak akan menolong, hentikan supaya tidak menghabiskan kuota.
       if (kode === 400 || kode === 404) break;
     } catch (e) {
-      // Termasuk AbortError (timeout) dan gangguan jaringan.
       const pesan = e?.name === 'TimeoutError'
-        ? 'Permintaan ke Groq melewati 60 detik.'
+        ? 'Permintaan ke AI melewati 60 detik.'
         : bersihkanPesan(e?.message || e);
       terakhir = { kode: 0, error: pesan };
     }
@@ -165,9 +160,37 @@ export async function tanyaGroq(pesan) {
   return {
     ok: false,
     kode: terakhir?.kode || 0,
-    error: (terakhir?.error || 'Gagal menghubungi Groq.') + semuaDicoba,
-    // Nama model ikut dilaporkan: kesalahan paling sering justru di sini,
-    // dan tanpa ini admin harus menebak-nebak dari pesan Groq.
-    model: modelGroq(),
+    error: (terakhir?.error || 'Gagal menghubungi AI.') + semuaDicoba,
+    model: modelAI(),
   };
+}
+
+/** Baca balasan SSE (Server-Sent Events) - dipakai provider yang streaming. */
+async function bacaSSE(res) {
+  try {
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let isi = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      isi += decoder.decode(value, { stream: true });
+    }
+    // Ekstrak konten dari format SSE: data: {"choices":[{"delta":{"content":"..."}}]}
+    const baris = isi.split('\n');
+    let teks = '';
+    for (const b of baris) {
+      if (!b.startsWith('data: ')) continue;
+      const jsonStr = b.slice(6).trim();
+      if (jsonStr === '[DONE]') continue;
+      try {
+        const obj = JSON.parse(jsonStr);
+        const delta = obj?.choices?.[0]?.delta?.content;
+        if (delta) teks += delta;
+      } catch (_) { /* baris bukan JSON valid - lewati */ }
+    }
+    return teks.trim() || null;
+  } catch {
+    return null;
+  }
 }
