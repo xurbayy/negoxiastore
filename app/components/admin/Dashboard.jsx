@@ -206,8 +206,8 @@ export default function Dashboard({ data }) {
         : 'bot belum kirim data ini',
       pick: null,
     },
-    { label: 'Loans Aktif', value: fmt(m.loans?.count), pick: null },
-    { label: 'Loans Telat', value: fmt(m.loans?.overdue), pick: null },
+    { label: 'Hutang Aktif', value: fmt(m.loans?.count), pick: null },
+    { label: 'Hutang Telat', value: fmt(m.loans?.overdue), pick: null },
     { label: 'RAM Bot', value: `${fmt(snap.bot?.memMb)} MB`, pick: null },
     { label: 'Ping WS', value: `${fmt(snap.bot?.wsPing ?? '-')} ms`, pick: null },
     { label: 'Uptime', value: fmtUptime(snap.bot?.uptimeSec), pick: null },
@@ -378,7 +378,9 @@ export default function Dashboard({ data }) {
             // dari katalog, tampilkan itemKey-nya apa adanya (jangan dikosongkan).
             const katalog = new Map((snap.shopItems || []).map((it) => [it.itemKey, it]));
             const maks = Math.max(...daftar.map((x) => x.kali), 1);
-            const baris = daftar.slice(0, 10).map((x) => {
+            // Permintaan pemilik: "list itu tu muncul 4 paling banyak item
+            // terjual" - jadi daftar dipangkas jadi 4, tidak 10.
+            const baris = daftar.slice(0, 4).map((x) => {
               const it = katalog.get(x.itemKey);
               return { nama: it?.name || x.itemKey, emojiUrl: it?.emojiUrl || null, ...x };
             });
@@ -403,6 +405,57 @@ export default function Dashboard({ data }) {
                     </div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg-soft">
                       <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(4, (b.kali / maks) * 100)}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
+        </div>
+
+        {/* Pengundang Terbanyak (Referral)
+            Permintaan pemilik 2026-09-30: tampilkan 10 orang yang paling
+            banyak mengundang lewat referral, lengkap dengan namanya.
+            Nama sudah di-JOIN di sisi bot, jadi di sini tinggal ditampilkan. */}
+        <div className="nx-card px-5 py-5">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="font-display text-ink">Pengundang Terbanyak</h3>
+            <span className="text-[0.65rem] text-ink-faint">
+              {m.referral ? fmt(m.referral.total) + ' pemakaian kode' : ''}
+            </span>
+          </div>
+          {(() => {
+            const ref = m.referral;
+            if (!ref) {
+              return (
+                <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+                  Bot belum mengirim data referral. Jalankan ulang bot dengan versi terbaru.
+                </p>
+              );
+            }
+            const atas = ref.teratas || [];
+            if (!atas.length) {
+              return <p className="mt-3 text-sm text-ink-muted">Belum ada yang memakai kode referral.</p>;
+            }
+            const maks = Math.max(...atas.map((x) => x.jumlah), 1);
+            return (
+              <ul className="mt-3 space-y-2.5 text-sm">
+                {atas.slice(0, 10).map((x, i) => (
+                  <li key={x.userId || i}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2 text-ink">
+                        <span className="w-4 shrink-0 font-display text-xs text-ink-muted">{i + 1}</span>
+                        <span className="truncate" title={x.username || x.userId}>
+                          {x.username || x.userId}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-ink-muted">
+                        {fmtRingkas(x.jumlah)} orang
+                        <span className="ml-1.5 text-[0.65rem] text-success">+{fmtRingkas(x.poin)}</span>
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg-soft">
+                      <div className="h-full rounded-full bg-success" style={{ width: `${Math.max(4, (x.jumlah / maks) * 100)}%` }} />
                     </div>
                   </li>
                 ))}
