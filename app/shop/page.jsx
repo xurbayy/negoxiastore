@@ -1,4 +1,4 @@
-import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
+import { getLatestSnapshot } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import Navbar from '../components/Navbar';
@@ -37,9 +37,7 @@ export default async function ShopPage() {
             NEXO Shop.
           </h1>
           <div className="accent-bar mt-4" aria-hidden="true" />
-          {snap ? (
-            <p className="mt-3 text-sm text-ink-muted">Kategori persis seperti nxshop Discord · diperbarui {timeAgo(snap.ts)}</p>
-          ) : (
+          {!snap && (
             <p className="mt-3 text-sm text-danger">⚠ Bot belum mengirim katalog. Ketik <code className="text-ink">nxshop</code> di Discord untuk melihat langsung.</p>
           )}
 

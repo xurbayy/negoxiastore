@@ -333,17 +333,9 @@ export default function AdminShell({ username, avatar = null }) {
         {/* Bar identitas mobile DIPINDAH ke <header> fixed di atas (lihat
             penanda "Bar atas admin"), supaya berlaku di semua ukuran dan
             tidak lagi menempel hanya di dalam kolom konten. */}
-        {/* Indikator hidup: data bergerak sendiri tanpa tombol manual */}
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-ink-muted">
-            {updatedAt && (
-              <span className="flex items-center gap-2">
-                <span className="pulse-dot" aria-hidden="true" />
-                Live · diperbarui {new Date(updatedAt).toLocaleTimeString('id-ID')}
-              </span>
-            )}
-          </div>
-        </div>
+        {/* Indikator "Live · diperbarui" DIHAPUS (permintaan pemilik
+            2026-10-01) - sudah ada indikator mengambang AutoRefresh di
+            kanan bawah. Bar kosong ini dihapus sepenuhnya. */}
 
         {/* ref + id + scroll-mt: dipakai untuk melompat ke atas setiap kali
             tab diganti, supaya halaman yang dituju LANGSUNG terlihat.
