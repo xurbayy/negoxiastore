@@ -111,6 +111,98 @@ export function susunKonteks(snap) {
     ((snap.premiumMembers || []).length + ' orang'));
   L.push(`Judul admin dipegang: ${(m.adminTitleHolders || []).length}`);
 
+  // ==========================================
+  // DATA OPERASIONAL (2026-09-30)
+  // ==========================================
+  // Permintaan pemilik: "AI harus bisa baca data realtime semuanya".
+  // Sebelumnya snapshot hanya memuat angka besar, sehingga AI menjawab dengan
+  // saran umum - bukan karena AI-nya kurang pintar, tapi karena bagian yang
+  // menjelaskan KENAPA angka itu begitu tidak pernah dikirim.
+
+  // ---------- Promo: mana yang gagal menarik pemain ----------
+  L.push('');
+  L.push('### PROMO - KLAIM PER KODE');
+  const klaim = m.promoClaimStat || [];
+  if (!klaim.length) {
+    L.push('(belum ada klaim tercatat)');
+  } else {
+    // Kuota ikut ditulis supaya AI bisa menilai rasio tanpa diberi tahu.
+    const petaPromo = new Map((snap.promoCodes || []).map((x) => [x.code, x]));
+    for (const k of klaim) {
+      const p = petaPromo.get(k.code);
+      const rasio = p && p.quota ? ' (' + Math.round((k.dipakai / p.quota) * 100) + '% dari kuota)' : '';
+      L.push('- ' + k.code + ': ' + k.dipakai + ' klaim' + rasio +
+        (p ? ' | hadiah ' + p.rewardType + ' ' + p.rewardValue : ''));
+    }
+  }
+
+  // ---------- Misi harian: metrik retensi paling langsung ----------
+  L.push('');
+  L.push('### MISI HARIAN');
+  const ms = m.misiStat || {};
+  L.push('Peserta hari ini: ' + (ms.peserta ?? '-') + ' | selesai semua: ' + (ms.selesaiSemua ?? '-'));
+
+  // ---------- Transaksi: dari mana poin masuk, ke mana perginya ----------
+  L.push('');
+  L.push('### TRANSAKSI');
+  const tt = m.transaksiPerTipe || [];
+  if (!tt.length) {
+    L.push('(belum ada transaksi)');
+  } else {
+    for (const t of tt) L.push('- ' + t.type + ': ' + t.jumlah + ' kali, total ' + rupiah(t.total) + ' poin');
+  }
+  L.push('24 jam terakhir: ' + (m.transaksi24jam?.jumlah ?? 0) + ' transaksi oleh ' +
+    (m.transaksi24jam?.pemain ?? 0) + ' pemain unik');
+
+  // ---------- Retensi & pertumbuhan ----------
+  L.push('');
+  L.push('### RETENSI & PERTUMBUHAN');
+  L.push('Pemain aktif 24 jam: ' + (m.aktif24jam ?? 0) + ' dari ' + (m.totalUsers ?? 0) + ' terdaftar');
+  L.push('Pemain baru 24 jam: ' + (m.pemainBaru24jam ?? 0));
+
+  // ---------- Stok & item yang benar-benar dipakai ----------
+  L.push('');
+  L.push('### STOK & KEPEMILIKAN ITEM');
+  const restok = m.restockTerakhir || [];
+  L.push('Item pernah di-restock: ' + restok.length + ' jenis');
+  if (restok.length) {
+    L.push('Restock terakhir: ' + restok.slice(0, 8)
+      .map((r) => r.itemKey + '=' + new Date(Number(r.terakhir)).toISOString().slice(0, 10)).join(', '));
+  }
+  const dipegang = m.itemDipegang || [];
+  if (dipegang.length) {
+    L.push('Item paling banyak dipegang pemain: ' + dipegang.slice(0, 10)
+      .map((x) => x.itemKey + '(' + x.pemilik + ' pemilik/' + x.total + ' unit)').join(', '));
+  }
+
+  // ---------- Bank & guild ----------
+  L.push('');
+  L.push('### BANK & GUILD');
+  L.push('Pinjaman TELAT: ' + (m.pinjamanTelat?.jumlah ?? 0) + ' (nilai ' + rupiah(m.pinjamanTelat?.nilai) + ')');
+  const gs = m.guildStat || {};
+  L.push('Guild: ' + (gs.total ?? 0) + ' dibuat, ' + (gs.adaAnggota ?? 0) +
+    ' punya anggota, ' + (gs.warSelesai ?? 0) + ' war selesai');
+
+  // ---------- LOG ERROR ----------
+  // Bagian yang sebelumnya TIDAK PERNAH bisa dibaca AI. Isinya POLA error
+  // (jenis + jumlah + waktu), bukan stack trace - lihat utils/logReader.js.
+  L.push('');
+  L.push('### LOG ERROR (pola, bukan stack trace)');
+  const lg = m.logError;
+  if (!lg) {
+    L.push('Bot belum mengirim rekap log (kode lama).');
+  } else {
+    L.push('Total error tercatat: ' + lg.totalSemua);
+    for (const f of (lg.file || []).slice(0, 5)) {
+      L.push(f.file + ': ' + f.total + ' baris, ' + f.jenisUnik + ' jenis');
+      for (const d of (f.daftar || []).slice(0, 6)) {
+        L.push('  - ' + d.jumlah + 'x ' + d.pesan +
+          (d.terakhir ? ' (terakhir ' + String(d.terakhir).slice(0, 19) + ')' : ''));
+      }
+    }
+  }
+
+
   return L.join('\n');
 }
 
@@ -165,9 +257,14 @@ export const PINTASAN = [
     tanya: 'Analisis sisi komunitas: 44 server tapi berapa yang benar-benar aktif, sebaran pemain antar server, guild yang cuma sedikit, link invite yang belum jadi. Apa langkah paling berdampak untuk menumbuhkan komunitas.',
   },
   {
+    id: 'error',
+    label: 'Log Error',
+    tanya: 'Baca bagian LOG ERROR. Sebutkan error mana yang paling sering muncul, sejak kapan, dan bagian mana yang terdampak (game, invite, izin, dsb). Pisahkan error yang berbahaya dari yang tidak berbahaya, lalu beri urutan perbaikan dari yang paling mendesak. Kalau log-nya kosong atau bot belum mengirimnya, katakan apa adanya.',
+  },
+  {
     id: 'guild',
     label: 'Masalah Guild & War',
-    tanya: 'Fokus ke fitur guild: jumlah guild, jumlah member, hasil war, poin guild. Kenapa fitur ini mungkin kurang hidup dibanding fitur lain? Beri langkah perbaikan yang bisa diukur.',
+    tanya: 'Fokus ke fitur guild: jumlah guild, jumlah anggota, hasil war, poin guild. Kenapa fitur ini mungkin kurang hidup dibanding fitur lain? Beri langkah perbaikan yang bisa diukur.',
   },
   {
     id: 'semua',
