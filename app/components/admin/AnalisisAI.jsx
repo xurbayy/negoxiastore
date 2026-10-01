@@ -115,8 +115,21 @@ export default function AnalisisAI() {
   // itu kenapa?") tetap nyambung karena riwayatnya dikirim ke AI.
   //
   // Struktur satu pesan: { peran: 'gw' | 'ai', isi, waktu, error? }
-  const [pesan, setPesan] = useState([]);
-  const [riwayat, setRiwayat] = useState([]); // { judul, jawaban } - daftar analisis siap
+  // ==========================================
+  // MODE: analisis (searah) vs diskusi (chat 2 arah)
+  // ==========================================
+  // Permintaan pemilik: "pertahankan metode yang tadi juga jadi ada 2, gw mau
+  // pake basisnya chat seperti GPT atau yang cuma searah doang - karena
+  // keunggulannya kalo searah itu dia bakal ngasih tau temuan saran resiko,
+  // nah kalo yang chat buat gw diskusi kedepannya bakal gimana".
+  //
+  // Keduanya berbasis DATA yang sama; mode hanya mengubah BENTUK jawaban.
+  const [mode, setMode] = useState('analisis');
+
+  // Hasil mode ANALISIS (searah): daftar laporan TEMUAN/SARAN/RISIKO.
+  // Terpisah dari `pesan` supaya dua mode tidak saling mengotori tampilan.
+  const [laporan, setLaporan] = useState([]);
+  const [bukaLaporan, setBukaLaporan] = useState(null); // indeks laporan yang dibuka
   // ARSIP JAWABAN: jawaban bagus bisa DISIMPAN dan DIHAPUS.
   const [arsip, setArsip] = useState([]);
   const [disimpan, setDisimpan] = useState(() => new Set());
@@ -170,51 +183,68 @@ export default function AnalisisAI() {
     return () => { batal = true; };
   }, []);
 
-  // Kirim satu giliran percakapan. `muatan` = { tanya } atau { pintasan }.
-  // Riwayat percakapan (pesan sebelum ini) ikut dikirim supaya AI nyambung.
+  // Kirim satu permintaan. `muatan` = { tanya } atau { pintasan }.
+  // Di mode DISKUSI riwayat percakapan ikut dikirim supaya AI nyambung.
+  // Di mode ANALISIS jawaban disimpan sebagai laporan (bukan gelembung chat).
   const jalankan = useCallback(async (muatan, judul, teksTampil) => {
     setJalan(true);
-    const waktu = Date.now();
-    // Tampilkan pesan pemilik lebih dulu supaya terasa responsif.
-    setPesan((p) => [...p, { peran: 'gw', isi: teksTampil || judul, waktu }]);
+    const modeKirim = mode;
 
-    // Ambil riwayat SEBELUM pesan ini (state `pesan` belum ter-update saat ini).
+    // Ambil riwayat SEBELUM pesan baru ditambahkan.
     const riwayatKirim = [];
     setPesan((p) => {
       for (const m of p.slice(-12)) riwayatKirim.push({ role: m.peran === 'ai' ? 'ai' : 'gw', isi: m.isi });
       return p;
     });
 
+    if (modeKirim === 'diskusi') {
+      // Tampilkan pesan pemilik lebih dulu supaya terasa responsif.
+      setPesan((p) => [...p, { peran: 'gw', isi: teksTampil || judul, waktu: Date.now() }]);
+    }
+
     try {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, riwayat: riwayatKirim }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim }),
       });
       const d = await res.json();
-      if (!d.ok) {
-        setPesan((p) => [...p, {
-          peran: 'ai', error: true, waktu: Date.now(),
-          isi: d.error + (d.petunjuk ? ' ' + d.petunjuk : ''),
-        }]);
+
+      if (modeKirim === 'diskusi') {
+        if (!d.ok) {
+          setPesan((p) => [...p, {
+            peran: 'ai', error: true, waktu: Date.now(),
+            isi: d.error + (d.petunjuk ? ' ' + d.petunjuk : ''),
+          }]);
+        } else {
+          setPesan((p) => [...p, { peran: 'ai', isi: d.jawaban, waktu: Date.now(), pertanyaan: muatan?.tanya || judul }]);
+        }
       } else {
-        setPesan((p) => [...p, { peran: 'ai', isi: d.jawaban, waktu: Date.now(), pertanyaan: muatan?.tanya || muatan?.pintasan || judul }]);
-        // Tetap catat di daftar "analisis siap" untuk tombol Simpan.
-        setRiwayat((r) => [{
+        // Mode analisis: simpan sebagai laporan terpisah.
+        setLaporan((l) => [{
           judul,
-          jawaban: d.jawaban,
+          jawaban: d.ok ? d.jawaban : null,
+          error: d.ok ? null : d.error + (d.petunjuk ? ' ' + d.petunjuk : ''),
           pertanyaan: muatan?.tanya || muatan?.pintasan || judul,
-          sumber: muatan?.pintasan ? 'pintasan:' + muatan.pintasan : 'chat',
-        }, ...r]);
+          sumber: muatan?.pintasan ? 'pintasan:' + muatan.pintasan : 'analisis',
+          waktu: Date.now(),
+        }, ...l]);
+        setBukaLaporan(0);
       }
     } catch (e) {
-      setPesan((p) => [...p, { peran: 'ai', error: true, isi: 'Gagal menghubungi server: ' + e.message, waktu: Date.now() }]);
+      if (modeKirim === 'diskusi') {
+        setPesan((p) => [...p, { peran: 'ai', error: true, isi: 'Gagal menghubungi server: ' + e.message, waktu: Date.now() }]);
+      } else {
+        setLaporan((l) => [{ judul, error: 'Gagal menghubungi server: ' + e.message, waktu: Date.now() }, ...l]);
+      }
     } finally {
       setJalan(false);
-      // Gulir ke pesan terbaru - perilaku standar chat.
-      setTimeout(() => ujungChat.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 80);
+      setTimeout(() => {
+        if (modeKirim === 'diskusi') ujungChat.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        else kotakHasil.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }, 80);
     }
-  }, []);
+  }, [mode]);
 
   const kirimBebas = (e) => {
     e.preventDefault();
@@ -227,7 +257,6 @@ export default function AnalisisAI() {
   // Hapus SELURUH percakapan dan mulai dari nol (seperti "New chat" ChatGPT).
   const mulaiBaru = useCallback(() => {
     setPesan([]);
-    setRiwayat([]);
     try { window.localStorage.removeItem('nexo_ai_chat'); } catch { /* abaikan */ }
   }, []);
 
@@ -300,61 +329,149 @@ export default function AnalisisAI() {
 
   return (
     <div className="space-y-4">
-      {/* Kepala */}
+      {/* Kepala + PEMILIH MODE */}
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display text-ink">Analisis AI</h3>
+          {/* Dua mode dengan keunggulan berbeda (permintaan pemilik):
+              - Analisis: laporan tersusun TEMUAN/SARAN/RISIKO
+              - Diskusi : chat 2 arah untuk berpikir bersama
+              Keduanya memakai DATA yang sama. */}
+          <div className="flex rounded-xl border border-border-soft bg-bg-soft/50 p-1">
+            {[
+              ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
+              ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
+            ].map(([id, label, ket]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMode(id)}
+                title={ket}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                  mode === id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-        <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
-          AI membaca seluruh data snapshot bot (server, game, toko, ekonomi, misi,
-          promo) lalu memberi temuan dan saran. Angka yang tidak ada di data tidak
-          akan dikarang.
+        <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+          {mode === 'analisis' ? (
+            <>Mode <strong className="text-ink">Analisis</strong>: AI membaca seluruh data bot lalu menyusun laporan TEMUAN, SARAN, dan RISIKO. Cocok untuk keputusan cepat yang butuh pertimbangan risiko.</>
+          ) : (
+            <>Mode <strong className="text-ink">Diskusi</strong>: ngobrol dua arah dengan AI, bisa ditanya lanjut dan AI ingat percakapan sebelumnya. Cocok untuk membahas arah pengembangan ke depan.</>
+          )}
+          {' '}Keduanya berbasis data yang sama - angka yang tidak ada di data tidak akan dikarang.
         </p>
       </div>
 
-      {/* Tombol pintas */}
-      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-        <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
-        {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
-            "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
-            tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
-            di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {(status.pintasan || []).map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              disabled={jalan}
-              onClick={() => jalankan({ pintasan: p.id }, p.label)}
-              className="flex min-h-10 items-center justify-center rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      {/* ==========================================
+          MODE ANALISIS (searah): tombol pintasan + laporan
+          ========================================== */}
+      {mode === 'analisis' && (
+        <>
+          <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
+            {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
+                "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
+                tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
+                di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              {(status.pintasan || []).map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={jalan}
+                  onClick={() => jalankan({ pintasan: p.id }, p.label)}
+                  className="flex min-h-10 items-center justify-center rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {/* Pertanyaan bebas juga bisa - tetap dijawab dengan format
+                TEMUAN/SARAN/RISIKO karena modenya 'analisis'. */}
+            <form onSubmit={kirimBebas} className="mt-3 flex gap-2">
+              <input
+                value={tanya}
+                onChange={(e) => setTanya(e.target.value)}
+                placeholder="Atau tulis topik yang mau dianalisis..."
+                aria-label="Topik analisis"
+                className="w-full rounded-xl border border-border-soft bg-card-cream px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
+              />
+              <button
+                type="submit"
+                disabled={jalan || !tanya.trim()}
+                className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {jalan ? '...' : 'Analisis'}
+              </button>
+            </form>
+          </div>
 
-        {/* Tombol pintasan analisis - tetap ada untuk analisis sekali klik */}
-      </div>
+          {jalan && (
+            <div className="nx-card px-4 py-4 sm:px-5 sm:py-5 text-sm text-ink-muted">
+              <span className="pulse-dot" aria-hidden="true" /> AI sedang membaca data, bisa 5-30 detik.
+            </div>
+          )}
+
+          {laporan.length === 0 && !jalan && (
+            <div className="nx-card px-4 py-6 sm:px-5 sm:py-8 text-center text-sm text-ink-muted">
+              Belum ada analisis. Klik salah satu tombol di atas untuk mulai.
+            </div>
+          )}
+
+          {laporan.map((r, i) => (
+            <div key={i} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+              <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-border-soft pb-2">
+                <span className="font-display text-sm font-bold text-ink">{r.judul}</span>
+                <span className="text-[0.65rem] text-ink-faint">
+                  {new Date(r.waktu).toLocaleString('id-ID')}
+                </span>
+                {!r.error && (
+                  <button
+                    type="button"
+                    onClick={() => simpanJawaban({ judul: r.judul, jawaban: r.jawaban, pertanyaan: r.pertanyaan, sumber: r.sumber })}
+                    disabled={disimpan.has(r.judul + '::' + String(r.jawaban || '').slice(0, 80))}
+                    className={`ml-auto shrink-0 rounded-lg border px-2.5 py-1 text-[0.7rem] font-bold transition ${
+                      disimpan.has(r.judul + '::' + String(r.jawaban || '').slice(0, 80))
+                        ? 'border-success/40 bg-success/10 text-success cursor-default'
+                        : 'border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink cursor-pointer'
+                    }`}
+                  >
+                    {disimpan.has(r.judul + '::' + String(r.jawaban || '').slice(0, 80)) ? 'Tersimpan' : 'Simpan'}
+                  </button>
+                )}
+              </div>
+              {r.error ? (
+                <p className="text-sm text-danger">{r.error}</p>
+              ) : (
+                <Paragraf teks={r.jawaban} />
+              )}
+            </div>
+          ))}
+        </>
+      )}
 
       {/* ==========================================
-          PERCAKAPAN (chat 2 arah)
+          MODE DISKUSI (chat 2 arah)
           ==========================================
-          Permintaan pemilik: "bentuknya chat 2 arah, gw juga leluasa nge chat
-          ke dianya, history chatnya bisa gw hapus jadi bisa mulai pembicaraan
-          baru kayak ChatGPT".
+          Pemilik: "kalo yang chat buat gw diskusi kedepannya bakal gimana".
           Pesan pemilik di kanan, balasan AI di kiri. */}
-      <div ref={kotakHasil} className="scroll-mt-4 space-y-3" />
-
-      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-soft pb-3">
-          <h3 className="font-display text-ink">
-            Percakapan {pesan.length > 0 && <span className="text-sm font-normal text-ink-muted">({Math.ceil(pesan.length / 2)} giliran)</span>}
-          </h3>
-          {pesan.length > 0 && (
-            <button
-              type="button"
-              onClick={mulaiBaru}
-              className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+      {mode === 'diskusi' && (
+        <>
+          <div ref={kotakHasil} className="scroll-mt-4" />
+          <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-soft pb-3">
+              <h3 className="font-display text-ink">
+                Diskusi {pesan.length > 0 && <span className="text-sm font-normal text-ink-muted">({Math.ceil(pesan.length / 2)} giliran)</span>}
+              </h3>
+              {pesan.length > 0 && (
+                <button
+                  type="button"
+                  onClick={mulaiBaru}
+                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
               title="Hapus seluruh percakapan dan mulai dari nol"
             >
               Hapus riwayat / Mulai baru
@@ -437,6 +554,8 @@ export default function AnalisisAI() {
           {jalan ? '...' : 'Kirim'}
         </button>
       </form>
+        </>
+      )}
 
       {/* ==========================================
           ARSIP JAWABAN TERSIMPAN

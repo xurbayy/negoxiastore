@@ -104,12 +104,32 @@ export async function POST(request) {
   const idPintasan = String(body?.pintasan || '').trim();
   const tanyaBebas = String(body?.tanya || '').trim().slice(0, 2000);
 
-  // RIWAYAT PERCAKAPAN (permintaan pemilik 2026-10-01: "chat 2 arah seperti
-  // ChatGPT"). Dikirim oleh panel sebagai daftar { role, isi } berisi
+  // ==========================================
+  // MODE JAWABAN (permintaan pemilik 2026-10-01)
+  // ==========================================
+  // Pemilik ingin DUA cara pakai, karena keunggulannya berbeda:
+  //
+  //   'analisis' (searah) - sekali klik tombol pintasan, jawaban tersusun
+  //      rapi dalam TEMUAN / SARAN / RISIKO. Cocok untuk laporan cepat dan
+  //      keputusan yang butuh pertimbangan risiko.
+  //
+  //   'diskusi' (chat 2 arah) - percakapan bebas, AI ingat konteks, bisa
+  //      ditanya lanjut. Cocok untuk mengobrol/berpikir bersama soal arah
+  //      pengembangan ke depan.
+  //
+  // KEDUANYA tetap berbasis DATA yang sama - mode hanya mengubah BENTUK
+  // jawaban, bukan kebebasan AI untuk mengarang. Aturan anti-halusinasi
+  // berlaku di kedua mode.
+  const mode = body?.mode === 'diskusi' ? 'diskusi' : (idPintasan ? 'analisis' : 'diskusi');
+
+  // RIWAYAT PERCAKAPAN. Dikirim oleh panel sebagai daftar { role, isi } berisi
   // pertukaran sebelumnya, supaya AI INGAT konteks dan bisa ditanya lanjut
   // ("yang tadi itu kenapa?"). Dibatasi 12 pesan terakhir agar konteks tidak
   // meledak dan biaya token tetap wajar.
-  const riwayatMentah = Array.isArray(body?.riwayat) ? body.riwayat : [];
+  //
+  // Di mode 'analisis' riwayat DIABAIKAN: tiap analisis harus berdiri sendiri
+  // supaya hasilnya tidak tercampur topik sebelumnya.
+  const riwayatMentah = mode === 'diskusi' && Array.isArray(body?.riwayat) ? body.riwayat : [];
   const riwayat = riwayatMentah
     .slice(-12)
     .map((r) => ({
@@ -241,12 +261,13 @@ export async function POST(request) {
 
   const konteks = susunKonteks(snap, panel) + konteksPemain;
 
-  // Tandai jenis tugas supaya AI tahu apakah harus menjawab SINGKAT (chat
-  // bebas) atau boleh menyusun analisis tiga bagian (tombol pintas).
-  // Ini yang mencegah jawaban bercabang saat pemilik bertanya hal spesifik.
-  const penandaTugas = idPintasan
-    ? 'PERMINTAAN ANALISIS MENYELURUH. Pakai format TEMUAN / SARAN / RISIKO.'
-    : 'PERTANYAAN LANGSUNG. Jawab persis yang ditanyakan, singkat, tanpa judul bagian (kecuali pertanyaannya memang minta analisis).';
+  // Tandai jenis tugas supaya AI tahu BENTUK jawaban yang diinginkan.
+  // Inilah pembeda dua mode yang diminta pemilik:
+  //   analisis -> tersusun TEMUAN / SARAN / RISIKO (laporan siap baca)
+  //   diskusi  -> jawaban langsung & singkat, boleh ditanya lanjut
+  const penandaTugas = mode === 'analisis'
+    ? 'PERMINTAAN ANALISIS. Pakai format TEMUAN / SARAN / RISIKO.'
+    : 'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian. Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.';
 
   // SUSUNAN PESAN (chat 2 arah):
   //   system  -> aturan main
@@ -281,6 +302,7 @@ export async function POST(request) {
   return json({
     ok: true,
     jawaban: hasil.teks,
+    mode,
     model: modelGroq(),
     kunciDipakai: hasil.kunciDipakai,
     totalKunci: jumlahKunci(),
