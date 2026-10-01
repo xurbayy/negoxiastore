@@ -33,7 +33,17 @@ export default function VerifyForm() {
       });
       const data = await res.json();
       if (data.ok) {
-        window.location.href = '/admin';
+        // Kembalikan ke tab yang dituju (sama seperti /admin/login) supaya
+        // admin yang membuka nexogames.site/admin#ai tidak terlempar ke
+        // Dashboard setelah lolos 2FA.
+        let tujuan = '/admin';
+        try {
+          const tabTujuan = window.localStorage.getItem('nexo_admin_tab_tujuan');
+          const TAB_SAH = ['ai', 'dashboard', 'players', 'log', 'ekonomi', 'shop', 'bank',
+            'redeem', 'manualorders', 'nexopass', 'titles', 'broadcast', 'moderasi', 'feedback'];
+          if (tabTujuan && TAB_SAH.includes(tabTujuan)) tujuan = '/admin#' + tabTujuan;
+        } catch { /* abaikan */ }
+        window.location.href = tujuan;
       } else {
         setError(data.error || 'Verifikasi gagal.');
         if (res.status === 401 && /kadaluarsa/i.test(data.error || '')) setExpired(true);

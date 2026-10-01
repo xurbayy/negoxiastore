@@ -24,6 +24,31 @@ export default function AdminLoginPage() {
   const [tsNonce, setTsNonce] = useState(0); // token sekali-pakai -> remount saat reset
   const [tsOn, setTsOn] = useState(false);
 
+  // ==========================================
+  // SIMPAN TUJUAN TAB (fix 2026-10-01)
+  // ==========================================
+  // MASALAH: admin membuka nexogames.site/admin#ai, tapi server hanya menerima
+  // '/admin' (browser TIDAK mengirim bagian #hash ke server). Server lalu
+  // redirect ke /admin/login, dan setelah login admin dikembalikan ke '/admin'
+  // TANPA '#ai' - sehingga selalu mendarat di Dashboard, bukan tab yang dituju.
+  //
+  // PERBAIKAN: sebelum diarahkan ke login, simpan hash tujuan ke localStorage.
+  // Setelah login berhasil, kembalikan hash itu. Jadi bookmark
+  // nexogames.site/admin#ai tetap bekerja seperti yang diharapkan.
+  //
+  // Hanya hash yang VALID yang disimpan (daftar sama dengan tab di AdminShell),
+  // supaya nilai asing tidak membuat panel kosong.
+  const TAB_SAH = ['ai', 'dashboard', 'players', 'log', 'ekonomi', 'shop', 'bank',
+    'redeem', 'manualorders', 'nexopass', 'titles', 'broadcast', 'moderasi', 'feedback'];
+  useEffect(() => {
+    try {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (hash && TAB_SAH.includes(hash)) {
+        window.localStorage.setItem('nexo_admin_tab_tujuan', hash);
+      }
+    } catch { /* localStorage bisa diblokir - abaikan */ }
+  }, []);
+
   useEffect(() => {
     if (HAS_TS_KEY) setTsOn(true);
   }, []);
@@ -45,7 +70,14 @@ export default function AdminLoginPage() {
       });
       const data = await res.json();
       if (data.ok) {
-        window.location.href = data.needs2fa ? '/admin/verify' : '/admin';
+        // Kembalikan ke tab yang dituju (kalau ada) supaya admin yang membuka
+        // nexogames.site/admin#ai mendarat di tab AI, bukan Dashboard.
+        let tujuan = '/admin';
+        try {
+          const tabTujuan = window.localStorage.getItem('nexo_admin_tab_tujuan');
+          if (tabTujuan && TAB_SAH.includes(tabTujuan)) tujuan = '/admin#' + tabTujuan;
+        } catch { /* abaikan */ }
+        window.location.href = data.needs2fa ? '/admin/verify' : tujuan;
       } else {
         setError(data.error || 'Username atau password salah.');
         if (data.turnstile) { setTsNonce((n) => n + 1); setCfToken(null); }

@@ -53,6 +53,11 @@ export default function AdminShell({ username, avatar = null }) {
     const dariHash = window.location.hash.replace(/^#/, '');
     if (dariHash && TAB_VALID.has(dariHash)) return dariHash;
     try {
+      // 'nexo_admin_tab_tujuan' diisi halaman login/verify saat admin membuka
+      // nexogames.site/admin#ai sebelum login - supaya setelah login mendarat
+      // di tab yang dituju, bukan Dashboard.
+      const tujuan = window.localStorage.getItem('nexo_admin_tab_tujuan');
+      if (tujuan && TAB_VALID.has(tujuan)) return tujuan;
       const simpan = window.localStorage.getItem('nexo_admin_tab');
       if (simpan && TAB_VALID.has(simpan)) return simpan;
     } catch (_) { /* localStorage bisa diblokir - abaikan */ }
