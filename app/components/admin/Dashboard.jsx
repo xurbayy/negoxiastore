@@ -172,12 +172,18 @@ export default function Dashboard({ data }) {
   const invites = (m.invites && typeof m.invites === 'object')
     ? m.invites
     : (snap.invites && typeof snap.invites === 'object' ? snap.invites : {});
-  const live = m.live || {};
-  const liveTotal = (live.playing || 0) + (live.lobby || 0) + (live.mp || 0) + (live.solo || 0);
   const stale = nowMs() - snap.ts > 3 * 60_000;
   // Peta beta dari payload bot: key (dice/sum/heal) -> nama & mode resmi.
   const betaMap = {};
   for (const b of snap.betaGames || []) betaMap[String(b.key).toLowerCase()] = b;
+
+  // Item terjual (permintaan pemilik 2026-09-30): kartu "Sesi LIVE" diganti
+  // jumlah item yang sudah dibeli pemain. Sesi LIVE diukur dari `live` yang
+  // hampir selalu 0 di jam sepi, sehingga kartunya jarang memberi informasi;
+  // angka item terjual selalu bergerak dan langsung berguna.
+  const totalItemTerjual = m.totalItemTerjual ?? 0;
+  const totalPoinBelanja = m.totalPoinBelanja ?? 0;
+  const itemHariIni = (m.itemTerjualToday || []).reduce((a, b) => a + (b.kali || 0), 0);
 
   const cards = [
     { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
@@ -186,11 +192,18 @@ export default function Dashboard({ data }) {
     { label: 'Member NEXO Pass', value: fmt(m.premiumCount), pick: null },
     { label: 'Game Hari Ini', value: fmt(m.gamesToday), pick: (s) => s.gamesToday },
     { label: 'Game 7 Hari', value: fmt(m.gamesWeek), pick: null },
-    { label: 'Sesi LIVE', value: fmt(liveTotal), pick: null },
+    {
+      label: 'Item Terjual',
+      value: fmt(totalItemTerjual),
+      // Keterangan tambahan di bawah angka: hari ini + poin yang dibelanjakan,
+      // supaya satu kartu menjawab "berapa banyak" dan "berapa nilainya".
+      sub: `${fmt(itemHariIni)} hari ini · ${fmt(totalPoinBelanja)} poin`,
+      pick: null,
+    },
     { label: 'Loans Aktif', value: fmt(m.loans?.count), pick: null },
     { label: 'Loans Telat', value: fmt(m.loans?.overdue), pick: null },
     { label: 'RAM Bot', value: `${fmt(snap.bot?.memMb)} MB`, pick: null },
-    { label: 'Ping WS', value: `${snap.bot?.wsPing ?? '-'} ms`, pick: null },
+    { label: 'Ping WS', value: `${fmt(snap.bot?.wsPing ?? '-')} ms`, pick: null },
     { label: 'Uptime', value: fmtUptime(snap.bot?.uptimeSec), pick: null },
   ];
 
@@ -210,20 +223,38 @@ export default function Dashboard({ data }) {
         </p>
       </div>
 
-      {/* Kartu metrik: angka + delta 24 jam + sparkline */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {/* Kartu metrik: angka + delta 24 jam + sparkline.
+          auto-rows-fr: semua BARIS grid dipaksa sama tinggi. Tanpa ini,
+          baris yang memuat kartu "Item Terjual" (punya baris keterangan
+          tambahan) jadi lebih tinggi sendiri sehingga grid terlihat tidak
+          rata - h-full pada kartu saja tidak cukup, karena h-full mengikuti
+          tinggi baris, sedangkan barisnya yang perlu disamakan. */}
+      <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {cards.map((c) => {
           const d = c.pick ? delta24(fullSeries, c.pick) : null;
+          // h-full: kartu mengisi tinggi baris grid, sehingga semua kartu sama
+          // tinggi walau ada yang punya baris keterangan tambahan. Sebelumnya
+          // kartu "Item Terjual" lebih tinggi sendiri (134 vs 82) sehingga
+          // baris grid terlihat tidak rata.
           return (
-            <div key={c.label} className="nx-card px-4 py-4">
+            <div key={c.label} className="nx-card flex h-full flex-col px-4 py-4">
               <div className="font-display text-xl text-ink">{c.value}</div>
               <div className="mt-1 text-xs text-ink-muted">{c.label}</div>
+              {/* Keterangan tambahan (mis. "3 hari ini · 12.000 poin" pada
+                  kartu Item Terjual) - membuat satu kartu menjawab lebih dari
+                  satu pertanyaan tanpa menambah kartu baru. */}
+              {c.sub && <div className="mt-0.5 text-[0.65rem] text-ink-faint">{c.sub}</div>}
               {d != null && (
                 <div className={`mt-0.5 text-[0.65rem] font-bold ${d > 0 ? 'text-success' : 'text-danger'}`} title="Perubahan 24 jam">
                   {d > 0 ? '▲' : '▼'} {fmtRingkas(Math.abs(d))} <span className="font-normal">/24 jam</span>
                 </div>
               )}
-              {c.pick && <Spark series={fullSeries} pick={c.pick} color={c.color || '#D98510'} />}
+              {/* mt-auto: grafik selalu menempel di dasar kartu. */}
+              {c.pick && (
+                <div className="mt-auto pt-1">
+                  <Spark series={fullSeries} pick={c.pick} color={c.color || '#D98510'} />
+                </div>
+              )}
             </div>
           );
         })}
@@ -295,6 +326,60 @@ export default function Dashboard({ data }) {
             </ul>
           )}
         </div>
+
+        {/* Item Paling Sering Dibeli
+            Sumbernya transaksi asli (kolom item_key), bukan tebakan dari teks.
+            Menampilkan 10 terlaris sepanjang masa + jumlah hari ini, supaya
+            kelihatan item mana yang masih laku dan mana yang sudah dingin. */}
+        <div className="nx-card px-5 py-5">
+          <div className="flex items-baseline justify-between gap-2">
+            <h3 className="font-display text-ink">Item Paling Sering Dibeli</h3>
+            <span className="text-[0.65rem] text-ink-faint">{fmt(totalItemTerjual)} total</span>
+          </div>
+          {(() => {
+            const daftar = m.itemTerjualAll || [];
+            if (daftar.length === 0) {
+              return <p className="mt-3 text-sm text-ink-muted">Belum ada pembelian item yang tercatat.</p>;
+            }
+            // Peta "hari ini" untuk anotasi tiap baris.
+            const hariIni = new Map((m.itemTerjualToday || []).map((x) => [x.itemKey, x.kali]));
+            // Nama item diambil dari katalog toko; kalau item sudah dihapus
+            // dari katalog, tampilkan itemKey-nya apa adanya (jangan dikosongkan).
+            const katalog = new Map((snap.shopItems || []).map((it) => [it.itemKey, it]));
+            const maks = Math.max(...daftar.map((x) => x.kali), 1);
+            const baris = daftar.slice(0, 10).map((x) => {
+              const it = katalog.get(x.itemKey);
+              return { nama: it?.name || x.itemKey, emojiUrl: it?.emojiUrl || null, ...x };
+            });
+            return (
+              <ul className="mt-3 space-y-2.5 text-sm">
+                {baris.map((b) => (
+                  <li key={b.itemKey}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2 text-ink">
+                        {b.emojiUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={b.emojiUrl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" />
+                        ) : null}
+                        <span className="truncate" title={b.nama}>{b.nama}</span>
+                      </span>
+                      <span className="shrink-0 text-ink-muted">
+                        {fmtRingkas(b.kali)}x
+                        {hariIni.get(b.itemKey) ? (
+                          <span className="ml-1.5 text-[0.65rem] text-success">+{hariIni.get(b.itemKey)} hari ini</span>
+                        ) : null}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg-soft">
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(4, (b.kali / maks) * 100)}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
+        </div>
+
         <div className="nx-card px-5 py-5">
           <h3 className="font-display text-ink">Top Server</h3>
           {(m.servers || m.topServers || []).length === 0 ? (
