@@ -20,7 +20,8 @@ export const dynamic = 'force-dynamic';
 async function prosesPengingat(jawaban) {
   const asli = String(jawaban || '');
   // Terima beberapa varian penulisan supaya tidak gagal karena spasi/huruf besar.
-  const re = /\[\[\s*INGATKAN\s*\]\]\s*tanggal\s*=\s*(\d{4})-(\d{2})-(\d{2})\s*\|\s*teks\s*=\s*([^\n\r]+)/i;
+  // Format: [[INGATKAN]] tanggal=YYYY-MM-DD jam=HH:MM | teks=... (jam opsional)
+  const re = /\[\[\s*INGATKAN\s*\]\]\s*tanggal\s*=\s*(\d{4})-(\d{2})-(\d{2})(?:\s+jam\s*=\s*(\d{1,2})[:.](\d{2}))?\s*\|\s*teks\s*=\s*([^\n\r]+)/i;
   const m = asli.match(re);
 
   // Baris perintah SELALU dipangkas dari jawaban, walau parsing-nya gagal -
@@ -30,12 +31,13 @@ async function prosesPengingat(jawaban) {
   if (!m) return { jawabanBersih, pengingat: null };
 
   const tahun = Number(m[1]), bulan = Number(m[2]) - 1, tanggal = Number(m[3]);
-  const teks = m[4].trim().slice(0, 300);
+  // Jam dari marker AI (opsional). Kalau tidak ada, default 09:00 WIB.
+  const jamAI = m[4] ? Math.min(23, Math.max(0, Number(m[4]))) : 9;
+  const menitAI = m[5] ? Math.min(59, Math.max(0, Number(m[5]))) : 0;
+  const teks = m[6].trim().slice(0, 300);
   if (!teks) return { jawabanBersih, pengingat: null };
 
-  // Jam 09:00 WIB - waktu yang masuk akal untuk pengingat kerja (pemilik
-  // masih sempat menyiapkan promo hari itu).
-  let waktuIngat = wibKeEpoch(tahun, bulan, tanggal, 9, 0);
+  let waktuIngat = wibKeEpoch(tahun, bulan, tanggal, jamAI, menitAI);
   // Kalau tanggal yang ditulis sudah lewat, coba baca momen dari teksnya
   // (mis. "Halloween") supaya dapat tahun berikutnya.
   if (!Number.isFinite(waktuIngat) || waktuIngat < Date.now() - 86400000) {
