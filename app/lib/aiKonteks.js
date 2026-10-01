@@ -50,6 +50,26 @@ export function susunKonteks(snap) {
   for (const s of servers.slice(0, 10)) {
     L.push(`- ${s.name} | ${s.players} | ${s.members} | ${s.games} | ${rupiah(s.points)}`);
   }
+
+  // TOP SERVER (angka murni, tanpa nama) - dikirim bot terpisah dari `servers`.
+  // Berguna saat AI perlu membandingkan peringkat tanpa terpengaruh panjang
+  // daftar nama server.
+  const topSrv = m.topServers;
+  if (Array.isArray(topSrv) && topSrv.length) {
+    L.push('Peringkat server (pemain unik, angka murni): ' +
+      topSrv.map((s, i) => `#${i + 1}=${s.players}`).join(', '));
+  }
+
+  // DIAGNOSA INVITE - kenapa tombol Gabung tidak muncul di sebagian server.
+  // Tanpa ini, AI hanya bisa menduga ("mungkin izin kurang") padahal bot
+  // sudah mencatat penyebab PASTINYA.
+  const diag = m.inviteDiag;
+  if (diag) {
+    L.push('Diagnosa invite: gagal=' + (diag.gagal ?? 0) + ', berhasil=' + (diag.sukses ?? 0));
+    if (Array.isArray(diag.alasan) && diag.alasan.length) {
+      L.push('Alasan kegagalan invite: ' + diag.alasan.slice(0, 5).join('; '));
+    }
+  }
   L.push('');
 
   // ---------- Game ----------
@@ -85,6 +105,55 @@ export function susunKonteks(snap) {
   }
   L.push('');
 
+  // ---------- PENJUALAN TOKO (NYATA dari transaksi) ----------
+  //
+  // KENAPA INI KRUSIAL (fix 2026-10-01): sebelumnya bot MENGIRIM data ini
+  // (itemTerjualAll/itemTerjualToday/totalItemTerjual/totalPoinBelanja) tapi
+  // AI tidak pernah melihatnya. Akibatnya saat ditanya "item mana yang laris"
+  // atau "apa yang sebaiknya dipromo", AI hanya bisa menebak dari HARGA dan
+  // STOK - bukan dari penjualan nyata. Itu sumber jawaban yang terdengar
+  // masuk akal tapi tidak berdasar.
+  //
+  // Sekarang AI melihat angka penjualan asli: berapa kali terjual, berapa
+  // poin yang dibelanjakan, dan mana yang belum pernah laku sama sekali.
+  L.push('### PENJUALAN TOKO (dari transaksi nyata)');
+  const terjualAll = m.itemTerjualAll;
+  if (terjualAll === undefined) {
+    // BEDAKAN dua keadaan berbeda - jangan biarkan AI mengira "tidak ada
+    // penjualan" padahal botnya cuma belum memuat kode ini.
+    L.push('Bot belum mengirim data penjualan (versi lama). TIDAK BISA dinilai.');
+  } else if (!terjualAll.length) {
+    L.push('Belum ada penjualan item tercatat sejak fitur ini aktif (rekap mulai dari nol saat bot diperbarui).');
+  } else {
+    L.push('Total item terjual (sepanjang rekap): ' + (m.totalItemTerjual ?? 0));
+    L.push('Total poin dibelanjakan untuk item: ' + rupiah(m.totalPoinBelanja));
+    L.push('Item terlaris (nama | berapa kali | total poin):');
+    for (const t of terjualAll.slice(0, 20)) {
+      L.push(`- ${t.nama || t.itemKey} | ${t.kali}x | ${rupiah(t.totalPoin)} poin`);
+    }
+
+    // Item yang BELUM PERNAH laku - ini yang sering jadi target promo.
+    const laku = new Set(terjualAll.map((t) => t.itemKey));
+    const belumLaku = items.filter((i) => !laku.has(i.itemKey));
+    if (belumLaku.length) {
+      L.push(`Item BELUM PERNAH terjual (${belumLaku.length}): ` +
+        belumLaku.slice(0, 25).map((i) => i.name).join(', '));
+    } else {
+      L.push('Semua item sudah pernah terjual minimal sekali.');
+    }
+  }
+
+  // Penjualan HARI INI - untuk melihat tren, bukan cuma total.
+  const terjualHariIni = m.itemTerjualToday;
+  if (Array.isArray(terjualHariIni) && terjualHariIni.length) {
+    const petaNama = new Map(items.map((i) => [i.itemKey, i.name]));
+    L.push('Terjual HARI INI: ' + terjualHariIni.slice(0, 15)
+      .map((t) => `${petaNama.get(t.itemKey) || t.itemKey}(${t.kali}x)`).join(', '));
+  } else if (Array.isArray(terjualHariIni)) {
+    L.push('Terjual HARI INI: belum ada penjualan.');
+  }
+  L.push('');
+
   // ---------- Promo & diskon ----------
   L.push('### PROMO');
   L.push(`Kode promo aktif: ${JSON.stringify(snap.promoCodes || [])}`);
@@ -110,6 +179,23 @@ export function susunKonteks(snap) {
   L.push(`Member premium (tier): ` +
     ((snap.premiumMembers || []).length + ' orang'));
   L.push(`Judul admin dipegang: ${(m.adminTitleHolders || []).length}`);
+
+  // ---------- DAFTAR PEMAIN ----------
+  // Dikirim bot sebagai daftar RINGAN (id + nama + level) sampai 2000 pemain.
+  // Tanpa ini, AI tidak bisa menjawab "pemain bernama X itu level berapa" -
+  // ia hanya melihat 5 profil teratas.
+  //
+  // Ditulis HANYA jumlah + sampel kecil supaya konteks tidak meledak: profil
+  // LENGKAP pemain teratas sudah ada di bagian PROFIL MENDALAM di bawah.
+  const daftar = m.daftarPemain;
+  if (Array.isArray(daftar) && daftar.length) {
+    L.push(`Total pemain terdaftar di daftar: ${daftar.length}`);
+    // Sampel 30 nama teratas supaya AI bisa mengaitkan nama yang disebut
+    // pemilik dengan level/keberadaannya. Profil LENGKAP ada di bagian
+    // PROFIL MENDALAM (5 teratas) - di sini cukup daftar ringan.
+    L.push('Sampel pemain teratas (nama | level): ' +
+      daftar.slice(0, 30).map((p) => `${p.username}(${p.level})`).join(', '));
+  }
 
   // ==========================================
   // DATA OPERASIONAL (2026-09-30)
