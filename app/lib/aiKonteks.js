@@ -14,7 +14,7 @@
 const rupiah = (n) => Number(n || 0).toLocaleString('id-ID');
 
 /** Rakit konteks teks dari snapshot. Dipakai baik oleh chat maupun analisis cepat. */
-export function susunKonteks(snap) {
+export function susunKonteks(snap, panel = {}) {
   if (!snap) return 'TIDAK ADA DATA. Bot belum pernah mengirim snapshot.';
 
   const m = snap.monitor || {};
@@ -385,6 +385,120 @@ export function susunKonteks(snap) {
     }
   }
 
+
+  // ==========================================
+  // DATA PANEL ADMIN (2026-10-01)
+  // ==========================================
+  //
+  // KENAPA DITAMBAHKAN: audit menemukan AI hanya membaca `snapshot`, padahal
+  // panel admin menampilkan JAUH lebih banyak - pendapatan (orders), perintah
+  // admin (log), keluhan pemain (feedback), dan tren 7 hari (series). Akibatnya
+  // pertanyaan seperti "berapa pendapatan bulan ini" atau "keluhan apa yang
+  // paling sering" TIDAK BISA dijawab AI walaupun datanya ada di panel.
+  //
+  // Semua bagian di bawah OPTIONAL: kalau pemanggil tidak mengirim `panel`,
+  // bagian ini dilewati dengan sopan (bukan error).
+
+  // ---------- PENDAPATAN (orders pembayaran) ----------
+  const orders = panel.orders;
+  if (Array.isArray(orders) && orders.length) {
+    L.push('');
+    L.push('### PENDAPATAN (order pembayaran)');
+    const sukses = orders.filter((o) => o.status === 'paid');
+    const pending = orders.filter((o) => o.status === 'pending');
+    const gagal = orders.filter((o) => ['expired', 'canceled', 'failed'].includes(o.status));
+    const totalSukses = sukses.reduce((s, o) => s + (Number(o.amount) || 0), 0);
+    L.push(`Total order tercatat: ${orders.length}`);
+    L.push(`Berhasil (paid): ${sukses.length} order, nilai ${rupiah(totalSukses)}`);
+    L.push(`Menunggu (pending): ${pending.length}`);
+    L.push(`Batal/kedaluwarsa: ${gagal.length}`);
+
+    // Sebaran per gateway - berguna melihat kanal mana yang jalan.
+    const perGateway = {};
+    for (const o of orders) perGateway[o.gateway || '-'] = (perGateway[o.gateway || '-'] || 0) + 1;
+    L.push('Per gateway: ' + Object.entries(perGateway).map(([g, n]) => `${g}=${n}`).join(', '));
+
+    // 10 order terakhir supaya AI bisa melihat pola terbaru (bukan cuma total).
+    L.push('10 order terakhir (tanggal | plan | nilai | gateway | status):');
+    for (const o of orders.slice(0, 10)) {
+      const tgl = o.createdAt ? new Date(Number(o.createdAt)).toISOString().slice(0, 10) : '-';
+      L.push(`- ${tgl} | ${o.plan || '-'} | ${rupiah(o.amount)} | ${o.gateway || '-'} | ${o.status}`);
+    }
+  }
+
+  // ---------- LOG PERINTAH ADMIN ----------
+  // Isi Activity Log di panel: aksi apa yang dijalankan admin/otomatisasi,
+  // berhasil atau gagal. Tanpa ini AI tidak tahu apa yang sudah/pernah dicoba.
+  const log = panel.log;
+  if (Array.isArray(log) && log.length) {
+    L.push('');
+    L.push('### LOG PERINTAH ADMIN');
+    const perStatus = {};
+    for (const r of log) perStatus[r.status || '-'] = (perStatus[r.status || '-'] || 0) + 1;
+    L.push(`Total catatan: ${log.length} | status: ` +
+      Object.entries(perStatus).map(([s, n]) => `${s}=${n}`).join(', '));
+
+    // Aksi yang GAGAL - paling penting untuk perbaikan.
+    const gagal = log.filter((r) => ['failed', 'rejected'].includes(r.status));
+    if (gagal.length) {
+      const perAksi = {};
+      for (const r of gagal) perAksi[r.action || '-'] = (perAksi[r.action || '-'] || 0) + 1;
+      L.push('Aksi GAGAL (aksi = berapa kali): ' +
+        Object.entries(perAksi).map(([a, n]) => `${a}=${n}`).join(', '));
+      L.push('Contoh kegagalan terakhir:');
+      for (const r of gagal.slice(0, 5)) {
+        const tgl = r.createdAt ? new Date(Number(r.createdAt)).toISOString().slice(0, 16).replace('T', ' ') : '-';
+        L.push(`- ${tgl} ${r.action}: ${String(r.result || '').slice(0, 120)}`);
+      }
+    }
+
+    // Aksi yang masih MENUNGGU - bisa menandakan bot offline.
+    const pending = log.filter((r) => r.status === 'pending');
+    if (pending.length) L.push(`Aksi masih MENUNGGU dieksekusi bot: ${pending.length}`);
+  }
+
+  // ---------- FEEDBACK PEMAIN ----------
+  // Keluhan/masukan langsung dari pemain - sumber masalah yang tidak terlihat
+  // dari angka statistik.
+  const fb = panel.feedback;
+  if (Array.isArray(fb) && fb.length) {
+    L.push('');
+    L.push('### FEEDBACK PEMAIN');
+    const perKind = {};
+    for (const f of fb) perKind[f.kind || '-'] = (perKind[f.kind || '-'] || 0) + 1;
+    L.push(`Total feedback: ${fb.length} | jenis: ` +
+      Object.entries(perKind).map(([k, n]) => `${k}=${n}`).join(', '));
+    L.push('10 feedback terbaru (jenis | halaman | isi ringkas):');
+    for (const f of fb.slice(0, 10)) {
+      const tgl = f.createdAt ? new Date(Number(f.createdAt)).toISOString().slice(0, 10) : '-';
+      L.push(`- ${tgl} | ${f.kind || '-'} | ${f.page || '-'} | ${String(f.message || '').replace(/\s+/g, ' ').slice(0, 150)}`);
+    }
+  }
+
+  // ---------- TREN 7 HARI ----------
+  // Angka snapshot hanya kondisi SEKARANG. Tanpa seri waktu, AI tidak bisa
+  // membedakan "sedang naik" vs "sedang turun".
+  const seri = panel.series;
+  if (Array.isArray(seri) && seri.length >= 2) {
+    L.push('');
+    L.push('### TREN 7 HARI (snapshot berkala)');
+    const awal = seri[0], akhir = seri[seri.length - 1];
+    const delta = (k) => {
+      const a = Number(awal[k]) || 0, b = Number(akhir[k]) || 0;
+      const d = b - a;
+      return `${a} -> ${b} (${d >= 0 ? '+' : ''}${d})`;
+    };
+    L.push('Poin beredar: ' + delta('totalMoney'));
+    L.push('Pemain terdaftar: ' + delta('totalUsers'));
+    L.push('Game dimainkan: ' + delta('gamesToday'));
+    // Sampel titik supaya AI bisa melihat bentuk trennya, bukan cuma ujung.
+    const titik = seri.length <= 12 ? seri : seri.filter((_, i) => i % Math.ceil(seri.length / 12) === 0);
+    L.push('Titik data (waktu | poin | pemain | game):');
+    for (const s of titik.slice(0, 12)) {
+      const tgl = s.ts ? new Date(Number(s.ts)).toISOString().slice(5, 16).replace('T', ' ') : '-';
+      L.push(`- ${tgl} | ${rupiah(s.totalMoney)} | ${s.totalUsers} | ${s.gamesToday}`);
+    }
+  }
 
   return L.join('\n');
 }

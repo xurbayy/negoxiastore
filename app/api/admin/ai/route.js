@@ -97,6 +97,42 @@ export async function POST(request) {
   }
 
   // ==========================================
+  // DATA PANEL ADMIN (2026-10-01)
+  // ==========================================
+  // AI dulu hanya membaca `snapshot` - padahal panel admin menampilkan jauh
+  // lebih banyak (pendapatan, log perintah, feedback, tren 7 hari). Akibatnya
+  // pertanyaan seperti "berapa pendapatan" atau "keluhan apa yang sering"
+  // tidak bisa dijawab walau datanya ADA di panel.
+  //
+  // Diambil langsung dari DB di sini (bukan lewat fetch ke /api/admin/data)
+  // supaya tidak menambah satu putaran HTTP dan tidak bergantung pada cookie.
+  let panel = {};
+  try {
+    const { getDb } = await import('../../../lib/db');
+    const { getSnapshotSeries } = await import('../../../lib/snapshot');
+    const db = getDb();
+    const [orders, log, feedback, series] = await Promise.all([
+      db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 50'),
+      db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 200'),
+      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 60'),
+      getSnapshotSeries(7),
+    ]);
+    panel = {
+      orders: orders.rows.map((r) => ({
+        plan: r.plan, amount: Number(r.amount), gateway: r.gateway, status: r.status,
+        createdAt: Number(r.created_at),
+      })),
+      log: log.rows.map((r) => ({
+        action: r.action, status: r.status, result: r.result, createdAt: Number(r.created_at),
+      })),
+      feedback: feedback.rows.map((r) => ({
+        kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at),
+      })),
+      series: Array.isArray(series) ? series : [],
+    };
+  } catch { /* data panel gagal diambil -> AI tetap jalan dengan snapshot saja */ }
+
+  // ==========================================
   // DETEKSI PEMAIN YANG DITANYAKAN
   // ==========================================
   // Permintaan pemilik: "munculkan data sweetsucidial ... selengkap mungkin".
@@ -162,7 +198,7 @@ export async function POST(request) {
     }
   }
 
-  const konteks = susunKonteks(snap) + konteksPemain;
+  const konteks = susunKonteks(snap, panel) + konteksPemain;
 
   const pesan = [
     { role: 'system', content: sistemPrompt() },
