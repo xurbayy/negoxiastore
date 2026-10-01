@@ -238,16 +238,29 @@ export default function AnalisisAI() {
   // satu menit akan menghabiskan kuota dan request kedua ditolak dengan
   // 'Request too large'. Diberi jeda 20 detik supaya kuota sempat pulih.
   const [tungguSampai, setTungguSampai] = useState(0);
+  const [detikSisa, setDetikSisa] = useState(0);
+  // Tick setiap detik selama cooldown supaya tombol menampilkan sisa waktu.
+  useEffect(() => {
+    if (detikSisa <= 0) return;
+    const t = setTimeout(() => setDetikSisa((d) => d - 1), 1000);
+    return () => clearTimeout(t);
+  }, [detikSisa]);
   const jalankan = useCallback(async (muatan, judul, teksTampil) => {
     const sisaTunggu = tungguSampai - Date.now();
     if (sisaTunggu > 0) {
+      const detik = Math.ceil(sisaTunggu / 1000);
+      // Toast tampil di SEMUA mode (pesan chat hanya terlihat di mode Diskusi).
+      setPesanSimpan(`⏳ Tunggu ${detik} detik lagi - kuota AI per menit.`);
+      setTimeout(() => setPesanSimpan(null), 4000);
+      // Mode Diskusi: juga masuk ke chat supaya terlihat di riwayat.
       setPesan((p) => [...p, {
         peran: 'ai', error: true, waktu: Date.now(),
-        isi: `Tunggu ${Math.ceil(sisaTunggu / 1000)} detik lagi ya. Kuota AI dihitung per menit, jadi dua permintaan beruntun bikin yang kedua ditolak.`,
+        isi: `Tunggu ${detik} detik lagi ya. Kuota AI dihitung per menit, jadi dua permintaan beruntun bikin yang kedua ditolak.`,
       }]);
       return;
     }
     setTungguSampai(Date.now() + 20000);
+    setDetikSisa(20);
     setJalan(true);
     const modeKirim = mode;
 
@@ -597,11 +610,11 @@ export default function AnalisisAI() {
                 <button
                   key={p.id}
                   type="button"
-                  disabled={jalan}
+                  disabled={jalan || detikSisa > 0}
                   onClick={() => jalankan({ pintasan: p.id }, p.label)}
                   className="flex min-h-10 items-center justify-center rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
                 >
-                  {p.label}
+                  {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
                 </button>
               ))}
             </div>
@@ -617,7 +630,7 @@ export default function AnalisisAI() {
               />
               <button
                 type="submit"
-                disabled={jalan || !tanya.trim()}
+                disabled={jalan || detikSisa > 0 || !tanya.trim()}
                 className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {jalan ? '...' : 'Analisis'}
