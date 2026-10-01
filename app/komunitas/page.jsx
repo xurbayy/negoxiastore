@@ -4,6 +4,7 @@ import { userHasPremium } from '../lib/snapshot';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
+import AdUnit from '../components/AdUnit';
 import KomunitasClient from './KomunitasClient';
 
 export const metadata = {
@@ -93,6 +94,12 @@ export default async function KomunitasPage() {
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
 
         <div className="relative">
+          {/* Iklan AdSense di atas judul (permintaan pemilik 2026-10-01).
+              Slot diambil dari env NEXT_PUBLIC_ADSENSE_SLOT - buat dulu di
+              dashboard AdSense, lalu isi env-nya di Vercel. */}
+          <div className="mb-4">
+            <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT} format="auto" />
+          </div>
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Komunitas <span className="font-display text-ink">NEXO</span>
           </h1>
