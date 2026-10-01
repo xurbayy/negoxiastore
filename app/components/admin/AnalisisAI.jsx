@@ -199,16 +199,20 @@ export default function AnalisisAI() {
       </div>
 
       {/* Tombol pintas */}
-      <div className="nx-card px-5 py-4">
+      <div className="nx-card px-4 py-4 sm:px-5">
         <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
+            "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
+            tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
+            di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {(status.pintasan || []).map((p) => (
             <button
               key={p.id}
               type="button"
               disabled={jalan}
               onClick={() => jalankan({ pintasan: p.id }, p.label)}
-              className="rounded-full border border-border-soft bg-bg-soft px-3.5 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              className="flex min-h-10 items-center justify-center rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
             >
               {p.label}
             </button>

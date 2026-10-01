@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import TabelGeser from './TabelGeser';
 import ConfirmModal from './ConfirmModal';
 import { fmtRingkas } from '../../lib/formatClient';
 
@@ -76,7 +77,7 @@ export default function RedeemManager({ send, data }) {
       <NotifyForm codes={codes} onSent={() => {}} />
 
       {/* Tabel kode */}
-      <div className="nx-card overflow-x-auto">
+      <TabelGeser className="nx-card">
         <table className="w-full min-w-[600px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
@@ -116,7 +117,7 @@ export default function RedeemManager({ send, data }) {
             })}
           </tbody>
         </table>
-      </div>
+      </TabelGeser>
 
       {confirm && (
         <ConfirmModal

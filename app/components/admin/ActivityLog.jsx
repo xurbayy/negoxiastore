@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import TabelGeser from './TabelGeser';
 import { timeAgo } from '../../lib/formatClient';
 
 const STATUS_STYLE = {
@@ -50,7 +51,7 @@ export default function ActivityLog({ data }) {
         </div>
       </div>
 
-      <div className="nx-card overflow-x-auto">
+      <TabelGeser className="nx-card">
         <table className="w-full min-w-[680px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
@@ -82,7 +83,7 @@ export default function ActivityLog({ data }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </TabelGeser>
 
       {/* Pager: Prev · nomor halaman · Next · hitungan baris */}
       {pages > 1 && (

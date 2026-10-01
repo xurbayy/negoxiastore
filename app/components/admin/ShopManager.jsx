@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import TabelGeser from './TabelGeser';
 import ConfirmModal from './ConfirmModal';
 import { fmtRingkas, fmtPenuh } from '../../lib/formatClient';
 
@@ -61,7 +62,7 @@ export default function ShopManager({ send, data }) {
         <p className={`rounded-xl border px-4 py-3 text-sm ${feedback.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{feedback.text}</p>
       )}
 
-      <div className="nx-card overflow-x-auto">
+      <TabelGeser className="nx-card">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
@@ -104,7 +105,7 @@ export default function ShopManager({ send, data }) {
             })}
           </tbody>
         </table>
-      </div>
+      </TabelGeser>
 
       {confirm && (
         <ConfirmModal
