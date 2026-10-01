@@ -102,14 +102,38 @@ export async function tanyaGroq(pesan) {
         const j = await res.json();
         pesanErr = j?.error?.message || JSON.stringify(j);
       } catch {
-        pesanErr = 'HTTP ' + res.status;
+        pesanErr = '';
       }
-      terakhir = { kode: res.status, error: bersihkanPesan(pesanErr) };
 
-      // 401/403 = kunci memang salah/ dicabut -> coba kunci berikutnya.
-      // 429 = kuota habis -> coba kunci berikutnya.
-      // 400 = permintaan salah -> kunci lain tidak akan menolong, hentikan.
-      if (res.status === 400) break;
+      // ---------------------------------------------------------------
+      // RANGKAI PESAN YANG MENYEBUTKAN KODE HTTP (fix 2026-09-30)
+      // ---------------------------------------------------------------
+      // Keluhan nyata: pesan "Invalid API Key" muncul padahal kuncinya VALID
+      // (diuji langsung ke api.groq.com, kelima kunci balas normal).
+      //
+      // Sebabnya Groq memakai 403 dengan pesan generik untuk beberapa kondisi
+      // berbeda, dan satu di antaranya adalah MODEL yang tidak dikenal. Kalau
+      // pesan Groq diteruskan mentah-mentah, admin dikirim mengejar masalah
+      // yang salah (memeriksa kunci) padahal yang perlu diperbaiki nama model.
+      //
+      // Karena itu kode HTTP selalu ditulis, dan untuk 403 ditambah pengingat
+      // bahwa penyebabnya bisa model - bukan cuma kunci.
+      const kode = res.status;
+      let rangkai = pesanErr || ('HTTP ' + kode);
+      if (kode === 403) {
+        rangkai += ' [penyebab lazim: nama MODEL tidak dikenal. Cek GROQ_MODEL - ' +
+          'daftar model yang tersedia untuk akun ini bisa dilihat di console.groq.com]';
+      } else if (kode === 401) {
+        rangkai += ' [kunci ditolak: periksa nama variabel GROQ_API_KEY dan pastikan ' +
+          'nilainya tidak terpotong]';
+      } else if (kode === 429) {
+        rangkai += ' [kuota kunci ini habis]';
+      }
+      terakhir = { kode, error: bersihkanPesan(rangkai) };
+
+      // 400/404 = permintaan salah (termasuk model tidak ada) -> kunci lain
+      // tidak akan menolong, hentikan supaya tidak menghabiskan kuota.
+      if (kode === 400 || kode === 404) break;
     } catch (e) {
       // Termasuk AbortError (timeout) dan gangguan jaringan.
       const pesan = e?.name === 'TimeoutError'
@@ -124,5 +148,8 @@ export async function tanyaGroq(pesan) {
     ok: false,
     kode: terakhir?.kode || 0,
     error: (terakhir?.error || 'Gagal menghubungi Groq.') + semuaDicoba,
+    // Nama model ikut dilaporkan: kesalahan paling sering justru di sini,
+    // dan tanpa ini admin harus menebak-nebak dari pesan Groq.
+    model: modelGroq(),
   };
 }

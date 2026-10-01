@@ -104,6 +104,7 @@ export async function POST(request) {
     return json({
       ok: false,
       error: hasil.error,
+      modelDipaka: hasil.model,
       // Kode 429 = semua kunci kena limit. Pesan ini membantu admin tahu
       // harus menunggu, bukan mengira kodenya rusak.
       kode: hasil.kode,
