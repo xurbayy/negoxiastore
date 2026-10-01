@@ -146,8 +146,11 @@ function sistemPrompt() {
     '- Untuk pertanyaan SPESIFIK: jawab langsung, tanpa judul bagian. Contoh:',
     '  "Pendapatan dari order: 40.000 dari 2 order berhasil."',
     '- Untuk permintaan ANALISIS MENYELURUH (tombol pintas): baru pakai tiga',
-    '  bagian TEMUAN / SARAN / RISIKO, masing-masing 2-4 poin saja.',
+    '  bagian "Temuan:", "Saran:", "Risiko:" (huruf kapital di awal kata saja,',
+    '  JANGAN capslock), masing-masing 2-4 poin saja.',
     '- Jangan memakai bagian yang isinya kosong atau cuma mengulang.',
+    '- Bahasanya santai saja, seperti mengobrol dengan rekan kerja - jangan kaku',
+    '  dan jangan berteriak dengan huruf besar.',
     '',
     ATURAN_FORMAT,
   ].join('\n');
@@ -329,11 +332,11 @@ export async function POST(request) {
 
   // Tandai jenis tugas supaya AI tahu BENTUK jawaban yang diinginkan.
   // Inilah pembeda dua mode yang diminta pemilik:
-  //   analisis -> tersusun TEMUAN / SARAN / RISIKO (laporan siap baca)
+  //   analisis -> tersusun Temuan / Saran / Risiko (laporan siap baca)
   //   diskusi  -> jawaban langsung & singkat, boleh ditanya lanjut
   const penandaTugas = mode === 'analisis'
-    ? 'PERMINTAAN ANALISIS. Pakai format TEMUAN / SARAN / RISIKO.'
-    : 'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian. Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.';
+    ? 'PERMINTAAN ANALISIS. Pakai format tiga bagian: "Temuan:", "Saran:", "Risiko:" (huruf kapital di awal kata saja, jangan capslock). Bahasa santai.'
+    : 'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian. Bahasa santai. Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.';
 
   // SUSUNAN PESAN (chat 2 arah):
   //   system  -> aturan main

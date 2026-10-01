@@ -588,7 +588,7 @@ export default function AnalisisAI() {
               <input
                 value={tanya}
                 onChange={(e) => setTanya(e.target.value)}
-                placeholder="Atau tulis topik yang mau dianalisis..."
+                placeholder="Tulis topik..."
                 aria-label="Topik analisis"
                 className="w-full rounded-xl border border-border-soft bg-card-cream px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
               />
@@ -734,7 +734,7 @@ export default function AnalisisAI() {
         <input
           value={tanya}
           onChange={(e) => setTanya(e.target.value)}
-          placeholder="Ketik pertanyaanmu... (bisa lanjut tanya jawaban sebelumnya)"
+          placeholder="Ketik pertanyaanmu..."
           aria-label="Pertanyaan bebas tentang data"
           className="w-full rounded-xl bg-transparent px-3 py-2 text-sm text-ink outline-none"
         />

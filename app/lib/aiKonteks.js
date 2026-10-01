@@ -626,7 +626,10 @@ export const ATURAN_FORMAT = [
   '- Jangan memakai TABEL markdown. Kalau perlu membandingkan, pakai daftar bernomor atau "A: x | B: y" dalam satu baris.',
   '- Jangan memakai emoji sama sekali.',
   '- Jangan memakai em dash. Pakai tanda hubung biasa.',
-  '- Judul bagian ditulis KAPITAL diikuti titik dua: TEMUAN:, SARAN:, RISIKO:.',
+  // Judul bagian huruf kecil biasa (permintaan pemilik 2026-10-01): capslock
+  // terasa berteriak dan tidak nyaman dibaca. Cukup "Temuan:", "Saran:",
+  // "Risiko:" dengan huruf kapital di awal kata saja.
+  '- Judul bagian ditulis biasa saja, huruf kapital di awal kata: "Temuan:", "Saran:", "Risiko:".',
   '- Bahasa Indonesia santai tapi rapi. Langsung ke isi, jangan mengulang data mentah.',
 ].join('\n');
 
