@@ -223,8 +223,8 @@ export default function AdminShell({ username, avatar = null }) {
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'border-b border-border-soft/70 bg-bg/80 py-2.5 shadow-[0_2px_20px_rgba(43,33,24,0.07)] backdrop-blur-xl'
-          : 'border-b border-transparent bg-bg/40 py-4 backdrop-blur-md'
+          ? 'border-b border-border-soft bg-bg/90 py-2.5 backdrop-blur-xl'
+          : 'bg-transparent py-4'
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-5" aria-label="Navigasi admin">
@@ -234,7 +234,7 @@ export default function AdminShell({ username, avatar = null }) {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-soft/70 bg-card-cream/70 text-ink backdrop-blur-sm transition hover:border-accent/50 hover:bg-card-cream cursor-pointer md:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-soft text-ink cursor-pointer md:hidden"
             aria-label="Buka menu admin"
             aria-expanded={menuOpen}
           >
@@ -251,14 +251,14 @@ export default function AdminShell({ username, avatar = null }) {
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
             href="/"
-            className="hidden rounded-xl border border-border-soft/70 bg-card-cream/70 px-3.5 py-2 text-sm font-semibold text-ink-muted backdrop-blur-sm transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
+            className="hidden rounded-lg border border-border-soft bg-white px-3.5 py-1.5 text-sm font-semibold text-ink-muted shadow-sm transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
           >
             Lihat Situs
           </Link>
           {/* Profil admin: avatar + username, klik -> dropdown berisi Keluar.
               Pola <details> sama dengan menu "Info" di Navbar user. */}
           <details className="group relative">
-            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl border border-border-soft/70 bg-card-cream/70 py-1 pl-1 pr-2 backdrop-blur-sm transition hover:border-accent/50 hover:bg-card-cream sm:pr-2.5">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-1 transition hover:bg-bg-soft">
               {avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatar} alt="" width={30} height={30} className="h-[30px] w-[30px] shrink-0 rounded-full border border-border-soft object-cover" />
@@ -303,7 +303,13 @@ export default function AdminShell({ username, avatar = null }) {
       </nav>
     </header>
 
-    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-24 md:px-5 md:pt-24">
+    {/* Latar dekoratif grid di atas halaman - SAMA seperti halaman lain
+        (komunitas/leaderboard). Inilah yang membuat navbar transparan
+        terlihat elegan DAN tetap terbaca: teks navbar duduk di atas pola
+        halus, bukan di atas konten yang ramai. */}
+    <div className="pointer-events-none fixed inset-x-0 top-0 h-72 bg-grid" aria-hidden="true" />
+
+    <div className="relative mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-24 md:px-5 md:pt-24">
       {/* Sidebar */}
       {/*
         Sidebar desktop: MENEMPEL saat digulir.
