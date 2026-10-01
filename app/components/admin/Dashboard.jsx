@@ -388,7 +388,10 @@ export default function Dashboard({ data }) {
               const it = katalog.get(x.itemKey);
               return {
                 nama: x.nama || it?.name || x.itemKey,
+                // DUA bentuk emoji: gambar (custom Discord) atau teks (Unicode).
+                // Bot mengirim keduanya; katalog lokal jadi cadangan.
                 emojiUrl: x.emojiUrl || it?.emojiUrl || null,
+                emoji: x.emoji || it?.emoji || null,
                 ...x,
               };
             });
@@ -398,9 +401,18 @@ export default function Dashboard({ data }) {
                   <li key={b.itemKey}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-2 text-ink">
+                        {/* Emoji custom Discord -> gambar. Emoji Unicode
+                            (🎁, ⚡, 🎲) tidak punya ID sehingga TIDAK BISA
+                            jadi gambar - harus dirender sebagai teks.
+                            Tanpa cabang kedua ini, item ber-emoji Unicode
+                            tampil polos tanpa ikon sama sekali. */}
                         {b.emojiUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={b.emojiUrl} alt="" width={16} height={16} className="h-4 w-4 shrink-0" />
+                        ) : b.emoji ? (
+                          <span className="w-4 shrink-0 text-center text-sm leading-none" aria-hidden="true">
+                            {b.emoji}
+                          </span>
                         ) : null}
                         <span className="truncate" title={b.nama}>{b.nama}</span>
                       </span>
