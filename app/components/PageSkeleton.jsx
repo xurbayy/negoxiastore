@@ -144,6 +144,60 @@ function LeaderboardSkeleton() {
 }
 
 /**
+ * KOMUNITAS - halaman asli (app/komunitas):
+ *   h1 "Komunitas NEXO" + baris "Diperbarui ..."
+ *   kotak pencarian (bulat, ikon kiri)
+ *   baris status hasil
+ *   daftar kartu server: peringkat + logo bulat + nama + 3 statistik + tombol Gabung
+ *   navigasi halaman di bawah
+ * Akurasi penting: jumlah kartu 10 supaya tinggi halaman tidak melompat.
+ */
+function KomunitasSkeleton() {
+  const kartu = (i) => (
+    <div key={i} className="nx-card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+      <div className="flex items-center gap-4 sm:gap-5">
+        <Bar className="h-6 w-4 shrink-0" />
+        <div className="skeleton h-[52px] w-[52px] shrink-0 rounded-2xl" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <Bar className={i % 3 === 0 ? 'w-48' : i % 3 === 1 ? 'w-36' : 'w-40'} />
+        <div className="mt-2 flex items-center gap-4">
+          <Bar className="h-3 w-20" />
+          <Bar className="h-3 w-16" />
+          <Bar className="h-3 w-16" />
+        </div>
+      </div>
+      <div className="skeleton h-10 w-full rounded-full sm:w-24" />
+    </div>
+  );
+  return (
+    <Shell maxWidth="max-w-4xl">
+      <div className="mt-3 skeleton h-9 w-64 md:h-11 md:w-72" />
+      <Bar className="mt-3 w-52" />
+
+      {/* Kotak pencarian */}
+      <div className="mt-8">
+        <div className="skeleton h-12 w-full rounded-xl" />
+        {/* Baris status hasil */}
+        <Bar className="mt-3 h-3 w-56" />
+        {/* Daftar server */}
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 10 }).map((_, i) => kartu(i))}
+        </div>
+        {/* Navigasi halaman */}
+        <div className="mt-8 flex justify-center gap-1.5">
+          <div className="skeleton h-9 w-10 rounded-lg" />
+          <div className="skeleton h-9 w-9 rounded-lg" />
+          <div className="skeleton h-9 w-9 rounded-lg" />
+          <div className="skeleton h-9 w-9 rounded-lg" />
+          <div className="skeleton h-9 w-10 rounded-lg" />
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
+/**
  * SHOP - halaman asli:
  *   h1 "NEXO Shop." + accent-bar + subjudul
  *   deretan pill kategori (bulat, horizontal scroll)
@@ -656,6 +710,7 @@ function DocSkeleton() {
 const VARIANTS = {
   home: HomeSkeleton,
   leaderboard: LeaderboardSkeleton,
+  komunitas: KomunitasSkeleton,
   shop: ShopSkeleton,
   bank: BankSkeleton,
   premium: PremiumSkeleton,
@@ -667,7 +722,7 @@ const VARIANTS = {
 };
 
 /**
- * @param {'home'|'leaderboard'|'shop'|'bank'|'premium'|'me'|'redeem'|'admin'|'simple'|'doc'} variant
+ * @param {'home'|'leaderboard'|'komunitas'|'shop'|'bank'|'premium'|'me'|'redeem'|'admin'|'simple'|'doc'} variant
  *   Varian skeleton yang meniru halaman tujuan.
  */
 export default function PageSkeleton({ variant = 'home' }) {

@@ -1,4 +1,4 @@
-import { getLatestSnapshot, timeAgo } from '../lib/snapshot';
+import { getLatestSnapshot } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import Navbar from '../components/Navbar';
@@ -97,11 +97,12 @@ export default async function KomunitasPage() {
             Komunitas <span className="font-display text-ink">NEXO</span>
           </h1>
 
-          {snap ? (
-            <p className="mt-3 text-xs text-ink-muted">
-              Diperbarui {timeAgo(snap.ts)} · data live dari bot
-            </p>
-          ) : (
+          {/* Baris "Diperbarui ..." DIHAPUS (permintaan pemilik 2026-09-30).
+              Sudah ada indikator kecil mengambang di kanan bawah yang
+              BERDETAK tiap detik dan bisa diklik - jadi baris ini hanya
+              pengulangan yang tidak menambah informasi. Yang tersisa cuma
+              peringatan kalau bot benar-benar belum mengirim data. */}
+          {!snap && (
             <p className="mt-3 text-xs text-danger">
               ⚠ Bot belum mengirim data. Daftar akan muncul setelah bot online.
             </p>

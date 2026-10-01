@@ -34,6 +34,11 @@ export default function AdminShell({ username, avatar = null }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
   const lastSig = useRef('');
+  // Area konten (dipakai untuk melompat ke atas saat tab berganti).
+  const kontenRef = useRef(null);
+  // Penanda supaya lompatan hanya terjadi saat tab DIGANTI admin, bukan saat
+  // render pertama atau saat data di-poll ulang (tiap 5 detik).
+  const tabSebelumnya = useRef(null);
 
   // Global UI states for admin commands
   const [busy, setBusy] = useState(false);
@@ -69,6 +74,23 @@ export default function AdminShell({ username, avatar = null }) {
     window.addEventListener('focus', onFocus);
     return () => { clearTimeout(t); clearInterval(iv); window.removeEventListener('focus', onFocus); };
   }, [load]);
+
+  // Lompat ke atas setiap kali TAB DIGANTI.
+  //
+  // Kenapa perlu: mengganti tab hanya menukar isi area konten tanpa menyentuh
+  // posisi gulir. Kalau admin sedang di bawah (mis. setelah menggulir daftar
+  // panjang di Dashboard), panel tab baru terbuka di tengah gulir sehingga
+  // terlihat kosong - isinya sebenarnya ada di atas.
+  //
+  // tabSebelumnya mencegah lompatan ini ikut jalan saat render pertama atau
+  // saat data di-poll ulang tiap 5 detik (tab tidak berubah -> tidak digulir).
+  useEffect(() => {
+    const pertamaKali = tabSebelumnya.current === null;
+    if (tabSebelumnya.current === tab) return;
+    tabSebelumnya.current = tab;
+    if (pertamaKali) return; // render pertama: posisi dibiarkan apa adanya
+    kontenRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [tab]);
 
   const send = useCallback(async (action, payload) => {
     setBusy(true);
@@ -267,6 +289,13 @@ export default function AdminShell({ username, avatar = null }) {
           </div>
         </div>
 
+        {/* ref + id + scroll-mt: dipakai untuk melompat ke atas setiap kali
+            tab diganti, supaya halaman yang dituju LANGSUNG terlihat.
+            Sebelumnya mengganti tab hanya menukar isi tanpa mengubah posisi
+            gulir - kalau admin sedang di bawah (mis. daftar panjang di
+            Dashboard), panel tab baru terbuka di tengah dan terlihat kosong
+            karena isinya ada di atas. */}
+        <div ref={kontenRef} id="konten-admin" className="scroll-mt-4">
         {!data ? (
           // Isi skeleton yang SAMA dengan app/admin/loading.jsx supaya peralihan
           // dari skeleton Next.js ke panel tidak terlihat seperti skeleton dobel.
@@ -290,6 +319,7 @@ export default function AdminShell({ username, avatar = null }) {
             {tab === 'log' && <ActivityLog data={data} />}
           </>
         )}
+        </div>
       </div>
     </div>
     </>

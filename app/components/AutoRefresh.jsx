@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 // ==========================================
@@ -36,6 +36,9 @@ export default function AutoRefresh({ intervalMs = 20000 }) {
   const router = useRouter();
   const [detikLalu, setDetikLalu] = useState(0);
   const [menyegarkan, setMenyegarkan] = useState(false);
+  // Menampung fungsi segarkan dari efek di bawah, supaya tombol memakai jalur
+  // yang SAMA (timer, fokus tab, dan klik tidak boleh berbeda perilaku).
+  const segarkanRef = useRef(null);
 
   // --- detak visual (dihitung di browser, bukan dari data bot) ---
   useEffect(() => {
@@ -44,14 +47,23 @@ export default function AutoRefresh({ intervalMs = 20000 }) {
   }, []);
 
   // --- siklus penyegaran data ---
+  //
+  // SATU fungsi dipakai oleh timer, fokus tab, dan klik tombol - supaya
+  // semuanya berperilaku persis sama. Dulu logika klik ditulis ulang di
+  // atribut onClick sehingga bisa berbeda dari jalur timer.
   useEffect(() => {
     function segarkan() {
       setMenyegarkan(true);
+      // router.refresh() memuat ulang Server Component TANPA mengubah URL dan
+      // tanpa kehilangan state klien. Ini yang membuat data snapshot terbaru
+      // ikut terambil - bukan sekadar animasi.
       router.refresh();
       // router.refresh() tidak memberi tahu kapan selesai; jeda pendek ini
-      // hanya untuk memberi umpan balik visual, bukan penanda selesai.
+      // hanya umpan balik visual, bukan penanda selesai.
       setTimeout(() => { setMenyegarkan(false); setDetikLalu(0); }, 600);
     }
+    // Dipakai tombol di bawah (bukan disalin ulang).
+    segarkanRef.current = segarkan;
 
     const iv = setInterval(segarkan, intervalMs);
     function onFocus() { if (!document.hidden) segarkan(); }
@@ -75,8 +87,8 @@ export default function AutoRefresh({ intervalMs = 20000 }) {
   return (
     <button
       type="button"
-      onClick={() => { setMenyegarkan(true); router.refresh(); setTimeout(() => { setMenyegarkan(false); setDetikLalu(0); }, 600); }}
-      title="Data disegarkan otomatis tiap 20 detik. Klik untuk menyegarkan sekarang."
+      onClick={() => segarkanRef.current && segarkanRef.current()}
+      title="Klik untuk menyegarkan data sekarang. Data juga disegarkan otomatis."
       className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-card-cream/95 px-3 py-1.5 text-[0.68rem] font-medium text-ink-muted shadow-[0_4px_14px_rgba(43,33,24,0.12)] backdrop-blur transition-colors hover:border-accent hover:text-ink cursor-pointer"
     >
       {/* titik hijau: berdenyut sesaat setelah penyegaran sebagai tanda hidup */}

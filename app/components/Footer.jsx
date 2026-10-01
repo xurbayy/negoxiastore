@@ -12,7 +12,7 @@ const NAV_GUEST = [
   { href: '/komunitas', label: 'Komunitas' },
   { href: '/#fitur', label: 'Fitur' },
   { href: '/#cara-main', label: 'Cara Main' },
-  { href: '/#premium', label: 'Premium' },
+  { href: '/#premium', label: 'NEXO Pass' },
   { href: '/#faq', label: 'FAQ' },
 ];
 const NAV_MEMBER = [
