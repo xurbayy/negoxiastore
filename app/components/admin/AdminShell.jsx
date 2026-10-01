@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { NexoLogo } from '../ui';
 // Isi skeleton panel yang SAMA dengan app/admin/loading.jsx (anti skeleton dobel).
 import { AdminSkeletonBody, AdminAiSkeletonBody } from '../PageSkeleton';
@@ -196,7 +197,58 @@ export default function AdminShell({ username, avatar = null }) {
         className="fixed inset-0 z-30 bg-ink/40 backdrop-blur-[2px] md:hidden"
       />
     )}
-    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-6 md:px-5">
+    {/* Bar atas admin: MENEMPEL di atas seperti navbar halaman lain.
+        Kenapa `fixed inset-x-0 top-0`: halaman lain memakai <Navbar> dengan
+        posisi fixed, sehingga selalu ikut terlihat saat digulir. Panel admin
+        sebelumnya tidak punya bar ini - hanya tombol Menu kecil di dalam kolom
+        konten (yang ikut hilang di desktop). Sekarang satu bar tipis menempel
+        di semua ukuran, konsisten dengan sisa situs.
+
+        Isinya:
+        - Kiri: tombol Menu (hanya mobile, membuka sidebar) + logo + "Admin Panel".
+        - Kanan: tautan "Lihat Situs" (kembali ke beranda) + avatar admin.
+
+        Konten di bawahnya diberi pt agar tidak tertutup bar yang fixed ini. */}
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-bg/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5 md:px-5">
+        <div className="flex min-w-0 items-center gap-2">
+          {/* Tombol Menu hanya untuk mobile (sidebar desktop sudah selalu tampak). */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-border-soft px-2.5 py-1.5 text-ink cursor-pointer md:hidden"
+            aria-label="Buka menu admin"
+            aria-expanded={menuOpen}
+          >
+            <span aria-hidden="true" className="text-lg leading-none">☰</span>
+            <span className="text-sm font-semibold">Menu</span>
+          </button>
+          <span className="flex shrink-0 items-center"><NexoLogo size={30} /></span>
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate font-display text-sm font-bold tracking-tight text-ink">NEXO Games</span>
+            <span className="block text-[0.6rem] uppercase tracking-widest text-ink-muted">Admin Panel</span>
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 md:gap-3">
+          <Link
+            href="/"
+            className="hidden rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-sm font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
+          >
+            Lihat Situs
+          </Link>
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt="Admin" width={32} height={32} className="h-8 w-8 rounded-full border border-border-soft" />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover" aria-label="Admin">
+              {(username || '?').slice(0, 2).toUpperCase()}
+            </span>
+          )}
+        </div>
+      </div>
+    </header>
+
+    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-[4.5rem] md:px-5 md:pt-20">
       {/* Sidebar */}
       {/*
         Sidebar desktop: MENEMPEL saat digulir.
@@ -211,7 +263,7 @@ export default function AdminShell({ username, avatar = null }) {
         dvh (bukan vh) supaya akurat di browser mobile yang punya bilah alamat.
       */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-border-soft bg-bg-soft p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] transition-transform md:sticky md:top-6 md:z-auto md:max-h-[calc(100dvh-3rem)] md:w-60 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-border-soft bg-bg-soft p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] transition-transform md:sticky md:top-20 md:z-auto md:max-h-[calc(100dvh-5.5rem)] md:w-60 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -269,32 +321,9 @@ export default function AdminShell({ username, avatar = null }) {
 
       {/* Konten */}
       <div className="min-w-0 flex-1">
-        {/* Mobile: bar identitas yang MENEMPEL di atas (sticky).
-            Kenapa sticky: sebelumnya bar ini `static`, jadi ikut tergulir dan
-            hilang saat admin membaca daftar panjang - untuk membuka menu harus
-            menggulir balik ke atas dulu. Sekarang selalu tersedia di layar.
-            `top-0` + z-20: menempel tepat di tepi atas, di bawah overlay menu. */}
-        <div className="sticky top-0 z-20 -mx-4 mb-3 flex items-center justify-between gap-2 border-b border-border-soft bg-bg/85 px-4 py-2.5 backdrop-blur md:hidden">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-2 rounded-lg py-1 pr-2 text-ink cursor-pointer"
-            aria-label="Buka menu admin"
-            aria-expanded={menuOpen}
-          >
-            <span className="flex shrink-0 items-center"><NexoLogo size={28} /></span>
-            <span aria-hidden="true" className="text-lg leading-none">☰</span>
-            <span className="text-sm font-semibold">Menu</span>
-          </button>
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt="Admin" width={34} height={34} className="h-[34px] w-[34px] rounded-full border border-border-soft" />
-          ) : (
-            <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover" aria-label="Admin">
-              {(username || '?').slice(0, 2).toUpperCase()}
-            </span>
-          )}
-        </div>
+        {/* Bar identitas mobile DIPINDAH ke <header> fixed di atas (lihat
+            penanda "Bar atas admin"), supaya berlaku di semua ukuran dan
+            tidak lagi menempel hanya di dalam kolom konten. */}
         {/* Indikator hidup: data bergerak sendiri tanpa tombol manual */}
         <div className="mb-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-ink-muted">
@@ -316,7 +345,10 @@ export default function AdminShell({ username, avatar = null }) {
         {/* pb-10: jarak ke footer. Sebelumnya area ini TIDAK punya padding
             bawah, sehingga kartu terakhir menempel langsung ke footer -
             terlihat sesak di HP. */}
-        <div ref={kontenRef} id="konten-admin" className="scroll-mt-4 pb-10">
+        {/* scroll-mt dinaikkan ke 5rem: bar atas kini fixed (~56px), jadi
+            tanpa ini lompatan antar-tab akan berhenti dengan judul tertutup
+            bar. pb-10 tetap untuk jarak ke footer. */}
+        <div ref={kontenRef} id="konten-admin" className="scroll-mt-20 pb-10">
         {!data ? (
           // Kerangka menyesuaikan TAB yang sedang dimuat.
           //
