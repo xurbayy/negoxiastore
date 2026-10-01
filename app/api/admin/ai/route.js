@@ -66,6 +66,9 @@ function sistemPrompt() {
     '4. Jangan mengulang pertanyaan pemilik di awal jawaban. Langsung ke isi.',
     '5. Kalau pertanyaan menyentuh beberapa hal sekaligus, jawab berurutan',
     '   sesuai urutan yang ditanyakan - jangan melompat-lompat.',
+    '6. INGAT percakapan sebelumnya. Kalau pemilik bertanya lanjutan ("yang tadi",',
+    '   "kenapa", "terus"), rujuk jawabanmu sebelumnya - jangan mulai dari nol',
+    '   atau mengulang penjelasan yang sudah diberikan.',
     '',
     'ATURAN DATA:',
     '6. HANYA pakai angka dari DATA yang diberikan. Jangan mengarang angka, item, atau game yang tidak ada di data.',
@@ -100,6 +103,20 @@ export async function POST(request) {
   // Dua mode: tombol pintas (pakai instruksi bawaan) atau chat bebas.
   const idPintasan = String(body?.pintasan || '').trim();
   const tanyaBebas = String(body?.tanya || '').trim().slice(0, 2000);
+
+  // RIWAYAT PERCAKAPAN (permintaan pemilik 2026-10-01: "chat 2 arah seperti
+  // ChatGPT"). Dikirim oleh panel sebagai daftar { role, isi } berisi
+  // pertukaran sebelumnya, supaya AI INGAT konteks dan bisa ditanya lanjut
+  // ("yang tadi itu kenapa?"). Dibatasi 12 pesan terakhir agar konteks tidak
+  // meledak dan biaya token tetap wajar.
+  const riwayatMentah = Array.isArray(body?.riwayat) ? body.riwayat : [];
+  const riwayat = riwayatMentah
+    .slice(-12)
+    .map((r) => ({
+      role: r?.role === 'ai' ? 'assistant' : 'user',
+      content: String(r?.isi || '').slice(0, 4000),
+    }))
+    .filter((r) => r.content);
 
   let instruksi = '';
   if (idPintasan) {
@@ -231,9 +248,18 @@ export async function POST(request) {
     ? 'PERMINTAAN ANALISIS MENYELURUH. Pakai format TEMUAN / SARAN / RISIKO.'
     : 'PERTANYAAN LANGSUNG. Jawab persis yang ditanyakan, singkat, tanpa judul bagian (kecuali pertanyaannya memang minta analisis).';
 
+  // SUSUNAN PESAN (chat 2 arah):
+  //   system  -> aturan main
+  //   user    -> DATA (sekali, di awal - supaya AI selalu punya acuan angka)
+  //   ...riwayat pertukaran sebelumnya (user/assistant bergantian)...
+  //   user    -> pertanyaan terbaru
+  //
+  // Data diletakkan di AWAL, bukan diulang tiap giliran: AI tetap bisa
+  // merujuknya sepanjang percakapan, dan token tidak membengkak.
   const pesan = [
     { role: 'system', content: sistemPrompt() },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },
+    ...riwayat,
     { role: 'user', content: penandaTugas + '\n\nPERTANYAAN: ' + instruksi },
   ];
 

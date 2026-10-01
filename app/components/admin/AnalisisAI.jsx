@@ -105,16 +105,42 @@ export default function AnalisisAI() {
   const [memuatStatus, setMemuatStatus] = useState(true);
   const [jalan, setJalan] = useState(false);
   const [tanya, setTanya] = useState('');
-  const [riwayat, setRiwayat] = useState([]); // { judul, jawaban } | { judul, error }
-  // ARSIP JAWABAN (permintaan pemilik 2026-10-01): jawaban yang bagus bisa
-  // DISIMPAN supaya bisa dibaca lagi kapan saja, dan DIHAPUS kalau sudah
-  // tidak relevan. `disimpan` menandai jawaban mana yang sudah masuk arsip
-  // (berdasarkan judul+isi) supaya tombolnya berubah jadi "Tersimpan".
+
+  // ==========================================
+  // CHAT 2 ARAH (permintaan pemilik 2026-10-01)
+  // ==========================================
+  // Sebelumnya panel ini hanya "tanya sekali lalu tampil hasil" - tidak bisa
+  // dilanjutkan. Sekarang berbentuk PERCAKAPAN: pesan pemilik dan balasan AI
+  // tampil sebagai gelembung bergantian, dan pertanyaan lanjutan ("yang tadi
+  // itu kenapa?") tetap nyambung karena riwayatnya dikirim ke AI.
+  //
+  // Struktur satu pesan: { peran: 'gw' | 'ai', isi, waktu, error? }
+  const [pesan, setPesan] = useState([]);
+  const [riwayat, setRiwayat] = useState([]); // { judul, jawaban } - daftar analisis siap
+  // ARSIP JAWABAN: jawaban bagus bisa DISIMPAN dan DIHAPUS.
   const [arsip, setArsip] = useState([]);
   const [disimpan, setDisimpan] = useState(() => new Set());
   const [bukaArsip, setBukaArsip] = useState(false);
   const [pesanSimpan, setPesanSimpan] = useState(null);
   const kotakHasil = useRef(null);
+  const ujungChat = useRef(null);
+
+  // Muat percakapan terakhir dari localStorage supaya TIDAK HILANG saat
+  // refresh - perilaku yang diharapkan dari sebuah chat.
+  useEffect(() => {
+    try {
+      const simpan = window.localStorage.getItem('nexo_ai_chat');
+      if (simpan) {
+        const arr = JSON.parse(simpan);
+        if (Array.isArray(arr)) setPesan(arr.slice(-40));
+      }
+    } catch { /* data rusak / localStorage diblokir - mulai dari kosong */ }
+  }, []);
+
+  // Simpan tiap kali percakapan berubah.
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_chat', JSON.stringify(pesan.slice(-40))); } catch { /* penuh/diblokir */ }
+  }, [pesan]);
 
   // Muat daftar arsip saat komponen dibuka.
   const muatArsip = useCallback(async () => {
@@ -144,36 +170,49 @@ export default function AnalisisAI() {
     return () => { batal = true; };
   }, []);
 
-  const jalankan = useCallback(async (muatan, judul) => {
+  // Kirim satu giliran percakapan. `muatan` = { tanya } atau { pintasan }.
+  // Riwayat percakapan (pesan sebelum ini) ikut dikirim supaya AI nyambung.
+  const jalankan = useCallback(async (muatan, judul, teksTampil) => {
     setJalan(true);
+    const waktu = Date.now();
+    // Tampilkan pesan pemilik lebih dulu supaya terasa responsif.
+    setPesan((p) => [...p, { peran: 'gw', isi: teksTampil || judul, waktu }]);
+
+    // Ambil riwayat SEBELUM pesan ini (state `pesan` belum ter-update saat ini).
+    const riwayatKirim = [];
+    setPesan((p) => {
+      for (const m of p.slice(-12)) riwayatKirim.push({ role: m.peran === 'ai' ? 'ai' : 'gw', isi: m.isi });
+      return p;
+    });
+
     try {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(muatan),
+        body: JSON.stringify({ ...muatan, riwayat: riwayatKirim }),
       });
       const d = await res.json();
       if (!d.ok) {
-        setRiwayat((r) => [{ judul, error: d.error + (d.petunjuk ? ' ' + d.petunjuk : '') }, ...r]);
+        setPesan((p) => [...p, {
+          peran: 'ai', error: true, waktu: Date.now(),
+          isi: d.error + (d.petunjuk ? ' ' + d.petunjuk : ''),
+        }]);
       } else {
+        setPesan((p) => [...p, { peran: 'ai', isi: d.jawaban, waktu: Date.now(), pertanyaan: muatan?.tanya || muatan?.pintasan || judul }]);
+        // Tetap catat di daftar "analisis siap" untuk tombol Simpan.
         setRiwayat((r) => [{
           judul,
           jawaban: d.jawaban,
-          // Disimpan supaya tombol "Simpan ke arsip" bisa mengirim konteks
-          // pertanyaannya (bukan cuma jawaban) - lihat simpanJawaban().
           pertanyaan: muatan?.tanya || muatan?.pintasan || judul,
           sumber: muatan?.pintasan ? 'pintasan:' + muatan.pintasan : 'chat',
-          // Info teknis (nama model, kunci ke berapa, panjang konteks) SENGAJA
-          // tidak ditampilkan - itu urusan internal, bukan informasi untuk
-          // pemakai panel.
         }, ...r]);
       }
     } catch (e) {
-      setRiwayat((r) => [{ judul, error: 'Gagal menghubungi server: ' + e.message }, ...r]);
+      setPesan((p) => [...p, { peran: 'ai', error: true, isi: 'Gagal menghubungi server: ' + e.message, waktu: Date.now() }]);
     } finally {
       setJalan(false);
-      // Gulir ke hasil terbaru supaya jawaban langsung terlihat.
-      setTimeout(() => kotakHasil.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 100);
+      // Gulir ke pesan terbaru - perilaku standar chat.
+      setTimeout(() => ujungChat.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 80);
     }
   }, []);
 
@@ -182,8 +221,15 @@ export default function AnalisisAI() {
     const t = tanya.trim();
     if (!t || jalan) return;
     setTanya('');
-    jalankan({ tanya: t }, t.length > 60 ? t.slice(0, 60) + '...' : t);
+    jalankan({ tanya: t }, t.length > 60 ? t.slice(0, 60) + '...' : t, t);
   };
+
+  // Hapus SELURUH percakapan dan mulai dari nol (seperti "New chat" ChatGPT).
+  const mulaiBaru = useCallback(() => {
+    setPesan([]);
+    setRiwayat([]);
+    try { window.localStorage.removeItem('nexo_ai_chat'); } catch { /* abaikan */ }
+  }, []);
 
   // ==========================================
   // SIMPAN / HAPUS JAWABAN (permintaan pemilik)
@@ -287,67 +333,110 @@ export default function AnalisisAI() {
           ))}
         </div>
 
-        {/* Chat bebas */}
-        <form onSubmit={kirimBebas} className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <input
-            value={tanya}
-            onChange={(e) => setTanya(e.target.value)}
-            placeholder="Atau tanya apa saja tentang data, mis. kenapa guild cuma 1?"
-            aria-label="Pertanyaan bebas tentang data"
-            className="w-full rounded-xl border border-border-soft bg-card-cream px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
-          />
-          <button
-            type="submit"
-            disabled={jalan || !tanya.trim()}
-            className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {jalan ? 'Menganalisis...' : 'Tanya AI'}
-          </button>
-        </form>
-        {jalan && (
-          <p className="mt-2 text-xs text-ink-muted">
-            <span className="pulse-dot" aria-hidden="true" /> AI sedang membaca data, bisa 5-30 detik.
-          </p>
-        )}
+        {/* Tombol pintasan analisis - tetap ada untuk analisis sekali klik */}
       </div>
 
-      {/* Hasil */}
-      <div ref={kotakHasil} className="scroll-mt-4 space-y-4" />
-      {riwayat.length === 0 && !jalan && (
-        <div className="nx-card px-4 py-6 sm:px-5 sm:py-8 text-center text-sm text-ink-muted">
-          Belum ada analisis. Klik salah satu tombol di atas untuk mulai.
-        </div>
-      )}
-      {riwayat.map((r, i) => (
-        <div key={i} className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-          <div className="mb-2 flex items-center gap-2 border-b border-border-soft pb-2">
-            <span className="font-display text-sm font-bold text-ink">{r.judul}</span>
-            {r.info && <span className="ml-auto text-[0.65rem] text-ink-faint">{r.info}</span>}
-            {/* Tombol Simpan: hanya untuk jawaban yang berhasil (bukan error).
-                Kalau sudah tersimpan, tombol berubah jadi penanda pasif supaya
-                tidak bisa tersimpan dua kali. */}
-            {!r.error && (
-              <button
-                type="button"
-                onClick={() => simpanJawaban(r)}
-                disabled={disimpan.has(kunciJawaban(r))}
-                className={`ml-auto shrink-0 rounded-lg border px-2.5 py-1 text-[0.7rem] font-bold transition ${
-                  disimpan.has(kunciJawaban(r))
-                    ? 'border-success/40 bg-success/10 text-success cursor-default'
-                    : 'border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink cursor-pointer'
-                }`}
-              >
-                {disimpan.has(kunciJawaban(r)) ? 'Tersimpan' : 'Simpan'}
-              </button>
-            )}
-          </div>
-          {r.error ? (
-            <p className="text-sm text-danger">{r.error}</p>
-          ) : (
-            <Paragraf teks={r.jawaban} />
+      {/* ==========================================
+          PERCAKAPAN (chat 2 arah)
+          ==========================================
+          Permintaan pemilik: "bentuknya chat 2 arah, gw juga leluasa nge chat
+          ke dianya, history chatnya bisa gw hapus jadi bisa mulai pembicaraan
+          baru kayak ChatGPT".
+          Pesan pemilik di kanan, balasan AI di kiri. */}
+      <div ref={kotakHasil} className="scroll-mt-4 space-y-3" />
+
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-soft pb-3">
+          <h3 className="font-display text-ink">
+            Percakapan {pesan.length > 0 && <span className="text-sm font-normal text-ink-muted">({Math.ceil(pesan.length / 2)} giliran)</span>}
+          </h3>
+          {pesan.length > 0 && (
+            <button
+              type="button"
+              onClick={mulaiBaru}
+              className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+              title="Hapus seluruh percakapan dan mulai dari nol"
+            >
+              Hapus riwayat / Mulai baru
+            </button>
           )}
         </div>
-      ))}
+
+        {pesan.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">
+            Mulai percakapan: klik salah satu tombol pintasan di atas, atau ketik pertanyaanmu di kolom bawah.
+            Percakapan bisa dilanjutkan berkali-kali dan tidak hilang saat halaman di-refresh.
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {pesan.map((m, i) => (
+              <li key={i} className={`flex ${m.peran === 'gw' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[92%] rounded-2xl px-4 py-2.5 sm:max-w-[80%] ${
+                  m.peran === 'gw'
+                    ? 'bg-accent/15 text-ink'
+                    : m.error
+                      ? 'bg-danger/10 text-danger'
+                      : 'bg-bg-soft/60 text-ink'
+                }`}>
+                  <p className="mb-1 text-[0.6rem] font-bold uppercase tracking-widest text-ink-muted">
+                    {m.peran === 'gw' ? 'Kamu' : m.error ? 'AI - gagal' : 'AI'}
+                    {m.waktu ? ' - ' + new Date(m.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </p>
+                  {m.error ? (
+                    <p className="text-sm">{m.isi}</p>
+                  ) : (
+                    <Paragraf teks={m.isi} />
+                  )}
+                  {/* Tombol Simpan hanya pada balasan AI yang berhasil -
+                      supaya masukan bagus bisa diarsipkan seperti sebelumnya. */}
+                  {m.peran === 'ai' && !m.error && (
+                    <button
+                      type="button"
+                      onClick={() => simpanJawaban({ judul: m.pertanyaan || 'Catatan AI', jawaban: m.isi, pertanyaan: m.pertanyaan, sumber: 'chat' })}
+                      disabled={disimpan.has('chat::' + String(m.isi).slice(0, 80))}
+                      className={`mt-2 rounded-lg border px-2.5 py-1 text-[0.68rem] font-bold transition ${
+                        disimpan.has('chat::' + String(m.isi).slice(0, 80))
+                          ? 'border-success/40 bg-success/10 text-success cursor-default'
+                          : 'border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink cursor-pointer'
+                      }`}
+                    >
+                      {disimpan.has('chat::' + String(m.isi).slice(0, 80)) ? 'Tersimpan di arsip' : 'Simpan ke arsip'}
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+            {jalan && (
+              <li className="flex justify-start">
+                <div className="rounded-2xl bg-bg-soft/60 px-4 py-2.5 text-sm text-ink-muted">
+                  <span className="pulse-dot" aria-hidden="true" /> AI sedang membaca data, bisa 5-30 detik...
+                </div>
+              </li>
+            )}
+          </ul>
+        )}
+        <div ref={ujungChat} />
+      </div>
+
+      {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT.
+          Ditaruh setelah kartu percakapan supaya alurnya: baca dulu, balas
+          di bawah. Tetap satu baris dengan tombol kirim di kanan. */}
+      <form onSubmit={kirimBebas} className="sticky bottom-4 z-10 flex gap-2 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)]">
+        <input
+          value={tanya}
+          onChange={(e) => setTanya(e.target.value)}
+          placeholder="Ketik pertanyaanmu... (bisa lanjut tanya jawaban sebelumnya)"
+          aria-label="Pertanyaan bebas tentang data"
+          className="w-full rounded-xl bg-transparent px-3 py-2 text-sm text-ink outline-none"
+        />
+        <button
+          type="submit"
+          disabled={jalan || !tanya.trim()}
+          className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {jalan ? '...' : 'Kirim'}
+        </button>
+      </form>
 
       {/* ==========================================
           ARSIP JAWABAN TERSIMPAN
