@@ -117,12 +117,24 @@ export async function tanyaGroq(pesan) {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        // Beberapa provider streaming: baca SSE untuk ambil konten.
+        // Deteksi SSE dari content-type header (provider seperti 9router/Gemini
+        // mengembalikan text/event-stream, bukan application/json).
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('text/event-stream') || ct.includes('stream')) {
+          const teksSse = await bacaSSE(res);
+          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1 };
+          terakhir = { kode: res.status, error: 'AI mengembalikan stream kosong.' };
+          continue;
+        }
+
+        // Response JSON biasa (Groq dan beberapa provider lain).
+        let data;
+        try { data = await res.json(); } catch (_) { data = null; }
+
         const teks = data?.choices?.[0]?.message?.content;
         if (teks) return { ok: true, teks, kunciDipakai: i + 1 };
 
-        // Fallback: kalau respon bukan JSON biasa (SSE), coba parse.
+        // Fallback: kalau response bukan JSON valid, coba baca sebagai SSE.
         if (!data?.choices) {
           const teksSse = await bacaSSE(res);
           if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1 };
