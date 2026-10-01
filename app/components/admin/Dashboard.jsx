@@ -381,8 +381,16 @@ export default function Dashboard({ data }) {
             // Permintaan pemilik: "list itu tu muncul 4 paling banyak item
             // terjual" - jadi daftar dipangkas jadi 4, tidak 10.
             const baris = daftar.slice(0, 4).map((x) => {
+              // Bot sudah mengirim nama + emojiUrl lewat JOIN ke katalog.
+              // Katalog lokal tetap dipakai sebagai cadangan kalau bot versi
+              // lama belum mengirimnya; terakhir, itemKey ditampilkan apa adanya
+              // supaya baris tidak pernah kosong.
               const it = katalog.get(x.itemKey);
-              return { nama: it?.name || x.itemKey, emojiUrl: it?.emojiUrl || null, ...x };
+              return {
+                nama: x.nama || it?.name || x.itemKey,
+                emojiUrl: x.emojiUrl || it?.emojiUrl || null,
+                ...x,
+              };
             });
             return (
               <ul className="mt-3 space-y-2.5 text-sm">
@@ -445,6 +453,25 @@ export default function Dashboard({ data }) {
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-2 text-ink">
                         <span className="w-4 shrink-0 font-display text-xs text-ink-muted">{i + 1}</span>
+                        {/* Foto profil: bot mengambil URL terbaru dari Discord
+                            (cache dulu, lalu REST), jadi ganti PP ikut kebaca.
+                            Kalau belum ada, jatuh ke inisial nama - bukan
+                            gambar rusak. */}
+                        {x.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={x.avatarUrl}
+                            alt=""
+                            width={22}
+                            height={22}
+                            loading="lazy"
+                            className="h-[22px] w-[22px] shrink-0 rounded-full border border-border-soft bg-bg-soft object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-accent/15 text-[0.55rem] font-bold text-accent-hover">
+                            {String(x.username || '?').slice(0, 2).toUpperCase()}
+                          </span>
+                        )}
                         <span className="truncate" title={x.username || x.userId}>
                           {x.username || x.userId}
                         </span>
