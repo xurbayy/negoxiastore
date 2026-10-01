@@ -505,39 +505,11 @@ export default function AnalisisAI() {
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display text-ink">Analisis AI</h3>
+          {/* Tombol Notif PINDAH ke navbar (sebelah profil) - permintaan
+              pemilik 2026-10-01: "notif di AI itu pindahin aja ke sebelah
+              profil... yang di AI ga usah". Jadi pengingat terlihat dari
+              halaman admin mana pun, bukan cuma di tab ini. */}
           <div className="flex items-center gap-2">
-            {/* ==========================================
-                TOMBOL NOTIF PENGINGAT (permintaan pemilik)
-                ==========================================
-                Menyala MERAH kalau ada pengingat aktif - supaya langsung
-                terlihat tanpa perlu membuka panelnya. Titik kecil di pojok
-                menunjukkan jumlah pengingat yang sudah jatuh tempo. */}
-            <button
-              type="button"
-              onClick={() => setBukaPengingat((v) => !v)}
-              className={`relative flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition cursor-pointer ${
-                jumlahPengingat > 0
-                  ? 'border-danger bg-danger text-white hover:bg-danger/90'
-                  : 'border-border-soft text-ink-muted hover:border-accent/50 hover:text-ink'
-              }`}
-              title={jumlahPengingat > 0 ? `${jumlahPengingat} pengingat aktif` : 'Belum ada pengingat'}
-              aria-label={`Pengingat: ${jumlahPengingat} aktif`}
-            >
-              {/* Ikon lonceng */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span>Notif</span>
-              {jumlahPengingat > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[0.65rem] leading-none ${
-                  jumlahJatuhTempo > 0 ? 'bg-white text-danger' : 'bg-white/25 text-white'
-                }`}>
-                  {jumlahPengingat}
-                </span>
-              )}
-            </button>
-
             {/* Dua mode dengan keunggulan berbeda (permintaan pemilik):
                 - Analisis: laporan tersusun TEMUAN/SARAN/RISIKO
                 - Diskusi : chat 2 arah untuk berpikir bersama

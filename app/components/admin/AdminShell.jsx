@@ -69,6 +69,9 @@ export default function AdminShell({ username, avatar = null }) {
   // Efek navbar: saat halaman digulir, bar jadi solid + lebih rapat (sama
   // seperti Navbar halaman user). Memberi kesan hidup + konsisten.
   const [scrolled, setScrolled] = useState(false);
+  // PENGINGAT AI di navbar (permintaan pemilik 2026-10-01): dipindah dari
+  // halaman AI ke sebelah profil supaya terlihat dari halaman admin mana pun.
+  const [pengingat, setPengingat] = useState([]);
   const lastSig = useRef('');
   // Area konten (dipakai untuk melompat ke atas saat tab berganti).
   const kontenRef = useRef(null);
@@ -88,6 +91,11 @@ export default function AdminShell({ username, avatar = null }) {
     nexopass: (data.snapshot?.premiumMembers || []).length,
     manualorders: (data.orders || []).filter((r) => r.status === 'pending' && r.gateway === 'manual').length,
   } : {};
+
+  // Angka untuk tombol notif pengingat di navbar.
+  const pengingatAktif = pengingat.filter((p) => !p.selesai);
+  const jumlahPengingat = pengingatAktif.length;
+  const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
   const load = useCallback(async () => {
     try {
@@ -117,6 +125,38 @@ export default function AdminShell({ username, avatar = null }) {
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // PENGINGAT: muat + perbarui tiap 60 detik supaya penanda 'jatuh tempo'
+  // hidup sendiri tanpa pemilik perlu refresh halaman.
+  const muatPengingat = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ai/reminders', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setPengingat(d.reminders || []);
+    } catch { /* gagal muat tidak menghalangi panel */ }
+  }, []);
+
+  useEffect(() => {
+    muatPengingat();
+    const iv = setInterval(muatPengingat, 60000);
+    return () => clearInterval(iv);
+  }, [muatPengingat]);
+
+  const tandaiPengingat = useCallback(async (id, selesai = true) => {
+    try {
+      const res = await fetch(`/api/admin/ai/reminders?id=${id}${selesai ? '' : '&selesai=0'}`, { method: 'PATCH' });
+      const d = await res.json();
+      if (d.ok) muatPengingat();
+    } catch { /* abaikan */ }
+  }, [muatPengingat]);
+
+  const hapusPengingat = useCallback(async (id) => {
+    try {
+      const res = await fetch(`/api/admin/ai/reminders?id=${id}`, { method: 'DELETE' });
+      const d = await res.json();
+      if (d.ok) setPengingat((p) => p.filter((x) => x.id !== id));
+    } catch { /* abaikan */ }
   }, []);
 
   // GANTI TAB: simpan pilihan ke URL hash + localStorage supaya bertahan
@@ -320,6 +360,84 @@ export default function AdminShell({ username, avatar = null }) {
           >
             Lihat Situs
           </Link>
+
+          {/* ==========================================
+              TOMBOL NOTIF PENGINGAT - di navbar, sebelah profil
+              ==========================================
+              Permintaan pemilik: "notif di AI itu pindahin aja ke sebelah
+              profil jadi ada notif disitu yang dimana ingatannya tu keliatan
+              jadi jelas kalo ada notif".
+
+              Jadi pengingat dari AI sekarang muncul di SINI - terlihat dari
+              halaman admin mana pun, bukan cuma di tab AI. Menyala MERAH
+              kalau ada pengingat aktif. */}
+          <details className="group relative">
+            <summary
+              className={`relative flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg border px-2.5 transition ${
+                jumlahPengingat > 0
+                  ? 'border-danger bg-danger text-white hover:bg-danger/90'
+                  : 'border-border-soft text-ink-muted hover:border-accent/50 hover:text-ink'
+              }`}
+              title={jumlahPengingat > 0 ? `${jumlahPengingat} pengingat aktif` : 'Belum ada pengingat'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {jumlahPengingat > 0 && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[0.62rem] font-bold leading-none ${
+                  jumlahJatuhTempo > 0 ? 'bg-white text-danger' : 'bg-white/25 text-white'
+                }`}>
+                  {jumlahPengingat}
+                </span>
+              )}
+            </summary>
+
+            {/* Dropdown daftar pengingat */}
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
+              <p className="px-2 py-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">
+                Pengingat {jumlahPengingat > 0 ? `(${jumlahPengingat})` : ''}
+              </p>
+              {jumlahPengingat === 0 ? (
+                <p className="px-2 pb-2 text-xs leading-relaxed text-ink-muted">
+                  Belum ada. Tulis di tab Analisis AI mode Diskusi, mis. "ingetin gw pas Idul Fitri mau promo".
+                </p>
+              ) : (
+                <ul className="max-h-80 space-y-1.5 overflow-y-auto">
+                  {pengingatAktif.map((p) => (
+                    <li
+                      key={p.id}
+                      className={`rounded-xl border px-3 py-2 ${
+                        p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'
+                      }`}
+                    >
+                      <p className="text-xs font-semibold text-ink">{p.teks}</p>
+                      <p className={`mt-0.5 text-[0.65rem] ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
+                        {p.jatuhTempo ? 'SEKARANG - ' : ''}{p.waktuTeks}
+                      </p>
+                      <div className="mt-1.5 flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => tandaiPengingat(p.id, true)}
+                          className="rounded-md border border-success/40 px-2 py-0.5 text-[0.65rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
+                        >
+                          Selesai
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => hapusPengingat(p.id)}
+                          className="rounded-md border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </details>
+
           {/* Profil admin: avatar + username, klik -> dropdown berisi Keluar.
               Pola <details> sama dengan menu "Info" di Navbar user. */}
           <details className="group relative">
