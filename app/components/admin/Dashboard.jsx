@@ -218,7 +218,7 @@ export default function Dashboard({ data }) {
   return (
     <div className="space-y-6">
       {/* Bridge status: pita solid - status sistem jangan samar */}
-      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-5 py-4 text-white ${stale ? 'bg-danger' : 'bg-success'}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-white ${stale ? 'bg-danger' : 'bg-success'}`}>
         <p className="text-sm font-bold">
           {stale ? '⚠ BOT OFFLINE · Snapshot terakhir lebih dari 3 menit lalu' : '● Bridge aktif, data mengalir'}
         </p>
