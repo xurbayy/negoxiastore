@@ -48,6 +48,15 @@
 
 html {
   scroll-behavior: smooth;
+  /* Anti-gulir horizontal. Diletakkan di html, BUKAN body.
+     Kenapa: `overflow-x: hidden` pada body memaksa browser menghitung
+     overflow-y menjadi `auto` (aturan CSS: bila satu sumbu bukan `visible`,
+     sumbu lain yang `visible` otomatis jadi `auto`). Akibatnya body menjadi
+     wadah gulir sendiri setinggi isinya dan tidak pernah benar-benar
+     menggulir, sehingga `position: sticky` di dalamnya MENEMPEL PADA BODY
+     YANG DIAM - efeknya sidebar admin ikut naik saat halaman digulir.
+     Di html, sticky kembali mengacu ke viewport dan bekerja normal. */
+  overflow-x: hidden;
 }
 
 body {
@@ -55,7 +64,6 @@ body {
   color: var(--ink);
   font-family: var(--font-body), sans-serif;
   line-height: 1.7;
-  overflow-x: hidden;
 }
 
 .font-display {

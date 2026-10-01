@@ -196,10 +196,22 @@ export default function AdminShell({ username, avatar = null }) {
         className="fixed inset-0 z-30 bg-ink/40 backdrop-blur-[2px] md:hidden"
       />
     )}
-    <div className="mx-auto flex max-w-7xl gap-6 px-4 pb-20 pt-6 md:px-5">
+    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-6 md:px-5">
       {/* Sidebar */}
+      {/*
+        Sidebar desktop: MENEMPEL saat digulir.
+        Kenapa sebelumnya gagal nempel: flex item default `align-self: stretch`,
+        sehingga <aside> ditinggikan mengikuti tinggi baris flex. Akibatnya
+        tidak ada ruang gerak untuk sticky - nilainya jadi sekadar sepanjang
+        dirinya sendiri, dan saat digulir ia ikut naik bersama halaman.
+        Perbaikannya: `items-start` pada induk (atau md:self-start) membuat
+        aside setinggi ISINYA saja, sehingga sticky punya ruang untuk bekerja.
+        `md:max-h-[calc(100dvh-3rem)]` + overflow-y-auto: kalau menunya lebih
+        panjang dari layar, isi sidebar bisa digulir sendiri, bukan terpotong.
+        dvh (bukan vh) supaya akurat di browser mobile yang punya bilah alamat.
+      */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col overflow-hidden border-r border-border-soft bg-bg-soft p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] transition-transform md:sticky md:top-6 md:z-auto md:max-h-[calc(100vh-3rem)] md:w-60 md:translate-x-0 md:rounded-2xl md:border md:bg-card-cream/60 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 transform flex-col border-r border-border-soft bg-bg-soft p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] transition-transform md:sticky md:top-6 md:z-auto md:max-h-[calc(100dvh-3rem)] md:w-60 md:translate-x-0 md:self-start md:rounded-2xl md:border md:bg-card-cream/60 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -257,17 +269,22 @@ export default function AdminShell({ username, avatar = null }) {
 
       {/* Konten */}
       <div className="min-w-0 flex-1">
-        {/* Mobile: identitas tetap ada tapi senyap - logo (buka menu) + avatar saja. */}
-        <div className="mb-3 flex items-center justify-between md:hidden">
+        {/* Mobile: bar identitas yang MENEMPEL di atas (sticky).
+            Kenapa sticky: sebelumnya bar ini `static`, jadi ikut tergulir dan
+            hilang saat admin membaca daftar panjang - untuk membuka menu harus
+            menggulir balik ke atas dulu. Sekarang selalu tersedia di layar.
+            `top-0` + z-20: menempel tepat di tepi atas, di bawah overlay menu. */}
+        <div className="sticky top-0 z-20 -mx-4 mb-3 flex items-center justify-between gap-2 border-b border-border-soft bg-bg/85 px-4 py-2.5 backdrop-blur md:hidden">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-2 rounded-lg px-1 py-1 cursor-pointer"
+            className="flex items-center gap-2 rounded-lg py-1 pr-2 text-ink cursor-pointer"
             aria-label="Buka menu admin"
             aria-expanded={menuOpen}
           >
             <span className="flex shrink-0 items-center"><NexoLogo size={28} /></span>
-            <span className="text-ink-muted" aria-hidden="true">☰</span>
+            <span aria-hidden="true" className="text-lg leading-none">☰</span>
+            <span className="text-sm font-semibold">Menu</span>
           </button>
           {avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
