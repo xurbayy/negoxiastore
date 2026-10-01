@@ -35,6 +35,9 @@ export default function AdminShell({ username, avatar = null }) {
   const [data, setData] = useState(null); // { snapshot, series, log }
   const [menuOpen, setMenuOpen] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(null);
+  // Efek navbar: saat halaman digulir, bar jadi solid + lebih rapat (sama
+  // seperti Navbar halaman user). Memberi kesan hidup + konsisten.
+  const [scrolled, setScrolled] = useState(false);
   const lastSig = useRef('');
   // Area konten (dipakai untuk melompat ke atas saat tab berganti).
   const kontenRef = useRef(null);
@@ -76,6 +79,14 @@ export default function AdminShell({ username, avatar = null }) {
     window.addEventListener('focus', onFocus);
     return () => { clearTimeout(t); clearInterval(iv); window.removeEventListener('focus', onFocus); };
   }, [load]);
+
+  // Pantau posisi gulir untuk efek navbar (solid + rapat setelah 24px).
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Lompat ke atas setiap kali TAB DIGANTI.
   //
@@ -209,46 +220,82 @@ export default function AdminShell({ username, avatar = null }) {
         - Kanan: tautan "Lihat Situs" (kembali ke beranda) + avatar admin.
 
         Konten di bawahnya diberi pt agar tidak tertutup bar yang fixed ini. */}
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-bg/95 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4">
+    <header
+      className={`fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-bg/90 backdrop-blur-xl transition-all duration-300 ${
+        scrolled ? 'py-2.5' : 'py-3.5'
+      }`}
+    >
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-5" aria-label="Navigasi admin">
         <div className="flex min-w-0 items-center gap-3">
-          {/* Tombol Menu hanya untuk mobile (sidebar desktop sudah selalu tampak). */}
+          {/* Tombol Menu hanya untuk mobile (sidebar desktop selalu tampak).
+              Gaya sama dengan tombol hamburger Navbar user (kotak ikon). */}
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-border-soft px-3.5 py-2.5 text-ink cursor-pointer md:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border-soft text-ink cursor-pointer md:hidden"
             aria-label="Buka menu admin"
             aria-expanded={menuOpen}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-            <span className="text-sm font-semibold">Menu</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
-          <span className="flex shrink-0 items-center"><NexoLogo size={40} /></span>
-          <span className="min-w-0 leading-tight">
-            <span className="block truncate font-display text-lg font-bold tracking-tight text-ink">NEXO Games</span>
-            <span className="block text-[0.7rem] uppercase tracking-widest text-ink-muted">Admin Panel</span>
-          </span>
+          <Link href="/" className="flex items-center gap-2.5 leading-none cursor-pointer" aria-label="NEXO Games - Beranda">
+            <span className="flex shrink-0 items-center"><NexoLogo size={36} /></span>
+            <span className="hidden font-display text-lg font-bold tracking-tight text-ink sm:inline">
+              NEXO Games
+            </span>
+            {/* Label khusus admin - satu-satunya pembeda dari navbar user. */}
+            <span className="hidden rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest text-accent-hover sm:inline">
+              Admin
+            </span>
+          </Link>
         </div>
-        <div className="flex shrink-0 items-center gap-2.5 md:gap-3">
+
+        <div className="flex shrink-0 items-center gap-2 md:gap-3">
           <Link
             href="/"
-            className="hidden rounded-xl border border-border-soft bg-card-cream px-4 py-2 text-sm font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
+            className="hidden rounded-lg border border-border-soft bg-card-cream px-3.5 py-1.5 text-sm font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink sm:inline-flex cursor-pointer"
           >
             Lihat Situs
           </Link>
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt="Admin" width={40} height={40} className="h-10 w-10 rounded-full border border-border-soft" />
-          ) : (
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 text-sm font-bold text-accent-hover" aria-label="Admin">
-              {(username || '?').slice(0, 2).toUpperCase()}
-            </span>
-          )}
+          {/* Profil admin: avatar + username, klik -> dropdown berisi Keluar.
+              Pola <details> sama dengan menu "Info" di Navbar user. */}
+          <details className="group relative">
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-1 transition hover:bg-bg-soft">
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatar} alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-full border border-border-soft" />
+              ) : (
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent-hover">
+                  {(username || '?').slice(0, 2).toUpperCase()}
+                </span>
+              )}
+              <span className="hidden max-w-[120px] truncate text-sm font-semibold text-ink sm:inline">{username}</span>
+              <svg className="hidden h-3.5 w-3.5 shrink-0 text-ink-muted transition group-open:rotate-180 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9" /></svg>
+            </summary>
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-border-soft bg-card-cream p-1.5 opacity-0 shadow-[0_12px_32px_rgba(43,33,24,0.14)] transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
+              <div className="border-b border-border-soft px-3 py-2.5">
+                <p className="text-[0.65rem] uppercase tracking-widest text-ink-muted">Masuk sebagai</p>
+                <p className="mt-0.5 truncate text-sm font-bold text-ink">{username}</p>
+              </div>
+              <Link href="/" className="mt-1 block rounded-lg px-3 py-2 text-sm text-ink-muted transition hover:bg-bg-soft hover:text-ink cursor-pointer">
+                Lihat Situs
+              </Link>
+              {/* Logout: pakai <a> (bukan Link) karena ini route API yang
+                  mengalihkan keluar, bukan halaman internal Next. */}
+              <a
+                href="/api/auth/logout"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-danger transition hover:bg-danger/10 cursor-pointer"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Keluar Panel
+              </a>
+            </div>
+          </details>
         </div>
-      </div>
+      </nav>
     </header>
 
-    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-[5rem] md:px-5 md:pt-[5.5rem]">
+    <div className="mx-auto flex max-w-7xl items-start gap-6 px-4 pb-20 pt-24 md:px-5 md:pt-24">
       {/* Sidebar */}
       {/*
         Sidebar desktop: MENEMPEL saat digulir.
