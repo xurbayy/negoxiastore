@@ -95,10 +95,15 @@ export default async function KomunitasPage() {
 
         <div className="relative">
           {/* Iklan AdSense di atas judul (permintaan pemilik 2026-10-01).
-              Slot diambil dari env NEXT_PUBLIC_ADSENSE_SLOT - buat dulu di
-              dashboard AdSense, lalu isi env-nya di Vercel. */}
+              Slot PER-HALAMAN dari env - beda halaman beda unit, supaya
+              AdSense bisa mengukur performa tiap posisi secara terpisah.
+              Fallback ke NEXT_PUBLIC_ADSENSE_SLOT (nama lama) agar tidak
+              langsung kosong kalau env baru belum diisi. */}
           <div className="mb-4">
-            <AdUnit slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT} format="auto" />
+            <AdUnit
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_KOMUNITAS || process.env.NEXT_PUBLIC_ADSENSE_SLOT}
+              format="auto"
+            />
           </div>
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Komunitas <span className="font-display text-ink">NEXO</span>
