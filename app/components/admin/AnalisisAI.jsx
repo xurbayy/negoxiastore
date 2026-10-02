@@ -884,28 +884,17 @@ export default function AnalisisAI() {
   }, [peran]);
   useEffect(() => { muatSaran(); }, [muatSaran]);
 
-  // Muat ulang saran + reset dismiss. "Segar" = bypass saran agen, pakai
-  // snapshot real-time supaya topik SELALU BARU (permintaan pemilik 2026-10-02).
-  const [saranMemuat, setSaranMemuat] = useState(false);
-  const muatSaranSegar = useCallback(async () => {
-    setSaranMemuat(true);
-    setSaranDismiss(new Set());
-    try {
-      const res = await fetch('/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&segar=1', { cache: 'no-store' });
-      const d = await res.json();
-      if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
-    } catch { /* fallback */ }
-    finally { setSaranMemuat(false); }
-  }, [peran]);
-
   // CARI TOPIK via AI: AI membaca data terkini lalu usulkan pertanyaan paling
   // relevan (permintaan pemilik 2026-10-02: "langsung dari ai aja yang relevan").
+  // Menggantikan tombol "Muat ulang".
   const [saranAI, setSaranAI] = useState(false);
   const muatSaranAI = useCallback(async () => {
     if (!provider?.trim() || !modelInput?.trim()) {
       setPesanSimpan('⚠️ Pilih provider & model dulu untuk cari topik AI.');
+      setValidasiProvider(true);
       setPanelTampil(true);
       setTimeout(() => setPesanSimpan(null), 5000);
+      setTimeout(() => setValidasiProvider(false), 4000);
       return;
     }
     setSaranAI(true);
@@ -915,9 +904,15 @@ export default function AnalisisAI() {
         + '&provider=' + encodeURIComponent(provider) + '&model=' + encodeURIComponent(modelInput.trim());
       const res = await fetch(url, { cache: 'no-store' });
       const d = await res.json();
-      if (d.ok && Array.isArray(d.saran) && d.sumber === 'ai') setSaranDin(d.saran);
-      else if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
-    } catch { /* fallback */ }
+      if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
+      if (!d.ok || !d.saran?.length) {
+        setPesanSimpan('AI tidak menghasilkan topik - coba lagi atau ganti model.');
+        setTimeout(() => setPesanSimpan(null), 5000);
+      }
+    } catch {
+      setPesanSimpan('Gagal cari topik AI. Cek koneksi/model.');
+      setTimeout(() => setPesanSimpan(null), 5000);
+    }
     finally { setSaranAI(false); }
   }, [peran, provider, modelInput]);
 
@@ -2407,36 +2402,17 @@ export default function AnalisisAI() {
               </p>
               <button
                 type="button"
-                onClick={muatSaranSegar}
-                disabled={saranMemuat}
-                title="Muat ulang saran dari data terbaru"
-                className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-              >
-                {saranMemuat ? (
-                  <>
-                    <span className="pulse-dot" aria-hidden="true" />
-                    Memuat...
-                  </>
-                ) : (
-                  <>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                    </svg>
-                    Muat ulang
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
                 onClick={muatSaranAI}
                 disabled={saranAI}
                 title="AI cari topik paling relevan dari data terkini"
-                className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2 py-0.5 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
+                className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 disabled:cursor-wait cursor-pointer"
               >
                 {saranAI ? (
                   <>
-                    <span className="pulse-dot" aria-hidden="true" />
-                    AI mencari...
+                    <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    Memuat topik...
                   </>
                 ) : (
                   <>
@@ -2448,6 +2424,13 @@ export default function AnalisisAI() {
                 )}
               </button>
             </div>
+            {/* Status loading AI generate (biar kelihatan sedang bekerja). */}
+            {saranAI && (
+              <p className="mt-2 flex items-center gap-2 rounded-lg bg-accent/5 px-3 py-2 text-[0.7rem] font-semibold text-accent">
+                <span className="pulse-dot" aria-hidden="true" />
+                AI sedang membaca data & menyusun topik paling relevan... (5-15 detik)
+              </p>
+            )}
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
                 "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
                 tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
@@ -2764,12 +2747,14 @@ export default function AnalisisAI() {
                   onClick={muatSaranAI}
                   disabled={saranAI}
                   title="AI cari topik paling relevan dari data terkini"
-                  className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2 py-0.5 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 disabled:cursor-wait cursor-pointer"
                 >
                   {saranAI ? (
                     <>
-                      <span className="pulse-dot" aria-hidden="true" />
-                      AI mencari...
+                      <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                      </svg>
+                      Memuat topik...
                     </>
                   ) : (
                     <>
@@ -2780,19 +2765,14 @@ export default function AnalisisAI() {
                     </>
                   )}
                 </button>
-                <button
-                  type="button"
-                  onClick={muatSaranSegar}
-                  title="Muat ulang saran dari data terbaru"
-                  className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                  </svg>
-                  Muat ulang
-                </button>
                 </div>
               </div>
+              {saranAI && (
+                <p className="mt-2 flex items-center gap-2 rounded-lg bg-accent/5 px-3 py-2 text-[0.7rem] font-semibold text-accent">
+                  <span className="pulse-dot" aria-hidden="true" />
+                  AI sedang membaca data & menyusun topik paling relevan... (5-15 detik)
+                </p>
+              )}
               <div className="flex flex-wrap gap-1.5">
                 {saran.filter((s) => !saranDismiss.has(s.id)).map((s) => (
                   <span key={s.id} className="relative inline-flex">
