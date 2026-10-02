@@ -633,18 +633,20 @@ export default function AnalisisAI() {
   }, []);
 
   // Muat daftar provider kustom SAAT MOUNT (tidak menunggu panel kelola dibuka).
-  // Dipakai untuk menentukan "siap" walau endpoint /ai bermasalah.
+  // Muat daftar provider kustom SAAT MOUNT (tidak menunggu panel kelola dibuka).
   useEffect(() => { muatKelola(); }, [muatKelola]);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
-  // langsung menampilkan provider baru tanpa refresh halaman.
+  // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang
+  // daftar provider kustom (sumber cadangan kalau /ai bermasalah).
   const muatStatusUlang = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/ai', { cache: 'no-store' });
       const d = await res.json();
       if (d.ok) setStatus(d);
     } catch { /* abaikan */ }
-  }, []);
+    muatKelola();
+  }, [muatKelola]);
 
   const simpanProvider = useCallback(async () => {
     if (!formProv.nama.trim() || !formProv.base_url.trim()) {
@@ -1333,23 +1335,31 @@ export default function AnalisisAI() {
             placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
             className="flex-1 min-w-[200px] rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
           />
-          {/* Dropdown model tersimpan - pilih cepat tanpa hafal nama model. */}
-          {(status.models || []).length > 0 && (
-            <select
-              value=""
-              onChange={(e) => {
-                const m = (status.models || []).find((x) => String(x.id) === e.target.value);
-                if (m) pakaiModel(m);
-              }}
-              title="Pilih dari model tersimpan"
-              className="rounded-xl border border-border-soft bg-bg-soft/60 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent cursor-pointer"
-            >
-              <option value="">Model tersimpan...</option>
-              {(status.models || []).map((m) => (
-                <option key={m.id} value={m.id}>{m.label} - {m.model}</option>
-              ))}
-            </select>
-          )}
+          {/* Dropdown model tersimpan - pilih cepat tanpa hafal nama model.
+              Gabung dari /ai + /providers supaya tetap muncul walau /ai ngadat. */}
+          {(() => {
+            const modelGabung = [
+              ...(status?.models || []),
+              ...(daftarModel || []).filter((m) => !(status?.models || []).some((x) => x.id === m.id)),
+            ];
+            if (!modelGabung.length) return null;
+            return (
+              <select
+                value=""
+                onChange={(e) => {
+                  const m = modelGabung.find((x) => String(x.id) === e.target.value);
+                  if (m) pakaiModel(m);
+                }}
+                title="Pilih dari model tersimpan"
+                className="rounded-xl border border-border-soft bg-bg-soft/60 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="">Model tersimpan...</option>
+                {modelGabung.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label} - {m.model}</option>
+                ))}
+              </select>
+            );
+          })()}
           {/* Validasi model: cek apakah model ini benar-benar ada di provider. */}
           <button
             type="button"
