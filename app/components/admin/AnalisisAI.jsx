@@ -506,6 +506,12 @@ export default function AnalisisAI() {
   // per pesannya jangan kelamaan").
   const [tungguSampai, setTungguSampai] = useState(0);
   const [detikSisa, setDetikSisa] = useState(0);
+  // SAFETY: reset jalan/detikSisa kalau stuck > 70 detik (anti-lock).
+  useEffect(() => {
+    if (!jalan && detikSisa <= 0) return;
+    const t = setTimeout(() => { setJalan(false); setDetikSisa(0); }, 70000);
+    return () => clearTimeout(t);
+  }, [jalan, detikSisa]);
   // Tick setiap detik selama cooldown supaya tombol menampilkan sisa waktu.
   useEffect(() => {
     if (detikSisa <= 0) return;
