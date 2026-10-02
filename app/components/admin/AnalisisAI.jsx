@@ -2334,9 +2334,9 @@ export default function AnalisisAI() {
                       type="button"
                       onClick={() => dismissSaran(p.id)}
                       title="Hapus saran ini"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-ink-faint transition hover:text-danger cursor-pointer"
+                      className="absolute right-0.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-faint transition hover:bg-danger/10 hover:text-danger cursor-pointer"
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </span>
                 ));
@@ -2617,9 +2617,9 @@ export default function AnalisisAI() {
                       type="button"
                       onClick={() => dismissSaran(s.id)}
                       title="Hapus saran ini"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-ink-faint transition hover:text-danger cursor-pointer"
+                      className="absolute right-0.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-ink-faint transition hover:bg-danger/10 hover:text-danger cursor-pointer"
                     >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </span>
                 ))}
