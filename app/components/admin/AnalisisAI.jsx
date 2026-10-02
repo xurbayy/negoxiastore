@@ -1640,114 +1640,117 @@ export default function AnalisisAI() {
         {/* Baris 2: provider + model manual. TETAP TAMPIL di semua mode
             (permintaan pemilik 2026-10-02: "modelnya bisa gw pilih" - termasuk
             di mode Agen supaya pemilik bisa memilih model agen). */}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Provider</span>
-          <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
-            {providerToggle.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  setProvider(p.id);
-                  // Ganti provider manual = model lama TIDAK berlaku lagi untuk
-                  // provider baru. Kosongkan supaya tidak salah pakai model yang
-                  // hanya ada di provider lain (permintaan pemilik 2026-10-02).
-                  if (p.model && p.model.trim()) setModelInput(p.model);
-                  else setModelInput('');
-                }}
-                title={p.model ? `Default: ${p.model}` : undefined}
-                className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
-                  provider === p.id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+        <div className="mt-3 space-y-2">
+          {/* Provider toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider</span>
+            <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
+              {providerToggle.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setProvider(p.id);
+                    if (p.model && p.model.trim()) setModelInput(p.model);
+                    else setModelInput('');
+                  }}
+                  title={p.model ? `Default: ${p.model}` : undefined}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                    provider === p.id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {agentProviderId && (
+              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[0.6rem] font-bold text-accent">
+                {status?.providers?.find((p) => p.id === agentProviderId)?.label || agentProviderId} → agent
+              </span>
+            )}
           </div>
-          {agentProviderId && (
-            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[0.6rem] font-bold text-accent">
-              {status?.providers?.find((p) => p.id === agentProviderId)?.label || agentProviderId} → agent
-            </span>
-          )}
-          <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Model</span>
-          <input
-            type="text"
-            value={modelInput}
-            onChange={(e) => setModelInput(e.target.value)}
-            placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
-            className="flex-1 min-w-[200px] rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
-          />
-          {/* Dropdown model tersimpan - pilih cepat tanpa hafal nama model.
-              Gabung dari /ai + /providers supaya tetap muncul walau /ai ngadat. */}
-          {(() => {
-            const modelGabung = [
-              ...(status?.models || []),
-              ...(daftarModel || []).filter((m) => !(status?.models || []).some((x) => x.id === m.id)),
-            ];
-            if (!modelGabung.length) return null;
-            return (
-              <select
-                value=""
-                onChange={(e) => {
-                  const m = modelGabung.find((x) => String(x.id) === e.target.value);
-                  if (m) pakaiModel(m);
-                }}
-                title="Pilih dari model tersimpan"
-                className="rounded-xl border border-border-soft bg-bg-soft/60 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent cursor-pointer"
-              >
-                <option value="">Model tersimpan...</option>
-                {modelGabung.map((m) => (
-                  <option key={m.id} value={m.id}>{m.label} - {m.model}</option>
-                ))}
-              </select>
-            );
-          })()}
-          {/* Validasi model: cek apakah model ini benar-benar ada di provider. */}
-          <button
-            type="button"
-            onClick={cekModel}
-            disabled={cekHasil.status === 'cek'}
-            title="Cek model ini ada di provider atau tidak"
-            className="shrink-0 rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-          >
-            {cekHasil.status === 'cek' ? '...' : 'Cek model'}
-          </button>
-          {/* Lihat daftar model provider (filter gratis). */}
-          <button
-            type="button"
-            onClick={() => {
-              if (modelProv.status === 'ok') setModelProv((s) => ({ ...s, status: 'idle' }));
-              else muatModelProv(modelProv.hanyaGratis);
-            }}
-            disabled={modelProv.status === 'cek'}
-            title="Tampilkan daftar model provider"
-            className="shrink-0 rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-          >
-            {modelProv.status === 'cek' ? '...' : modelProv.status === 'ok' ? 'Tutup daftar' : 'Lihat model'}
-          </button>
-          {/* Semua model dari SEMUA provider (khusus gratis). */}
-          <button
-            type="button"
-            onClick={() => {
-              if (modelProv.status === 'ok' && modelProv.semuaProvider) setModelProv((s) => ({ ...s, status: 'idle' }));
-              else muatModelSemua(true);
-            }}
-            disabled={modelProv.status === 'cek'}
-            title="Tampilkan semua model gratis dari semua provider"
-            className="shrink-0 rounded-xl border border-accent/40 bg-accent/5 px-3 py-1.5 text-xs font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
-          >
-            {modelProv.status === 'cek' ? '...' : (modelProv.status === 'ok' && modelProv.semuaProvider) ? 'Tutup semua' : 'Semua model'}
-          </button>
-          {/* Cek pemakaian / kuota provider. */}
-          <button
-            type="button"
-            onClick={() => { if (usage.status === 'ok') setUsage({ status: 'idle' }); else muatUsage(); }}
-            disabled={usage.status === 'cek'}
-            title="Lihat pemakaian / sisa kuota provider"
-            className="shrink-0 rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-          >
-            {usage.status === 'cek' ? '...' : usage.status === 'ok' ? 'Tutup usage' : 'Usage'}
-          </button>
+
+          {/* Model input + aksi */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model</span>
+            <input
+              type="text"
+              value={modelInput}
+              onChange={(e) => setModelInput(e.target.value)}
+              placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
+              className="flex-1 min-w-[180px] rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
+            />
+            {/* Dropdown model tersimpan */}
+            {(() => {
+              const modelGabung = [
+                ...(status?.models || []),
+                ...(daftarModel || []).filter((m) => !(status?.models || []).some((x) => x.id === m.id)),
+              ];
+              if (!modelGabung.length) return null;
+              return (
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const m = modelGabung.find((x) => String(x.id) === e.target.value);
+                    if (m) pakaiModel(m);
+                  }}
+                  title="Pilih dari model tersimpan"
+                  className="rounded-xl border border-border-soft bg-bg-soft/60 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent cursor-pointer"
+                >
+                  <option value="">Tersimpan...</option>
+                  {modelGabung.map((m) => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              );
+            })()}
+          </div>
+
+          {/* Aksi model: Cek + Lihat + Semua + Usage */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={cekModel}
+              disabled={cekHasil.status === 'cek'}
+              title="Cek model ini ada di provider atau tidak"
+              className="rounded-lg border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+            >
+              {cekHasil.status === 'cek' ? '...' : 'Cek'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (modelProv.status === 'ok') setModelProv((s) => ({ ...s, status: 'idle' }));
+                else muatModelProv(modelProv.hanyaGratis);
+              }}
+              disabled={modelProv.status === 'cek'}
+              title="Tampilkan daftar model provider"
+              className="rounded-lg border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+            >
+              {modelProv.status === 'cek' ? '...' : modelProv.status === 'ok' ? 'Tutup' : 'Lihat model'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (modelProv.status === 'ok' && modelProv.semuaProvider) setModelProv((s) => ({ ...s, status: 'idle' }));
+                else muatModelSemua(true);
+              }}
+              disabled={modelProv.status === 'cek'}
+              title="Semua model gratis dari semua provider"
+              className="rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-1.5 text-[0.7rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
+            >
+              {modelProv.status === 'cek' ? '...' : (modelProv.status === 'ok' && modelProv.semuaProvider) ? 'Tutup' : 'Semua model'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (usage.status === 'ok') setUsage({ status: 'idle' }); else muatUsage(); }}
+              disabled={usage.status === 'cek'}
+              title="Lihat pemakaian / sisa kuota provider"
+              className="rounded-lg border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+            >
+              {usage.status === 'cek' ? '...' : usage.status === 'ok' ? 'Tutup' : 'Usage'}
+            </button>
+          </div>
         </div>
 
         {/* Panel info pemakaian / kuota provider. */}
