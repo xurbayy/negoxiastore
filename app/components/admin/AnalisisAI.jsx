@@ -178,7 +178,7 @@ export default function AnalisisAI() {
   const [memuatKelola, setMemuatKelola] = useState(false);
   const [pesanKelola, setPesanKelola] = useState(null);
   // Form provider baru.
-  const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '', env_key: '' });
+  const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '' });
   // Form model baru.
   const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
@@ -225,7 +225,7 @@ export default function AnalisisAI() {
   // Hasil tes koneksi jadi basi begitu form provider diubah - reset.
   useEffect(() => {
     setTesHasil({ status: 'idle' });
-  }, [formProv.base_url, formProv.api_key, formProv.env_key]);
+  }, [formProv.base_url, formProv.api_key]);
 
   // Kalau provider tersimpan (localStorage) tidak ada di daftar yang disediakan
   // server (mis. 'custom' sudah dihapus), paksa ke provider aktif server.
@@ -650,7 +650,7 @@ export default function AnalisisAI() {
       });
       const d = await res.json();
       if (d.ok) {
-        setFormProv({ nama: '', base_url: '', api_key: '', env_key: '' });
+        setFormProv({ nama: '', base_url: '', api_key: '' });
         setEditProvId(null);
         flashKelola(modeEdit ? 'Provider diperbarui.' : 'Provider ditambahkan.');
         await Promise.all([muatKelola(), muatStatusUlang()]);
@@ -664,13 +664,13 @@ export default function AnalisisAI() {
   // kosong = jangan ubah kunci lama (dijaga di PATCH).
   const mulaiEditProvider = useCallback((p) => {
     setEditProvId(p.id);
-    setFormProv({ nama: p.nama, base_url: p.baseUrl, api_key: '', env_key: p.envKey || '' });
+    setFormProv({ nama: p.nama, base_url: p.baseUrl, api_key: '' });
     setTesHasil({ status: 'idle' });
   }, []);
 
   const batalEditProvider = useCallback(() => {
     setEditProvId(null);
-    setFormProv({ nama: '', base_url: '', api_key: '', env_key: '' });
+    setFormProv({ nama: '', base_url: '', api_key: '' });
     setTesHasil({ status: 'idle' });
   }, []);
 
@@ -884,8 +884,8 @@ export default function AnalisisAI() {
                       {kunciTerlihat[p.id] ? kunciTerlihat[p.id] : `${p.kunciTersamar} 👁`}
                     </button>
                   ) : (
-                    <span className="shrink-0 rounded-full bg-card-cream px-2 py-0.5 text-[0.6rem] text-ink-faint">
-                      {p.envKey || 'tanpa kunci'}
+                    <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 text-[0.6rem] font-bold text-danger">
+                      tanpa kunci
                     </span>
                   )}
                   <button
@@ -939,12 +939,6 @@ export default function AnalisisAI() {
                   {lihatInputKunci ? 'Sembunyi' : 'Lihat'}
                 </button>
               </div>
-              <input
-                value={formProv.env_key}
-                onChange={(e) => setFormProv({ ...formProv, env_key: e.target.value })}
-                placeholder="atau nama env (mis. DEEPSEEK_API_KEY)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               <button

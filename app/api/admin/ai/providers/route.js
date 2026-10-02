@@ -132,15 +132,12 @@ export async function POST(request) {
     return json({ ok: true, id: Number(res.lastInsertRowid ?? 0) });
   }
 
-  // Provider baru.
+  // Provider baru. API key WAJIB (tidak ada opsi env lagi).
   const nama = String(body?.nama || '').trim().slice(0, 60);
   const baseUrl = String(body?.base_url || '').trim().slice(0, 300);
   const apiKey = String(body?.api_key || '').trim().slice(0, 500);
-  const envKey = String(body?.env_key || '').trim().slice(0, 60);
   if (!nama || !baseUrl) return json({ ok: false, error: 'Nama dan URL wajib diisi.' }, 400);
-  if (!apiKey && !envKey) {
-    return json({ ok: false, error: 'Isi API key atau nama environment variable.' }, 400);
-  }
+  if (!apiKey) return json({ ok: false, error: 'API key wajib diisi.' }, 400);
 
   // Slug unik: kalau bentrok, tambah sufiks angka.
   let slug = buatSlug(nama);
@@ -154,7 +151,7 @@ export async function POST(request) {
 
   const res = await db.execute({
     sql: 'INSERT INTO ai_providers (nama, slug, base_url, api_key_enc, env_key, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    args: [nama, slug, baseUrl, apiKey ? enkripsiKunci(apiKey) : null, envKey || null, Date.now()],
+    args: [nama, slug, baseUrl, apiKey ? enkripsiKunci(apiKey) : null, null, Date.now()],
   });
   return json({ ok: true, id: Number(res.lastInsertRowid ?? 0), slug });
 }

@@ -30,7 +30,6 @@ export async function POST(request) {
   const hasil = await tesKoneksi({
     baseUrl: body?.base_url || '',
     apiKey: body?.api_key || '',
-    envKey: body?.env_key || '',
   });
   return json(hasil);
 }

@@ -94,10 +94,6 @@ export async function providerInfo(namaProvider) {
     const kunci = [];
     const dek = dekripsiKunci(row.api_key_enc);
     if (dek) kunci.push(...String(dek).split(',').map((k) => k.trim()).filter(Boolean));
-    // Env key opsional sebagai alternatif (mis. kalau key tidak disimpan di DB).
-    if (!kunci.length && row.env_key && process.env[row.env_key]) {
-      kunci.push(...String(process.env[row.env_key]).split(',').map((k) => k.trim()).filter(Boolean));
-    }
     return {
       slug: row.slug,
       url,
@@ -242,15 +238,14 @@ export async function infoProviderLengkap(providerTerpilih) {
  * divalidasi SEBELUM disimpan.
  * @returns {Promise<{ok:boolean, pesan:string, urlDicek?:string, jumlah?:number, contoh?:string[]}>}
  */
-export async function tesKoneksi({ baseUrl, apiKey, envKey }) {
+export async function tesKoneksi({ baseUrl, apiKey }) {
   const base = String(baseUrl || '').trim().replace(/\/+$/, '');
   if (!base) return { ok: false, pesan: 'URL base kosong.' };
   if (!/^https?:\/\//i.test(base)) {
     return { ok: false, pesan: 'URL base harus dimulai dengan http:// atau https://' };
   }
-  let kunci = String(apiKey || '').trim();
-  if (!kunci && envKey && process.env[envKey]) kunci = String(process.env[envKey]).split(',')[0].trim();
-  if (!kunci) return { ok: false, pesan: 'API key kosong (isi API key atau nama env yang ada isinya).' };
+  const kunci = String(apiKey || '').trim();
+  if (!kunci) return { ok: false, pesan: 'API key kosong.' };
 
   const urlModels = base.replace(/\/chat\/completions\/?$/, '') + '/models';
   try {
