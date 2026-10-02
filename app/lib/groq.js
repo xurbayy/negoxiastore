@@ -163,6 +163,7 @@ export function infoProvider() {
  * Dipakai panel admin (async karena membaca DB).
  */
 export async function infoProviderLengkap(providerTerpilih) {
+  let _errorDb = null;
   const aktif = resolveProvider(providerTerpilih || process.env.AI_PROVIDER);
   const bawaan = Object.keys(PROVIDERS).filter(
     (k) => k !== 'custom' || Boolean(process.env.AI_BASE_URL)
@@ -201,7 +202,11 @@ export async function infoProviderLengkap(providerTerpilih) {
       maxTokens: r.max_tokens == null ? null : Number(r.max_tokens),
       kecerdasan: r.kecerdasan == null ? null : Number(r.kecerdasan),
     }));
-  } catch { /* DB tidak siap - tampilkan provider bawaan saja */ }
+  } catch (e) {
+    // JANGAN telan senyap - ini yang bikin "provider tidak terbaca" tanpa jejak.
+    console.error('[AI] Gagal baca provider kustom dari DB:', e?.message || e);
+    _errorDb = e?.message || String(e);
+  }
 
   // Info provider aktif (bisa kustom).
   const aktifInfo = await providerInfo(aktif);
@@ -219,6 +224,7 @@ export async function infoProviderLengkap(providerTerpilih) {
     siap: (aktifInfo?.kunci || []).length > 0 || adaKunciBawaan || adaKunciKustom,
     tersedia,
     models: modelTersimpan,
+    errorDb: _errorDb,
   };
 }
 

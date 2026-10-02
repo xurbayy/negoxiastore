@@ -1149,6 +1149,7 @@ export default function AnalisisAI() {
               <li>GROQ_API_KEY: {status.diag.adaGroq ? `${status.diag.jumlahGroq} kunci` : 'TIDAK ADA'} | OPENROUTER_API_KEY: {status.diag.adaOpenrouter ? `${status.diag.jumlahOpenrouter} kunci` : 'TIDAK ADA'}</li>
               <li>Provider bawaan: {(status.diag.providerBawaanTerbaca || []).join(', ') || '-'}</li>
               <li>Provider kustom: {(status.diag.providerKustom || []).join(', ') || '-'}</li>
+              {status.diag.errorDb && <li className="text-danger">Error DB: {status.diag.errorDb}</li>}
             </ul>
           )}
         </div>

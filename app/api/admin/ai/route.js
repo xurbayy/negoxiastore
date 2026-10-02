@@ -452,6 +452,7 @@ export async function GET() {
       jumlahOpenrouter: (process.env.OPENROUTER_API_KEY || '').split(',').filter((k) => k.trim()).length,
       providerBawaanTerbaca: info.tersedia.filter((t) => !t.kustom).map((t) => `${t.id}(${t.kunci})`),
       providerKustom: info.tersedia.filter((t) => t.kustom).map((t) => `${t.id}(${t.kunci})`),
+      errorDb: info.errorDb || null,
     };
     return json({
       ok: true,
