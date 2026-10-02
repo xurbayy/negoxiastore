@@ -131,7 +131,9 @@ export async function POST(request) {
 
   await schemaReady();
   const db = getDb();
-  const tgl = hariIniWib();
+  // hariIniWib() return object { tahun, bulan, tanggal } -> format ke string.
+  const tglObj = hariIniWib();
+  const tgl = `${tglObj.tahun}-${String(tglObj.bulan + 1).padStart(2, '0')}-${String(tglObj.tanggal).padStart(2, '0')}`;
   const ins = await db.execute({
     sql: 'INSERT INTO ai_agen (tanggal, ringkasan, temuan, model, provider, dibuat_at) VALUES (?, ?, ?, ?, ?, ?)',
     args: [tgl, ringkasan || '(kosong)', temuan, hasil.model || null, hasil.provider || null, Date.now()],

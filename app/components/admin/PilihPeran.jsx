@@ -44,10 +44,10 @@ export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKo
       {terpilih?.deskripsi && (
         <p className="mt-1 text-[0.7rem] text-ink-muted">{terpilih.deskripsi}</p>
       )}
-      {/* Peringatan: peran teknis butuh ringkasan kode dari bot. */}
-      {peranButuhKode && !adaKodeBase && (
-        <p className="mt-1.5 text-[0.7rem] text-ink-faint">
-          ⓘ Peran teknis butuh kode base. Bot belum mengirimnya - restart bot untuk mengaktifkan analisis kode.
+      {/* Info ringkas: apakah kode base sudah terkirim dari bot. */}
+      {peranButuhKode && (
+        <p className={`mt-1 text-[0.7rem] ${adaKodeBase ? 'text-success' : 'text-ink-faint'}`}>
+          {adaKodeBase ? '✓ Kode base terkirim dari bot.' : '⚠ Kode base belum terkirim - restart bot untuk mengaktifkan analisis kode.'}
         </p>
       )}
     </div>

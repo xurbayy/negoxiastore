@@ -1174,23 +1174,29 @@ export default function AnalisisAI() {
           <div className={`mt-3 rounded-xl border p-3 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
             <p className="text-xs font-bold text-ink-muted">{editProvId ? 'Edit provider' : 'Tambah provider'}</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <input
-                value={formProv.nama}
-                onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
-                placeholder="Nama (mis. DeepSeek)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
-              <input
-                value={formProv.base_url}
-                onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
-                placeholder="URL base (mis. https://api.deepseek.com/v1)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
+              <label className="flex flex-col gap-0.5">
+                <span className="text-[0.65rem] font-semibold text-ink-faint">Nama</span>
+                <input
+                  value={formProv.nama}
+                  onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
+                  placeholder="DeepSeek"
+                  className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                />
+              </label>
+              <label className="flex flex-col gap-0.5">
+                <span className="text-[0.65rem] font-semibold text-ink-faint">URL base</span>
+                <input
+                  value={formProv.base_url}
+                  onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
+                  placeholder="https://api.deepseek.com/v1"
+                  className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                />
+              </label>
               <div className="col-span-2">
                 <div className="rounded-lg border border-border-soft bg-card-cream px-3 py-2">
                   {/* Daftar API key - masing-masing baris terpisah. */}
                   {apiKeys.length > 0 && (
-                    <ul className="mb-2 space-y-1">
+                    <ul className="mb-2 max-h-32 space-y-1 overflow-y-auto">
                       {apiKeys.map((k, i) => (
                         <li key={i} className="flex items-center gap-2 rounded bg-bg-soft/50 px-2 py-1">
                           <span className={`min-w-0 flex-1 truncate font-mono text-[0.7rem] ${lihatInputKunci ? 'text-ink' : 'text-ink-muted'}`}>

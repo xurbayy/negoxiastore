@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // ==========================================
 // AgenAI - agen pemantau otomatis (komponen modular)
@@ -27,8 +27,31 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   const [jalanAgen, setJalanAgen] = useState(false);
   const [pesan, setPesan] = useState(null);
   const [bukaRiwayat, setBukaRiwayat] = useState(false);
+  // Auto-run: agen jalan otomatis tiap 6 jam saat toggle AKTIF.
+  const [autoJalan, setAutoJalan] = useState(() => {
+    try { return window.localStorage.getItem('nexo_agen_auto') === '1'; } catch { return false; }
+  });
+  const [terakhirJalan, setTerakhirJalan] = useState(null);
 
   const flash = (t) => { setPesan(t); setTimeout(() => setPesan(null), 5000); };
+
+  // Simpan toggle auto-run ke localStorage.
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_agen_auto', autoJalan ? '1' : '0'); } catch { /* abaikan */ }
+  }, [autoJalan]);
+
+  // AUTO-RUN: saat toggle AKTIF, agen jalan otomatis tiap 6 jam (hemat token,
+  // bukan terus-menerus). Interval hanya jalan saat tab aktif.
+  const jalankanAgenRef = useRef(null);
+  useEffect(() => {
+    if (!autoJalan) return;
+    const iv = setInterval(() => {
+      if (document.hidden) return; // skip saat tab tersembunyi
+      if (!provider?.trim() || !model?.trim()) return; // belum pilih model
+      jalankanAgenRef.current?.();
+    }, 6 * 60 * 60 * 1000); // 6 jam
+    return () => clearInterval(iv);
+  }, [autoJalan, provider, model]);
 
   const muat = useCallback(async () => {
     setMemuat(true);
@@ -74,7 +97,8 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     finally { setJalanAgen(false); }
   }, [muat, provider, model, onSelesai]);
 
-  // Putuskan usulan: setuju (kirim ke bot) / tolak.
+  // Simpan referensi jalankanAgen untuk dipanggil dari interval auto-run.
+  useEffect(() => { jalankanAgenRef.current = jalankanAgen; }, [jalankanAgen]);
   const putuskan = useCallback(async (id, putusan) => {
     try {
       const res = await fetch('/api/admin/ai/agen/usulan?id=' + id, {
@@ -106,14 +130,31 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
               Model: {provider || '-'} • {model || 'belum dipilih'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={jalankanAgen}
-            disabled={jalanAgen || jalan || detikSisa > 0}
-            className="btn-primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {jalanAgen ? 'Menganalisis...' : 'Jalankan agen sekarang'}
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            {/* Toggle AUTO-RUN: agen jalan otomatis tiap 6 jam. */}
+            <button
+              type="button"
+              onClick={() => {
+                const baru = !autoJalan;
+                setAutoJalan(baru);
+                flash(baru ? 'Agen AKTIF - jalan otomatis tiap 6 jam.' : 'Agen MATI - hanya manual.');
+                if (baru) jalankanAgenRef.current?.();
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                autoJalan ? 'bg-success/15 text-success border border-success/40' : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
+              }`}
+            >
+              {autoJalan ? '● Agen aktif (6 jam)' : '○ Agen mati'}
+            </button>
+            <button
+              type="button"
+              onClick={jalankanAgen}
+              disabled={jalanAgen || jalan || detikSisa > 0}
+              className="btn-primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {jalanAgen ? 'Menganalisis...' : 'Jalankan sekarang'}
+            </button>
+          </div>
         </div>
         {pesan && <p className="mt-2 text-xs font-semibold text-accent">{pesan}</p>}
       </div>
@@ -209,7 +250,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Laporan terbaru</p>
             <span className="text-[0.65rem] text-ink-faint">
-              {laporanTerbaru.tanggal} • {laporanTerbaru.provider || '-'} • {laporanTerbaru.model || '-'}
+              {typeof laporanTerbaru.tanggal === 'string' ? laporanTerbaru.tanggal : '(tanggal lama)'} • {laporanTerbaru.provider || '-'} • {laporanTerbaru.model || '-'}
             </span>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{laporanTerbaru.ringkasan}</p>
