@@ -234,6 +234,14 @@ export default function AnalisisAI() {
   // menyimpan model (label + nama model + provider) yang bisa diedit/dihapus.
   const [kelola, setKelola] = useState(false);          // panel kelola terbuka?
   const [bukaSetting, setBukaSetting] = useState(false); // panel pengaturan (token/IQ/peran)
+  // Panel kontrol (provider/model/peran) bisa disembunyikan - permintaan pemilik
+  // 2026-10-02: "bisa di hide ya kalo ga butuh, pusing kalo semua muncul".
+  const [panelTampil, setPanelTampil] = useState(() => {
+    try { return window.localStorage.getItem('nexo_ai_panel') !== '0'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_panel', panelTampil ? '1' : '0'); } catch { /* abaikan */ }
+  }, [panelTampil]);
   const [daftarProvider, setDaftarProvider] = useState([]);
   const [daftarModel, setDaftarModel] = useState([]);
   const [memuatKelola, setMemuatKelola] = useState(false);
@@ -1649,36 +1657,58 @@ export default function AnalisisAI() {
           provider -> ketik/tanya. Sticky supaya tetap terlihat saat hasilnya
           panjang (permintaan pemilik 2026-10-02: "lebih mudah pakenya"). */}
       <div className="nx-card z-20 px-4 py-3.5 sm:sticky sm:top-2 sm:px-5 sm:py-4 backdrop-blur-sm">
-        {/* Baris 1: judul + pemilih MODE (segmented besar). */}
+        {/* Baris 1: judul + pemilih MODE + tombol sembunyikan panel. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="font-display text-ink">Analisis AI</h3>
-            {/* Titik status - hijau (AI selalu tersedia lewat provider apa pun). */}
             <span
               title="AI siap dipakai"
               className="inline-block h-2 w-2 rounded-full bg-success"
             />
           </div>
-          <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
-            {[
-              ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
-              ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
-              ['agen', 'Agen', 'Agen memantau & mengusulkan aksi (butuh persetujuanmu)'],
-            ].map(([id, label, ket]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setMode(id)}
-                title={ket}
-                className={`rounded-lg px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
-                  mode === id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
+              {[
+                ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
+                ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
+                ['agen', 'Agen', 'Agen memantau & mengusulkan aksi (butuh persetujuanmu)'],
+              ].map(([id, label, ket]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setMode(id)}
+                  title={ket}
+                  className={`rounded-lg px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
+                    mode === id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Tombol sembunyikan/tampilkan panel kontrol (provider/model/peran). */}
+            <button
+              type="button"
+              onClick={() => setPanelTampil((v) => !v)}
+              title={panelTampil ? 'Sembunyikan panel kontrol' : 'Tampilkan panel kontrol'}
+              className="shrink-0 rounded-lg border border-border-soft px-2 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+            >
+              <span className="flex items-center gap-1">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {panelTampil ? (
+                    <path d="M6 9l6 6 6-6"/>
+                  ) : (
+                    <path d="M18 15l-6-6-6 6"/>
+                  )}
+                </svg>
+                <span className="hidden sm:inline">{panelTampil ? 'Sembunyi' : 'Panel'}</span>
+              </span>
+            </button>
           </div>
         </div>
+
+        {/* Panel kontrol (provider/model/peran/aksi) - bisa disembunyikan. */}
+        {panelTampil && (<>
 
         {/* Baris 2: provider + model manual. TETAP TAMPIL di semua mode
             (permintaan pemilik 2026-10-02: "modelnya bisa gw pilih" - termasuk
@@ -2170,6 +2200,7 @@ export default function AnalisisAI() {
               ? 'Agen memantau data & mengusulkan aksi - kamu yang memutuskan.'
               : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
         </p>
+        </>)}
       </div>
 
       {/* ==========================================
@@ -2192,7 +2223,17 @@ export default function AnalisisAI() {
                   <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
                 )}
               </p>
-              <span className="text-[0.65rem] text-ink-faint">Klik topik - langsung jalan</span>
+              <button
+                type="button"
+                onClick={muatSaran}
+                title="Muat ulang saran dari data terbaru"
+                className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
+                Muat ulang
+              </button>
             </div>
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
                 "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
@@ -2478,12 +2519,25 @@ export default function AnalisisAI() {
                 : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL)));
           return (
             <div className="mt-3">
-              <p className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
-                Saran cepat
-                {saranAgen.length > 0 && (
-                  <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
-                )}
-              </p>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="flex flex-wrap items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
+                  Saran cepat
+                  {saranAgen.length > 0 && (
+                    <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={muatSaran}
+                  title="Muat ulang saran dari data terbaru"
+                  className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                  </svg>
+                  Muat ulang
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {saran.map((s) => (
                   <button
