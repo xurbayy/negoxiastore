@@ -870,6 +870,21 @@ export default function AnalisisAI() {
     || adaProviderKustom
     || (status?.models || []).length > 0;
 
+  // DAFTAR PROVIDER UNTUK TOGGLE: gabung provider dari /ai (bawaan + kustom)
+  // dengan yang dari /providers. Kalau /ai bermasalah, /providers menutupinya
+  // supaya tombol provider tetap muncul (fix 2026-10-02).
+  const providerToggle = (() => {
+    const hasil = [...(status?.providers || [])];
+    const adaSlug = new Set(hasil.map((p) => p.id));
+    for (const p of (daftarProvider || [])) {
+      if (!adaSlug.has(p.slug)) {
+        hasil.push({ id: p.slug, label: p.nama, model: '', kunci: p.adaKunci ? 1 : 0, kustom: true });
+        adaSlug.add(p.slug);
+      }
+    }
+    return hasil;
+  })();
+
   const renderKelola = () => (
         <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1072,7 +1087,7 @@ export default function AnalisisAI() {
                 className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
               >
                 <option value="">Pilih provider...</option>
-                {(status.providers || []).map((p) => (
+                {providerToggle.map((p) => (
                   <option key={p.id} value={p.id}>{p.label}{p.kustom ? ' (kustom)' : ''}</option>
                 ))}
               </select>
@@ -1299,7 +1314,7 @@ export default function AnalisisAI() {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Provider</span>
           <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
-            {(status.providers || []).map((p) => (
+            {providerToggle.map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -1722,7 +1737,7 @@ export default function AnalisisAI() {
 
           {jalan && (
             <div className="nx-card px-4 py-4 sm:px-5 sm:py-5 text-sm text-ink-muted">
-              <span className="pulse-dot" aria-hidden="true" /> AI ({(status.providers || []).find((p) => p.id === provider)?.label || provider || 'Groq'}) sedang membaca data, bisa 5-30 detik.
+              <span className="pulse-dot" aria-hidden="true" /> AI ({providerToggle.find((p) => p.id === provider)?.label || provider || 'AI'}) sedang membaca data, bisa 5-30 detik.
             </div>
           )}
 
@@ -1907,7 +1922,7 @@ export default function AnalisisAI() {
             {jalan && (
               <li className="flex justify-start">
                 <div className="rounded-2xl bg-bg-soft/60 px-4 py-2.5 text-sm text-ink-muted">
-                  <span className="pulse-dot" aria-hidden="true" /> AI ({(status.providers || []).find((p) => p.id === provider)?.label || provider || 'Groq'}) sedang membaca data, bisa 5-30 detik...
+                  <span className="pulse-dot" aria-hidden="true" /> AI ({providerToggle.find((p) => p.id === provider)?.label || provider || 'AI'}) sedang membaca data, bisa 5-30 detik...
                 </div>
               </li>
             )}
