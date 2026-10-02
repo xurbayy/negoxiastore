@@ -13,11 +13,11 @@
 // deploy belum jalan), tetap tampilkan tombol peran bawaan. Prompt lengkap
 // ada di server (aiPeran.js) - di sini hanya label untuk UI.
 const PERAN_BAWAAN = [
-  { id: 'umum', label: 'Analis Umum', emoji: '📊', deskripsi: 'Analisis data NEXO biasa.' },
-  { id: 'bug', label: 'Bug Hunter', emoji: '🐛', deskripsi: 'Cari bug, race condition, dead code.' },
-  { id: 'security', label: 'Cyber Security', emoji: '🛡️', deskripsi: 'Audit keamanan: injection, auth, kredensial.' },
-  { id: 'exploit', label: 'Exploit Ekonomi', emoji: '💰', deskripsi: 'Cari celah curang & duplikasi reward.' },
-  { id: 'analyst', label: 'System Analyst', emoji: '⚙️', deskripsi: 'Arsitektur, performa, modularitas.' },
+  { id: 'umum', label: 'Analis Umum', deskripsi: 'Analisis data NEXO biasa.' },
+  { id: 'bug', label: 'Bug Hunter', deskripsi: 'Cari bug, race condition, dead code.' },
+  { id: 'security', label: 'Cyber Security', deskripsi: 'Audit keamanan: injection, auth, kredensial.' },
+  { id: 'exploit', label: 'Exploit Ekonomi', deskripsi: 'Cari celah curang & duplikasi reward.' },
+  { id: 'analyst', label: 'System Analyst', deskripsi: 'Arsitektur, performa, modularitas.' },
 ];
 
 export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKodeBase }) {
@@ -43,7 +43,7 @@ export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKo
                 : 'border-border-soft bg-bg-soft text-ink-muted hover:border-accent/60 hover:text-ink'
             }`}
           >
-            {p.emoji} {p.label}
+            {p.label}
           </button>
         ))}
       </div>
@@ -52,8 +52,8 @@ export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKo
       )}
       {/* Peringatan: peran teknis butuh ringkasan kode dari bot. */}
       {peranButuhKode && !adaKodeBase && (
-        <p className="mt-1.5 rounded-lg bg-danger/10 px-2.5 py-1 text-[0.7rem] font-semibold text-danger">
-          Peran ini butuh kode base dari bot, tapi bot belum mengirimnya. Pastikan bot versi terbaru &amp; bridge aktif (restart bot).
+        <p className="mt-1.5 text-[0.7rem] text-ink-faint">
+          ⓘ Peran teknis butuh kode base. Bot belum mengirimnya - restart bot untuk mengaktifkan analisis kode.
         </p>
       )}
     </div>

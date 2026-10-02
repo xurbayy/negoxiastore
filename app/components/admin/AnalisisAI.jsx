@@ -1490,7 +1490,7 @@ export default function AnalisisAI() {
           Digabung jadi SATU kartu biar alurnya jelas: pilih mode -> pilih
           provider -> ketik/tanya. Sticky supaya tetap terlihat saat hasilnya
           panjang (permintaan pemilik 2026-10-02: "lebih mudah pakenya"). */}
-      <div className="nx-card sticky top-2 z-20 px-4 py-3.5 sm:px-5 sm:py-4 backdrop-blur-sm">
+      <div className="nx-card z-20 px-4 py-3.5 sm:sticky sm:top-2 sm:px-5 sm:py-4 backdrop-blur-sm">
         {/* Baris 1: judul + pemilih MODE (segmented besar). */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -1501,7 +1501,7 @@ export default function AnalisisAI() {
               className="inline-block h-2 w-2 rounded-full bg-success"
             />
           </div>
-          <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
+          <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
             {[
               ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
               ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
@@ -1524,7 +1524,7 @@ export default function AnalisisAI() {
         {/* Baris 2: provider + model manual. */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Provider</span>
-          <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
+          <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
             {providerToggle.map((p) => (
               <button
                 key={p.id}
@@ -1758,7 +1758,7 @@ export default function AnalisisAI() {
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                 {tampil.map((m, mi) => (
                   <li key={(m.providerId || '') + '::' + m.id + '::' + mi} className={`rounded-lg ${modelProv.dipilih === (m.providerId || '') + '::' + m.id ? 'bg-accent/10' : ''}`}>
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -1769,10 +1769,10 @@ export default function AnalisisAI() {
                           }));
                         }}
                         title="Pilih model ini"
-                        className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
+                        className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-2 gap-y-0.5 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
                       >
-                        <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
-                        <span className="flex shrink-0 items-center gap-1">
+                        <span className="min-w-0 max-w-full truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
+                        <span className="flex flex-wrap items-center gap-1">
                           {/* Badge provider kalau mode semua-provider. */}
                           {m.providerLabel && modelProv.semuaProvider && (
                             <span className="rounded bg-bg-soft px-1.5 py-0.5 text-[0.6rem] font-semibold text-ink-muted">{m.providerLabel}</span>
@@ -2360,7 +2360,7 @@ export default function AnalisisAI() {
       </div>
 
       {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT. */}
-      <div className="sticky bottom-4 z-10 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)]">
+      <div className="z-10 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)] sm:sticky sm:bottom-4">
         {/* Preview gambar terlampir. */}
         {gambar.length > 0 && (
           <div className="mb-2">
