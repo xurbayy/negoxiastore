@@ -934,6 +934,29 @@ export default function AnalisisAI() {
     }
   }, [provider, modelProv.hanyaGratis]);
 
+  // Muat model dari SEMUA provider sekaligus (permintaan pemilik 2026-10-02:
+  // "gw mau liat semua model ai dari semua provider, lengkap yang free").
+  const muatModelSemua = useCallback(async (hanyaGratis) => {
+    const g = hanyaGratis ?? modelProv.hanyaGratis;
+    setModelProv((s) => ({ ...s, status: 'cek', hanyaGratis: g, semuaProvider: true }));
+    try {
+      const res = await fetch(`/api/admin/ai/daftar-model?semua=1&gratis=${g ? '1' : '0'}`, { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) {
+        setModelProv({
+          status: 'ok', models: d.models || [], jumlah: d.jumlah || 0,
+          jumlahGratis: d.jumlah || 0, hanyaGratis: g, semuaProvider: true,
+          perProvider: d.perProvider || [],
+          label: 'Semua provider',
+        });
+      } else {
+        setModelProv({ status: 'gagal', models: [], hanyaGratis: g, semuaProvider: true, pesan: d.error || 'Gagal memuat.' });
+      }
+    } catch (e) {
+      setModelProv({ status: 'gagal', models: [], hanyaGratis: g, semuaProvider: true, pesan: e.message });
+    }
+  }, [modelProv.hanyaGratis]);
+
   // Cek pemakaian / kuota provider aktif.
   const muatUsage = useCallback(async () => {
     setUsage({ status: 'cek' });
@@ -1470,6 +1493,19 @@ export default function AnalisisAI() {
           >
             {modelProv.status === 'cek' ? '...' : modelProv.status === 'ok' ? 'Tutup daftar' : 'Lihat model'}
           </button>
+          {/* Semua model dari SEMUA provider (khusus gratis). */}
+          <button
+            type="button"
+            onClick={() => {
+              if (modelProv.status === 'ok' && modelProv.semuaProvider) setModelProv((s) => ({ ...s, status: 'idle' }));
+              else muatModelSemua(true);
+            }}
+            disabled={modelProv.status === 'cek'}
+            title="Tampilkan semua model gratis dari semua provider"
+            className="shrink-0 rounded-xl border border-accent/40 bg-accent/5 px-3 py-1.5 text-xs font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
+          >
+            {modelProv.status === 'cek' ? '...' : (modelProv.status === 'ok' && modelProv.semuaProvider) ? 'Tutup semua' : 'Semua model'}
+          </button>
           {/* Cek pemakaian / kuota provider. */}
           <button
             type="button"
@@ -1541,6 +1577,9 @@ export default function AnalisisAI() {
                 Model {modelProv.label} -
                 <span className="ml-1 text-ink-muted">
                   {modelProv.hanyaGratis ? `${modelProv.jumlahGratis} gratis` : `${modelProv.jumlah} total`}
+                  {modelProv.semuaProvider && modelProv.perProvider
+                    ? ` dari ${modelProv.perProvider.filter((p) => (p.models || []).length).length} provider`
+                    : ''}
                 </span>
               </p>
               <div className="flex flex-wrap items-center gap-3">
@@ -1548,7 +1587,7 @@ export default function AnalisisAI() {
                   <input
                     type="checkbox"
                     checked={modelProv.hanyaGratis}
-                    onChange={(e) => muatModelProv(e.target.checked)}
+                    onChange={(e) => (modelProv.semuaProvider ? muatModelSemua(e.target.checked) : muatModelProv(e.target.checked))}
                     className="cursor-pointer"
                   />
                   Gratis saja
@@ -1587,8 +1626,8 @@ export default function AnalisisAI() {
                 </p>
               )}
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-                {tampil.map((m) => (
-                  <li key={m.id} className={`rounded-lg ${modelProv.dipilih === m.id ? 'bg-accent/10' : ''}`}>
+                {tampil.map((m, mi) => (
+                  <li key={(m.providerId || '') + '::' + m.id + '::' + mi} className={`rounded-lg ${modelProv.dipilih === (m.providerId || '') + '::' + m.id ? 'bg-accent/10' : ''}`}>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -1596,7 +1635,7 @@ export default function AnalisisAI() {
                           // Pilih model + buka pengaturan (max token & kecerdasan).
                           setModelProv((s) => ({
                             ...s,
-                            dipilih: s.dipilih === m.id ? null : m.id,
+                            dipilih: s.dipilih === (m.providerId || '') + '::' + m.id ? null : (m.providerId || '') + '::' + m.id,
                             setToken: s.setToken || '2000',
                             setIq: s.setIq || '6',
                           }));
@@ -1606,6 +1645,10 @@ export default function AnalisisAI() {
                       >
                         <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
                         <span className="flex shrink-0 items-center gap-1">
+                          {/* Badge provider kalau mode semua-provider. */}
+                          {m.providerLabel && modelProv.semuaProvider && (
+                            <span className="rounded bg-bg-soft px-1.5 py-0.5 text-[0.6rem] font-semibold text-ink-muted">{m.providerLabel}</span>
+                          )}
                           {m.vision && <span title="Bisa lihat gambar (vision)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">LIHAT</span>}
                           {m.reasoning && <span title="Bisa bernalar (reasoning)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">NALAR</span>}
                           {m.gratis === true && <span className="rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
@@ -1614,7 +1657,12 @@ export default function AnalisisAI() {
                       {/* Pakai cepat tanpa atur. */}
                       <button
                         type="button"
-                        onClick={() => { setModelInput(m.id); setModelSetting({ maxTokens: null, kecerdasan: null, vision: m.vision ?? null }); setModelProv((s) => ({ ...s, status: 'idle', dipilih: null })); }}
+                        onClick={() => {
+                          if (m.providerId) setProvider(m.providerId);
+                          setModelInput(m.id);
+                          setModelSetting({ maxTokens: null, kecerdasan: null, vision: m.vision ?? null });
+                          setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
+                        }}
                         title="Pakai model ini langsung (default)"
                         className="shrink-0 rounded-lg border border-accent/40 px-2 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
                       >
@@ -1622,7 +1670,7 @@ export default function AnalisisAI() {
                       </button>
                     </div>
                     {/* Pengaturan model terpilih: max token + kecerdasan. */}
-                    {modelProv.dipilih === m.id && (
+                    {modelProv.dipilih === (m.providerId || '') + '::' + m.id && (
                       <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2">
                         <div className="grid gap-2 sm:grid-cols-2">
                           <label className="flex items-center gap-2 text-[0.65rem] text-ink-muted">
@@ -1648,6 +1696,7 @@ export default function AnalisisAI() {
                           <button
                             type="button"
                             onClick={() => {
+                              if (m.providerId) setProvider(m.providerId);
                               setModelInput(m.id);
                               setModelSetting({ maxTokens: Number(modelProv.setToken) || null, kecerdasan: Number(modelProv.setIq) || null, vision: m.vision ?? null });
                               setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
