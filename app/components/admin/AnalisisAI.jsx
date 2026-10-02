@@ -185,6 +185,49 @@ export default function AnalisisAI() {
   });
 
   // ==========================================
+  // PREFS SERVER (persist lintas device & logout)
+  // ==========================================
+  // localStorage tidak transfer antar device. Simpan ke DB via /api/admin/ai/prefs.
+  // Muat saat mount, simpan (debounced) saat berubah.
+  const prefsLoaded = useRef(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
+        const d = await res.json();
+        if (d.ok && d.prefs) {
+          const p = d.prefs;
+          if (p.provider) setProvider(p.provider);
+          if (p.model) setModelInput(p.model);
+          if (p.mode) setMode(p.mode);
+          if (p.peran) setPeran(p.peran);
+          if (p.maxTokens || p.kecerdasan) {
+            setModelSetting((s) => ({ ...s, ...(p.maxTokens ? { maxTokens: p.maxTokens } : {}), ...(p.kecerdasan ? { kecerdasan: p.kecerdasan } : {}) }));
+          }
+        }
+      } catch { /* offline / gagal - pakai localStorage */ }
+      finally { prefsLoaded.current = true; }
+    })();
+  }, []);
+
+  // Simpan prefs ke server (debounced 1 detik) - hanya setelah mount.
+  const simpanPrefsRef = useRef(null);
+  useEffect(() => {
+    if (!prefsLoaded.current) return;
+    clearTimeout(simpanPrefsRef.current);
+    simpanPrefsRef.current = setTimeout(async () => {
+      try {
+        await fetch('/api/admin/ai/prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider, model: modelInput, mode, peran }),
+        });
+      } catch { /* offline */ }
+    }, 1000);
+    return () => clearTimeout(simpanPrefsRef.current);
+  }, [provider, modelInput, mode, peran]);
+
+  // ==========================================
   // KELOLA PROVIDER & MODEL (permintaan pemilik 2026-10-02)
   // ==========================================
   // Pemilik bisa menambah provider (nama + URL + API key), menghapusnya, dan

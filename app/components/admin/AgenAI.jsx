@@ -52,22 +52,47 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         const res = await fetch('/api/admin/ai', { cache: 'no-store' });
         const d = await res.json();
         if (d.ok && Array.isArray(d.providers)) {
-          // d.providers = [{ id, label, kunci, kustom }, ...]
           const daftar = d.providers
-            .filter((p) => p.kunci > 0) // hanya provider yang punya key
+            .filter((p) => p.kunci > 0)
             .map((p) => ({ id: p.id, nama: p.label || p.id }));
           setDaftarProv(daftar);
-          // Restore pilihan tersimpan.
-          try {
-            const sp = window.localStorage.getItem('nexo_agen_provider') || '';
-            const sm = window.localStorage.getItem('nexo_agen_model') || '';
-            if (sp) setAgentProvider(sp);
-            if (sm) setAgentModel(sm);
-          } catch { /* abaikan */ }
         }
+      } catch { /* abaikan */ }
+      // Muat dari SERVER dulu (persist lintas device), fallback localStorage.
+      try {
+        const res2 = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
+        const d2 = await res2.json();
+        if (d2.ok && d2.prefs) {
+          if (d2.prefs.agentProvider) setAgentProvider(d2.prefs.agentProvider);
+          if (d2.prefs.agentModel) setAgentModel(d2.prefs.agentModel);
+          return; // sudah dapat dari server
+        }
+      } catch { /* fallback ke localStorage */ }
+      try {
+        const sp = window.localStorage.getItem('nexo_agen_provider') || '';
+        const sm = window.localStorage.getItem('nexo_agen_model') || '';
+        if (sp) setAgentProvider(sp);
+        if (sm) setAgentModel(sm);
       } catch { /* abaikan */ }
     })();
   }, []);
+
+  // Simpan agent provider/model ke server (debounced).
+  const prefsRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(prefsRef.current);
+    prefsRef.current = setTimeout(async () => {
+      if (!agentProvider && !agentModel) return;
+      try {
+        await fetch('/api/admin/ai/prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agentProvider, agentModel }),
+        });
+      } catch { /* offline */ }
+    }, 1000);
+    return () => clearTimeout(prefsRef.current);
+  }, [agentProvider, agentModel]);
 
   // AUTO-RUN: saat toggle AKTIF, agen jalan otomatis tiap 6 jam (hemat token,
   // bukan terus-menerus). Interval hanya jalan saat tab aktif.

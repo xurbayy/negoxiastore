@@ -358,6 +358,17 @@ export async function ensureSchema() {
   try {
     await db.execute('ALTER TABLE data_requests ADD COLUMN claimed_at INTEGER');
   } catch {}
+
+  // PREFS ADMIN AI (permintaan pemilik 2026-10-02: "model harusnya kesimpan
+  // walau logout / pindah device"). Key-value sederhana: provider, model,
+  // mode, peran, maxTokens, kecerdasan. Satu baris per admin (discord_id).
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS admin_ai_prefs (
+      discord_id  TEXT PRIMARY KEY,
+      prefs       TEXT NOT NULL DEFAULT '{}',
+      updated_at  INTEGER NOT NULL
+    )
+  `);
 }
 
 let _schemaReady = null;
