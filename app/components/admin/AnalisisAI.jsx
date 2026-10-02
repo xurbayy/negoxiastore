@@ -208,6 +208,9 @@ export default function AnalisisAI() {
   const [tesHasil, setTesHasil] = useState({ status: 'idle' });
   // Daftar model provider (permintaan pemilik: tampilkan nama model, filter free).
   const [modelProv, setModelProv] = useState({ status: 'idle', models: [], jumlah: 0, jumlahGratis: 0, hanyaGratis: true });
+  // Hasil uji model: { [modelId]: {ok, alasan} }. Kosong = belum diuji.
+  const [ujiHasil, setUjiHasil] = useState({});
+  const [ujiJalan, setUjiJalan] = useState(false);
   // PENGATURAN GLOBAL model: max token + kecerdasan (1-10). Berlaku untuk
   // SEMUA model (permintaan pemilik 2026-10-02: "setting sekali saja").
   // Disimpan di localStorage supaya bertahan.
@@ -976,7 +979,53 @@ export default function AnalisisAI() {
     }
   }, [modelProv.hanyaGratis]);
 
-  // Cek pemakaian / kuota provider aktif.
+  // Uji model yang sedang tampil di daftar (batch). Hanya dijalankan saat
+  // pemilik menekan tombol. Hasil di-cache 24 jam di server.
+  const ujiModelTampil = useCallback(async () => {
+    const daftar = (modelProv.models || []).map((m) => m.id).filter(Boolean).slice(0, 40);
+    if (!daftar.length) return;
+    setUjiJalan(true);
+    try {
+      if (modelProv.semuaProvider) {
+        // Mode semua-provider: uji per provider secara berurutan.
+        const perProv = {};
+        for (const m of modelProv.models) {
+          if (!m.providerId) continue;
+          (perProv[m.providerId] = perProv[m.providerId] || []).push(m.id);
+        }
+        for (const [provId, models] of Object.entries(perProv)) {
+          try {
+            const res = await fetch('/api/admin/ai/uji-model', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ provider: provId, models: models.slice(0, 40) }),
+            });
+            const d = await res.json();
+            if (d.ok) {
+              setUjiHasil((s) => {
+                const next = { ...s };
+                for (const h of d.hasil || []) next[`${provId}::${h.model}`] = { ok: h.ok, alasan: h.alasan };
+                return next;
+              });
+            }
+          } catch { /* lewati provider ini */ }
+        }
+      } else {
+        const res = await fetch('/api/admin/ai/uji-model', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: provider || '', models: daftar }),
+        });
+        const d = await res.json();
+        if (d.ok) {
+          setUjiHasil((s) => {
+            const next = { ...s };
+            for (const h of d.hasil || []) next[`${provider || ''}::${h.model}`] = { ok: h.ok, alasan: h.alasan };
+            return next;
+          });
+        } else setPesanSimpan('Gagal uji: ' + (d.error || 'tidak diketahui'));
+      }
+    } catch (e) { setPesanSimpan('Gagal uji: ' + e.message); }
+    finally { setUjiJalan(false); setTimeout(() => setPesanSimpan(null), 4000); }
+  }, [modelProv.models, modelProv.semuaProvider, provider]);
   const muatUsage = useCallback(async () => {
     setUsage({ status: 'cek' });
     try {
@@ -1090,7 +1139,7 @@ export default function AnalisisAI() {
                 <input
                   value={formProv.api_key}
                   onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
-                  placeholder="API key (disimpan terenkripsi)"
+                  placeholder="API key (boleh beberapa, pisah koma)"
                   type={lihatInputKunci ? 'text' : 'password'}
                   className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 pr-14 text-xs text-ink outline-none focus:border-accent"
                 />
@@ -1103,6 +1152,9 @@ export default function AnalisisAI() {
                 </button>
               </div>
             </div>
+            <p className="mt-1 text-[0.65rem] text-ink-faint">
+              Boleh beberapa API key sekaligus, pisahkan dengan koma. Bot otomatis pindah ke kunci berikutnya saat satu kena limit.
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1618,11 +1670,32 @@ export default function AnalisisAI() {
                   />
                   Bisa bernalar
                 </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modelProv.filterLolos || false}
+                    onChange={(e) => setModelProv((s) => ({ ...s, filterLolos: e.target.checked }))}
+                    className="cursor-pointer"
+                  />
+                  Hanya yang lolos uji
+                </label>
+                {/* Uji model nyata: hanya tampilkan yang benar-benar bisa dipakai. */}
+                <button
+                  type="button"
+                  onClick={ujiModelTampil}
+                  disabled={ujiJalan}
+                  title="Uji masing-masing model dengan 1 request kecil (hasil di-cache 24 jam)"
+                  className="rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 disabled:opacity-50 cursor-pointer"
+                >
+                  {ujiJalan ? 'Menguji...' : 'Uji model'}
+                </button>
               </div>
             </div>
             {(() => {
               const tampil = modelProv.models.filter((m) =>
-                (!modelProv.filterLihat || m.vision) && (!modelProv.filterNalar || m.reasoning)
+                (!modelProv.filterLihat || m.vision) &&
+                (!modelProv.filterNalar || m.reasoning) &&
+                (!modelProv.filterLolos || ujiHasil[`${m.providerId || ''}::${m.id}`]?.ok === true)
               );
               if (tampil.length === 0) return <p className="mt-2 text-xs text-ink-muted">Tidak ada model yang cocok.</p>;
               return (
@@ -1657,6 +1730,14 @@ export default function AnalisisAI() {
                           {m.vision && <span title="Bisa lihat gambar (vision)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">LIHAT</span>}
                           {m.reasoning && <span title="Bisa bernalar (reasoning)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">NALAR</span>}
                           {m.gratis === true && <span className="rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
+                          {/* Badge hasil uji (kalau sudah diuji). */}
+                          {(() => {
+                            const u = ujiHasil[`${m.providerId || ''}::${m.id}`];
+                            if (!u) return null;
+                            return u.ok
+                              ? <span title="Lolos uji - bisa dipakai" className="rounded bg-success/20 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">✓ OK</span>
+                              : <span title={`Gagal uji: ${u.alasan || '-'}`} className="rounded bg-danger/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-danger">✗ {u.alasan || 'gagal'}</span>;
+                          })()}
                         </span>
                       </button>
                       {/* Pakai cepat tanpa atur. */}

@@ -435,3 +435,28 @@ section, .nx-shell, main { position: relative; overflow-x: clip; }
     .mascot-bob { animation: mascotWiggle 1.6s ease-in-out infinite; }
   }
 }
+
+/* ── KETERBACAAN DI HP (permintaan pemilik 2026-10-02) ──
+   Banyak elemen panel admin memakai font mikro (0.55–0.7rem) yang di layar HP
+   kecil jadi tidak terbaca. Aturan ini MENAIKKAN ukuran font mikro + memberi
+   ruang sentuh minimum di layar <640px, tanpa mengubah struktur di desktop. */
+@media (max-width: 639px) {
+  /* Font mikro dinaikkan agar terbaca di HP. */
+  .text-\[0\.55rem\], .text-\[0\.6rem\], .text-\[0\.65rem\], .text-\[0\.7rem\] {
+    font-size: 0.8rem !important;
+    line-height: 1.35 !important;
+  }
+  /* Teks kecil (xs) sedikit lebih besar. */
+  .text-xs { font-size: 0.82rem !important; line-height: 1.45 !important; }
+  /* Label uppercase yang panjang diizinkan membungkus. */
+  .tracking-widest { letter-spacing: 0.04em !important; }
+  /* Tombol/label punya tinggi minimum nyaman ditekan. */
+  .nx-card button, .nx-card label { min-height: 32px; }
+  /* Cegah elemen memaksa lebar layar (horizontal scroll). */
+  .nx-card, .nx-card * { max-width: 100%; }
+  .nx-card input, .nx-card select, .nx-card textarea {
+    min-width: 0 !important;
+  }
+  /* Input model yang tadinya min 200px diizinkan menyusut. */
+  .min-w-\[200px\] { min-width: 0 !important; }
+}

@@ -229,6 +229,19 @@ export async function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_ai_diskusi_updated ON ai_diskusi(updated_at DESC);
 
+    -- HASIL UJI MODEL (permintaan pemilik 2026-10-02).
+    -- Menyimpan apakah sebuah model BENAR-BENAR bisa dipakai (hasil 1 request
+    -- kecil). Dipakai agar daftar model hanya menampilkan yang valid.
+    -- Di-cache 24 jam supaya tidak menguji ulang tiap kali.
+    CREATE TABLE IF NOT EXISTS ai_model_uji (
+        provider TEXT NOT NULL,
+        model    TEXT NOT NULL,
+        ok       INTEGER NOT NULL DEFAULT 0,
+        alasan   TEXT,
+        diuji_at INTEGER NOT NULL,
+        PRIMARY KEY (provider, model)
+    );
+
     -- PROVIDER AI KUSTOM (permintaan pemilik 2026-10-02).
     -- Pemilik ingin bisa MENAMBAH provider sendiri (nama + URL + api key),
     -- lalu menyimpan & mengelola MODEL yang dipakai. Provider bawaan
