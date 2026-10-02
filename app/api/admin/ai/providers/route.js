@@ -135,12 +135,11 @@ export async function POST(request) {
     return json({ ok: true, id: Number(res.lastInsertRowid ?? 0) });
   }
 
-  // Provider baru. API key WAJIB (tidak ada opsi env lagi).
+  // Provider baru. API key OPSIONAL (bisa ditambah belakangan via Edit).
   const nama = String(body?.nama || '').trim().slice(0, 60);
   const baseUrl = String(body?.base_url || '').trim().slice(0, 300);
   const apiKey = String(body?.api_key || '').trim().slice(0, 500);
   if (!nama || !baseUrl) return json({ ok: false, error: 'Nama dan URL wajib diisi.' }, 400);
-  if (!apiKey) return json({ ok: false, error: 'API key wajib diisi.' }, 400);
 
   // Slug unik: kalau bentrok, tambah sufiks angka.
   let slug = buatSlug(nama);

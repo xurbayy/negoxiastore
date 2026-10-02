@@ -805,7 +805,9 @@ export default function AnalisisAI() {
       return;
     }
     const modeEdit = Boolean(editProvId);
-    const kunciGabung = apiKeys.join(',');
+    // Auto-add keyBaru ke apiKeys jika belum di-klik "+ Tambah".
+    const keysFinal = keyBaru.trim() ? [...apiKeys, keyBaru.trim()] : apiKeys;
+    const kunciGabung = keysFinal.join(',');
     try {
       const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editProvId : ''), {
         method: modeEdit ? 'PATCH' : 'POST',
@@ -824,7 +826,7 @@ export default function AnalisisAI() {
         flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
       }
     } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [formProv, apiKeys, editProvId, muatKelola, muatStatusUlang]);
+  }, [formProv, apiKeys, keyBaru, editProvId, muatKelola, muatStatusUlang]);
 
   // Isi form dengan data provider yang mau diedit. Field key dikosongkan -
   // kosong = jangan ubah kunci lama (dijaga di PATCH).
