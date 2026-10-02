@@ -421,10 +421,11 @@ export default function AnalisisAI() {
       return p;
     });
 
-    // Gambar hanya untuk mode DISKUSI (analisis berbasis angka). Ambil snapshot
-    // lalu kosongkan supaya tidak ikut terkirim di permintaan berikutnya.
+    // Gambar hanya untuk mode DISKUSI (analisis berbasis angka).
+    // PENTING: jangan kosongkan gambar SEKARANG. Kalau request GAGAL (mis. model
+    // salah), pemilik harus bisa kirim ulang gambar yang sama. Gambar baru
+    // dihapus dari kotak ketik setelah request BERHASIL.
     const gambarKirim = modeKirim === 'diskusi' ? gambar.slice(0, 4) : [];
-    if (gambarKirim.length) setGambar([]);
 
     if (modeKirim === 'diskusi') {
       // Tampilkan pesan pemilik lebih dulu supaya terasa responsif.
@@ -444,6 +445,10 @@ export default function AnalisisAI() {
       });
       clearTimeout(timer);
       const d = await res.json();
+
+      // Request BERHASIL -> baru kosongkan gambar dari kotak ketik (kalau gagal,
+      // gambar tetap ada supaya bisa dikirim ulang ke model yang benar).
+      if (d.ok && gambarKirim.length) setGambar([]);
 
       // Kalau AI membuat pengingat, tampilkan konfirmasi + muat ulang daftar.
       if (d.ok && d.pengingat) {
@@ -846,7 +851,7 @@ export default function AnalisisAI() {
   const pakaiModel = useCallback((m) => {
     setProvider(m.provider);
     setModelInput(m.model);
-    setModelSetting({ maxTokens: m.maxTokens, kecerdasan: m.kecerdasan });
+    setModelSetting({ maxTokens: m.maxTokens, kecerdasan: m.kecerdasan, vision: m.vision ?? null });
     flashKelola(`Dipakai: ${m.label}`);
   }, []);
 
@@ -1609,7 +1614,7 @@ export default function AnalisisAI() {
                       {/* Pakai cepat tanpa atur. */}
                       <button
                         type="button"
-                        onClick={() => { setModelInput(m.id); setModelSetting({ maxTokens: null, kecerdasan: null }); setModelProv((s) => ({ ...s, status: 'idle', dipilih: null })); }}
+                        onClick={() => { setModelInput(m.id); setModelSetting({ maxTokens: null, kecerdasan: null, vision: m.vision ?? null }); setModelProv((s) => ({ ...s, status: 'idle', dipilih: null })); }}
                         title="Pakai model ini langsung (default)"
                         className="shrink-0 rounded-lg border border-accent/40 px-2 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
                       >
@@ -1644,7 +1649,7 @@ export default function AnalisisAI() {
                             type="button"
                             onClick={() => {
                               setModelInput(m.id);
-                              setModelSetting({ maxTokens: Number(modelProv.setToken) || null, kecerdasan: Number(modelProv.setIq) || null });
+                              setModelSetting({ maxTokens: Number(modelProv.setToken) || null, kecerdasan: Number(modelProv.setIq) || null, vision: m.vision ?? null });
                               setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
                             }}
                             className="btn-primary text-[0.7rem]"
@@ -2094,21 +2099,29 @@ export default function AnalisisAI() {
       <div className="sticky bottom-4 z-10 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)]">
         {/* Preview gambar terlampir. */}
         {gambar.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-2">
-            {gambar.map((g, i) => (
-              <div key={i} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g} alt={`Lampiran ${i + 1}`} className="h-16 w-16 rounded-lg border border-border-soft object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setGambar((arr) => arr.filter((_, j) => j !== i))}
-                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[0.65rem] font-bold text-white cursor-pointer"
-                  title="Hapus gambar"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+          <div className="mb-2">
+            <div className="flex flex-wrap gap-2">
+              {gambar.map((g, i) => (
+                <div key={i} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={g} alt={`Lampiran ${i + 1}`} className="h-16 w-16 rounded-lg border border-border-soft object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setGambar((arr) => arr.filter((_, j) => j !== i))}
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[0.65rem] font-bold text-white cursor-pointer"
+                    title="Hapus gambar"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            {/* Peringatan: gambar hanya dibaca model yang bisa lihat (vision). */}
+            {modelSetting.vision === false && (
+              <p className="mt-1.5 rounded-lg bg-danger/10 px-2.5 py-1 text-[0.7rem] font-semibold text-danger">
+                Model ini tidak bisa lihat gambar. Pilih model bertanda LIHAT (klik "Lihat model" → centang "Bisa lihat gambar").
+              </p>
+            )}
           </div>
         )}
         <form onSubmit={kirimBebas} className="flex gap-2">
