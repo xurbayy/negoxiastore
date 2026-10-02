@@ -277,9 +277,9 @@ export async function POST(request) {
     const { getSnapshotSeries } = await import('../../../lib/snapshot');
     const db = getDb();
     const [orders, log, feedback, series] = await Promise.all([
-      db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 50'),
-      db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 200'),
-      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 60'),
+      db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 40'),
+      db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'),
+      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 40'),
       getSnapshotSeries(7),
     ]);
     panel = {

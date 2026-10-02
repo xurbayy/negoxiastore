@@ -25,20 +25,40 @@ async function izinkan() {
   return adminIds.includes(session.discordId);
 }
 
-export async function GET() {
+export async function GET(request) {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   await schemaReady();
   const db = getDb();
-  const res = await db.execute('SELECT id, judul, pesan, model, provider, created_at, updated_at FROM ai_diskusi ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 100');
+
+  // ?id=N -> isi LENGKAP satu diskusi (dipakai tombol "Lanjutkan").
+  const url = new URL(request.url);
+  const idAmbil = Number(url.searchParams.get('id'));
+  if (idAmbil) {
+    const satu = await db.execute({ sql: 'SELECT id, judul, pesan, model, provider, created_at, updated_at FROM ai_diskusi WHERE id = ? LIMIT 1', args: [idAmbil] });
+    const r = satu.rows?.[0];
+    if (!r) return json({ ok: false, error: 'Diskusi tidak ditemukan.' }, 404);
+    let pesan = [];
+    try { pesan = JSON.parse(r.pesan) || []; } catch { pesan = []; }
+    return json({ ok: true, diskusi: { id: Number(r.id), judul: r.judul, pesan, model: r.model || null, provider: r.provider || null, createdAt: Number(r.created_at), updatedAt: r.updated_at ? Number(r.updated_at) : null } });
+  }
+
+  // Tanpa id -> daftar ringkas (metadata saja).
+  // Pakai updated_at (bukan COALESCE) supaya index idx_ai_diskusi_updated
+  // terpakai. Baris lama yang updated_at NULL diisi created_at saat insert
+  // tidak, jadi fallback ke created_at lewat urutan kedua.
+  const res = await db.execute('SELECT id, judul, pesan, model, provider, created_at, updated_at FROM ai_diskusi ORDER BY COALESCE(updated_at, created_at) DESC LIMIT 50');
   return json({
     ok: true,
+    // HEMAT PAYLOAD: daftar HANYA kirim metadata + jumlah pesan, bukan isi
+    // lengkap (bisa memuat gambar base64 ratusan KB). Isi diambil saat
+    // "Lanjutkan" lewat ?id=N.
     diskusi: (res.rows || []).map((r) => {
-      let pesan = [];
-      try { pesan = JSON.parse(r.pesan) || []; } catch { pesan = []; }
+      let jumlahPesan = 0;
+      try { jumlahPesan = (JSON.parse(r.pesan) || []).length; } catch { jumlahPesan = 0; }
       return {
         id: Number(r.id),
         judul: r.judul,
-        pesan,
+        jumlahPesan,
         model: r.model || null,
         provider: r.provider || null,
         createdAt: Number(r.created_at),
@@ -47,6 +67,9 @@ export async function GET() {
     }),
   });
 }
+
+// GET ?id=N -> isi lengkap satu diskusi (untuk dilanjutkan).
+export async function HEAD() { return json({ ok: true }); }
 
 export async function POST(request) {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);

@@ -188,6 +188,7 @@ export default function AnalisisAI() {
   // Pemilik bisa menambah provider (nama + URL + API key), menghapusnya, dan
   // menyimpan model (label + nama model + provider) yang bisa diedit/dihapus.
   const [kelola, setKelola] = useState(false);          // panel kelola terbuka?
+  const [bukaSetting, setBukaSetting] = useState(false); // panel pengaturan (token/IQ/peran)
   const [daftarProvider, setDaftarProvider] = useState([]);
   const [daftarModel, setDaftarModel] = useState([]);
   const [memuatKelola, setMemuatKelola] = useState(false);
@@ -599,8 +600,17 @@ export default function AnalisisAI() {
   }, [pesan, modelInput, provider, diskusiAktifId, muatDiskusi]);
 
   // Buka (lanjutkan) diskusi tersimpan.
-  const lanjutkanDiskusi = useCallback((d) => {
-    setPesan(Array.isArray(d.pesan) ? d.pesan : []);
+  const lanjutkanDiskusi = useCallback(async (d) => {
+    // Daftar hanya kirim metadata. Ambil isi lengkap lewat ?id=N.
+    let isi = Array.isArray(d.pesan) ? d.pesan : null;
+    if (!isi) {
+      try {
+        const res = await fetch('/api/admin/ai/diskusi?id=' + d.id, { cache: 'no-store' });
+        const r = await res.json();
+        if (r.ok && Array.isArray(r.diskusi?.pesan)) isi = r.diskusi.pesan;
+      } catch { /* gagal - tetap buka kosong */ }
+    }
+    setPesan(Array.isArray(isi) ? isi : []);
     setDiskusiAktifId(d.id);
     if (d.provider) setProvider(d.provider);
     if (d.model) setModelInput(d.model);
@@ -1319,31 +1329,31 @@ export default function AnalisisAI() {
   // di atas. Provider kustom yang tersimpan tetap bisa langsung dipakai.
 
   return (
-    <div className="space-y-4">
-      {/* KARTU INFO PROVIDER (bukan validasi/blokir). AI selalu dianggap aktif -
-          mengingat provider selalu tersedia. Kartu ini hanya menampilkan
-          ringkasan supaya pemilik tahu provider mana yang aktif & berapa kunci. */}
+    <div className="space-y-3">
+      {/* INFO PROVIDER - ringkas, satu baris. Detail disembunyikan sampai
+          diklik supaya layar tidak penuh (permintaan pemilik 2026-10-02:
+          "terlalu penuh layar, pusing"). */}
       {(() => {
         const berKunci = providerToggle.filter((p) => Number(p.kunci) > 0);
         const aktifLabel = providerToggle.find((p) => p.id === provider)?.label || provider || '-';
         return (
-          <div className="nx-card px-4 py-3 sm:px-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className={`inline-block h-2 w-2 rounded-full ${berKunci.length ? 'bg-success' : 'bg-danger'}`} />
-                <p className="text-xs font-semibold text-ink">
-                  {berKunci.length ? `${berKunci.length} provider siap` : 'Belum ada provider ber-kunci'} - dipilih: {aktifLabel}
+          <details className="nx-card px-4 py-2.5 sm:px-5">
+            <summary className="flex cursor-pointer items-center gap-2 text-xs text-ink-muted">
+              <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${berKunci.length ? 'bg-success' : 'bg-danger'}`} />
+              <span className="font-semibold text-ink">{berKunci.length} provider siap</span>
+              <span className="text-ink-faint">- aktif: {aktifLabel}</span>
+              <span className="ml-auto text-ink-faint">detail</span>
+            </summary>
+            <div className="mt-2 space-y-1 border-t border-border-soft pt-2">
+              {providerToggle.map((p) => (
+                <p key={p.id} className="text-[0.7rem] text-ink-muted">
+                  {p.label} - {p.kunci || 0} kunci{p.kustom ? ' (kustom)' : ''}
                 </p>
-              </div>
-              {status?.errorMuatan && <span className="text-[0.65rem] text-danger">muat status: {status.errorMuatan}</span>}
+              ))}
+              {status?.diag?.errorDb && <p className="text-[0.7rem] text-danger">Error DB: {status.diag.errorDb}</p>}
+              {status?.errorMuatan && <p className="text-[0.7rem] text-danger">Muat status: {status.errorMuatan}</p>}
             </div>
-            {providerToggle.length > 0 && (
-              <p className="mt-1 text-[0.65rem] text-ink-faint">
-                {providerToggle.map((p) => `${p.label}(${p.kunci || 0})`).join(' • ')}
-                {status?.diag?.errorDb ? ` • Error DB: ${status.diag.errorDb}` : ''}
-              </p>
-            )}
-          </div>
+          </details>
         );
       })()}
 
@@ -1865,34 +1875,23 @@ export default function AnalisisAI() {
           </div>
         )}
 
-        {/* Baris 3: PENGATURAN GLOBAL model (max token + kecerdasan) + kelola.
-            Permintaan pemilik 2026-10-02: "kecerdasan dan maks konteks gw atur
-            di sebelah text ini (Analisis Cepat / Diskusi), jadi semua model
-            ikut aturan itu - setting sekali saja". Berlaku untuk SEMUA model. */}
+        {/* Baris 3: PENGATURAN (dilipat) + kelola. Ringkas agar layar lega. */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1.5 text-[0.7rem] text-ink-muted">
-            <span className="shrink-0">Maks token</span>
-            <input
-              type="number" min="200" max="32000"
-              value={modelSetting.maxTokens ?? ''}
-              onChange={(e) => setModelSetting((s) => ({ ...s, maxTokens: e.target.value === '' ? null : Number(e.target.value) }))}
-              placeholder="2000"
-              className="w-20 rounded-lg border border-border-soft bg-bg-soft/60 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
-            />
-          </label>
-          <label className="flex items-center gap-1.5 text-[0.7rem] text-ink-muted">
-            <span className="shrink-0">Kecerdasan (1-10)</span>
-            <input
-              type="number" min="1" max="10"
-              value={modelSetting.kecerdasan ?? ''}
-              onChange={(e) => setModelSetting((s) => ({ ...s, kecerdasan: e.target.value === '' ? null : Number(e.target.value) }))}
-              placeholder="6"
-              className="w-16 rounded-lg border border-border-soft bg-bg-soft/60 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
-            />
-          </label>
-          <span className="text-[0.65rem] text-ink-faint hidden sm:inline">
-            1 = presisi, 10 = kreatif. Berlaku semua model.
+          <span className="text-[0.7rem] text-ink-muted">
+            Peran: <strong className="text-ink">{(status?.peran || []).find((p) => p.id === peran)?.label || peran}</strong>
           </span>
+          <span className="text-ink-faint">•</span>
+          <span className="text-[0.7rem] text-ink-muted">
+            {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
+            {modelSetting.kecerdasan ? ` • IQ ${modelSetting.kecerdasan}/10` : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => setBukaSetting((v) => !v)}
+            className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+          >
+            {bukaSetting ? 'Tutup pengaturan' : 'Pengaturan'}
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -1902,18 +1901,45 @@ export default function AnalisisAI() {
             }}
             className="ml-auto rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
           >
-            {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
+            {kelola ? 'Tutup kelola' : 'Kelola provider'}
           </button>
         </div>
 
-        {/* PERAN AI (modular) - bug hunter / security / exploit / analyst. */}
-        <PilihPeran
-          peran={status?.peran || []}
-          nilai={peran}
-          onPilih={setPeran}
-          disabled={jalan}
-          adaKodeBase={status?.adaKodeBase}
-        />
+        {/* PANEL PENGATURAN (max token + kecerdasan + peran) - dilipat. */}
+        {bukaSetting && (
+          <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
+                <span className="shrink-0">Maks token</span>
+                <input
+                  type="number" min="200" max="32000"
+                  value={modelSetting.maxTokens ?? ''}
+                  onChange={(e) => setModelSetting((s) => ({ ...s, maxTokens: e.target.value === '' ? null : Number(e.target.value) }))}
+                  placeholder="2000"
+                  className="w-24 rounded-lg border border-border-soft bg-card-cream px-2 py-1 text-[0.75rem] text-ink outline-none focus:border-accent"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
+                <span className="shrink-0">Kecerdasan (1-10)</span>
+                <input
+                  type="number" min="1" max="10"
+                  value={modelSetting.kecerdasan ?? ''}
+                  onChange={(e) => setModelSetting((s) => ({ ...s, kecerdasan: e.target.value === '' ? null : Number(e.target.value) }))}
+                  placeholder="6"
+                  className="w-16 rounded-lg border border-border-soft bg-card-cream px-2 py-1 text-[0.75rem] text-ink outline-none focus:border-accent"
+                />
+              </label>
+            </div>
+            <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. 1 = presisi, 10 = kreatif.</p>
+            <PilihPeran
+              peran={status?.peran || []}
+              nilai={peran}
+              onPilih={setPeran}
+              disabled={jalan}
+              adaKodeBase={status?.adaKodeBase}
+            />
+          </div>
+        )}
 
         <p className="mt-1.5 text-xs text-ink-muted">
           {mode === 'analisis'
@@ -2149,7 +2175,7 @@ export default function AnalisisAI() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-ink">{d.judul}</p>
                       <p className="text-[0.65rem] text-ink-faint">
-                        {Array.isArray(d.pesan) ? Math.ceil(d.pesan.length / 2) : 0} giliran • {new Date(d.updatedAt || d.createdAt).toLocaleString('id-ID')}
+                        {Math.ceil((d.jumlahPesan || 0) / 2)} giliran • {new Date(d.updatedAt || d.createdAt).toLocaleString('id-ID')}
                         {d.provider ? ` • ${d.provider}` : ''}
                       </p>
                     </div>
