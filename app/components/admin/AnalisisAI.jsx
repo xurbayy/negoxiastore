@@ -239,6 +239,8 @@ export default function AnalisisAI() {
   const [panelTampil, setPanelTampil] = useState(() => {
     try { return window.localStorage.getItem('nexo_ai_panel') !== '0'; } catch { return true; }
   });
+  // Validasi visual: highlight merah bar provider/model saat kosong.
+  const [validasiProvider, setValidasiProvider] = useState(false);
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_panel', panelTampil ? '1' : '0'); } catch { /* abaikan */ }
   }, [panelTampil]);
@@ -522,9 +524,11 @@ export default function AnalisisAI() {
     // Validasi: wajib ada model & provider. Tanpa ini, request jalan ke default
     // dan menggantung sampai timeout (kejadian nyata 2026-10-02).
     if (!provider?.trim() || !modelInput?.trim()) {
-      setPesanSimpan('⚠️ Pilih provider & model dulu di bar kontrol (Provider + Model).');
-      setPanelTampil(true); // buka panel supaya provider/model terlihat
+      setValidasiProvider(true); // highlight merah di bar kontrol
+      setPanelTampil(true);
+      setPesanSimpan('⚠️ Pilih provider & model dulu di bar kontrol.');
       setTimeout(() => setPesanSimpan(null), 6000);
+      setTimeout(() => setValidasiProvider(false), 4000);
       return;
     }
     const sisaTunggu = tungguSampai - Date.now();
@@ -1839,7 +1843,7 @@ export default function AnalisisAI() {
           {/* Provider toggle */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider</span>
-            <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
+            <div className={`flex flex-wrap rounded-xl border p-1 transition ${validasiProvider ? 'border-danger/60 bg-danger/5' : 'border-border-soft bg-bg-soft/60'}`}>
               {providerToggle.map((p) => (
                 <button
                   key={p.id}
@@ -1848,6 +1852,7 @@ export default function AnalisisAI() {
                     setProvider(p.id);
                     if (p.model && p.model.trim()) setModelInput(p.model);
                     else setModelInput('');
+                    setValidasiProvider(false);
                   }}
                   title={p.model ? `Default: ${p.model}` : undefined}
                   className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
@@ -1873,7 +1878,7 @@ export default function AnalisisAI() {
               value={modelInput}
               onChange={(e) => setModelInput(e.target.value)}
               placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
-              className="flex-1 min-w-[180px] rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
+              className={`flex-1 min-w-[180px] rounded-xl border px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30 transition ${validasiProvider ? 'border-danger/60 bg-danger/5' : 'border-border-soft bg-bg-soft/60'}`}
             />
             {/* Dropdown model tersimpan */}
             {(() => {
