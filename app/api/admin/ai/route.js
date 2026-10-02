@@ -427,9 +427,26 @@ export async function POST(request) {
   // dari jawaban yang ditampilkan ke pemilik.
   const { jawabanBersih, pengingat } = await prosesPengingat(hasil.teks);
 
+  // MODE ANALISIS: PASTIKAN keluaran bertiga bagian (Temuan/Saran/Risiko).
+  // Sebagian model lupa format walau sudah diminta (kejadian nyata: minimax
+  // menjawab teks polos). Kalau tidak ada ketiga penanda, rapikan agar
+  // strukturnya konsisten: taruh seluruh jawaban sebagai "Temuan" supaya
+  // pemilik tetap melihat ada bagiannya.
+  let jawabanFinal = jawabanBersih;
+  if (mode === 'analisis' && jawabanBersih) {
+    const adaTemuan = /temuan\s*:/i.test(jawabanBersih);
+    const adaSaran = /saran\s*:/i.test(jawabanBersih);
+    const adaRisiko = /risiko\s*:/i.test(jawabanBersih);
+    if (!adaTemuan && !adaSaran && !adaRisiko) {
+      jawabanFinal = 'Temuan:\n\n' + jawabanBersih.trim() +
+        '\n\nSaran:\n\n(lihat temuan di atas - model tidak memisahkan bagian. Coba ulangi atau ganti model yang lebih patuh format.)' +
+        '\n\nRisiko:\n\n- (belum dapat dipisah otomatis oleh model)';
+    }
+  }
+
   return json({
     ok: true,
-    jawaban: jawabanBersih,
+    jawaban: jawabanFinal,
     mode,
     pengingat,
     model: hasil.model,

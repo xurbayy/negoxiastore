@@ -618,6 +618,23 @@ function maksToken() {
   return Number.isFinite(n) && n > 0 ? n : 2000;
 }
 
+/**
+ * Buang jejak penalaran (reasoning) dari jawaban model. Sebagian model
+ * (mis. minimax-m2.7, deepseek-r) menulis <think>...</think> atau baris
+ * "thinking" ke CONTENT - bukan ke field reasoning. Kalau ikut tampil,
+ * jawaban jadi berisi coretan proses berpikir (kejadian nyata 2026-10-02).
+ */
+function bersihkanJawaban(teks) {
+  if (!teks) return teks;
+  let out = String(teks);
+  // Blok <think ...>...</think> (termasuk varian <thinking>, <reasoning>).
+  out = out.replace(/<think(?:ing)?[^>]*>[\s\S]*?<\/think(?:ing)?>/gi, '');
+  out = out.replace(/<reasoning[^>]*>[\s\S]*?<\/reasoning>/gi, '');
+  // Kalau tag pembuka/penutup tak berpasangan, buang tag-nya saja.
+  out = out.replace(/<\/?(?:think(?:ing)?|reasoning)[^>]*>/gi, '');
+  return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function bersihkanPesan(teks, kunci) {
   let out = String(teks || '');
   for (const k of (kunci || [])) {
@@ -715,7 +732,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
         const ct = res.headers.get('content-type') || '';
         if (ct.includes('text/event-stream') || ct.includes('stream')) {
           const sse = await bacaSSE(res);
-          if (sse?.teks) return { ok: true, teks: sse.teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse.usage };
+          if (sse?.teks) return { ok: true, teks: bersihkanJawaban(sse.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse.usage };
           terakhir = { kode: res.status, error: 'AI mengembalikan stream kosong.' };
           continue;
         }
@@ -732,11 +749,11 @@ export async function tanyaGroq(pesan, opsi = {}) {
         } : null;
 
         const teks = data?.choices?.[0]?.message?.content;
-        if (teks) return { ok: true, teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage };
+        if (teks) return { ok: true, teks: bersihkanJawaban(teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage };
 
         if (!data?.choices) {
           const sse2 = await bacaSSE(res);
-          if (sse2?.teks) return { ok: true, teks: sse2.teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse2.usage };
+          if (sse2?.teks) return { ok: true, teks: bersihkanJawaban(sse2.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse2.usage };
         }
 
         terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
