@@ -1138,166 +1138,194 @@ export default function AnalisisAI() {
           ) : daftarProvider.length === 0 ? (
             <p className="mt-2 text-xs text-ink-muted">Belum ada provider kustom. Provider bawaan (Groq, OpenRouter) sudah tersedia di atas.</p>
           ) : (
-            <ul className="mt-2 space-y-1.5">
+            <ul className="mt-2 space-y-2">
               {daftarProvider.map((p) => (
-                <>
-                <li key={p.id} className="rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
-                  <div className="flex flex-wrap items-center gap-2">
+                <li key={p.id} className="rounded-xl border border-border-soft bg-bg-soft/40">
+                  {/* Baris utama: nama + URL + badge key */}
+                  <div className="flex items-start gap-2 px-3 py-2.5">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
                       <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
                     </div>
-                    <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-semibold text-ink-muted">
+                    <span className="shrink-0 rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-semibold text-ink-muted">
                       {p.jumlahKunci || 0} key
                     </span>
+                  </div>
+                  {/* Baris aksi: tombol */}
+                  <div className="flex items-center gap-1.5 border-t border-border-soft/50 px-3 py-2">
                     <button
                       type="button"
                       onClick={() => toggleLihatKunci(p.id)}
                       title={kunciTerlihat[p.id] ? 'Sembunyikan kunci' : 'Lihat kunci'}
-                      className="shrink-0 rounded border border-border-soft px-1.5 py-1 text-ink-muted transition hover:text-ink cursor-pointer"
+                      className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-1 text-[0.7rem] font-medium text-ink-muted transition hover:border-accent/50 hover:text-ink cursor-pointer"
                     >
-                      {kunciTerlihat[p.id] ? '🙈' : '👁'}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        {kunciTerlihat[p.id] ? (
+                          <>
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                            <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88"/>
+                            <path d="M1 1l22 22"/>
+                          </>
+                        ) : (
+                          <>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </>
+                        )}
+                      </svg>
+                      <span className="hidden xs:inline">{kunciTerlihat[p.id] ? 'Sembunyi' : 'Lihat'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => mulaiEditProvider(p)}
-                      className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                      className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
                     >
                       Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => hapusProvider(p.id)}
-                      className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                      className="ml-auto rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
                     >
                       Hapus
                     </button>
                   </div>
+                  {/* Daftar key terlihat (saat toggle aktif) */}
+                  {kunciTerlihat[p.id] && p.kunci && (
+                    <div className="border-t border-border-soft/50 bg-card-cream px-3 py-2">
+                      <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">API Key ({p.jumlahKunci})</p>
+                      <ul className="mt-1 space-y-1">
+                        {p.kunci.map((k) => (
+                          <li key={k.id} className="break-all font-mono text-[0.65rem] text-ink-muted">{k.tersamar}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </li>
-                // Daftar key terlihat (saat toggle 👁 aktif)
-                {kunciTerlihat[p.id] && p.kunci && (
-                  <li className="ml-4 space-y-1 rounded-lg border border-border-soft bg-card-cream px-3 py-2">
-                    <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">API Key ({p.jumlahKunci})</p>
-                    {p.kunci.map((k) => (
-                      <p key={k.id} className="break-all font-mono text-[0.65rem] text-ink-muted">{k.tersamar}</p>
-                    ))}
-                  </li>
-                )}
-                </>
               ))}
             </ul>
           )}
 
           {/* Form provider (tambah / edit) */}
-          <div className={`mt-3 rounded-xl border p-3 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
+          <div className={`mt-4 rounded-xl border p-3 sm:p-4 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
             <p className="text-xs font-bold text-ink-muted">{editProvId ? 'Edit provider' : 'Tambah provider'}</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <label className="flex flex-col gap-0.5">
-                <span className="text-[0.65rem] font-semibold text-ink-faint">Nama</span>
+
+            {/* Nama + URL base: stack di mobile, side-by-side di sm+ */}
+            <div className="mt-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-[0.7rem] font-semibold text-ink-faint">Nama</span>
                 <input
                   value={formProv.nama}
                   onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
                   placeholder="DeepSeek"
-                  className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                 />
               </label>
-              <label className="flex flex-col gap-0.5">
-                <span className="text-[0.65rem] font-semibold text-ink-faint">URL base</span>
+              <label className="flex flex-col gap-1">
+                <span className="text-[0.7rem] font-semibold text-ink-faint">URL base</span>
                 <input
                   value={formProv.base_url}
                   onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
                   placeholder="https://api.deepseek.com/v1"
-                  className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                 />
               </label>
-              <div className="col-span-2">
-                <div className="rounded-lg border border-border-soft bg-card-cream px-3 py-2">
-                  {/* Daftar API key - masing-masing baris terpisah. */}
-                  {apiKeys.length > 0 && (
-                    <ul className="mb-2 max-h-32 space-y-1 overflow-y-auto">
-                      {apiKeys.map((k, i) => (
-                        <li key={i} className="flex items-center gap-2 rounded bg-bg-soft/50 px-2 py-1">
-                          <span className={`min-w-0 flex-1 truncate font-mono text-[0.7rem] ${lihatInputKunci ? 'text-ink' : 'text-ink-muted'}`}>
-                            {lihatInputKunci ? k : k.slice(0, 8) + '...' + k.slice(-4)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setApiKeys((arr) => arr.filter((_, j) => j !== i))}
-                            title="Hapus kunci ini"
-                            className="shrink-0 rounded p-0.5 text-[0.65rem] text-ink-faint transition hover:text-danger cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {/* Input key baru + tombol tambah. */}
-                  <div className="flex flex-wrap gap-1.5">
-                    <input
-                      value={keyBaru}
-                      onChange={(e) => setKeyBaru(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && keyBaru.trim()) {
-                          e.preventDefault();
-                          setApiKeys((arr) => [...arr, keyBaru.trim()]);
-                          setKeyBaru('');
-                        }
-                      }}
-                      placeholder={editProvId ? 'Tempel API key BARU (lama tetap tersimpan)' : 'Tempel API key baru di sini'}
-                      type={lihatInputKunci ? 'text' : 'password'}
-                      className="flex-1 min-w-[140px] rounded border border-border-soft bg-bg-soft/50 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => { if (keyBaru.trim()) { setApiKeys((arr) => [...arr, keyBaru.trim()]); setKeyBaru(''); } }}
-                      disabled={!keyBaru.trim()}
-                      className="shrink-0 rounded border border-accent/40 px-2 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/10 disabled:opacity-40 cursor-pointer"
-                    >
-                      + Tambah
-                    </button>
-                    {/* Toggle lihat/sembunyikan - SVG icon (mata). */}
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (editProvId && !lihatInputKunci && apiKeys.length === 0) {
-                          await toggleLihatKunci(editProvId);
-                          const asli = kunciTerlihat[editProvId];
-                          if (asli) {
-                            setApiKeys(asli.split(',').map((k) => k.trim()).filter(Boolean));
-                            setLihatInputKunci(true);
-                          } else { setPesanSimpan('Kunci tersimpan tidak bisa dibaca.'); setTimeout(() => setPesanSimpan(null), 4000); }
-                          return;
-                        }
-                        setLihatInputKunci((v) => !v);
-                      }}
-                      title={lihatInputKunci ? 'Sembunyikan kunci' : 'Lihat kunci'}
-                      className="shrink-0 rounded border border-border-soft px-2 py-1 text-ink-muted transition hover:text-ink cursor-pointer"
-                    >
+            </div>
+
+            {/* API Key section */}
+            <div className="mt-3">
+              <span className="text-[0.7rem] font-semibold text-ink-faint">API Key</span>
+              <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2.5">
+                {/* Daftar key yang sudah ada */}
+                {apiKeys.length > 0 && (
+                  <ul className="mb-2 max-h-36 space-y-1 overflow-y-auto">
+                    {apiKeys.map((k, i) => (
+                      <li key={i} className="flex items-center gap-2 rounded bg-bg-soft/50 px-2 py-1.5">
+                        <span className={`min-w-0 flex-1 truncate font-mono text-[0.7rem] ${lihatInputKunci ? 'text-ink' : 'text-ink-muted'}`}>
+                          {lihatInputKunci ? k : k.slice(0, 8) + '...' + k.slice(-4)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setApiKeys((arr) => arr.filter((_, j) => j !== i))}
+                          title="Hapus kunci ini"
+                          className="shrink-0 rounded p-1 text-ink-faint transition hover:text-danger cursor-pointer"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {/* Input key baru */}
+                <div className="flex gap-1.5">
+                  <input
+                    value={keyBaru}
+                    onChange={(e) => setKeyBaru(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && keyBaru.trim()) {
+                        e.preventDefault();
+                        setApiKeys((arr) => [...arr, keyBaru.trim()]);
+                        setKeyBaru('');
+                      }
+                    }}
+                    placeholder={editProvId ? 'Tempel key BARU (lama tetap tersimpan)' : 'Tempel API key baru di sini'}
+                    type={lihatInputKunci ? 'text' : 'password'}
+                    className="flex-1 min-w-0 rounded-lg border border-border-soft bg-bg-soft/50 px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { if (keyBaru.trim()) { setApiKeys((arr) => [...arr, keyBaru.trim()]); setKeyBaru(''); } }}
+                    disabled={!keyBaru.trim()}
+                    className="shrink-0 rounded-lg border border-accent/40 px-3 py-2 text-xs font-bold text-accent transition hover:bg-accent/10 disabled:opacity-40 cursor-pointer"
+                  >
+                    + Tambah
+                  </button>
+                  {/* Toggle lihat/sembunyikan input */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (editProvId && !lihatInputKunci && apiKeys.length === 0) {
+                        await toggleLihatKunci(editProvId);
+                        const asli = kunciTerlihat[editProvId];
+                        if (asli) {
+                          setApiKeys(asli.split(',').map((k) => k.trim()).filter(Boolean));
+                          setLihatInputKunci(true);
+                        } else { setPesanSimpan('Kunci tersimpan tidak bisa dibaca.'); setTimeout(() => setPesanSimpan(null), 4000); }
+                        return;
+                      }
+                      setLihatInputKunci((v) => !v);
+                    }}
+                    title={lihatInputKunci ? 'Sembunyikan kunci' : 'Lihat kunci'}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-2 text-ink-muted transition hover:text-ink cursor-pointer"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       {lihatInputKunci ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <>
                           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
                           <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
                           <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88"/>
                           <path d="M1 1l22 22"/>
-                        </svg>
+                        </>
                       ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <>
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                           <circle cx="12" cy="12" r="3"/>
-                        </svg>
+                        </>
                       )}
-                    </button>
-                  </div>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="mt-2 flex flex-wrap gap-2">
+
+            {/* Tombol aksi */}
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={tesKoneksiProv}
                 disabled={tesHasil.status === 'cek'}
-                className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+                className="rounded-lg border border-border-soft px-3 py-2 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
               >
                 {tesHasil.status === 'cek' ? 'Tes...' : 'Tes koneksi'}
               </button>
@@ -1312,7 +1340,7 @@ export default function AnalisisAI() {
                 <button
                   type="button"
                   onClick={batalEditProvider}
-                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                  className="rounded-lg border border-border-soft px-3 py-2 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
                 >
                   Batal
                 </button>
@@ -1321,20 +1349,20 @@ export default function AnalisisAI() {
             {editProvId && (
               <p className="mt-1.5 text-[0.65rem] text-ink-faint">Tempel key baru = nambah. Kosongkan = biarkan key lama.</p>
             )}
-            {/* Hasil tes koneksi - jelas penyebabnya kalau gagal. */}
+            {/* Hasil tes koneksi */}
             {tesHasil.status === 'ok' && (
-              <div className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs text-success">
+              <div className="mt-2 rounded-lg bg-success/10 px-3 py-2 text-xs text-success">
                 <p className="font-semibold">✓ {tesHasil.pesan}</p>
                 {tesHasil.contoh?.length > 0 && (
-                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Contoh: {tesHasil.contoh.join(', ')}</p>
+                  <p className="mt-0.5 break-all font-mono text-[0.65rem] text-ink-muted">Contoh: {tesHasil.contoh.join(', ')}</p>
                 )}
               </div>
             )}
             {tesHasil.status === 'gagal' && (
-              <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
+              <div className="mt-2 rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
                 <p className="font-semibold">{tesHasil.pesan}</p>
                 {tesHasil.url && (
-                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Dicek: {tesHasil.url}</p>
+                  <p className="mt-0.5 break-all font-mono text-[0.65rem] text-ink-muted">Dicek: {tesHasil.url}</p>
                 )}
               </div>
             )}
