@@ -264,6 +264,9 @@ export default function AnalisisAI() {
   const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '' });
   const [apiKeys, setApiKeys] = useState([]); // daftar key terpisah
   const [keyBaru, setKeyBaru] = useState('');  // input key baru
+  // Field wajib yang kosong -> highlight merah (permintaan pemilik 2026-10-02).
+  const [errProv, setErrProv] = useState({});
+  const [errModel, setErrModel] = useState({});
   // Form model baru.
   const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
@@ -947,12 +950,20 @@ export default function AnalisisAI() {
 
   const [provMenyimpan, setProvMenyimpan] = useState(false);
   const simpanProvider = useCallback(async () => {
-    if (!formProv.nama.trim() || !formProv.base_url.trim()) {
-      flashKelola('Nama dan URL wajib diisi.');
-      return;
-    }
+    // Validasi + highlight field yang kosong.
     const modeEdit = Boolean(editProvId);
     const keysFinal = keyBaru.trim() ? [...apiKeys, keyBaru.trim()] : apiKeys;
+    const err = {};
+    if (!formProv.nama.trim()) err.nama = true;
+    if (!formProv.base_url.trim()) err.base_url = true;
+    // API key wajib untuk provider BARU (saat edit, boleh kosong = tidak ubah).
+    if (!modeEdit && keysFinal.length === 0) err.api_key = true;
+    if (Object.keys(err).length) {
+      setErrProv(err);
+      flashKelola('Field merah wajib diisi.');
+      setTimeout(() => setErrProv({}), 4000);
+      return;
+    }
     const kunciGabung = keysFinal.join(',');
     setProvMenyimpan(true);
     try {
@@ -1017,8 +1028,15 @@ export default function AnalisisAI() {
 
   const [modelMenyimpan, setModelMenyimpan] = useState(false);
   const simpanModel = useCallback(async () => {
-    if (!formModel.label.trim() || !formModel.model.trim() || !formModel.provider.trim()) {
-      flashKelola('Label, model, dan provider wajib diisi.');
+    // Validasi + highlight field yang kosong.
+    const err = {};
+    if (!formModel.label.trim()) err.label = true;
+    if (!formModel.model.trim()) err.model = true;
+    if (!formModel.provider.trim()) err.provider = true;
+    if (Object.keys(err).length) {
+      setErrModel(err);
+      flashKelola('Field merah wajib diisi.');
+      setTimeout(() => setErrModel({}), 4000);
       return;
     }
     const modeEdit = Boolean(editModelId);
@@ -1390,29 +1408,29 @@ export default function AnalisisAI() {
             {/* Nama + URL base: stack di mobile, side-by-side di sm+ */}
             <div className="mt-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-3">
               <label className="flex flex-col gap-1">
-                <span className="text-[0.7rem] font-semibold text-ink-faint">Nama</span>
+                <span className={`text-[0.7rem] font-semibold ${errProv.nama ? 'text-danger' : 'text-ink-faint'}`}>Nama{errProv.nama ? ' *wajib' : ''}</span>
                 <input
                   value={formProv.nama}
-                  onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
+                  onChange={(e) => { setFormProv({ ...formProv, nama: e.target.value }); if (errProv.nama) setErrProv((x) => ({ ...x, nama: false })); }}
                   placeholder="DeepSeek"
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className={`w-full rounded-lg border bg-card-cream px-3 py-2 text-sm text-ink outline-none transition ${errProv.nama ? 'border-danger ring-2 ring-danger/30' : 'border-border-soft focus:border-accent'}`}
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-[0.7rem] font-semibold text-ink-faint">URL base</span>
+                <span className={`text-[0.7rem] font-semibold ${errProv.base_url ? 'text-danger' : 'text-ink-faint'}`}>URL base{errProv.base_url ? ' *wajib' : ''}</span>
                 <input
                   value={formProv.base_url}
-                  onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
+                  onChange={(e) => { setFormProv({ ...formProv, base_url: e.target.value }); if (errProv.base_url) setErrProv((x) => ({ ...x, base_url: false })); }}
                   placeholder="https://api.deepseek.com/v1"
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+                  className={`w-full rounded-lg border bg-card-cream px-3 py-2 text-sm text-ink outline-none transition ${errProv.base_url ? 'border-danger ring-2 ring-danger/30' : 'border-border-soft focus:border-accent'}`}
                 />
               </label>
             </div>
 
             {/* API Key section */}
             <div className="mt-3">
-              <span className="text-[0.7rem] font-semibold text-ink-faint">API Key</span>
-              <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2.5">
+              <span className={`text-[0.7rem] font-semibold ${errProv.api_key ? 'text-danger' : 'text-ink-faint'}`}>API Key{errProv.api_key ? ' *wajib' : ''}</span>
+              <div className={`mt-1 rounded-lg border bg-card-cream p-2.5 ${errProv.api_key ? 'border-danger ring-2 ring-danger/30' : 'border-border-soft'}`}>
                 {/* Daftar key yang sudah ada */}
                 {apiKeys.length > 0 && (
                   <ul className="mb-2 max-h-36 space-y-1 overflow-y-auto">
@@ -1639,20 +1657,20 @@ export default function AnalisisAI() {
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <input
                 value={formModel.label}
-                onChange={(e) => setFormModel({ ...formModel, label: e.target.value })}
-                placeholder="Label (mis. Nemotron Cepat)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                onChange={(e) => { setFormModel({ ...formModel, label: e.target.value }); if (errModel.label) setErrModel((x) => ({ ...x, label: false })); }}
+                placeholder={errModel.label ? '* Label wajib' : 'Label (mis. Nemotron Cepat)'}
+                className={`rounded-lg border bg-card-cream px-3 py-1.5 text-xs text-ink outline-none transition ${errModel.label ? 'border-danger ring-2 ring-danger/30' : 'border-border-soft focus:border-accent'}`}
               />
               <input
                 value={formModel.model}
-                onChange={(e) => setFormModel({ ...formModel, model: e.target.value })}
-                placeholder="Nama model (mis. nvidia/nemotron...:free)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                onChange={(e) => { setFormModel({ ...formModel, model: e.target.value }); if (errModel.model) setErrModel((x) => ({ ...x, model: false })); }}
+                placeholder={errModel.model ? '* Nama model wajib' : 'Nama model (mis. nvidia/nemotron...:free)'}
+                className={`rounded-lg border bg-card-cream px-3 py-1.5 text-xs text-ink outline-none transition ${errModel.model ? 'border-danger ring-2 ring-danger/30' : 'border-border-soft focus:border-accent'}`}
               />
               <select
                 value={formModel.provider}
-                onChange={(e) => setFormModel({ ...formModel, provider: e.target.value })}
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                onChange={(e) => { setFormModel({ ...formModel, provider: e.target.value }); if (errModel.provider) setErrModel((x) => ({ ...x, provider: false })); }}
+                className={`rounded-lg border bg-card-cream px-3 py-1.5 text-xs text-ink outline-none transition ${errModel.provider ? 'border-danger ring-2 ring-danger/30' : 'border-border-soft focus:border-accent'}`}
               >
                 <option value="">Pilih provider...</option>
                 {providerToggle.map((p) => (
