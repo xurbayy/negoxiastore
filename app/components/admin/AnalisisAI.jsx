@@ -2549,17 +2549,18 @@ export default function AnalisisAI() {
           ==========================================
           Permintaan pemilik 2026-10-02: agen memantau, usul aksi, pemilik
           setujui. Komponen terpisah (AgenAI.jsx) supaya file ini tetap rapi. */}
-      {mode === 'agen' && (
+      {/* SELALU ter-render (dibungkus div hidden saat bukan mode agen) supaya
+          proses agen TIDAK ter-reset saat pindah tab. Permintaan pemilik
+          2026-10-02: "pindah ke diskusi lalu balik, agennya berhenti". */}
+      <div className={mode === 'agen' ? '' : 'hidden'}>
         <AgenAI
           jalan={jalan}
           detikSisa={detikSisa}
           provider={provider}
           model={modelInput}
-          // Setelah agen selesai, muat ulang saran supaya kartu saran di tab
-          // lain ikut memakai hasil agen terbaru.
           onSelesai={muatSaran}
         />
-      )}
+      </div>
 
       {/* ==========================================
           MODE DISKUSI (chat 2 arah)
