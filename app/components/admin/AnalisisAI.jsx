@@ -354,8 +354,8 @@ export default function AnalisisAI() {
             if (d.model) setModelInput(d.model);
           }
         }
-      } catch {
-        if (!batal) setStatus({ ok: false, aktif: false });
+      } catch (err) {
+        if (!batal) setStatus({ ok: false, aktif: false, errorMuatan: err?.message || String(err) });
       } finally {
         if (!batal) setMemuatStatus(false);
       }
@@ -1138,13 +1138,17 @@ export default function AnalisisAI() {
         <div className="nx-card border-danger/40 px-4 py-3 sm:px-5">
           <p className="text-sm font-bold text-danger">Belum ada provider AI yang siap dipakai</p>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-            Pastikan <strong className="text-ink">GROQ_API_KEY</strong> / <strong className="text-ink">OPENROUTER_API_KEY</strong> terisi lalu redeploy, atau tambah provider sendiri lewat <strong className="text-ink">Kelola provider &amp; model</strong> (disimpan terenkripsi di database, tanpa redeploy).
+            Klik <strong className="text-ink">Pakai</strong> di salah satu model tersimpan, atau tambah provider lewat <strong className="text-ink">Kelola provider &amp; model</strong>. Kalau provider sudah ada tapi tetap muncul ini, cek diagnostik di bawah.
           </p>
+          {status?.errorMuatan && (
+            <p className="mt-1 text-[0.65rem] text-danger">Error muat status: {status.errorMuatan}</p>
+          )}
           {status?.diag && (
             <ul className="mt-2 space-y-0.5 text-[0.65rem] text-ink-faint">
               <li>AI_PROVIDER: {status.diag.AI_PROVIDER || '(kosong)'} | AI_BASE_URL: {status.diag.AI_BASE_URL || '(kosong)'}</li>
               <li>GROQ_API_KEY: {status.diag.adaGroq ? `${status.diag.jumlahGroq} kunci` : 'TIDAK ADA'} | OPENROUTER_API_KEY: {status.diag.adaOpenrouter ? `${status.diag.jumlahOpenrouter} kunci` : 'TIDAK ADA'}</li>
-              <li>Provider bawaan terbaca: {(status.diag.providerBawaanTerbaca || []).join(', ') || '-'}</li>
+              <li>Provider bawaan: {(status.diag.providerBawaanTerbaca || []).join(', ') || '-'}</li>
+              <li>Provider kustom: {(status.diag.providerKustom || []).join(', ') || '-'}</li>
             </ul>
           )}
         </div>
