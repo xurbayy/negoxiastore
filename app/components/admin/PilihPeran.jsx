@@ -45,9 +45,9 @@ export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKo
         <p className="mt-1 text-[0.7rem] text-ink-muted">{terpilih.deskripsi}</p>
       )}
       {/* Info ringkas: apakah kode base sudah terkirim dari bot. */}
-      {peranButuhKode && !adaKodeBase && (
-        <p className="mt-1 text-[0.65rem] text-ink-faint italic">
-          Analisis kode butuh bot restart. Tanpa itu, AI tetap jalan dari data.
+      {peranButuhKode && adaKodeBase && (
+        <p className="mt-1 text-[0.65rem] text-success">
+          ✓ Kode base aktif
         </p>
       )}
     </div>
