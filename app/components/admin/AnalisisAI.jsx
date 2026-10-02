@@ -1862,17 +1862,34 @@ export default function AnalisisAI() {
                 tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
                 di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              {(status.pintasan || []).map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  disabled={jalan || detikSisa > 0}
-                  onClick={() => jalankan({ pintasan: p.id }, p.label)}
-                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
-                >
-                  {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
-                </button>
-              ))}
+              {(() => {
+                // Fallback: kalau server tidak kirim pintasan (GET /ai gagal),
+                // tetap tampilkan daftar bawaan. ID-nya SAMA dengan PINTASAN di
+                // server agar tetap dikenali saat dikirim.
+                const PINTASAN_LOKAL = [
+                  { id: 'promo', label: 'Saran Promo' },
+                  { id: 'sepi', label: 'Item & Game Sepi' },
+                  { id: 'retensi', label: 'Retensi Pemain' },
+                  { id: 'ekonomi', label: 'Kesehatan Ekonomi' },
+                  { id: 'komunitas', label: 'Pertumbuhan Komunitas' },
+                  { id: 'error', label: 'Log Error' },
+                  { id: 'idegame', label: 'Ide Game Baru' },
+                  { id: 'guild', label: 'Masalah Guild & War' },
+                  { id: 'semua', label: 'Gambaran Menyeluruh' },
+                ];
+                const daftarPintasan = (status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL;
+                return daftarPintasan.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={jalan || detikSisa > 0}
+                    onClick={() => jalankan({ pintasan: p.id }, p.label)}
+                    className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
+                  >
+                    {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
+                  </button>
+                ));
+              })()}
             </div>
             {/* Pertanyaan bebas juga bisa - tetap dijawab dengan format
                 TEMUAN/SARAN/RISIKO karena modenya 'analisis'. */}
