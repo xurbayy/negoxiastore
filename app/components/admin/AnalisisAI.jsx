@@ -244,14 +244,8 @@ export default function AnalisisAI() {
     setTesHasil({ status: 'idle' });
   }, [formProv.base_url, formProv.api_key]);
 
-  // Kalau provider tersimpan (localStorage) tidak ada di daftar yang disediakan
-  // server (mis. 'custom' sudah dihapus), paksa ke provider aktif server.
-  useEffect(() => {
-    const daftar = status?.providers || [];
-    if (!daftar.length) return;
-    const valid = daftar.some((p) => p.id === provider);
-    if (!valid && status?.provider) setProvider(status.provider);
-  }, [status, provider]);
+  // Validasi provider dilakukan SETELAH providerToggle didefinisikan (di bawah),
+  // karena toggle menggabung dua sumber (/ai + /providers). Lihat efek di sana.
 
   // Percakapan mode DISKUSI (chat 2 arah): daftar pesan bergantian.
   // Struktur satu pesan: { peran: 'gw' | 'ai', isi, waktu, error? }
@@ -1000,6 +994,18 @@ export default function AnalisisAI() {
     }
     return hasil;
   })();
+
+  // PENTING: kalau provider tersimpan (localStorage) tidak valid/tidak ada di
+  // daftar-toggle, paksa pilih yang PERTAMA. Tanpa ini, `provider` kosong ->
+  // server pakai default -> model (mis. qwen) dikirim ke provider salah ->
+  // "No model found" (kejadian nyata 2026-10-02).
+  useEffect(() => {
+    if (!providerToggle.length) return;
+    const valid = providerToggle.some((p) => p.id === provider);
+    if (!valid) setProvider(providerToggle[0].id);
+  }, [providerToggle, provider]);
+
+  // Mode DISKUSI & ANALISIS dipakai dari `mode` (satu state).
 
   const renderKelola = () => (
         <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
