@@ -508,6 +508,8 @@ export default function AnalisisAI() {
   // per pesannya jangan kelamaan").
   const [tungguSampai, setTungguSampai] = useState(0);
   const [detikSisa, setDetikSisa] = useState(0);
+  // Topik/pintasan yang SEDANG dijalankan (buat spinner di tombol itu saja).
+  const [topikAktif, setTopikAktif] = useState(null);
   // SAFETY: reset jalan/detikSisa kalau stuck > 70 detik (anti-lock).
   useEffect(() => {
     if (!jalan && detikSisa <= 0) return;
@@ -547,6 +549,7 @@ export default function AnalisisAI() {
     setTungguSampai(Date.now() + 5000);
     setDetikSisa(5);
     setJalan(true);
+    setTopikAktif(judul || muatan?.pintasan || muatan?.tanya || null);
     const modeKirim = mode;
 
     // Ambil riwayat SEBELUM pesan baru ditambahkan. IKUT sertakan gambar dari
@@ -641,6 +644,7 @@ export default function AnalisisAI() {
       }
     } finally {
       setJalan(false);
+      setTopikAktif(null);
       setTimeout(() => {
         if (modeKirim === 'diskusi') ujungChat.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
         else kotakHasil.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -2484,15 +2488,26 @@ export default function AnalisisAI() {
                         ? pintasanPeranIni
                         : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
                 const tampil = daftarPintasan.filter((p) => !saranDismiss.has(p.id));
-                return tampil.map((p) => (
+                return tampil.map((p) => {
+                  const aktif = topikAktif === p.label;
+                  return (
                   <span key={p.id} className="relative inline-flex">
                     <button
                       type="button"
                       disabled={jalan || detikSisa > 0}
                       onClick={() => jalankan(p.tanya ? { tanya: p.tanya } : { pintasan: p.id }, p.label)}
-                      className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 pr-7 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
+                      className={`flex min-h-10 items-center justify-center gap-1.5 rounded-full border px-3 py-2 pr-7 text-center text-xs font-semibold leading-tight transition disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer ${
+                        aktif ? 'border-accent bg-accent text-white shadow-sm' : 'border-border-soft bg-bg-soft text-ink hover:border-accent hover:bg-accent/15'
+                      }`}
                     >
-                      {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
+                      {aktif ? (
+                        <>
+                          <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          {p.label}
+                        </>
+                      ) : p.label}
                     </button>
                     <button
                       type="button"
@@ -2503,7 +2518,8 @@ export default function AnalisisAI() {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                   </span>
-                ));
+                  );
+                });
               })()}
             </div>
             {/* Pertanyaan bebas juga bisa - tetap dijawab dengan format
@@ -2803,9 +2819,18 @@ export default function AnalisisAI() {
                       type="button"
                       disabled={jalan || detikSisa > 0}
                       onClick={() => jalankan({ tanya: s.tanya || s.label }, s.label, s.label)}
-                      className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 pr-6 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                      className={`rounded-full border px-3 py-1.5 pr-6 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer ${
+                        topikAktif === s.label ? 'border-accent bg-accent text-white shadow-sm' : 'border-accent/30 bg-accent/5 text-ink hover:border-accent hover:bg-accent/15'
+                      }`}
                     >
-                      {s.label}
+                      {topikAktif === s.label ? (
+                        <span className="flex items-center gap-1.5">
+                          <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                          </svg>
+                          {s.label}
+                        </span>
+                      ) : s.label}
                     </button>
                     <button
                       type="button"
@@ -2967,9 +2992,16 @@ export default function AnalisisAI() {
           <button
             type="submit"
             disabled={jalan || detikSisa > 0 || (!tanya.trim() && gambar.length === 0)}
-            className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary flex shrink-0 items-center gap-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {jalan ? '...' : detikSisa > 0 ? `⏳ ${detikSisa}s` : 'Kirim'}
+            {jalan ? (
+              <>
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                </svg>
+                ...
+              </>
+            ) : `Kirim${detikSisa > 0 ? ` (${detikSisa}s)` : ''}`}
           </button>
         </form>
       </div>
