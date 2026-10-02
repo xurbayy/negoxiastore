@@ -253,6 +253,24 @@ export default function AnalisisAI() {
     try { window.localStorage.setItem('nexo_ai_chat', JSON.stringify(pesan.slice(-40))); } catch { /* penuh/diblokir */ }
   }, [pesan]);
 
+  // LAPORAN ANALISIS juga disimpan di localStorage - permintaan pemilik
+  // 2026-10-02: "hasil ini kalo refresh ga ilang semua, kecuali gw hapus
+  // manual". Simpan berapa pun hasilnya (dibatasi 30 terbaru) supaya tidak
+  // membebani localStorage.
+  useEffect(() => {
+    try {
+      const simpan = window.localStorage.getItem('nexo_ai_laporan');
+      if (simpan) {
+        const arr = JSON.parse(simpan);
+        if (Array.isArray(arr)) setLaporan(arr.slice(0, 30));
+      }
+    } catch { /* data rusak / diblokir - mulai kosong */ }
+  }, []);
+
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_laporan', JSON.stringify(laporan.slice(0, 30))); } catch { /* penuh/diblokir */ }
+  }, [laporan]);
+
   // Muat daftar arsip saat komponen dibuka.
   const muatArsip = useCallback(async () => {
     try {
@@ -439,8 +457,33 @@ export default function AnalisisAI() {
 
   // Hapus SELURUH percakapan dan mulai dari nol (seperti "New chat" ChatGPT).
   const mulaiBaru = useCallback(() => {
-    setPesan([]);
-    try { window.localStorage.removeItem('nexo_ai_chat'); } catch { /* abaikan */ }
+    setKonfirmasi({
+      judul: 'Hapus riwayat diskusi?',
+      body: 'Seluruh percakapan akan dihapus permanen dari panel ini.',
+      jalankan: async () => {
+        setPesan([]);
+        try { window.localStorage.removeItem('nexo_ai_chat'); } catch { /* abaikan */ }
+      },
+    });
+  }, []);
+
+  // Hapus SELURUH laporan analisis (permintaan pemilik: bisa hapus manual).
+  const hapusSemuaLaporan = useCallback(() => {
+    setKonfirmasi({
+      judul: 'Hapus riwayat analisis?',
+      body: `Semua ${laporan.length} laporan analisis akan dihapus permanen dari panel ini.`,
+      jalankan: async () => {
+        setLaporan([]);
+        setBukaLaporan(null);
+        try { window.localStorage.removeItem('nexo_ai_laporan'); } catch { /* abaikan */ }
+      },
+    });
+  }, [laporan.length]);
+
+  // Hapus SATU laporan.
+  const hapusLaporan = useCallback((idx) => {
+    setLaporan((l) => l.filter((_, i) => i !== idx));
+    setBukaLaporan(null);
   }, []);
 
   // ==========================================
@@ -1418,6 +1461,20 @@ export default function AnalisisAI() {
             </div>
           )}
 
+          {/* Bilah riwayat analisis tersimpan + tombol hapus semua. */}
+          {laporan.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <span className="text-xs text-ink-muted">{laporan.length} laporan tersimpan (tidak hilang saat refresh)</span>
+              <button
+                type="button"
+                onClick={hapusSemuaLaporan}
+                className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+              >
+                Hapus semua
+              </button>
+            </div>
+          )}
+
           {laporan.length === 0 && !jalan && (
             <div className="nx-card px-4 py-6 sm:px-5 sm:py-8 text-center text-sm text-ink-muted">
               Belum ada analisis. Pilih topik di atas.
@@ -1452,6 +1509,15 @@ export default function AnalisisAI() {
                     {disimpan.has(r.judul + '::' + String(r.jawaban || '').slice(0, 80)) ? 'Tersimpan' : 'Simpan'}
                   </button>
                 )}
+                {/* Hapus satu laporan manual. */}
+                <button
+                  type="button"
+                  onClick={() => hapusLaporan(i)}
+                  title="Hapus laporan ini"
+                  className={`${r.error ? 'ml-auto' : ''} shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer`}
+                >
+                  Hapus
+                </button>
               </div>
               {r.error ? (
                 <p className="text-sm text-danger">{r.error}</p>
