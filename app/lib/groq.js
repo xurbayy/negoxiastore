@@ -329,11 +329,29 @@ export async function daftarModelProvider(namaProvider) {
         const n = parseFloat(harga);
         if (Number.isFinite(n)) gratis = n === 0;
       }
+      // Deteksi kemampuan (permintaan pemilik 2026-10-02: "test model bisa
+      // vision atau reasoning, biar gw bisa tentuin mana yang bisa liat").
+      const arch = m?.architecture || {};
+      const inputMod = Array.isArray(arch.input_modalities) ? arch.input_modalities : [];
+      const modality = String(arch.modality || '');
+      const params = Array.isArray(m?.supported_parameters) ? m.supported_parameters : [];
+      // VISION: bisa terima gambar (input_modalities berisi 'image', atau
+      // modality mengandung 'image').
+      const vision = inputMod.includes('image') || /image/i.test(modality)
+        || /\bvl\b|-vl|vision|llava|pixtral|gemini|gpt-4o|gpt-4\.1|claude-3|claude-4|qwen.*vl/i.test(id);
+      // FILE: bisa terima dokumen.
+      const file = inputMod.includes('file') || /file/i.test(modality);
+      // REASONING: model punya parameter penalaran (reasoning/think).
+      const reasoning = params.some((p) => /reason/i.test(String(p)))
+        || /reasoning|\bthink|o1|o3|deepseek-r|qwq/i.test(id);
       return {
         id,
         nama: m?.name || id,
         gratis,
         konteks: m?.context_length || m?.context || null,
+        vision,
+        file,
+        reasoning,
       };
     }).filter(Boolean);
 

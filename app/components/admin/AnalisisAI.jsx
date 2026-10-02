@@ -101,11 +101,43 @@ function Paragraf({ teks }) {
   );
 }
 
+// Baca satu file gambar -> data URL, dengan resize di klien supaya payload
+// tidak membengkak (maks panjang sisi 1280px, JPEG kualitas 0.8).
+function bacaGambar(file) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type?.startsWith('image/')) return reject(new Error('Bukan gambar.'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Gagal membaca file.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Gambar tidak bisa dibaca.'));
+      img.onload = () => {
+        const maks = 1280;
+        let { width: w, height: h } = img;
+        if (w > maks || h > maks) {
+          const skala = Math.min(maks / w, maks / h);
+          w = Math.round(w * skala);
+          h = Math.round(h * skala);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function AnalisisAI() {
-  const [status, setStatus] = useState(null); // { aktif, jumlahKunci, model, pintasan }
   const [memuatStatus, setMemuatStatus] = useState(true);
   const [jalan, setJalan] = useState(false);
   const [tanya, setTanya] = useState('');
+  // Gambar terlampir untuk chat diskusi (data URL). Di-resize di klien supaya
+  // ukurannya wajar (permintaan pemilik 2026-10-02: "gw bisa kirim gambar").
+  const [gambar, setGambar] = useState([]);
 
   // ==========================================
   // CHAT 2 ARAH (permintaan pemilik 2026-10-01)
@@ -370,9 +402,14 @@ export default function AnalisisAI() {
       return p;
     });
 
+    // Gambar hanya untuk mode DISKUSI (analisis berbasis angka). Ambil snapshot
+    // lalu kosongkan supaya tidak ikut terkirim di permintaan berikutnya.
+    const gambarKirim = modeKirim === 'diskusi' ? gambar.slice(0, 4) : [];
+    if (gambarKirim.length) setGambar([]);
+
     if (modeKirim === 'diskusi') {
       // Tampilkan pesan pemilik lebih dulu supaya terasa responsif.
-      setPesan((p) => [...p, { peran: 'gw', isi: teksTampil || judul, waktu: Date.now() }]);
+      setPesan((p) => [...p, { peran: 'gw', isi: teksTampil || judul, waktu: Date.now(), gambar: gambarKirim }]);
     }
 
     try {
@@ -383,7 +420,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, kecerdasan: modelSetting.kecerdasan || undefined }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, kecerdasan: modelSetting.kecerdasan || undefined, gambar: gambarKirim.length ? gambarKirim : undefined }),
         signal: ac.signal,
       });
       clearTimeout(timer);
@@ -450,9 +487,11 @@ export default function AnalisisAI() {
   const kirimBebas = (e) => {
     e.preventDefault();
     const t = tanya.trim();
-    if (!t || jalan) return;
+    // Boleh kirim gambar tanpa teks (pertanyaan default "jelaskan gambar ini").
+    if ((!t && gambar.length === 0) || jalan) return;
     setTanya('');
-    jalankan({ tanya: t }, t.length > 60 ? t.slice(0, 60) + '...' : t, t);
+    const teks = t || 'Jelaskan gambar ini dan kaitkan dengan data NEXO kalau relevan.';
+    jalankan({ tanya: teks }, teks.length > 60 ? teks.slice(0, 60) + '...' : teks, teks);
   };
 
   // Hapus SELURUH percakapan dan mulai dari nol (seperti "New chat" ChatGPT).
@@ -1028,21 +1067,45 @@ export default function AnalisisAI() {
                   {modelProv.hanyaGratis ? `${modelProv.jumlahGratis} gratis` : `${modelProv.jumlah} total`}
                 </span>
               </p>
-              <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={modelProv.hanyaGratis}
-                  onChange={(e) => muatModelProv(e.target.checked)}
-                  className="cursor-pointer"
-                />
-                Gratis saja
-              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modelProv.hanyaGratis}
+                    onChange={(e) => muatModelProv(e.target.checked)}
+                    className="cursor-pointer"
+                  />
+                  Gratis saja
+                </label>
+                {/* Filter kemampuan (client-side, tidak perlu fetch ulang). */}
+                <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modelProv.filterLihat || false}
+                    onChange={(e) => setModelProv((s) => ({ ...s, filterLihat: e.target.checked }))}
+                    className="cursor-pointer"
+                  />
+                  Bisa lihat gambar
+                </label>
+                <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modelProv.filterNalar || false}
+                    onChange={(e) => setModelProv((s) => ({ ...s, filterNalar: e.target.checked }))}
+                    className="cursor-pointer"
+                  />
+                  Bisa bernalar
+                </label>
+              </div>
             </div>
-            {modelProv.models.length === 0 ? (
-              <p className="mt-2 text-xs text-ink-muted">Tidak ada model{modelProv.hanyaGratis ? ' gratis' : ''}.</p>
-            ) : (
+            {(() => {
+              const tampil = modelProv.models.filter((m) =>
+                (!modelProv.filterLihat || m.vision) && (!modelProv.filterNalar || m.reasoning)
+              );
+              if (tampil.length === 0) return <p className="mt-2 text-xs text-ink-muted">Tidak ada model yang cocok.</p>;
+              return (
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-                {modelProv.models.map((m) => (
+                {tampil.map((m) => (
                   <li key={m.id}>
                     <button
                       type="button"
@@ -1050,13 +1113,19 @@ export default function AnalisisAI() {
                       title="Pakai model ini"
                       className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
                     >
-                      <span className="min-w-0 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
-                      {m.gratis === true && <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
+                      <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        {/* Kemampuan model: bisa lihat gambar & bisa bernalar. */}
+                        {m.vision && <span title="Bisa lihat gambar (vision)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">LIHAT</span>}
+                        {m.reasoning && <span title="Bisa bernalar (reasoning)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">NALAR</span>}
+                        {m.gratis === true && <span className="rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
+                      </span>
                     </button>
                   </li>
                 ))}
               </ul>
-            )}
+              );
+            })()}
             {modelProv.url && (
               <p className="mt-2 break-all font-mono text-[0.6rem] text-ink-faint">{modelProv.url}</p>
             )}
@@ -1594,6 +1663,15 @@ export default function AnalisisAI() {
                   ) : (
                     <Paragraf teks={m.isi} />
                   )}
+                  {/* Gambar lampiran yang dikirim pemilik. */}
+                  {Array.isArray(m.gambar) && m.gambar.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {m.gambar.map((g, gi) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={gi} src={g} alt={`Lampiran ${gi + 1}`} className="max-h-40 rounded-lg border border-border-soft object-contain" />
+                      ))}
+                    </div>
+                  )}
                   {/* Tombol Simpan hanya pada balasan AI yang berhasil -
                       supaya masukan bagus bisa diarsipkan seperti sebelumnya. */}
                   {m.peran === 'ai' && !m.error && (
@@ -1626,22 +1704,65 @@ export default function AnalisisAI() {
       </div>
 
       {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT. */}
-      <form onSubmit={kirimBebas} className="sticky bottom-4 z-10 flex gap-2 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)]">
-        <input
-          value={tanya}
-          onChange={(e) => setTanya(e.target.value)}
-          placeholder={detikSisa > 0 ? `Tunggu ${detikSisa} detik...` : 'Ketik pertanyaanmu...'}
-          aria-label="Pertanyaan bebas tentang data"
-          className="w-full rounded-xl bg-transparent px-3 py-2 text-sm text-ink outline-none"
-        />
-        <button
-          type="submit"
-          disabled={jalan || detikSisa > 0 || !tanya.trim()}
-          className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {jalan ? '...' : detikSisa > 0 ? `⏳ ${detikSisa}s` : 'Kirim'}
-        </button>
-      </form>
+      <div className="sticky bottom-4 z-10 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)]">
+        {/* Preview gambar terlampir. */}
+        {gambar.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {gambar.map((g, i) => (
+              <div key={i} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g} alt={`Lampiran ${i + 1}`} className="h-16 w-16 rounded-lg border border-border-soft object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setGambar((arr) => arr.filter((_, j) => j !== i))}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[0.65rem] font-bold text-white cursor-pointer"
+                  title="Hapus gambar"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <form onSubmit={kirimBebas} className="flex gap-2">
+          {/* Lampirkan gambar. */}
+          <label
+            title="Lampirkan gambar (untuk model yang bisa lihat)"
+            className="flex shrink-0 cursor-pointer items-center rounded-xl px-2.5 text-lg text-ink-muted transition hover:text-ink"
+          >
+            +
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={async (e) => {
+                const files = Array.from(e.target.files || []).slice(0, 4 - gambar.length);
+                const hasil = [];
+                for (const f of files) {
+                  try { hasil.push(await bacaGambar(f)); } catch { /* lewati file rusak */ }
+                }
+                if (hasil.length) setGambar((arr) => [...arr, ...hasil].slice(0, 4));
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <input
+            value={tanya}
+            onChange={(e) => setTanya(e.target.value)}
+            placeholder={detikSisa > 0 ? `Tunggu ${detikSisa} detik...` : 'Ketik pertanyaanmu...'}
+            aria-label="Pertanyaan bebas tentang data"
+            className="w-full rounded-xl bg-transparent px-3 py-2 text-sm text-ink outline-none"
+          />
+          <button
+            type="submit"
+            disabled={jalan || detikSisa > 0 || (!tanya.trim() && gambar.length === 0)}
+            className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {jalan ? '...' : detikSisa > 0 ? `⏳ ${detikSisa}s` : 'Kirim'}
+          </button>
+        </form>
+      </div>
         </>
       )}
 

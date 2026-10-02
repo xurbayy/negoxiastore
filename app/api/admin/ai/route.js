@@ -359,11 +359,23 @@ export async function POST(request) {
   //
   // Data diletakkan di AWAL, bukan diulang tiap giliran: AI tetap bisa
   // merujuknya sepanjang percakapan, dan token tidak membengkak.
+  //
+  // GAMBAR (permintaan pemilik 2026-10-02): kalau ada lampiran gambar,
+  // pertanyaan terakhir memakai format content array (teks + image_url
+  // data-URL) yang dipahami provider OpenAI-compatible.
+  const gambar = Array.isArray(body?.gambar) ? body.gambar.filter((g) => typeof g === 'string' && g.startsWith('data:image')).slice(0, 4) : [];
+  const kontenTerakhir = gambar.length
+    ? [
+        { type: 'text', text: penandaTugas + '\n\nPERTANYAAN: ' + instruksi },
+        ...gambar.map((g) => ({ type: 'image_url', image_url: { url: g } })),
+      ]
+    : (penandaTugas + '\n\nPERTANYAAN: ' + instruksi);
+
   const pesan = [
     { role: 'system', content: sistemPrompt() },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },
     ...riwayat,
-    { role: 'user', content: penandaTugas + '\n\nPERTANYAAN: ' + instruksi },
+    { role: 'user', content: kontenTerakhir },
   ];
 
   // Provider & model dari UI (toggle di panel admin AI).
