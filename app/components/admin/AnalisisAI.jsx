@@ -1826,7 +1826,7 @@ export default function AnalisisAI() {
         {/* Baris 1: judul + pemilih MODE + tombol sembunyikan panel. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-display text-ink">Analisis AI</h3>
+            <h3 className="font-display text-ink">NEXO AI</h3>
             <span
               title="AI siap dipakai"
               className="inline-block h-2 w-2 rounded-full bg-success"
@@ -2409,7 +2409,10 @@ export default function AnalisisAI() {
           sedang berjalan TIDAK terputus saat pindah tab. */}
       <div className={mode === 'analisis' ? '' : 'hidden'}>
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-ink-muted">
+              Laporan TEMUAN / SARAN / RISIKO dari data NEXO - sekali klik topik.
+            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
               <p className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
                 Analisis Cepat
                 {saranDin.some((s) => s.sumber === 'ai') && (

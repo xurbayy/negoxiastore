@@ -227,7 +227,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     <div className="space-y-3">
       {/* Kepala + tombol aksi - mobile friendly */}
       <div className="nx-card px-4 py-4 sm:px-5">
-        <h3 className="font-display text-ink">Agen AI</h3>
+        <h3 className="font-display text-ink">Agent</h3>
         <p className="mt-0.5 text-xs text-ink-muted">
           Memantau data &amp; kode bot, mengusulkan aksi + saran.
         </p>

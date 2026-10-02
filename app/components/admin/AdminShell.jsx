@@ -23,7 +23,7 @@ import ManualOrders from './ManualOrders';
 // Sidebar dikelompokkan per area kerja + badge angka live (dari data yang
 // sudah di-poll - tanpa API baru). Visual saja, alur data tidak berubah.
 const TAB_GROUPS = [
-  { label: 'Pantau', tabs: [['ai', 'Analisis AI'], ['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
+  { label: 'Pantau', tabs: [['ai', 'NEXO AI'], ['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
   { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
   { label: 'Member', tabs: [['nexopass', 'NEXO Pass'], ['titles', 'Titles']] },
   { label: 'Komunitas', tabs: [['broadcast', 'Broadcast'], ['moderasi', 'Sanksi & Moderasi'], ['feedback', 'Feedback']] },
