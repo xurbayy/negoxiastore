@@ -898,6 +898,29 @@ export default function AnalisisAI() {
     finally { setSaranMemuat(false); }
   }, [peran]);
 
+  // CARI TOPIK via AI: AI membaca data terkini lalu usulkan pertanyaan paling
+  // relevan (permintaan pemilik 2026-10-02: "langsung dari ai aja yang relevan").
+  const [saranAI, setSaranAI] = useState(false);
+  const muatSaranAI = useCallback(async () => {
+    if (!provider?.trim() || !modelInput?.trim()) {
+      setPesanSimpan('⚠️ Pilih provider & model dulu untuk cari topik AI.');
+      setPanelTampil(true);
+      setTimeout(() => setPesanSimpan(null), 5000);
+      return;
+    }
+    setSaranAI(true);
+    setSaranDismiss(new Set());
+    try {
+      const url = '/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&ai=1'
+        + '&provider=' + encodeURIComponent(provider) + '&model=' + encodeURIComponent(modelInput.trim());
+      const res = await fetch(url, { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok && Array.isArray(d.saran) && d.sumber === 'ai') setSaranDin(d.saran);
+      else if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
+    } catch { /* fallback */ }
+    finally { setSaranAI(false); }
+  }, [peran, provider, modelInput]);
+
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang
   // daftar provider kustom (sumber cadangan kalau /ai bermasalah).
@@ -2371,9 +2394,11 @@ export default function AnalisisAI() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
                 Analisis Cepat
-                {saranDin.some((s) => s.sumber === 'agen') && (
+                {saranDin.some((s) => s.sumber === 'ai') ? (
+                  <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari AI</span>
+                ) : saranDin.some((s) => s.sumber === 'agen') ? (
                   <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
-                )}
+                ) : null}
               </p>
               <button
                 type="button"
@@ -2396,6 +2421,27 @@ export default function AnalisisAI() {
                   </>
                 )}
               </button>
+              <button
+                type="button"
+                onClick={muatSaranAI}
+                disabled={saranAI}
+                title="AI cari topik paling relevan dari data terkini"
+                className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2 py-0.5 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
+              >
+                {saranAI ? (
+                  <>
+                    <span className="pulse-dot" aria-hidden="true" />
+                    AI mencari...
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    Cari topik AI
+                  </>
+                )}
+              </button>
             </div>
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
                 "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
@@ -2403,10 +2449,11 @@ export default function AnalisisAI() {
                 di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(() => {
-                // PRIORITAS: 1) saran agen (hasil cek AI), 2) saran dinamis dari
-                // snapshot (real-time), 3) pintasan peran, 4) statis (darurat).
+                // PRIORITAS: 1) saran AI generate, 2) saran agen, 3) saran dinamis
+                // snapshot, 4) pintasan peran, 5) statis (darurat).
+                const saranAIGen = saranDin.filter((s) => s.sumber === 'ai');
                 const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
-                const saranSnapshot = saranDin.filter((s) => s.sumber !== 'agen');
+                const saranSnapshot = saranDin.filter((s) => s.sumber !== 'agen' && s.sumber !== 'ai');
                 const dariServer = status?.pintasanPeran?.[peran] || [];
                 const pintasanPeranIni = dariServer.length ? dariServer : pintasanPeranKlien(peran);
                 const PINTASAN_LOKAL = [
@@ -2420,13 +2467,15 @@ export default function AnalisisAI() {
                   { id: 'guild', label: 'Masalah Guild & War' },
                   { id: 'semua', label: 'Gambaran Menyeluruh' },
                 ];
-                const daftarPintasan = saranAgen.length
-                  ? saranAgen.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
-                  : saranSnapshot.length
-                    ? saranSnapshot.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
-                    : ((peran !== 'umum' && pintasanPeranIni.length)
-                      ? pintasanPeranIni
-                      : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
+                const daftarPintasan = saranAIGen.length
+                  ? saranAIGen.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
+                  : saranAgen.length
+                    ? saranAgen.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
+                    : saranSnapshot.length
+                      ? saranSnapshot.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
+                      : ((peran !== 'umum' && pintasanPeranIni.length)
+                        ? pintasanPeranIni
+                        : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
                 const tampil = daftarPintasan.filter((p) => !saranDismiss.has(p.id));
                 return tampil.map((p) => (
                   <span key={p.id} className="relative inline-flex">
@@ -2680,25 +2729,52 @@ export default function AnalisisAI() {
           ];
           const dariServer = status?.pintasanPeran?.[peran] || [];
           const pintasanPeranIni = (dariServer.length ? dariServer : pintasanPeranKlien(peran)).map((x) => ({ id: x.id, label: x.label, tanya: x.tanya || x.label }));
-          // PRIORITAS: 1) saran agen, 2) saran dinamis snapshot, 3) pintasan peran, 4) statis.
+          // PRIORITAS: 1) saran AI, 2) agen, 3) dinamis snapshot, 4) pintasan peran, 5) statis.
+          const saranAIGen = saranDin.filter((s) => s.sumber === 'ai');
           const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
-          const saranSnapshot = saranDin.filter((s) => s.sumber !== 'agen');
-          const saran = saranAgen.length
-            ? saranAgen
-            : saranSnapshot.length
-              ? saranSnapshot
-              : ((peran !== 'umum' && pintasanPeranIni.length)
-                ? pintasanPeranIni
-                : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL));
+          const saranSnapshot = saranDin.filter((s) => s.sumber !== 'agen' && s.sumber !== 'ai');
+          const saran = saranAIGen.length
+            ? saranAIGen
+            : saranAgen.length
+              ? saranAgen
+              : saranSnapshot.length
+                ? saranSnapshot
+                : ((peran !== 'umum' && pintasanPeranIni.length)
+                  ? pintasanPeranIni
+                  : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL));
           return (
             <div className="mt-3">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="flex flex-wrap items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
                   Saran cepat
-                  {saranAgen.length > 0 && (
+                  {saranAIGen.length > 0 ? (
+                    <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari AI</span>
+                  ) : saranAgen.length > 0 ? (
                     <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
-                  )}
+                  ) : null}
                 </p>
+                <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={muatSaranAI}
+                  disabled={saranAI}
+                  title="AI cari topik paling relevan dari data terkini"
+                  className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2 py-0.5 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
+                >
+                  {saranAI ? (
+                    <>
+                      <span className="pulse-dot" aria-hidden="true" />
+                      AI mencari...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                      </svg>
+                      Cari topik AI
+                    </>
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={muatSaranSegar}
@@ -2710,6 +2786,7 @@ export default function AnalisisAI() {
                   </svg>
                   Muat ulang
                 </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {saran.filter((s) => !saranDismiss.has(s.id)).map((s) => (
