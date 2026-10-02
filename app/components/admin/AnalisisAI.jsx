@@ -572,20 +572,24 @@ export default function AnalisisAI() {
         </div>
       )}
 
-      {/* Kepala + PEMILIH MODE */}
-      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+      {/* ==========================================
+          BAR KONTROL TERPADU (sticky)
+          ==========================================
+          Digabung jadi SATU kartu biar alurnya jelas: pilih mode -> pilih
+          provider -> ketik/tanya. Sticky supaya tetap terlihat saat hasilnya
+          panjang (permintaan pemilik 2026-10-02: "lebih mudah pakenya"). */}
+      <div className="nx-card sticky top-2 z-20 px-4 py-3.5 sm:px-5 sm:py-4 backdrop-blur-sm">
+        {/* Baris 1: judul + pemilih MODE (segmented besar). */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-display text-ink">Analisis AI</h3>
-          {/* Tombol Notif PINDAH ke navbar (sebelah profil) - permintaan
-              pemilik 2026-10-01: "notif di AI itu pindahin aja ke sebelah
-              profil... yang di AI ga usah". Jadi pengingat terlihat dari
-              halaman admin mana pun, bukan cuma di tab ini. */}
           <div className="flex items-center gap-2">
-            {/* Dua mode dengan keunggulan berbeda (permintaan pemilik):
-                - Analisis: laporan tersusun TEMUAN/SARAN/RISIKO
-                - Diskusi : chat 2 arah untuk berpikir bersama
-                Keduanya memakai DATA yang sama. */}
-            <div className="flex rounded-xl border border-border-soft bg-bg-soft/50 p-1">
+            <h3 className="font-display text-ink">Analisis AI</h3>
+            {/* Titik status provider aktif - hijau = siap. */}
+            <span
+              title={`Provider aktif: ${provider || status.provider || 'groq'}`}
+              className={`inline-block h-2 w-2 rounded-full ${status.aktif ? 'bg-success' : 'bg-danger'}`}
+            />
+          </div>
+          <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
             {[
               ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
               ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
@@ -595,21 +599,20 @@ export default function AnalisisAI() {
                 type="button"
                 onClick={() => setMode(id)}
                 title={ket}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                className={`rounded-lg px-4 py-1.5 text-xs font-bold transition cursor-pointer ${
                   mode === id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
                 }`}
               >
                 {label}
               </button>
             ))}
-            </div>
           </div>
         </div>
-        {/* Toggle provider + input model manual (permintaan pemilik
-            2026-10-01: "tombol toggle openrouter dan groq, nama model
-            bisa masukkin manual"). */}
+
+        {/* Baris 2: provider + model manual. */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl border border-border-soft bg-bg-soft/50 p-1">
+          <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Provider</span>
+          <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
             {(status.providers || []).map((p) => (
               <button
                 key={p.id}
@@ -619,6 +622,7 @@ export default function AnalisisAI() {
                   // Auto-ganti modelInput ke default model provider baru
                   if (p.model) setModelInput(p.model);
                 }}
+                title={p.model ? `Default: ${p.model}` : undefined}
                 className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
                   provider === p.id ? 'bg-card-cream text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
                 }`}
@@ -627,21 +631,21 @@ export default function AnalisisAI() {
               </button>
             ))}
           </div>
+          <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Model</span>
           <input
             type="text"
             value={modelInput}
             onChange={(e) => setModelInput(e.target.value)}
             placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
-            className="flex-1 min-w-[200px] rounded-xl border border-border-soft bg-bg-soft/50 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
+            className="flex-1 min-w-[200px] rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
           />
         </div>
-        {/* Satu baris singkat saja - penjelasan panjang dihapus (permintaan
-            pemilik 2026-10-01: 'terlalu banyak text dan pusing'). Keterangan
-            cara pakai sudah ada di tombol (title) dan di pesan kosong. */}
+
+        {/* Baris 3: keterangan singkat sesuai mode. */}
         <p className="mt-2 text-xs text-ink-muted">
           {mode === 'analisis'
-            ? 'Pilih topik atau tulis sendiri - hasilnya: Temuan, Saran, Risiko.'
-            : 'Ngobrol bebas, AI ingat percakapan sebelumnya.'}
+            ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
+            : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
         </p>
       </div>
 
@@ -651,7 +655,10 @@ export default function AnalisisAI() {
       {mode === 'analisis' && (
         <>
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-            <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
+              <span className="text-[0.65rem] text-ink-faint">Klik topik - langsung jalan</span>
+            </div>
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
                 "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
                 tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
@@ -663,7 +670,7 @@ export default function AnalisisAI() {
                   type="button"
                   disabled={jalan || detikSisa > 0}
                   onClick={() => jalankan({ pintasan: p.id }, p.label)}
-                  className="flex min-h-10 items-center justify-center rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
+                  className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
                 >
                   {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
                 </button>
@@ -675,7 +682,7 @@ export default function AnalisisAI() {
               <input
                 value={tanya}
                 onChange={(e) => setTanya(e.target.value)}
-                placeholder="Tulis topik..."
+                placeholder="Atau tulis topik sendiri..."
                 aria-label="Topik analisis"
                 className="w-full rounded-xl border border-border-soft bg-card-cream px-3.5 py-2.5 text-sm text-ink outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/25"
               />
@@ -750,25 +757,36 @@ export default function AnalisisAI() {
           <div ref={kotakHasil} className="scroll-mt-4" />
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-soft pb-3">
-              <h3 className="font-display text-ink">
-                Diskusi {pesan.length > 0 && <span className="text-sm font-normal text-ink-muted">({Math.ceil(pesan.length / 2)} giliran)</span>}
-              </h3>
+              <div>
+                <h3 className="font-display text-ink">
+                  Diskusi
+                  {pesan.length > 0 && (
+                    <span className="ml-2 text-sm font-normal text-ink-muted">
+                      {Math.ceil(pesan.length / 2)} giliran
+                    </span>
+                  )}
+                </h3>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  Ngobrol bebas soal data NEXO - AI ingat percakapan ini.
+                </p>
+              </div>
               {pesan.length > 0 && (
                 <button
                   type="button"
                   onClick={mulaiBaru}
                   className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-              title="Hapus seluruh percakapan dan mulai dari nol"
-            >
-              Hapus riwayat / Mulai baru
-            </button>
-          )}
-        </div>
+                  title="Hapus seluruh percakapan dan mulai dari nol"
+                >
+                  Mulai baru
+                </button>
+              )}
+            </div>
 
         {pesan.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            Ketik pertanyaanmu di kolom bawah untuk mulai.
-          </p>
+          <div className="mt-5 text-center">
+            <p className="text-sm text-ink-muted">Belum ada percakapan.</p>
+            <p className="mt-1 text-xs text-ink-faint">Ketik pertanyaanmu di kolom bawah untuk mulai.</p>
+          </div>
         ) : (
           <ul className="mt-3 space-y-3">
             {pesan.map((m, i) => (
@@ -825,23 +843,21 @@ export default function AnalisisAI() {
         <div ref={ujungChat} />
       </div>
 
-      {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT.
-          Ditaruh setelah kartu percakapan supaya alurnya: baca dulu, balas
-          di bawah. Tetap satu baris dengan tombol kirim di kanan. */}
+      {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT. */}
       <form onSubmit={kirimBebas} className="sticky bottom-4 z-10 flex gap-2 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)]">
         <input
           value={tanya}
           onChange={(e) => setTanya(e.target.value)}
-          placeholder="Ketik pertanyaanmu..."
+          placeholder={detikSisa > 0 ? `Tunggu ${detikSisa} detik...` : 'Ketik pertanyaanmu...'}
           aria-label="Pertanyaan bebas tentang data"
           className="w-full rounded-xl bg-transparent px-3 py-2 text-sm text-ink outline-none"
         />
         <button
           type="submit"
-          disabled={jalan || !tanya.trim()}
+          disabled={jalan || detikSisa > 0 || !tanya.trim()}
           className="btn-primary shrink-0 text-sm disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {jalan ? '...' : 'Kirim'}
+          {jalan ? '...' : detikSisa > 0 ? `⏳ ${detikSisa}s` : 'Kirim'}
         </button>
       </form>
         </>
