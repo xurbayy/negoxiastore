@@ -1123,11 +1123,13 @@ export default function AnalisisAI() {
   // Tes koneksi provider (sebelum simpan): validasi URL base + API key.
   const tesKoneksiProv = useCallback(async () => {
     setTesHasil({ status: 'cek' });
+    // Sertakan keyBaru kalau belum diklik "+ Tambah" (fix 2026-10-02).
+    const keysFinal = keyBaru.trim() ? [...apiKeys, keyBaru.trim()] : apiKeys;
     try {
       const res = await fetch('/api/admin/ai/tes-koneksi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base_url: formProv.base_url, api_key: apiKeys.join(',') }),
+        body: JSON.stringify({ base_url: formProv.base_url, api_key: keysFinal.join(',') }),
       });
       const d = await res.json();
       if (d.ok) setTesHasil({ status: 'ok', pesan: d.pesan, url: d.urlDicek, contoh: d.contoh || [] });
@@ -1135,7 +1137,7 @@ export default function AnalisisAI() {
     } catch (e) {
       setTesHasil({ status: 'gagal', pesan: e.message });
     }
-  }, [formProv]);
+  }, [formProv, apiKeys, keyBaru]);
 
   const cekModel = useCallback(async () => {
     const m = modelInput.trim();
