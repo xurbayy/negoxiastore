@@ -148,6 +148,12 @@ export default function AnalisisAI() {
   const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '', env_key: '' });
   // Form model baru.
   const [formModel, setFormModel] = useState({ label: '', model: '', provider: '' });
+  // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
+  // Permintaan pemilik 2026-10-02: "api key bisa diliat - ada toggle lihat".
+  const [kunciTerlihat, setKunciTerlihat] = useState({});
+  // Toggle tampilkan input API key di FORM tambah provider (bukan kunci
+  // tersimpan). Default tersembunyi (type=password).
+  const [lihatInputKunci, setLihatInputKunci] = useState(false);
 
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
@@ -575,6 +581,29 @@ export default function AnalisisAI() {
     flashKelola(`Dipakai: ${m.label}`);
   }, []);
 
+  // Toggle lihat/sembunyikan API key satu provider. Kunci asli diambil
+  // sekali dari server (endpoint ?reveal=ID) lalu di-cache di state.
+  const toggleLihatKunci = useCallback(async (id) => {
+    if (kunciTerlihat[id]) {
+      // Sedang terlihat -> sembunyikan (hapus dari cache).
+      setKunciTerlihat((s) => {
+        const next = { ...s };
+        delete next[id];
+        return next;
+      });
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/ai/providers?reveal=' + id, { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) {
+        setKunciTerlihat((s) => ({ ...s, [id]: d.apiKey || '(kosong)' }));
+      } else {
+        flashKelola('Gagal lihat kunci: ' + (d.error || 'tidak diketahui'));
+      }
+    } catch (e) { flashKelola('Gagal lihat kunci: ' + e.message); }
+  }, [kunciTerlihat]);
+
   if (memuatStatus) {
     return (
       <div className="nx-card px-6 py-10 text-center text-sm text-ink-muted">
@@ -824,9 +853,20 @@ export default function AnalisisAI() {
                     <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
                     <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-card-cream px-2 py-0.5 text-[0.6rem] text-ink-faint">
-                    {p.adaKunci ? p.kunciTersamar : (p.envKey || 'tanpa kunci')}
-                  </span>
+                  {p.adaKunci ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleLihatKunci(p.id)}
+                      title={kunciTerlihat[p.id] ? 'Sembunyikan API key' : 'Lihat API key'}
+                      className="shrink-0 max-w-[220px] truncate rounded-full bg-card-cream px-2 py-0.5 font-mono text-[0.6rem] text-ink-faint transition hover:bg-accent/15 hover:text-ink cursor-pointer"
+                    >
+                      {kunciTerlihat[p.id] ? kunciTerlihat[p.id] : `${p.kunciTersamar} 👁`}
+                    </button>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-card-cream px-2 py-0.5 text-[0.6rem] text-ink-faint">
+                      {p.envKey || 'tanpa kunci'}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => hapusProvider(p.id)}
@@ -855,13 +895,22 @@ export default function AnalisisAI() {
                 placeholder="URL base (mis. https://api.deepseek.com/v1)"
                 className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
               />
-              <input
-                value={formProv.api_key}
-                onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
-                placeholder="API key (disimpan terenkripsi)"
-                type="password"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
+              <div className="relative">
+                <input
+                  value={formProv.api_key}
+                  onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
+                  placeholder="API key (disimpan terenkripsi)"
+                  type={lihatInputKunci ? 'text' : 'password'}
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 pr-14 text-xs text-ink outline-none focus:border-accent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLihatInputKunci((v) => !v)}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                >
+                  {lihatInputKunci ? 'Sembunyi' : 'Lihat'}
+                </button>
+              </div>
               <input
                 value={formProv.env_key}
                 onChange={(e) => setFormProv({ ...formProv, env_key: e.target.value })}

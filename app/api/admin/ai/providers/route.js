@@ -1,6 +1,7 @@
 import { getSession, getAdminSession } from '../../../../lib/session';
 import { getDb, schemaReady } from '../../../../lib/db';
 import { json } from '../../../../lib/api-helpers';
+import { NextResponse } from 'next/server';
 import { enkripsiKunci, dekripsiKunci, samarkanKunci } from '../../../../lib/aiCrypto';
 
 export const dynamic = 'force-dynamic';
@@ -41,10 +42,30 @@ function buatSlug(nama) {
     .slice(0, 40) || 'provider';
 }
 
-export async function GET() {
+export async function GET(request) {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   await schemaReady();
   const db = getDb();
+
+  // Mode REVEAL: kembalikan kunci ASLI satu provider (permintaan pemilik
+  // 2026-10-02: "api key bisa diliat - ada toggle lihat & sembunyikan").
+  // Hanya SATU kunci per permintaan, tetap butuh sesi admin, dan tidak
+  // di-cache - supaya tidak ada endpoint yang membocorkan semua kunci sekaligus.
+  const url = new URL(request.url);
+  const revealId = Number(url.searchParams.get('reveal'));
+  if (revealId) {
+    const res = await db.execute({
+      sql: 'SELECT api_key_enc FROM ai_providers WHERE id = ? LIMIT 1',
+      args: [revealId],
+    });
+    const enc = res.rows?.[0]?.api_key_enc;
+    const asli = dekripsiKunci(enc);
+    return NextResponse.json({ ok: true, apiKey: asli || '' }, {
+      status: 200,
+      headers: { 'Cache-Control': 'no-store' },
+    });
+  }
+
   const [prov, mod] = await Promise.all([
     db.execute('SELECT id, nama, slug, base_url, api_key_enc, env_key, created_at, updated_at FROM ai_providers ORDER BY nama ASC'),
     db.execute('SELECT id, label, model, provider, created_at, updated_at FROM ai_models ORDER BY label ASC'),
