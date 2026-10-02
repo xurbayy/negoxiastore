@@ -848,6 +848,271 @@ export default function AnalisisAI() {
     }
   }, [provider]);
 
+  const renderKelola = () => (
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-ink">Kelola Provider & Model</h3>
+            {pesanKelola && <span className="text-xs font-semibold text-accent">{pesanKelola}</span>}
+          </div>
+
+          {/* Provider kustom tersimpan */}
+          <p className="mt-3 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider kustom</p>
+          {memuatKelola ? (
+            <p className="mt-2 text-sm text-ink-muted"><span className="pulse-dot" aria-hidden="true" /> Memuat...</p>
+          ) : daftarProvider.length === 0 ? (
+            <p className="mt-2 text-xs text-ink-muted">Belum ada provider kustom. Provider bawaan (Groq, OpenRouter) sudah tersedia di atas.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {daftarProvider.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
+                    <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
+                  </div>
+                  {p.adaKunci ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleLihatKunci(p.id)}
+                      title={kunciTerlihat[p.id] ? 'Sembunyikan API key' : 'Lihat API key'}
+                      className="shrink-0 max-w-[220px] truncate rounded-full bg-card-cream px-2 py-0.5 font-mono text-[0.6rem] text-ink-faint transition hover:bg-accent/15 hover:text-ink cursor-pointer"
+                    >
+                      {kunciTerlihat[p.id] ? kunciTerlihat[p.id] : `${p.kunciTersamar} 👁`}
+                    </button>
+                  ) : (
+                    <span className="shrink-0 rounded-full bg-card-cream px-2 py-0.5 text-[0.6rem] text-ink-faint">
+                      {p.envKey || 'tanpa kunci'}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => mulaiEditProvider(p)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hapusProvider(p.id)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Form provider (tambah / edit) */}
+          <div className={`mt-3 rounded-xl border p-3 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
+            <p className="text-xs font-bold text-ink-muted">{editProvId ? 'Edit provider' : 'Tambah provider'}</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input
+                value={formProv.nama}
+                onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
+                placeholder="Nama (mis. DeepSeek)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={formProv.base_url}
+                onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
+                placeholder="URL base (mis. https://api.deepseek.com/v1)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <div className="relative">
+                <input
+                  value={formProv.api_key}
+                  onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
+                  placeholder="API key (disimpan terenkripsi)"
+                  type={lihatInputKunci ? 'text' : 'password'}
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 pr-14 text-xs text-ink outline-none focus:border-accent"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLihatInputKunci((v) => !v)}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                >
+                  {lihatInputKunci ? 'Sembunyi' : 'Lihat'}
+                </button>
+              </div>
+              <input
+                value={formProv.env_key}
+                onChange={(e) => setFormProv({ ...formProv, env_key: e.target.value })}
+                placeholder="atau nama env (mis. DEEPSEEK_API_KEY)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={tesKoneksiProv}
+                disabled={tesHasil.status === 'cek'}
+                className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+              >
+                {tesHasil.status === 'cek' ? 'Tes...' : 'Tes koneksi'}
+              </button>
+              <button
+                type="button"
+                onClick={simpanProvider}
+                className="btn-primary text-xs"
+              >
+                {editProvId ? 'Simpan perubahan' : 'Simpan provider'}
+              </button>
+              {editProvId && (
+                <button
+                  type="button"
+                  onClick={batalEditProvider}
+                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                >
+                  Batal
+                </button>
+              )}
+            </div>
+            {editProvId && (
+              <p className="mt-1.5 text-[0.65rem] text-ink-faint">Kosongkan API key kalau tidak ingin mengubah kunci lama.</p>
+            )}
+            {/* Hasil tes koneksi - jelas penyebabnya kalau gagal. */}
+            {tesHasil.status === 'ok' && (
+              <div className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs text-success">
+                <p className="font-semibold">✓ {tesHasil.pesan}</p>
+                {tesHasil.contoh?.length > 0 && (
+                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Contoh: {tesHasil.contoh.join(', ')}</p>
+                )}
+              </div>
+            )}
+            {tesHasil.status === 'gagal' && (
+              <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
+                <p className="font-semibold">{tesHasil.pesan}</p>
+                {tesHasil.url && (
+                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Dicek: {tesHasil.url}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Model tersimpan */}
+          <p className="mt-4 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model tersimpan</p>
+          {daftarModel.length === 0 ? (
+            <p className="mt-2 text-xs text-ink-muted">Belum ada model tersimpan.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {daftarModel.map((m) => (
+                <li key={m.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">{m.label}</p>
+                    <p className="truncate text-[0.7rem] text-ink-muted">{m.provider} • {m.model}</p>
+                    {(m.maxTokens || m.kecerdasan) && (
+                      <p className="text-[0.65rem] text-ink-faint">
+                        {m.maxTokens ? `maks ${m.maxTokens} token` : ''}
+                        {m.maxTokens && m.kecerdasan ? ' • ' : ''}
+                        {m.kecerdasan ? `kecerdasan ${m.kecerdasan}/10` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => pakaiModel(m)}
+                    className="shrink-0 rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                  >
+                    Pakai
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => mulaiEditModel(m)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hapusModel(m.id)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Form model (simpan / edit) */}
+          <div className={`mt-3 rounded-xl border p-3 ${editModelId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
+            <p className="text-xs font-bold text-ink-muted">{editModelId ? 'Edit model' : 'Simpan model'}</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <input
+                value={formModel.label}
+                onChange={(e) => setFormModel({ ...formModel, label: e.target.value })}
+                placeholder="Label (mis. Nemotron Cepat)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={formModel.model}
+                onChange={(e) => setFormModel({ ...formModel, model: e.target.value })}
+                placeholder="Nama model (mis. nvidia/nemotron...:free)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <select
+                value={formModel.provider}
+                onChange={(e) => setFormModel({ ...formModel, provider: e.target.value })}
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              >
+                <option value="">Pilih provider...</option>
+                {(status.providers || []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}{p.kustom ? ' (kustom)' : ''}</option>
+                ))}
+              </select>
+            </div>
+            {/* Pengaturan per-model: panjang jawaban + tingkat kecerdasan. */}
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
+                <span className="shrink-0">Maks token jawaban</span>
+                <input
+                  type="number"
+                  min="200"
+                  max="32000"
+                  value={formModel.max_tokens}
+                  onChange={(e) => setFormModel({ ...formModel, max_tokens: e.target.value })}
+                  placeholder="2000"
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
+                <span className="shrink-0">Kecerdasan (1-10)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formModel.kecerdasan}
+                  onChange={(e) => setFormModel({ ...formModel, kecerdasan: e.target.value })}
+                  placeholder="6"
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                />
+              </label>
+            </div>
+            <p className="mt-1 text-[0.65rem] text-ink-faint">
+              Kecerdasan: 1 = paling presisi/fokus, 10 = paling kreatif/eksploratif. Kosongkan untuk pakai default (6).
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={simpanModel}
+                className="btn-primary text-xs"
+              >
+                {editModelId ? 'Simpan perubahan' : 'Simpan model'}
+              </button>
+              {editModelId && (
+                <button
+                  type="button"
+                  onClick={batalEditModel}
+                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                >
+                  Batal
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+  );
+
   if (memuatStatus) {
     return (
       <div className="nx-card px-6 py-10 text-center text-sm text-ink-muted">
@@ -858,16 +1123,32 @@ export default function AnalisisAI() {
 
   if (!status?.aktif) {
     return (
-      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-        <h3 className="font-display text-ink">Analisis AI belum aktif</h3>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Belum ada provider AI yang punya API key. Pilih salah satu:
-        </p>
-        <ul className="mt-2 space-y-1 text-sm leading-relaxed text-ink-muted">
-          <li>- Isi <strong className="text-ink">GROQ_API_KEY</strong> atau <strong className="text-ink">OPENROUTER_API_KEY</strong> di environment (Vercel &gt; Settings &gt; Environment Variables), lalu deploy ulang.</li>
-          <li>- Atau tambah provider sendiri lewat tombol <strong className="text-ink">Kelola provider &amp; model</strong> di bawah (API key disimpan terenkripsi di database, tanpa perlu deploy ulang).</li>
-        </ul>
-        <p className="mt-2 text-xs text-ink-faint">Beberapa kunci bisa dipisah koma supaya otomatis pindah saat satu kena batas kuota.</p>
+      <div className="space-y-4">
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+          <h3 className="font-display text-ink">Analisis AI belum aktif</h3>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+            Belum ada provider AI yang punya API key. Pilih salah satu:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm leading-relaxed text-ink-muted">
+            <li>- Isi <strong className="text-ink">GROQ_API_KEY</strong> atau <strong className="text-ink">OPENROUTER_API_KEY</strong> di environment (Vercel &gt; Settings &gt; Environment Variables), lalu deploy ulang.</li>
+            <li>- Atau tambah provider sendiri lewat tombol <strong className="text-ink">Kelola provider &amp; model</strong> di bawah (API key disimpan terenkripsi di database, tanpa perlu deploy ulang).</li>
+          </ul>
+          <p className="mt-2 text-xs text-ink-faint">Beberapa kunci bisa dipisah koma supaya otomatis pindah saat satu kena batas kuota.</p>
+          {/* Diagnostik: tampilkan provider yang terbaca server supaya jelas. */}
+          {Array.isArray(status?.providers) && (
+            <p className="mt-2 text-[0.65rem] text-ink-faint">
+              Terbaca server: {status.providers.map((p) => `${p.label}(${p.kunci})`).join(', ') || 'tidak ada'}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => { setKelola((v) => !v); if (!kelola) muatKelola(); }}
+            className="btn-primary mt-3 text-sm"
+          >
+            {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
+          </button>
+        </div>
+        {kelola && renderKelola()}
       </div>
     );
   }
@@ -1379,270 +1660,7 @@ export default function AnalisisAI() {
           ==========================================
           Tambah provider kustom (nama + URL + API key), hapus, lalu simpan
           model (label + nama model + provider) yang bisa dipakai ulang. */}
-      {kelola && (
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-display text-ink">Kelola Provider & Model</h3>
-            {pesanKelola && <span className="text-xs font-semibold text-accent">{pesanKelola}</span>}
-          </div>
-
-          {/* Provider kustom tersimpan */}
-          <p className="mt-3 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider kustom</p>
-          {memuatKelola ? (
-            <p className="mt-2 text-sm text-ink-muted"><span className="pulse-dot" aria-hidden="true" /> Memuat...</p>
-          ) : daftarProvider.length === 0 ? (
-            <p className="mt-2 text-xs text-ink-muted">Belum ada provider kustom. Provider bawaan (Groq, OpenRouter) sudah tersedia di atas.</p>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {daftarProvider.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
-                    <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
-                  </div>
-                  {p.adaKunci ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleLihatKunci(p.id)}
-                      title={kunciTerlihat[p.id] ? 'Sembunyikan API key' : 'Lihat API key'}
-                      className="shrink-0 max-w-[220px] truncate rounded-full bg-card-cream px-2 py-0.5 font-mono text-[0.6rem] text-ink-faint transition hover:bg-accent/15 hover:text-ink cursor-pointer"
-                    >
-                      {kunciTerlihat[p.id] ? kunciTerlihat[p.id] : `${p.kunciTersamar} 👁`}
-                    </button>
-                  ) : (
-                    <span className="shrink-0 rounded-full bg-card-cream px-2 py-0.5 text-[0.6rem] text-ink-faint">
-                      {p.envKey || 'tanpa kunci'}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => mulaiEditProvider(p)}
-                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => hapusProvider(p.id)}
-                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-                  >
-                    Hapus
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Form provider (tambah / edit) */}
-          <div className={`mt-3 rounded-xl border p-3 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
-            <p className="text-xs font-bold text-ink-muted">{editProvId ? 'Edit provider' : 'Tambah provider'}</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <input
-                value={formProv.nama}
-                onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
-                placeholder="Nama (mis. DeepSeek)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
-              <input
-                value={formProv.base_url}
-                onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
-                placeholder="URL base (mis. https://api.deepseek.com/v1)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
-              <div className="relative">
-                <input
-                  value={formProv.api_key}
-                  onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
-                  placeholder="API key (disimpan terenkripsi)"
-                  type={lihatInputKunci ? 'text' : 'password'}
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 pr-14 text-xs text-ink outline-none focus:border-accent"
-                />
-                <button
-                  type="button"
-                  onClick={() => setLihatInputKunci((v) => !v)}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:text-ink cursor-pointer"
-                >
-                  {lihatInputKunci ? 'Sembunyi' : 'Lihat'}
-                </button>
-              </div>
-              <input
-                value={formProv.env_key}
-                onChange={(e) => setFormProv({ ...formProv, env_key: e.target.value })}
-                placeholder="atau nama env (mis. DEEPSEEK_API_KEY)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={tesKoneksiProv}
-                disabled={tesHasil.status === 'cek'}
-                className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-              >
-                {tesHasil.status === 'cek' ? 'Tes...' : 'Tes koneksi'}
-              </button>
-              <button
-                type="button"
-                onClick={simpanProvider}
-                className="btn-primary text-xs"
-              >
-                {editProvId ? 'Simpan perubahan' : 'Simpan provider'}
-              </button>
-              {editProvId && (
-                <button
-                  type="button"
-                  onClick={batalEditProvider}
-                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
-                >
-                  Batal
-                </button>
-              )}
-            </div>
-            {editProvId && (
-              <p className="mt-1.5 text-[0.65rem] text-ink-faint">Kosongkan API key kalau tidak ingin mengubah kunci lama.</p>
-            )}
-            {/* Hasil tes koneksi - jelas penyebabnya kalau gagal. */}
-            {tesHasil.status === 'ok' && (
-              <div className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs text-success">
-                <p className="font-semibold">✓ {tesHasil.pesan}</p>
-                {tesHasil.contoh?.length > 0 && (
-                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Contoh: {tesHasil.contoh.join(', ')}</p>
-                )}
-              </div>
-            )}
-            {tesHasil.status === 'gagal' && (
-              <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
-                <p className="font-semibold">{tesHasil.pesan}</p>
-                {tesHasil.url && (
-                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Dicek: {tesHasil.url}</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Model tersimpan */}
-          <p className="mt-4 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model tersimpan</p>
-          {daftarModel.length === 0 ? (
-            <p className="mt-2 text-xs text-ink-muted">Belum ada model tersimpan.</p>
-          ) : (
-            <ul className="mt-2 space-y-1.5">
-              {daftarModel.map((m) => (
-                <li key={m.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{m.label}</p>
-                    <p className="truncate text-[0.7rem] text-ink-muted">{m.provider} • {m.model}</p>
-                    {(m.maxTokens || m.kecerdasan) && (
-                      <p className="text-[0.65rem] text-ink-faint">
-                        {m.maxTokens ? `maks ${m.maxTokens} token` : ''}
-                        {m.maxTokens && m.kecerdasan ? ' • ' : ''}
-                        {m.kecerdasan ? `kecerdasan ${m.kecerdasan}/10` : ''}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => pakaiModel(m)}
-                    className="shrink-0 rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
-                  >
-                    Pakai
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => mulaiEditModel(m)}
-                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => hapusModel(m.id)}
-                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-                  >
-                    Hapus
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* Form model (simpan / edit) */}
-          <div className={`mt-3 rounded-xl border p-3 ${editModelId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
-            <p className="text-xs font-bold text-ink-muted">{editModelId ? 'Edit model' : 'Simpan model'}</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              <input
-                value={formModel.label}
-                onChange={(e) => setFormModel({ ...formModel, label: e.target.value })}
-                placeholder="Label (mis. Nemotron Cepat)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
-              <input
-                value={formModel.model}
-                onChange={(e) => setFormModel({ ...formModel, model: e.target.value })}
-                placeholder="Nama model (mis. nvidia/nemotron...:free)"
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              />
-              <select
-                value={formModel.provider}
-                onChange={(e) => setFormModel({ ...formModel, provider: e.target.value })}
-                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
-              >
-                <option value="">Pilih provider...</option>
-                {(status.providers || []).map((p) => (
-                  <option key={p.id} value={p.id}>{p.label}{p.kustom ? ' (kustom)' : ''}</option>
-                ))}
-              </select>
-            </div>
-            {/* Pengaturan per-model: panjang jawaban + tingkat kecerdasan. */}
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
-                <span className="shrink-0">Maks token jawaban</span>
-                <input
-                  type="number"
-                  min="200"
-                  max="32000"
-                  value={formModel.max_tokens}
-                  onChange={(e) => setFormModel({ ...formModel, max_tokens: e.target.value })}
-                  placeholder="2000"
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
-                />
-              </label>
-              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
-                <span className="shrink-0">Kecerdasan (1-10)</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={formModel.kecerdasan}
-                  onChange={(e) => setFormModel({ ...formModel, kecerdasan: e.target.value })}
-                  placeholder="6"
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
-                />
-              </label>
-            </div>
-            <p className="mt-1 text-[0.65rem] text-ink-faint">
-              Kecerdasan: 1 = paling presisi/fokus, 10 = paling kreatif/eksploratif. Kosongkan untuk pakai default (6).
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={simpanModel}
-                className="btn-primary text-xs"
-              >
-                {editModelId ? 'Simpan perubahan' : 'Simpan model'}
-              </button>
-              {editModelId && (
-                <button
-                  type="button"
-                  onClick={batalEditModel}
-                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
-                >
-                  Batal
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {kelola && renderKelola()}
 
       {/* ==========================================
           MODE ANALISIS (searah): tombol pintasan + laporan
