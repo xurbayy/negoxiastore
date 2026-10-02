@@ -1284,10 +1284,11 @@ export default function AnalisisAI() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="font-display text-ink">Analisis AI</h3>
-            {/* Titik status provider aktif - hijau = siap. */}
+            {/* Titik status - hijau kalau siap (pakai `siap`, bukan status.aktif
+                mentah, supaya cocok dengan logika banner). */}
             <span
-              title={`Provider aktif: ${provider || status.provider || 'groq'}`}
-              className={`inline-block h-2 w-2 rounded-full ${status.aktif ? 'bg-success' : 'bg-danger'}`}
+              title={siap ? 'Provider AI siap dipakai' : 'Belum ada provider siap'}
+              className={`inline-block h-2 w-2 rounded-full ${siap ? 'bg-success' : 'bg-danger'}`}
             />
           </div>
           <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
