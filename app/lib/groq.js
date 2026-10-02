@@ -16,6 +16,12 @@
 //   - Kunci TIDAK PERNAH dikembalikan ke pemanggil, apalagi ke browser.
 //   - Pesan error disaring supaya kunci tidak bocor.
 
+// Import STATIS (bukan dynamic) - dynamic import './db' pernah gagal senyap
+// di runtime serverless sehingga provider kustom tak terbaca (fix 2026-10-02).
+// File ini hanya diimpor route server, jadi aman.
+import { getDb, schemaReady } from './db';
+import { dekripsiKunci } from './aiCrypto';
+
 const PROVIDERS = {
   groq: {
     url: 'https://api.groq.com/openai/v1/chat/completions',
@@ -77,8 +83,6 @@ export async function providerInfo(namaProvider) {
   }
   // Provider kustom dari DB.
   try {
-    const { getDb, schemaReady } = await import('./db');
-    const { dekripsiKunci } = await import('./aiCrypto');
     await schemaReady();
     const db = getDb();
     const res = await db.execute({
@@ -178,7 +182,6 @@ export async function infoProviderLengkap(providerTerpilih) {
 
   let modelTersimpan = [];
   try {
-    const { getDb, schemaReady } = await import('./db');
     await schemaReady();
     const db = getDb();
     const [prov, mod] = await Promise.all([
