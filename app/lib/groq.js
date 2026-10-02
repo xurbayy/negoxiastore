@@ -689,6 +689,20 @@ export async function tanyaGroq(pesan, opsi = {}) {
         }
 
         terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
+        // RETRY: model free kadang kosong saat pertama. Coba ulang sekali.
+        try {
+          await new Promise((r) => setTimeout(r, 800));
+          const res2 = await fetch(url, {
+            method: 'POST',
+            headers: { ...h, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (res2.ok) {
+            const data2 = await res2.json().catch(() => null);
+            const teks2 = data2?.choices?.[0]?.message?.content;
+            if (teks2) return { ok: true, teks: bersihkanJawaban(teks2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
+          }
+        } catch { /* retry gagal - lanjut */ }
         continue;
       }
 
