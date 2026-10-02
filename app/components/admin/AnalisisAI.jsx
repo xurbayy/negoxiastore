@@ -148,7 +148,7 @@ export default function AnalisisAI() {
   // Form provider baru.
   const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '', env_key: '' });
   // Form model baru.
-  const [formModel, setFormModel] = useState({ label: '', model: '', provider: '' });
+  const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
   // Permintaan pemilik 2026-10-02: "api key bisa diliat - ada toggle lihat".
   const [kunciTerlihat, setKunciTerlihat] = useState({});
@@ -161,6 +161,9 @@ export default function AnalisisAI() {
   const [tesHasil, setTesHasil] = useState({ status: 'idle' });
   // Daftar model provider (permintaan pemilik: tampilkan nama model, filter free).
   const [modelProv, setModelProv] = useState({ status: 'idle', models: [], jumlah: 0, jumlahGratis: 0, hanyaGratis: true });
+  // Pengaturan model aktif: max token + kecerdasan (1-10). Diambil dari model
+  // tersimpan saat dipilih, atau diubah manual di bar kontrol.
+  const [modelSetting, setModelSetting] = useState({ maxTokens: null, kecerdasan: null });
   // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
   // 2026-10-02: "provider model itu ada CRUD-nya semua".
   const [editProvId, setEditProvId] = useState(null);
@@ -362,7 +365,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, kecerdasan: modelSetting.kecerdasan || undefined }),
         signal: ac.signal,
       });
       clearTimeout(timer);
@@ -614,7 +617,7 @@ export default function AnalisisAI() {
       });
       const d = await res.json();
       if (d.ok) {
-        setFormModel({ label: '', model: '', provider: '' });
+        setFormModel({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
         setEditModelId(null);
         flashKelola(modeEdit ? 'Model diperbarui.' : 'Model disimpan.');
         await Promise.all([muatKelola(), muatStatusUlang()]);
@@ -624,12 +627,16 @@ export default function AnalisisAI() {
 
   const mulaiEditModel = useCallback((m) => {
     setEditModelId(m.id);
-    setFormModel({ label: m.label, model: m.model, provider: m.provider });
+    setFormModel({
+      label: m.label, model: m.model, provider: m.provider,
+      max_tokens: m.maxTokens == null ? '' : String(m.maxTokens),
+      kecerdasan: m.kecerdasan == null ? '' : String(m.kecerdasan),
+    });
   }, []);
 
   const batalEditModel = useCallback(() => {
     setEditModelId(null);
-    setFormModel({ label: '', model: '', provider: '' });
+    setFormModel({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   }, []);
 
   const hapusModel = useCallback(async (id) => {
@@ -655,10 +662,12 @@ export default function AnalisisAI() {
     finally { setKonfirmasiBusy(false); setKonfirmasi(null); }
   }, [konfirmasi]);
 
-  // Pakai model tersimpan: isi provider + model di bar kontrol atas.
+  // Pakai model tersimpan: isi provider + model + pengaturan (max token,
+  // kecerdasan) di bar kontrol atas.
   const pakaiModel = useCallback((m) => {
     setProvider(m.provider);
     setModelInput(m.model);
+    setModelSetting({ maxTokens: m.maxTokens, kecerdasan: m.kecerdasan });
     flashKelola(`Dipakai: ${m.label}`);
   }, []);
 
@@ -1062,17 +1071,27 @@ export default function AnalisisAI() {
               ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
               : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              const buka = !kelola;
-              setKelola(buka);
-              if (buka && daftarProvider.length === 0) muatKelola();
-            }}
-            className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-          >
-            {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Setting aktif model: max token + kecerdasan. */}
+            {(modelSetting.maxTokens || modelSetting.kecerdasan) && (
+              <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-semibold text-ink-muted">
+                {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : ''}
+                {modelSetting.maxTokens && modelSetting.kecerdasan ? ' • ' : ''}
+                {modelSetting.kecerdasan ? `IQ ${modelSetting.kecerdasan}/10` : ''}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                const buka = !kelola;
+                setKelola(buka);
+                if (buka && daftarProvider.length === 0) muatKelola();
+              }}
+              className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+            >
+              {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1233,6 +1252,13 @@ export default function AnalisisAI() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ink">{m.label}</p>
                     <p className="truncate text-[0.7rem] text-ink-muted">{m.provider} • {m.model}</p>
+                    {(m.maxTokens || m.kecerdasan) && (
+                      <p className="text-[0.65rem] text-ink-faint">
+                        {m.maxTokens ? `maks ${m.maxTokens} token` : ''}
+                        {m.maxTokens && m.kecerdasan ? ' • ' : ''}
+                        {m.kecerdasan ? `kecerdasan ${m.kecerdasan}/10` : ''}
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -1287,6 +1313,36 @@ export default function AnalisisAI() {
                 ))}
               </select>
             </div>
+            {/* Pengaturan per-model: panjang jawaban + tingkat kecerdasan. */}
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
+                <span className="shrink-0">Maks token jawaban</span>
+                <input
+                  type="number"
+                  min="200"
+                  max="32000"
+                  value={formModel.max_tokens}
+                  onChange={(e) => setFormModel({ ...formModel, max_tokens: e.target.value })}
+                  placeholder="2000"
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
+                <span className="shrink-0">Kecerdasan (1-10)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={formModel.kecerdasan}
+                  onChange={(e) => setFormModel({ ...formModel, kecerdasan: e.target.value })}
+                  placeholder="6"
+                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
+                />
+              </label>
+            </div>
+            <p className="mt-1 text-[0.65rem] text-ink-faint">
+              Kecerdasan: 1 = paling presisi/fokus, 10 = paling kreatif/eksploratif. Kosongkan untuk pakai default (6).
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"

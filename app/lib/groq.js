@@ -184,7 +184,7 @@ export async function infoProviderLengkap(providerTerpilih) {
     const db = getDb();
     const [prov, mod] = await Promise.all([
       db.execute('SELECT slug, nama, base_url, env_key, api_key_enc FROM ai_providers ORDER BY nama ASC'),
-      db.execute('SELECT id, label, model, provider FROM ai_models ORDER BY label ASC'),
+      db.execute('SELECT id, label, model, provider, max_tokens, kecerdasan FROM ai_models ORDER BY label ASC'),
     ]);
     for (const r of (prov.rows || [])) {
       tersedia.push({
@@ -200,6 +200,8 @@ export async function infoProviderLengkap(providerTerpilih) {
       label: r.label,
       model: r.model,
       provider: r.provider,
+      maxTokens: r.max_tokens == null ? null : Number(r.max_tokens),
+      kecerdasan: r.kecerdasan == null ? null : Number(r.kecerdasan),
     }));
   } catch { /* DB tidak siap - tampilkan provider bawaan saja */ }
 
@@ -456,6 +458,19 @@ export async function tanyaGroq(pesan, opsi = {}) {
   const model = (opsi.model && opsi.model.trim()) || info.model;
   const label = info.label;
 
+  // Pengaturan per-model (permintaan pemilik 2026-10-02):
+  //   maxTokens  : batas panjang jawaban.
+  //   kecerdasan : 1-10 -> memetakan ke temperature (rendah = fokus/presisi,
+  //                tinggi = kreatif/exploratif). Default 6.
+  const batasToken = Number.isFinite(Number(opsi.maxTokens)) && Number(opsi.maxTokens) > 0
+    ? Math.min(32000, Math.max(200, Number(opsi.maxTokens)))
+    : maksToken();
+  const level = Number.isFinite(Number(opsi.kecerdasan)) && Number(opsi.kecerdasan) > 0
+    ? Math.min(10, Math.max(1, Number(opsi.kecerdasan)))
+    : 6;
+  // Level 1 -> 0.1 (sangat presisi), level 10 -> 1.0 (sangat kreatif).
+  const suhu = Math.round((0.1 + (level - 1) * 0.1) * 100) / 100;
+
   if (!kunci.length) {
     return { ok: false, error: `Kunci ${label} belum diisi. Cek environment variable ${info.envKey} atau isi API key di panel provider.`, provider: namaProvider, providerLabel: label, envKey: info.envKey };
   }
@@ -476,8 +491,8 @@ export async function tanyaGroq(pesan, opsi = {}) {
         body: JSON.stringify({
           model,
           messages: pesan,
-          max_tokens: maksToken(),
-          temperature: 0.4,
+          max_tokens: batasToken,
+          temperature: suhu,
         }),
         signal: AbortSignal.timeout(60000),
       });

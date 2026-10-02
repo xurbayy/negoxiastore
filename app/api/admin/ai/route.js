@@ -369,8 +369,17 @@ export async function POST(request) {
   // Provider & model dari UI (toggle di panel admin AI).
   const providerPilihan = String(body?.provider || '').trim();
   const modelPilihan = String(body?.model || '').trim();
+  // Pengaturan per-model: UI mengirim max_tokens + kecerdasan (1-10) dari
+  // model tersimpan, kalau ada. Bisa juga dikirim manual.
+  const maxTokens = Number(body?.max_tokens) || undefined;
+  const kecerdasan = Number(body?.kecerdasan) || undefined;
 
-  const hasil = await tanyaGroq(pesan, { provider: providerPilihan || undefined, model: modelPilihan || undefined });
+  const hasil = await tanyaGroq(pesan, {
+    provider: providerPilihan || undefined,
+    model: modelPilihan || undefined,
+    maxTokens,
+    kecerdasan,
+  });
   if (!hasil.ok) {
     // Nama provider & env key untuk petunjuk - JANGAN hardcode "Groq",
     // pesan harus sesuai provider yang benar-benar dipakai.

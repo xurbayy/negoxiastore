@@ -42,6 +42,14 @@ function buatSlug(nama) {
     .slice(0, 40) || 'provider';
 }
 
+/** Angka opsional dengan batas; kosong/null -> null. */
+function angkaOpsional(v, min, max) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
 export async function GET(request) {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   await schemaReady();
@@ -68,7 +76,7 @@ export async function GET(request) {
 
   const [prov, mod] = await Promise.all([
     db.execute('SELECT id, nama, slug, base_url, api_key_enc, env_key, created_at, updated_at FROM ai_providers ORDER BY nama ASC'),
-    db.execute('SELECT id, label, model, provider, created_at, updated_at FROM ai_models ORDER BY label ASC'),
+    db.execute('SELECT id, label, model, provider, max_tokens, kecerdasan, created_at, updated_at FROM ai_models ORDER BY label ASC'),
   ]);
   return json({
     ok: true,
@@ -92,6 +100,8 @@ export async function GET(request) {
       label: r.label,
       model: r.model,
       provider: r.provider,
+      maxTokens: r.max_tokens == null ? null : Number(r.max_tokens),
+      kecerdasan: r.kecerdasan == null ? null : Number(r.kecerdasan),
       createdAt: Number(r.created_at),
       updatedAt: r.updated_at ? Number(r.updated_at) : null,
     })),
@@ -113,9 +123,11 @@ export async function POST(request) {
     if (!label || !model || !provider) {
       return json({ ok: false, error: 'Label, model, dan provider wajib diisi.' }, 400);
     }
+    const mt = angkaOpsional(body?.max_tokens, 200, 32000);
+    const kc = angkaOpsional(body?.kecerdasan, 1, 10);
     const res = await db.execute({
-      sql: 'INSERT INTO ai_models (label, model, provider, created_at) VALUES (?, ?, ?, ?)',
-      args: [label, model, provider, Date.now()],
+      sql: 'INSERT INTO ai_models (label, model, provider, max_tokens, kecerdasan, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [label, model, provider, mt, kc, Date.now()],
     });
     return json({ ok: true, id: Number(res.lastInsertRowid ?? 0) });
   }
@@ -166,8 +178,8 @@ export async function PATCH(request) {
       return json({ ok: false, error: 'Label, model, dan provider wajib diisi.' }, 400);
     }
     await db.execute({
-      sql: 'UPDATE ai_models SET label = ?, model = ?, provider = ?, updated_at = ? WHERE id = ?',
-      args: [label, model, provider, Date.now(), id],
+      sql: 'UPDATE ai_models SET label = ?, model = ?, provider = ?, max_tokens = ?, kecerdasan = ?, updated_at = ? WHERE id = ?',
+      args: [label, model, provider, angkaOpsional(body?.max_tokens, 200, 32000), angkaOpsional(body?.kecerdasan, 1, 10), Date.now(), id],
     });
     return json({ ok: true });
   }

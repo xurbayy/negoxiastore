@@ -247,6 +247,21 @@ export async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider);
   `);
 
+  // Migrasi kolom pengaturan per-model (permintaan pemilik 2026-10-02):
+  // "gw mau bisa custom per model dari berapa banyak max text yang bisa dikasih
+  // sama ai itu dan kecerdasannya pake takaran 1-10".
+  //   max_tokens  : batas panjang jawaban AI (default 2000).
+  //   kecerdasan  : 1-10 -> memengaruhi temperature + instruksi kedalaman.
+  try {
+    await db.execute('ALTER TABLE ai_models ADD COLUMN max_tokens INTEGER');
+  } catch {}
+  try {
+    await db.execute('ALTER TABLE ai_models ADD COLUMN kecerdasan INTEGER');
+  } catch {}
+  try {
+    await db.execute('ALTER TABLE ai_models ADD COLUMN catatan TEXT');
+  } catch {}
+
   // Migrasi aman: kolom/tabel baru pada DB lama (lewatii error "duplicate column")
   try {
     await db.execute('ALTER TABLE users ADD COLUMN was_premium INTEGER DEFAULT 0');
