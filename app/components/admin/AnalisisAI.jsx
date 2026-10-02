@@ -1227,7 +1227,7 @@ export default function AnalisisAI() {
                     </ul>
                   )}
                   {/* Input key baru + tombol tambah. */}
-                  <div className="flex gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
                     <input
                       value={keyBaru}
                       onChange={(e) => setKeyBaru(e.target.value)}
@@ -1240,7 +1240,7 @@ export default function AnalisisAI() {
                       }}
                       placeholder={editProvId ? 'Kosongkan = tidak ubah kunci lama' : 'Tempel API key baru di sini'}
                       type={lihatInputKunci ? 'text' : 'password'}
-                      className="flex-1 min-w-0 rounded border border-border-soft bg-bg-soft/50 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
+                      className="flex-1 min-w-[140px] rounded border border-border-soft bg-bg-soft/50 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
                     />
                     <button
                       type="button"
