@@ -275,6 +275,76 @@ export async function tesKoneksi({ baseUrl, apiKey, envKey }) {
   }
 }
 
+/**
+ * Ambil daftar ALL model dari provider + tandai mana yang GRATIS.
+ * Permintaan pemilik (2026-10-02): "bakal muncul semua nama modelnya yang free
+ * saja".
+ *
+ * Cara deteksi gratis (heuristik, karena tiap provider beda format):
+ *   1. Nama berakhiran ':free' (OpenRouter) -> gratis.
+ *   2. pricing.prompt === '0' atau 0 (OpenRouter & beberapa provider).
+ *   3. Field id/nama mengandung kata 'free'.
+ *   4. Provider tanpa info harga -> semua dianggap TIDAK diketahui (gratis: null).
+ *
+ * @returns {Promise<{ok:boolean, gratis:Array, semua:Array, label?:string, error?:string, urlDicek?:string}>}
+ */
+export async function daftarModelProvider(namaProvider) {
+  const nama = resolveProvider(namaProvider);
+  const info = await providerInfo(nama);
+  if (!info) return { ok: false, error: `Provider "${nama}" tidak ditemukan.` };
+  if (!info.kunci.length) return { ok: false, error: `Kunci ${info.label} belum diisi.` };
+  if (!info.url) return { ok: false, error: `URL ${info.label} belum diisi.` };
+
+  const urlModels = info.url.replace(/\/chat\/completions\/?$/, '/models');
+  try {
+    const res = await fetch(urlModels, {
+      headers: { Authorization: `Bearer ${info.kunci[0]}` },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (res.status === 404) {
+      return { ok: false, urlDicek: urlModels, label: info.label, error: `URL base sepertinya salah - ${urlModels} (404).` };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, urlDicek: urlModels, label: info.label, error: `API key ditolak (HTTP ${res.status}).` };
+    }
+    if (!res.ok) {
+      return { ok: false, urlDicek: urlModels, label: info.label, error: `Gagal ambil daftar model (HTTP ${res.status}).` };
+    }
+    const data = await res.json().catch(() => null);
+    const list = data?.data || data?.models || [];
+    if (!Array.isArray(list) || list.length === 0) {
+      return { ok: false, urlDicek: urlModels, label: info.label, error: 'Provider tidak mengembalikan daftar model.' };
+    }
+
+    const normal = list.map((m) => {
+      const id = String(m?.id || m?.name || '');
+      if (!id) return null;
+      // Deteksi gratis.
+      let gratis = null; // null = tidak diketahui
+      if (/[:/-]free\b|:free$|free$/i.test(id)) gratis = true;
+      const harga = m?.pricing?.prompt ?? m?.price ?? m?.harga;
+      if (harga !== undefined && harga !== null && harga !== '') {
+        const n = parseFloat(harga);
+        if (Number.isFinite(n)) gratis = n === 0;
+      }
+      return {
+        id,
+        nama: m?.name || id,
+        gratis,
+        konteks: m?.context_length || m?.context || null,
+      };
+    }).filter(Boolean);
+
+    const gratis = normal.filter((m) => m.gratis === true);
+    return { ok: true, gratis, semua: normal, label: info.label, urlDicek: urlModels, jumlah: normal.length, jumlahGratis: gratis.length };
+  } catch (e) {
+    const pesan = e?.name === 'TimeoutError'
+      ? `Tidak merespons dalam 20 detik. URL: ${urlModels}`
+      : `Tidak bisa terhubung ke ${urlModels}. (${e?.message || e})`;
+    return { ok: false, urlDicek: urlModels, label: info.label, error: pesan };
+  }
+}
+
 export async function cekModelAda(namaProvider, modelDicari) {
   const nama = resolveProvider(namaProvider);
   const info = await providerInfo(nama);

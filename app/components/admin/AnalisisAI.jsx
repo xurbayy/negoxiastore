@@ -159,6 +159,8 @@ export default function AnalisisAI() {
   const [cekHasil, setCekHasil] = useState({ status: 'idle' });
   // Hasil tes koneksi provider (form tambah) - validasi URL base + API key.
   const [tesHasil, setTesHasil] = useState({ status: 'idle' });
+  // Daftar model provider (permintaan pemilik: tampilkan nama model, filter free).
+  const [modelProv, setModelProv] = useState({ status: 'idle', models: [], jumlah: 0, jumlahGratis: 0, hanyaGratis: true });
   // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
   // 2026-10-02: "provider model itu ada CRUD-nya semua".
   const [editProvId, setEditProvId] = useState(null);
@@ -179,6 +181,7 @@ export default function AnalisisAI() {
   // Hasil cek model jadi basi begitu provider/model diganti - reset.
   useEffect(() => {
     setCekHasil({ status: 'idle' });
+    setModelProv((s) => (s.status === 'ok' ? { ...s, status: 'idle' } : s));
   }, [provider, modelInput]);
 
   // Hasil tes koneksi jadi basi begitu form provider diubah - reset.
@@ -721,6 +724,23 @@ export default function AnalisisAI() {
     }
   }, [provider, modelInput]);
 
+  // Muat daftar model provider (bisa difilter gratis saja).
+  const muatModelProv = useCallback(async (hanyaGratis) => {
+    const g = hanyaGratis ?? modelProv.hanyaGratis;
+    setModelProv((s) => ({ ...s, status: 'cek', hanyaGratis: g }));
+    try {
+      const res = await fetch(`/api/admin/ai/daftar-model?provider=${encodeURIComponent(provider || '')}&gratis=${g ? '1' : '0'}`, { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) {
+        setModelProv({ status: 'ok', models: d.models || [], jumlah: d.jumlah || 0, jumlahGratis: d.jumlahGratis || 0, hanyaGratis: g, label: d.label, url: d.urlDicek });
+      } else {
+        setModelProv({ status: 'gagal', models: [], hanyaGratis: g, pesan: d.error || 'Gagal memuat.', url: d.urlDicek });
+      }
+    } catch (e) {
+      setModelProv({ status: 'gagal', models: [], hanyaGratis: g, pesan: e.message });
+    }
+  }, [provider, modelProv.hanyaGratis]);
+
   if (memuatStatus) {
     return (
       <div className="nx-card px-6 py-10 text-center text-sm text-ink-muted">
@@ -931,7 +951,71 @@ export default function AnalisisAI() {
           >
             {cekHasil.status === 'cek' ? '...' : 'Cek model'}
           </button>
+          {/* Lihat daftar model provider (filter gratis). */}
+          <button
+            type="button"
+            onClick={() => {
+              if (modelProv.status === 'ok') setModelProv((s) => ({ ...s, status: 'idle' }));
+              else muatModelProv(modelProv.hanyaGratis);
+            }}
+            disabled={modelProv.status === 'cek'}
+            title="Tampilkan daftar model provider"
+            className="shrink-0 rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+          >
+            {modelProv.status === 'cek' ? '...' : modelProv.status === 'ok' ? 'Tutup daftar' : 'Lihat model'}
+          </button>
         </div>
+
+        {/* Panel daftar model provider. */}
+        {modelProv.status === 'ok' && (
+          <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-ink">
+                Model {modelProv.label} -
+                <span className="ml-1 text-ink-muted">
+                  {modelProv.hanyaGratis ? `${modelProv.jumlahGratis} gratis` : `${modelProv.jumlah} total`}
+                </span>
+              </p>
+              <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={modelProv.hanyaGratis}
+                  onChange={(e) => muatModelProv(e.target.checked)}
+                  className="cursor-pointer"
+                />
+                Gratis saja
+              </label>
+            </div>
+            {modelProv.models.length === 0 ? (
+              <p className="mt-2 text-xs text-ink-muted">Tidak ada model{modelProv.hanyaGratis ? ' gratis' : ''}.</p>
+            ) : (
+              <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                {modelProv.models.map((m) => (
+                  <li key={m.id}>
+                    <button
+                      type="button"
+                      onClick={() => { setModelInput(m.id); setModelProv((s) => ({ ...s, status: 'idle' })); }}
+                      title="Pakai model ini"
+                      className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
+                    >
+                      <span className="min-w-0 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
+                      {m.gratis === true && <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {modelProv.url && (
+              <p className="mt-2 break-all font-mono text-[0.6rem] text-ink-faint">{modelProv.url}</p>
+            )}
+          </div>
+        )}
+        {modelProv.status === 'gagal' && (
+          <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
+            <p className="font-semibold">{modelProv.pesan}</p>
+            {modelProv.url && <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Dicek: {modelProv.url}</p>}
+          </div>
+        )}
 
         {/* Hasil validasi model - hanya tampil setelah dicek. */}
         {cekHasil.status === 'ada' && (
