@@ -242,6 +242,16 @@ export default function AnalisisAI() {
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_panel', panelTampil ? '1' : '0'); } catch { /* abaikan */ }
   }, [panelTampil]);
+  // Saran yang di-dismiss (dihapus dari tampilan). Reset saat "Muat ulang".
+  const [saranDismiss, setSaranDismiss] = useState(() => {
+    try { return new Set(JSON.parse(window.localStorage.getItem('nexo_ai_saran_dismiss') || '[]')); } catch { return new Set(); }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_saran_dismiss', JSON.stringify([...saranDismiss])); } catch { /* abaikan */ }
+  }, [saranDismiss]);
+  const dismissSaran = useCallback((id) => {
+    setSaranDismiss((s) => { const n = new Set(s); n.add(id); return n; });
+  }, []);
   const [daftarProvider, setDaftarProvider] = useState([]);
   const [daftarModel, setDaftarModel] = useState([]);
   const [memuatKelola, setMemuatKelola] = useState(false);
@@ -837,6 +847,12 @@ export default function AnalisisAI() {
     } catch { /* gagal - pakai fallback lokal */ }
   }, [peran]);
   useEffect(() => { muatSaran(); }, [muatSaran]);
+
+  // Muat ulang saran + reset dismiss (tombol "Muat ulang").
+  const muatSaranSegar = useCallback(async () => {
+    setSaranDismiss(new Set());
+    await muatSaran();
+  }, [muatSaran]);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang
@@ -2225,7 +2241,7 @@ export default function AnalisisAI() {
               </p>
               <button
                 type="button"
-                onClick={muatSaran}
+                onClick={muatSaranSegar}
                 title="Muat ulang saran dari data terbaru"
                 className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
               >
@@ -2262,18 +2278,26 @@ export default function AnalisisAI() {
                   : ((peran !== 'umum' && pintasanPeranIni.length)
                     ? pintasanPeranIni
                     : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
-                return daftarPintasan.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={jalan || detikSisa > 0}
-                    // Saran agen punya `tanya` (teks bebas) -> kirim sebagai tanya.
-                    // Pintasan bawaan pakai id -> kirim sebagai pintasan.
-                    onClick={() => jalankan(p.tanya ? { tanya: p.tanya } : { pintasan: p.id }, p.label)}
-                    className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
-                  >
-                    {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
-                  </button>
+                const tampil = daftarPintasan.filter((p) => !saranDismiss.has(p.id));
+                return tampil.map((p) => (
+                  <span key={p.id} className="relative inline-flex">
+                    <button
+                      type="button"
+                      disabled={jalan || detikSisa > 0}
+                      onClick={() => jalankan(p.tanya ? { tanya: p.tanya } : { pintasan: p.id }, p.label)}
+                      className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 pr-7 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
+                    >
+                      {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dismissSaran(p.id)}
+                      title="Hapus saran ini"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-ink-faint transition hover:text-danger cursor-pointer"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </span>
                 ));
               })()}
             </div>
@@ -2528,7 +2552,7 @@ export default function AnalisisAI() {
                 </p>
                 <button
                   type="button"
-                  onClick={muatSaran}
+                  onClick={muatSaranSegar}
                   title="Muat ulang saran dari data terbaru"
                   className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
                 >
@@ -2539,16 +2563,25 @@ export default function AnalisisAI() {
                 </button>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {saran.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={jalan || detikSisa > 0}
-                    onClick={() => jalankan({ tanya: s.tanya || s.label }, s.label, s.label)}
-                    className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-                  >
-                    {s.label}
-                  </button>
+                {saran.filter((s) => !saranDismiss.has(s.id)).map((s) => (
+                  <span key={s.id} className="relative inline-flex">
+                    <button
+                      type="button"
+                      disabled={jalan || detikSisa > 0}
+                      onClick={() => jalankan({ tanya: s.tanya || s.label }, s.label, s.label)}
+                      className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 pr-6 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                    >
+                      {s.label}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => dismissSaran(s.id)}
+                      title="Hapus saran ini"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-ink-faint transition hover:text-danger cursor-pointer"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </span>
                 ))}
               </div>
             </div>
