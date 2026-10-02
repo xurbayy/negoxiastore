@@ -199,9 +199,20 @@ export default function AnalisisAI() {
   const [tesHasil, setTesHasil] = useState({ status: 'idle' });
   // Daftar model provider (permintaan pemilik: tampilkan nama model, filter free).
   const [modelProv, setModelProv] = useState({ status: 'idle', models: [], jumlah: 0, jumlahGratis: 0, hanyaGratis: true });
-  // Pengaturan model aktif: max token + kecerdasan (1-10). Diambil dari model
-  // tersimpan saat dipilih, atau diubah manual di bar kontrol.
-  const [modelSetting, setModelSetting] = useState({ maxTokens: null, kecerdasan: null });
+  // PENGATURAN GLOBAL model: max token + kecerdasan (1-10). Berlaku untuk
+  // SEMUA model (permintaan pemilik 2026-10-02: "setting sekali saja").
+  // Disimpan di localStorage supaya bertahan.
+  const [modelSetting, setModelSetting] = useState(() => {
+    try {
+      const s = JSON.parse(window.localStorage.getItem('nexo_ai_setting') || '{}');
+      return { maxTokens: s.maxTokens ?? null, kecerdasan: s.kecerdasan ?? null, vision: null };
+    } catch { return { maxTokens: null, kecerdasan: null, vision: null }; }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('nexo_ai_setting', JSON.stringify({ maxTokens: modelSetting.maxTokens, kecerdasan: modelSetting.kecerdasan }));
+    } catch { /* abaikan */ }
+  }, [modelSetting.maxTokens, modelSetting.kecerdasan]);
   // Info pemakaian / kuota provider (permintaan pemilik: "tau ini udah limit apa engga").
   const [usage, setUsage] = useState({ status: 'idle' });
   // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
@@ -851,7 +862,8 @@ export default function AnalisisAI() {
   const pakaiModel = useCallback((m) => {
     setProvider(m.provider);
     setModelInput(m.model);
-    setModelSetting({ maxTokens: m.maxTokens, kecerdasan: m.kecerdasan, vision: m.vision ?? null });
+    // JANGAN timpa setting global (max token/kecerdasan) - pemilik mengatur
+    // sekali di bar kontrol dan berlaku untuk semua model (permintaan 2026-10-02).
     flashKelola(`Dipakai: ${m.label}`);
   }, []);
 
@@ -1425,8 +1437,11 @@ export default function AnalisisAI() {
                 type="button"
                 onClick={() => {
                   setProvider(p.id);
-                  // Auto-ganti modelInput ke default model provider baru
-                  if (p.model) setModelInput(p.model);
+                  // Ganti provider manual = model lama TIDAK berlaku lagi untuk
+                  // provider baru. Kosongkan supaya tidak salah pakai model yang
+                  // hanya ada di provider lain (permintaan pemilik 2026-10-02).
+                  if (p.model && p.model.trim()) setModelInput(p.model);
+                  else setModelInput('');
                 }}
                 title={p.model ? `Default: ${p.model}` : undefined}
                 className={`rounded-lg px-3 py-1 text-xs font-bold transition cursor-pointer ${
@@ -1660,7 +1675,9 @@ export default function AnalisisAI() {
                         onClick={() => {
                           if (m.providerId) setProvider(m.providerId);
                           setModelInput(m.id);
-                          setModelSetting({ maxTokens: null, kecerdasan: null, vision: m.vision ?? null });
+                          // Hanya perbarui info vision (untuk peringatan gambar).
+                          // Max token/kecerdasan tetap dari setting global.
+                          setModelSetting((s) => ({ ...s, vision: m.vision ?? null }));
                           setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
                         }}
                         title="Pakai model ini langsung (default)"
@@ -1672,38 +1689,21 @@ export default function AnalisisAI() {
                     {/* Pengaturan model terpilih: max token + kecerdasan. */}
                     {modelProv.dipilih === (m.providerId || '') + '::' + m.id && (
                       <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2">
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <label className="flex items-center gap-2 text-[0.65rem] text-ink-muted">
-                            <span className="shrink-0">Maks token</span>
-                            <input
-                              type="number" min="200" max="32000"
-                              value={modelProv.setToken ?? '2000'}
-                              onChange={(e) => setModelProv((s) => ({ ...s, setToken: e.target.value }))}
-                              className="w-full rounded border border-border-soft bg-bg-soft px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
-                            />
-                          </label>
-                          <label className="flex items-center gap-2 text-[0.65rem] text-ink-muted">
-                            <span className="shrink-0">Kecerdasan (1-10)</span>
-                            <input
-                              type="number" min="1" max="10"
-                              value={modelProv.setIq ?? '6'}
-                              onChange={(e) => setModelProv((s) => ({ ...s, setIq: e.target.value }))}
-                              className="w-full rounded border border-border-soft bg-bg-soft px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
-                            />
-                          </label>
-                        </div>
+                        <p className="text-[0.65rem] text-ink-muted">
+                          Maks token &amp; kecerdasan pakai pengaturan global di atas (berlaku semua model).
+                        </p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <button
                             type="button"
                             onClick={() => {
                               if (m.providerId) setProvider(m.providerId);
                               setModelInput(m.id);
-                              setModelSetting({ maxTokens: Number(modelProv.setToken) || null, kecerdasan: Number(modelProv.setIq) || null, vision: m.vision ?? null });
+                              setModelSetting((s) => ({ ...s, vision: m.vision ?? null }));
                               setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
                             }}
                             className="btn-primary text-[0.7rem]"
                           >
-                            Pakai dengan setting ini
+                            Pakai model ini
                           </button>
                           <button
                             type="button"
@@ -1718,8 +1718,8 @@ export default function AnalisisAI() {
                               // Simpan permanent sebagai model tersimpan.
                               setFormModel({
                                 label: m.id.split('/').pop().split(':')[0].slice(0, 40),
-                                model: m.id, provider: provider || '',
-                                max_tokens: String(modelProv.setToken ?? ''), kecerdasan: String(modelProv.setIq ?? ''),
+                                model: m.id, provider: m.providerId || provider || '',
+                                max_tokens: '', kecerdasan: '',
                               });
                               setKelola(true);
                               setEditModelId(null);
@@ -1789,35 +1789,51 @@ export default function AnalisisAI() {
           </div>
         )}
 
-        {/* Baris 3: keterangan singkat sesuai mode + tombol kelola. */}
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-ink-muted">
-            {mode === 'analisis'
-              ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
-              : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
-          </p>
-          <div className="flex items-center gap-2">
-            {/* Setting aktif model: max token + kecerdasan. */}
-            {(modelSetting.maxTokens || modelSetting.kecerdasan) && (
-              <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-semibold text-ink-muted">
-                {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : ''}
-                {modelSetting.maxTokens && modelSetting.kecerdasan ? ' • ' : ''}
-                {modelSetting.kecerdasan ? `IQ ${modelSetting.kecerdasan}/10` : ''}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                const buka = !kelola;
-                setKelola(buka);
-                if (buka && daftarProvider.length === 0) muatKelola();
-              }}
-              className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-            >
-              {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
-            </button>
-          </div>
+        {/* Baris 3: PENGATURAN GLOBAL model (max token + kecerdasan) + kelola.
+            Permintaan pemilik 2026-10-02: "kecerdasan dan maks konteks gw atur
+            di sebelah text ini (Analisis Cepat / Diskusi), jadi semua model
+            ikut aturan itu - setting sekali saja". Berlaku untuk SEMUA model. */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-[0.7rem] text-ink-muted">
+            <span className="shrink-0">Maks token</span>
+            <input
+              type="number" min="200" max="32000"
+              value={modelSetting.maxTokens ?? ''}
+              onChange={(e) => setModelSetting((s) => ({ ...s, maxTokens: e.target.value === '' ? null : Number(e.target.value) }))}
+              placeholder="2000"
+              className="w-20 rounded-lg border border-border-soft bg-bg-soft/60 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-[0.7rem] text-ink-muted">
+            <span className="shrink-0">Kecerdasan (1-10)</span>
+            <input
+              type="number" min="1" max="10"
+              value={modelSetting.kecerdasan ?? ''}
+              onChange={(e) => setModelSetting((s) => ({ ...s, kecerdasan: e.target.value === '' ? null : Number(e.target.value) }))}
+              placeholder="6"
+              className="w-16 rounded-lg border border-border-soft bg-bg-soft/60 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
+            />
+          </label>
+          <span className="text-[0.65rem] text-ink-faint hidden sm:inline">
+            1 = presisi, 10 = kreatif. Berlaku semua model.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const buka = !kelola;
+              setKelola(buka);
+              if (buka && daftarProvider.length === 0) muatKelola();
+            }}
+            className="ml-auto rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+          >
+            {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
+          </button>
         </div>
+        <p className="mt-1.5 text-xs text-ink-muted">
+          {mode === 'analisis'
+            ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
+            : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
+        </p>
       </div>
 
       {/* ==========================================
