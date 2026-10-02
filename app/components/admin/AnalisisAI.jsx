@@ -1887,7 +1887,7 @@ export default function AnalisisAI() {
               ))}
             </div>
             {agentProviderId && (
-              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[0.6rem] font-bold text-accent">
+              <span className="rounded-full bg-accent px-2.5 py-1 text-[0.6rem] font-bold text-white shadow-sm">
                 {status?.providers?.find((p) => p.id === agentProviderId)?.label || agentProviderId} → agent
               </span>
             )}
@@ -2395,18 +2395,16 @@ export default function AnalisisAI() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
                 Analisis Cepat
-                {saranDin.some((s) => s.sumber === 'ai') ? (
-                  <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari AI</span>
-                ) : saranDin.some((s) => s.sumber === 'agen') ? (
-                  <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
-                ) : null}
+                {saranDin.some((s) => s.sumber === 'ai') && (
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-white shadow-sm">dari AI</span>
+                )}
               </p>
               <button
                 type="button"
                 onClick={muatSaranAI}
                 disabled={saranAI}
                 title="AI cari topik paling relevan dari data terkini"
-                className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 disabled:cursor-wait cursor-pointer"
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[0.65rem] font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70 disabled:cursor-wait cursor-pointer"
               >
                 {saranAI ? (
                   <>
@@ -2735,11 +2733,9 @@ export default function AnalisisAI() {
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="flex flex-wrap items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
                   Saran cepat
-                  {saranAIGen.length > 0 ? (
-                    <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari AI</span>
-                  ) : saranAgen.length > 0 ? (
-                    <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
-                  ) : null}
+                  {saranAIGen.length > 0 && (
+                    <span className="rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-white shadow-sm">dari AI</span>
+                  )}
                 </p>
                 <div className="flex items-center gap-1.5">
                 <button
@@ -2747,7 +2743,7 @@ export default function AnalisisAI() {
                   onClick={muatSaranAI}
                   disabled={saranAI}
                   title="AI cari topik paling relevan dari data terkini"
-                  className="flex items-center gap-1 rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 disabled:cursor-wait cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[0.65rem] font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70 disabled:cursor-wait cursor-pointer"
                 >
                   {saranAI ? (
                     <>
