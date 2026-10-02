@@ -408,55 +408,61 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         </div>
       )}
 
-      {/* LAPORAN TERBARU */}
+      {/* LAPORAN - semua tampil ke bawah, tidak ketumpuk */}
       {memuat ? (
         <div className="nx-card px-4 py-6 text-center text-sm text-ink-muted">
           <span className="pulse-dot" aria-hidden="true" /> Memuat laporan agen...
         </div>
-      ) : !laporanTerbaru ? (
+      ) : laporan.length === 0 ? (
         <div className="nx-card px-4 py-6 text-center text-sm text-ink-muted">
           Belum ada laporan. Klik "Analisis sekarang" (laporan otomatis juga dibuat tiap jam 12.00 WIB).
         </div>
       ) : (
-        <div className="nx-card px-4 py-4 sm:px-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Laporan terbaru</p>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => simpanKeArsip(laporanTerbaru)}
-                className="rounded border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-              >
-                Simpan
-              </button>
-              <button
-                type="button"
-                onClick={() => hapusLaporan(laporanTerbaru.id)}
-                className="rounded border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-              >
-                Hapus
-              </button>
+        <div className="space-y-3">
+          {laporan.map((l, i) => (
+            <div key={l.id} className={`nx-card px-4 py-4 sm:px-5 ${i === 0 ? 'border-accent/30' : ''}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">
+                  {i === 0 ? 'Laporan terbaru' : `Laporan #${laporan.length - i}`}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => simpanKeArsip(l)}
+                    className="rounded border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hapusLaporan(l.id)}
+                    className="rounded border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+              <div className="mt-1 text-[0.6rem] text-ink-faint">
+                {typeof l.tanggal === 'string' ? l.tanggal : '(tanggal lama)'} • {l.provider || '-'} • {l.model || '-'}
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{l.ringkasan}</p>
+              {l.temuan && (
+                <div className="mt-2 whitespace-pre-wrap text-sm text-ink-muted">{l.temuan}</div>
+              )}
             </div>
-          </div>
-          <div className="mt-1 text-[0.6rem] text-ink-faint">
-            {typeof laporanTerbaru.tanggal === 'string' ? laporanTerbaru.tanggal : '(tanggal lama)'} • {laporanTerbaru.provider || '-'} • {laporanTerbaru.model || '-'}
-          </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{laporanTerbaru.ringkasan}</p>
-          {laporanTerbaru.temuan && (
-            <div className="mt-2 whitespace-pre-wrap text-sm text-ink-muted">{laporanTerbaru.temuan}</div>
-          )}
+          ))}
         </div>
       )}
 
-      {/* RIWAYAT (laporan lama + usulan yang sudah diputuskan) */}
-      {(riwayatLain.length > 0 || usulanLama.length > 0) && (
+      {/* RIWAYAT USULAN (yang sudah diputuskan) */}
+      {usulanLama.length > 0 && (
         <div className="nx-card px-4 py-3 sm:px-5">
           <button
             type="button"
             onClick={() => setBukaRiwayat((v) => !v)}
             className="text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
           >
-            {bukaRiwayat ? 'Sembunyikan riwayat' : `Riwayat (${riwayatLain.length} laporan, ${usulanLama.length} usulan diputuskan)`}
+            {bukaRiwayat ? 'Sembunyikan riwayat' : `Riwayat usulan (${usulanLama.length} diputuskan)`}
           </button>
           {bukaRiwayat && (
             <div className="mt-3 space-y-2">
@@ -469,12 +475,6 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
                     {' - '}{u.judul} <span className="font-mono text-[0.6rem] text-ink-faint">({u.aksi})</span>
                   </p>
                   {u.hasil && <p className="text-[0.65rem] text-ink-faint">{u.hasil}</p>}
-                </div>
-              ))}
-              {riwayatLain.map((l) => (
-                <div key={'l' + l.id} className="rounded-lg border border-border-soft bg-bg-soft/30 px-3 py-2">
-                  <p className="text-[0.65rem] text-ink-faint">{typeof l.tanggal === 'string' ? l.tanggal : '(tanggal lama)'}</p>
-                  <p className="whitespace-pre-wrap text-xs text-ink-muted">{l.ringkasan}</p>
                 </div>
               ))}
             </div>
