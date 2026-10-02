@@ -175,7 +175,11 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
       return;
     }
     setJalanAgen(true);
+    flash('Agen sedang menganalisis... (30-60 detik)');
     try {
+      // Timeout 58 detik (server maxDuration 60s).
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 58000);
       const res = await fetch('/api/admin/ai/agen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,15 +187,21 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
           provider: agentProvider,
           model: agentModel,
         }),
+        signal: ac.signal,
       });
+      clearTimeout(timer);
       const d = await res.json();
       if (d.ok) {
-        flash(`Agen selesai. ${d.usulanTersimpan} usulan dibuat.`);
+        flash(`✓ Agen selesai. ${d.usulanTersimpan || 0} usulan dibuat.`);
         await muat();
         if (typeof onSelesai === 'function') onSelesai();
       }
-      else flash('Gagal: ' + (d.error || 'tidak diketahui'));
-    } catch (e) { flash('Gagal: ' + e.message); }
+      else flash('Gagal: ' + (d.error || 'tidak diketahui') + (d.providerLabel ? ` (${d.providerLabel})` : ''));
+    } catch (e) {
+      flash(e?.name === 'AbortError'
+        ? 'Timeout 58 detik - agen terlalu lama. Coba lagi atau ganti model.'
+        : 'Gagal: ' + (e?.message || e));
+    }
     finally { setJalanAgen(false); }
   }, [muat, agentProvider, agentModel, onSelesai]);
 
