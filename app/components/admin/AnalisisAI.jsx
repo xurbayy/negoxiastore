@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ConfirmModal from './ConfirmModal';
 
 // ==========================================
 // AnalisisAI - tab asisten data di panel admin
@@ -162,6 +163,11 @@ export default function AnalisisAI() {
   // 2026-10-02: "provider model itu ada CRUD-nya semua".
   const [editProvId, setEditProvId] = useState(null);
   const [editModelId, setEditModelId] = useState(null);
+  // Modal konfirmasi sendiri (ganti window.confirm bawaan browser yang kuno
+  // & tidak konsisten - permintaan pemilik 2026-10-02).
+  // Bentuk: { judul, body, onConfirm } | null
+  const [konfirmasi, setKonfirmasi] = useState(null);
+  const [konfirmasiBusy, setKonfirmasiBusy] = useState(false);
 
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
@@ -443,12 +449,17 @@ export default function AnalisisAI() {
   }, [muatPengingat]);
 
   const hapusPengingat = useCallback(async (id) => {
-    try {
-      const res = await fetch(`/api/admin/ai/reminders?id=${id}`, { method: 'DELETE' });
-      const d = await res.json();
-      if (d.ok) setPengingat((p) => p.filter((x) => x.id !== id));
-    } catch { /* abaikan */ }
-  }, []);
+    const p = pengingat.find((x) => x.id === id);
+    setKonfirmasi({
+      judul: 'Hapus pengingat ini?',
+      body: `Pengingat "${p?.teks || ''}" akan dihapus.`,
+      jalankan: async () => {
+        const res = await fetch(`/api/admin/ai/reminders?id=${id}`, { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) setPengingat((x) => x.filter((y) => y.id !== id));
+      },
+    });
+  }, [pengingat]);
 
   // ==========================================
   // SIMPAN / HAPUS JAWABAN (permintaan pemilik)
@@ -480,20 +491,23 @@ export default function AnalisisAI() {
   }, [muatArsip]);
 
   const hapusArsip = useCallback(async (id) => {
-    try {
-      const res = await fetch('/api/admin/ai/notes?id=' + encodeURIComponent(id), { method: 'DELETE' });
-      const d = await res.json();
-      if (d.ok) {
-        setArsip((a) => a.filter((x) => x.id !== id));
-        setPesanSimpan('Catatan dihapus.');
-      } else {
-        setPesanSimpan('Gagal menghapus: catatan tidak ditemukan.');
-      }
-    } catch (e) {
-      setPesanSimpan('Gagal menghapus: ' + e.message);
-    }
-    setTimeout(() => setPesanSimpan(null), 4000);
-  }, []);
+    const a = arsip.find((x) => x.id === id);
+    setKonfirmasi({
+      judul: 'Hapus catatan ini?',
+      body: `Catatan "${a?.judul || ''}" akan dihapus dari arsip jawaban.`,
+      jalankan: async () => {
+        const res = await fetch('/api/admin/ai/notes?id=' + encodeURIComponent(id), { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) {
+          setArsip((x) => x.filter((y) => y.id !== id));
+          setPesanSimpan('Catatan dihapus.');
+        } else {
+          setPesanSimpan('Gagal menghapus: catatan tidak ditemukan.');
+        }
+        setTimeout(() => setPesanSimpan(null), 4000);
+      },
+    });
+  }, [arsip]);
 
   // ==========================================
   // KELOLA PROVIDER & MODEL - muat, tambah, edit, hapus
@@ -570,14 +584,18 @@ export default function AnalisisAI() {
   }, []);
 
   const hapusProvider = useCallback(async (id) => {
-    if (!window.confirm('Hapus provider ini? Model yang memakainya perlu diubah manual.')) return;
-    try {
-      const res = await fetch('/api/admin/ai/providers?id=' + id, { method: 'DELETE' });
-      const d = await res.json();
-      if (d.ok) { flashKelola('Provider dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
-      else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
-    } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [muatKelola, muatStatusUlang]);
+    const p = daftarProvider.find((x) => x.id === id);
+    setKonfirmasi({
+      judul: 'Hapus provider ini?',
+      body: `Provider "${p?.nama || ''}" akan dihapus permanen. Model yang memakainya perlu diubah manual.`,
+      jalankan: async () => {
+        const res = await fetch('/api/admin/ai/providers?id=' + id, { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) { flashKelola('Provider dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
+        else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+      },
+    });
+  }, [daftarProvider, muatKelola, muatStatusUlang]);
 
   const simpanModel = useCallback(async () => {
     if (!formModel.label.trim() || !formModel.model.trim() || !formModel.provider.trim()) {
@@ -612,13 +630,27 @@ export default function AnalisisAI() {
   }, []);
 
   const hapusModel = useCallback(async (id) => {
-    try {
-      const res = await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' });
-      const d = await res.json();
-      if (d.ok) { flashKelola('Model dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
-      else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
-    } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [muatKelola, muatStatusUlang]);
+    const m = daftarModel.find((x) => x.id === id);
+    setKonfirmasi({
+      judul: 'Hapus model ini?',
+      body: `Model "${m?.label || ''}" (${m?.model || ''}) akan dihapus dari daftar tersimpan.`,
+      jalankan: async () => {
+        const res = await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) { flashKelola('Model dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
+        else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+      },
+    });
+  }, [daftarModel, muatKelola, muatStatusUlang]);
+
+  // Jalankan aksi konfirmasi lalu tutup modal.
+  const jalankanKonfirmasi = useCallback(async () => {
+    if (!konfirmasi) return;
+    setKonfirmasiBusy(true);
+    try { await konfirmasi.jalankan(); }
+    catch (e) { flashKelola('Gagal: ' + e.message); }
+    finally { setKonfirmasiBusy(false); setKonfirmasi(null); }
+  }, [konfirmasi]);
 
   // Pakai model tersimpan: isi provider + model di bar kontrol atas.
   const pakaiModel = useCallback((m) => {
@@ -1464,6 +1496,17 @@ export default function AnalisisAI() {
           <p className="mt-2 text-xs text-ink-muted">{arsip.length} catatan tersimpan.</p>
         )}
       </div>
+      )}
+
+      {/* Modal konfirmasi (ganti window.confirm bawaan browser). */}
+      {konfirmasi && (
+        <ConfirmModal
+          title={konfirmasi.judul}
+          body={konfirmasi.body}
+          busy={konfirmasiBusy}
+          onCancel={() => setKonfirmasi(null)}
+          onConfirm={jalankanKonfirmasi}
+        />
       )}
     </div>
   );
