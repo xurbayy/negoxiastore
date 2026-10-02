@@ -134,34 +134,6 @@ function modelDipakai(namaProvider, override) {
   return process.env[p.envModel] || p.defaultModel;
 }
 
-export function namaProviderAktif() {
-  return resolveProvider(process.env.AI_PROVIDER);
-}
-
-// Catatan: infoProvider() TETAP sinkron & murah (dipakai jalur lama), tapi
-// versi lengkap dengan provider kustom + model tersimpan ada di
-// infoProviderLengkap() (async, membaca DB).
-export function infoProvider() {
-  const aktif = resolveProvider(process.env.AI_PROVIDER);
-  // Custom hanya ditawarkan kalau AI_BASE_URL benar-benar diisi. Tanpa ini,
-  // tombol Custom muncul terus padahal tidak bisa dipakai (bingung pemilik).
-  const daftar = Object.keys(PROVIDERS).filter(
-    (k) => k !== 'custom' || Boolean(process.env.AI_BASE_URL)
-  );
-  return {
-    aktif,
-    label: PROVIDERS[aktif]?.label || aktif,
-    model: modelDipakai(aktif),
-    kunci: daftarKunci(aktif).length,
-    tersedia: daftar.map((k) => ({
-      id: k,
-      label: PROVIDERS[k].label,
-      model: modelDipakai(k),
-      kunci: daftarKunci(k).length,
-    })),
-  };
-}
-
 /**
  * Versi lengkap: provider bawaan + provider kustom dari DB + model tersimpan.
  * Dipakai panel admin (async karena membaca DB).
@@ -303,13 +275,13 @@ export async function tesKoneksi({ baseUrl, apiKey }) {
  *
  * @returns {Promise<{ok:boolean, gratis:Array, semua:Array, label?:string, error?:string, urlDicek?:string}>}
  */
-export async function daftarModelProvider(namaProvider) {
-  const nama = resolveProvider(namaProvider);
-  const info = await providerInfo(nama);
-  if (!info) return { ok: false, error: `Provider "${nama}" tidak ditemukan.` };
-  if (!info.kunci.length) return { ok: false, error: `Kunci ${info.label} belum diisi.` };
-  if (!info.url) return { ok: false, error: `URL ${info.label} belum diisi.` };
-
+/**
+ * Ambil daftar mentah model dari provider (endpoint /models).
+ * Dipakai bersama oleh daftarModelProvider() dan cekModelAda() - supaya logika
+ * error (404/401/timeout) TIDAK ditulis dua kali (anti tumpang-tindih).
+ * @returns {Promise<{ok:boolean, list?:any[], data?:any, urlModels:string, label:string, error?:string, tidakDidukung?:boolean}>}
+ */
+async function ambilDaftarModel(info) {
   const urlModels = info.url.replace(/\/chat\/completions\/?$/, '/models');
   try {
     const res = await fetch(urlModels, {
@@ -317,21 +289,40 @@ export async function daftarModelProvider(namaProvider) {
       signal: AbortSignal.timeout(20000),
     });
     if (res.status === 404) {
-      return { ok: false, urlDicek: urlModels, label: info.label, error: `URL base sepertinya salah - ${urlModels} (404).` };
+      return { ok: false, urlModels, label: info.label, tidakDidukung: true, error: `URL base sepertinya salah. Endpoint ${urlModels} tidak ditemukan (404). Pastikan URL base benar, contoh: https://api.openrouter.ai/api/v1` };
     }
     if (res.status === 401 || res.status === 403) {
-      return { ok: false, urlDicek: urlModels, label: info.label, error: `API key ditolak (HTTP ${res.status}).` };
+      return { ok: false, urlModels, label: info.label, error: `API key ditolak (HTTP ${res.status}). Periksa kunci provider ${info.label}.` };
     }
     if (!res.ok) {
-      return { ok: false, urlDicek: urlModels, label: info.label, error: `Gagal ambil daftar model (HTTP ${res.status}).` };
+      return { ok: false, urlModels, label: info.label, error: `Gagal mengambil daftar model (HTTP ${res.status}). Cek URL base & kunci.` };
     }
     const data = await res.json().catch(() => null);
     const list = data?.data || data?.models || [];
     if (!Array.isArray(list) || list.length === 0) {
-      return { ok: false, urlDicek: urlModels, label: info.label, error: 'Provider tidak mengembalikan daftar model.' };
+      return { ok: false, urlModels, label: info.label, tidakDidukung: true, error: `Provider ${info.label} membalas tapi tidak mengembalikan daftar model. URL base mungkin kurang tepat (${urlModels}).` };
     }
+    return { ok: true, list, data, urlModels, label: info.label };
+  } catch (e) {
+    const pesan = e?.name === 'TimeoutError'
+      ? `Tidak merespons dalam 20 detik. URL: ${urlModels}`
+      : `Tidak bisa terhubung ke ${urlModels} - kemungkinan URL base salah. (${e?.message || e})`;
+    return { ok: false, urlModels, label: info.label, error: pesan };
+  }
+}
 
-    const normal = list.map((m) => {
+export async function daftarModelProvider(namaProvider) {
+  const nama = resolveProvider(namaProvider);
+  const info = await providerInfo(nama);
+  if (!info) return { ok: false, error: `Provider "${nama}" tidak ditemukan.` };
+  if (!info.kunci.length) return { ok: false, error: `Kunci ${info.label} belum diisi.` };
+  if (!info.url) return { ok: false, error: `URL ${info.label} belum diisi.` };
+
+  const ambil = await ambilDaftarModel(info);
+  if (!ambil.ok) return { ok: false, urlDicek: ambil.urlModels, label: info.label, error: ambil.error, tidakDidukung: ambil.tidakDidukung };
+  const list = ambil.list;
+  const urlModels = ambil.urlModels;
+  const normal = list.map((m) => {
       const id = String(m?.id || m?.name || '');
       if (!id) return null;
 
@@ -394,12 +385,6 @@ export async function daftarModelProvider(namaProvider) {
     // memastikan mana yang gratis. UI harus jujur soal ini.
     const bisaPastikan = normal.some((m) => m.adaHarga) || normal.some((m) => m.gratis === true);
     return { ok: true, gratis, semua: normal, label: info.label, urlDicek: urlModels, jumlah: normal.length, jumlahGratis: gratis.length, bisaPastikan };
-  } catch (e) {
-    const pesan = e?.name === 'TimeoutError'
-      ? `Tidak merespons dalam 20 detik. URL: ${urlModels}`
-      : `Tidak bisa terhubung ke ${urlModels}. (${e?.message || e})`;
-    return { ok: false, urlDicek: urlModels, label: info.label, error: pesan };
-  }
 }
 
 /**
@@ -538,79 +523,20 @@ export async function cekModelAda(namaProvider, modelDicari) {
   const dicari = String(modelDicari || '').trim();
   if (!dicari) return { ok: false, error: 'Nama model kosong.' };
 
-  // Endpoint /models: buang "/chat/completions" dari URL, tambah "/models".
-  const urlModels = info.url.replace(/\/chat\/completions\/?$/, '/models');
-  try {
-    const res = await fetch(urlModels, {
-      headers: { Authorization: `Bearer ${info.kunci[0]}` },
-      signal: AbortSignal.timeout(20000),
-    });
-    // Baca pesan error dari body kalau ada - supaya penyebabnya jelas.
-    let pesanApi = '';
-    if (!res.ok) {
-      try { const j = await res.json(); pesanApi = j?.error?.message || j?.message || ''; } catch { /* body bukan JSON */ }
+  const ambil = await ambilDaftarModel(info);
+  if (!ambil.ok) return { ok: false, urlDicek: ambil.urlModels, label: info.label, error: ambil.error, tidakDidukung: ambil.tidakDidukung };
+
+  const ids = ambil.list.map((m) => String(m?.id || m?.name || '')).filter(Boolean);
+  const ada = ids.includes(dicari);
+  // Saran mirip (kalau tidak ada) - pakai potongan nama.
+  let mirip = [];
+  if (!ada) {
+    const potong = dicari.split('/').pop()?.split(':')[0]?.toLowerCase() || '';
+    if (potong.length >= 3) {
+      mirip = ids.filter((x) => x.toLowerCase().includes(potong)).slice(0, 8);
     }
-    if (res.status === 404) {
-      return {
-        ok: false, tidakDidukung: true,
-        error: `URL base sepertinya salah. Endpoint ${urlModels} tidak ditemukan (404). Pastikan URL base benar, contoh: https://api.openrouter.ai/api/v1`,
-        urlDicek: urlModels, label: info.label,
-      };
-    }
-    if (res.status === 401 || res.status === 403) {
-      return {
-        ok: false,
-        error: `API key ditolak (HTTP ${res.status})${pesanApi ? ': ' + pesanApi : ''}. Periksa kunci provider ${info.label}.`,
-        urlDicek: urlModels, label: info.label,
-      };
-    }
-    if (!res.ok) {
-      return {
-        ok: false,
-        error: `Gagal mengambil daftar model (HTTP ${res.status})${pesanApi ? ': ' + pesanApi : ''}. Cek URL base & kunci.`,
-        urlDicek: urlModels, label: info.label,
-      };
-    }
-    const data = await res.json().catch(() => null);
-    const list = data?.data || data?.models || [];
-    if (!Array.isArray(list) || list.length === 0) {
-      return {
-        ok: false, tidakDidukung: true,
-        error: `Provider ${info.label} membalas tapi tidak mengembalikan daftar model. URL base mungkin kurang tepat (${urlModels}).`,
-        urlDicek: urlModels, label: info.label,
-      };
-    }
-    const ids = list.map((m) => String(m?.id || m?.name || '')).filter(Boolean);
-    const ada = ids.includes(dicari);
-    // Saran mirip (kalau tidak ada) - pakai potongan nama.
-    let mirip = [];
-    if (!ada) {
-      const potong = dicari.split('/').pop()?.split(':')[0]?.toLowerCase() || '';
-      if (potong.length >= 3) {
-        mirip = ids.filter((x) => x.toLowerCase().includes(potong)).slice(0, 8);
-      }
-    }
-    return { ok: true, ada, tersedia: ids.slice(0, 400), mirip, label: info.label, jumlah: ids.length, urlDicek: urlModels };
-  } catch (e) {
-    // Kegagalan jaringan/DNS hampir selalu berarti URL base salah atau
-    // provider tidak bisa dijangkau.
-    const pesan = e?.name === 'TimeoutError'
-      ? `Cek model melewati 20 detik. URL base mungkin lambat/salah: ${urlModels}`
-      : `Tidak bisa terhubung ke ${urlModels} - kemungkinan URL base salah. (${e?.message || e})`;
-    return { ok: false, error: pesan, urlDicek: urlModels, label: info.label };
   }
-}
-
-export function adaGroq() {
-  return daftarKunci(namaProviderAktif()).length > 0;
-}
-
-export function jumlahKunci() {
-  return daftarKunci(namaProviderAktif()).length;
-}
-
-export function modelGroq() {
-  return modelDipakai(namaProviderAktif());
+  return { ok: true, ada, tersedia: ids.slice(0, 400), mirip, label: info.label, jumlah: ids.length, urlDicek: ambil.urlModels };
 }
 
 function maksToken() {

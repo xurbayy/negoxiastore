@@ -1624,15 +1624,13 @@ export default function AnalisisAI() {
                       <button
                         type="button"
                         onClick={() => {
-                          // Pilih model + buka pengaturan (max token & kecerdasan).
+                          // Buka/tutup panel pilihan model ini.
                           setModelProv((s) => ({
                             ...s,
                             dipilih: s.dipilih === (m.providerId || '') + '::' + m.id ? null : (m.providerId || '') + '::' + m.id,
-                            setToken: s.setToken || '2000',
-                            setIq: s.setIq || '6',
                           }));
                         }}
-                        title="Pilih + atur model ini"
+                        title="Pilih model ini"
                         className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
                       >
                         <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
