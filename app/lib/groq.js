@@ -214,6 +214,8 @@ export async function tanyaGroq(pesan, opsi = {}) {
     error: (terakhir?.error || `Gagal menghubungi ${PROVIDERS[namaProvider].label}.`) + semuaDicoba,
     model,
     provider: namaProvider,
+    providerLabel: PROVIDERS[namaProvider].label,
+    envKey: PROVIDERS[namaProvider].envKey,
   };
 }
 

@@ -379,15 +379,20 @@ export async function POST(request) {
 
   const hasil = await tanyaGroq(pesan, { provider: providerPilihan || undefined, model: modelPilihan || undefined });
   if (!hasil.ok) {
+    // Nama provider & env key untuk petunjuk - JANGAN hardcode "Groq",
+    // pesan harus sesuai provider yang benar-benar dipakai.
+    const labelProv = hasil.providerLabel || hasil.provider || 'AI';
+    const envProv = hasil.envKey || 'API_KEY';
     return json({
       ok: false,
       error: hasil.error,
       modelDipaka: hasil.model,
+      provider: hasil.provider,
       // Kode 429 = semua kunci kena limit. Pesan ini membantu admin tahu
       // harus menunggu, bukan mengira kodenya rusak.
       kode: hasil.kode,
       petunjuk: hasil.kode === 429
-        ? 'Semua kunci Groq kena batas kuota. Tunggu sebentar atau tambah kunci di GROQ_API_KEY.'
+        ? `Semua kunci ${labelProv} kena batas kuota. Tunggu sebentar atau tambah kunci di ${envProv}.`
         : undefined,
     }, 502);
   }
@@ -401,7 +406,8 @@ export async function POST(request) {
     jawaban: jawabanBersih,
     mode,
     pengingat,
-    model: modelGroq(),
+    model: hasil.model,
+    provider: hasil.provider,
     kunciDipakai: hasil.kunciDipakai,
     totalKunci: jumlahKunci(),
     ukuranKonteks: konteks.length,

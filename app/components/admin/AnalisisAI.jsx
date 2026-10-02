@@ -342,6 +342,10 @@ export default function AnalisisAI() {
           judul,
           jawaban: d.ok ? d.jawaban : null,
           error: d.ok ? null : d.error + (d.petunjuk ? ' ' + d.petunjuk : ''),
+          // Model & provider yang BENAR-BENAR dipakai (dari server, bukan
+          // tebakan UI) - supaya terlihat kalau switch gagal.
+          modelDipakai: d.model || d.modelDipaka || null,
+          providerDipakai: d.provider || null,
           pertanyaan: muatan?.tanya || muatan?.pintasan || judul,
           sumber: muatan?.pintasan ? 'pintasan:' + muatan.pintasan : 'analisis',
           waktu: Date.now(),
@@ -696,6 +700,13 @@ export default function AnalisisAI() {
                 <span className="text-[0.65rem] text-ink-faint">
                   {new Date(r.waktu).toLocaleString('id-ID')}
                 </span>
+                {/* Model & provider yang BENAR-BENAR dipakai - supaya pemilik
+                    bisa pastikan switch provider + model manual berhasil. */}
+                {r.modelDipakai && (
+                  <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.6rem] font-semibold text-ink-muted">
+                    {r.providerDipakai || 'AI'} • {r.modelDipakai}
+                  </span>
+                )}
                 {!r.error && (
                   <button
                     type="button"
