@@ -20,6 +20,13 @@ async function safeQuery(fn) {
 
 // Snapshot monitor terbaru dari bot (null kalau belum pernah push / DB mati).
 export async function getLatestSnapshot() {
+  // CACHE MEMORI 10 DETIK: beberapa pemanggilan berturutan (mis. router.refresh
+  // dari beberapa tab, atau beberapa komponen dalam satu render) tidak perlu
+  // query DB + parse JSON besar berulang. Memotong beban CPU & bandwidth.
+  const kini = Date.now();
+  if (_lastGood?.snap && _lastGood.snapAt && kini - _lastGood.snapAt < 10_000) {
+    return _lastGood.snap;
+  }
   const r = await safeQuery(async () => {
     await schemaReady();
     const db = getDb();
@@ -28,7 +35,7 @@ export async function getLatestSnapshot() {
     return JSON.parse(res.rows[0].data);
   });
   if (r) {
-    _lastGood = _lastGood ? { ..._lastGood, snap: r } : { snap: r, series: null, at: Date.now() };
+    _lastGood = { ...(_lastGood || {}), snap: r, at: kini, snapAt: kini };
     return r;
   }
   // DB error: pakai cache proses (maks 5 menit) supaya halaman tetap hidup.

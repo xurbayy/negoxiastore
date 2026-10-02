@@ -112,9 +112,11 @@ export default function AdminShell({ username, avatar = null }) {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(load, 0); 
-    const iv = setInterval(load, 15000);
-    function onFocus() { load(); }
+    const t = setTimeout(load, 0);
+    // HEMAT BANDWIDTH: jangan poll saat tab admin tidak terlihat. Tab yang
+    // ditinggal terbuka tidak perlu memanggil /api/admin/data terus-menerus.
+    const iv = setInterval(() => { if (!document.hidden) load(); }, 20000);
+    function onFocus() { if (!document.hidden) load(); }
     window.addEventListener('focus', onFocus);
     return () => { clearTimeout(t); clearInterval(iv); window.removeEventListener('focus', onFocus); };
   }, [load]);

@@ -21,7 +21,7 @@ import { useRouter } from 'next/navigation';
 //
 // Komponen ini merender UI-nya sendiri supaya setiap halaman yang memakainya
 // langsung dapat indikatornya tanpa perlu diubah satu per satu.
-export default function AutoRefresh({ intervalMs = 20000 }) {
+export default function AutoRefresh({ intervalMs = 30000 }) {
   const router = useRouter();
   const [detikLalu, setDetikLalu] = useState(0);
   const [menyegarkan, setMenyegarkan] = useState(false);
@@ -35,6 +35,10 @@ export default function AutoRefresh({ intervalMs = 20000 }) {
   // --- siklus penyegaran data ---
   useEffect(() => {
     function segarkan() {
+      // HEMAT BANDWIDTH: jangan menyegarkan saat tab tidak terlihat. Sebelumnya
+      // tab yang ditinggal terbuka tetap memanggil router.refresh() tiap 20-30
+      // detik -> membebani bandwidth Vercel tanpa ada yang menonton.
+      if (document.hidden) return;
       setMenyegarkan(true);
       // router.refresh() memuat ulang Server Component TANPA mengubah URL dan
       // tanpa kehilangan state klien. Ini yang membuat data snapshot terbaru
@@ -46,8 +50,7 @@ export default function AutoRefresh({ intervalMs = 20000 }) {
     }
 
     const iv = setInterval(segarkan, intervalMs);
-    // Tab kembali aktif -> segarkan sekali. Ini menutup celah data basi setelah
-    // pengguna lama meninggalkan halaman, tanpa menambah poll saat tidak dilihat.
+    // Tab kembali aktif -> segarkan sekali (data basi saat pengguna kembali).
     function onFocus() { if (!document.hidden) segarkan(); }
     function onVisible() { if (!document.hidden) segarkan(); }
 
