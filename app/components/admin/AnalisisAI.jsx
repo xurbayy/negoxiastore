@@ -2140,10 +2140,11 @@ export default function AnalisisAI() {
                 {/* Total token konteks percakapan ini (permintaan pemilik). */}
                 {(() => {
                   const totalTok = pesan.reduce((s, m) => s + (Number(m?.usage?.totalTokens) || 0), 0);
+                  const totalJawab = pesan.reduce((s, m) => s + (Number(m?.usage?.completionTokens) || 0), 0);
                   if (!totalTok) return null;
                   return (
                     <p className="mt-0.5 text-[0.7rem] font-semibold text-accent">
-                      Total token dipakai: {totalTok.toLocaleString('id-ID')}
+                      Total token: {totalTok.toLocaleString('id-ID')} (jawaban {totalJawab.toLocaleString('id-ID')})
                     </p>
                   );
                 })()}
@@ -2287,8 +2288,8 @@ export default function AnalisisAI() {
                       </span>
                     )}
                     {m.peran === 'ai' && m.usage?.totalTokens != null && (
-                      <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[0.55rem] font-semibold normal-case tracking-normal text-accent" title={`Prompt ${m.usage.promptTokens ?? '-'} + Jawaban ${m.usage.completionTokens ?? '-'}`}>
-                        {m.usage.totalTokens.toLocaleString('id-ID')} token
+                      <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[0.55rem] font-semibold normal-case tracking-normal text-accent" title={`Konteks (input): ${m.usage.promptTokens ?? '-'} token | Jawaban: ${m.usage.completionTokens ?? '-'} token`}>
+                        jawab {m.usage.completionTokens ?? '-'} • konteks {m.usage.promptTokens ?? '-'}
                       </span>
                     )}
                   </p>

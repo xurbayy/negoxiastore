@@ -629,7 +629,9 @@ export async function susunKonteks(snap, panel = {}) {
   // TOTAL token per menit: konteks 5000 token + max_tokens 4000 = 9000, sudah
   // MELEBIHI batas 8000 TPM akun gratis. Dengan 12000 karakter + output 2000,
   // total ~5000-6000 token - masih ada sisa untuk percakapan lanjutan.
-  const BATAS_KONTEKS = 12000;
+  // Kurangi batas konteks agar respons lebih cepat & total token lebih kecil
+  // (permintaan pemilik 2026-10-02: hindari timeout). 8000 char ≈ 2000 token.
+  const BATAS_KONTEKS = 8000;
   let teks = L.join('\n');
   if (teks.length > BATAS_KONTEKS) {
     // Buang bagian belakang sampai muat. Setiap bagian dipisah '### '.
