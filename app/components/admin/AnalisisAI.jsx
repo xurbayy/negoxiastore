@@ -858,18 +858,6 @@ export default function AnalisisAI() {
     }
   }, [provider]);
 
-  // "Siap" = server bilang aktif ATAU ada provider mana pun yang punya kunci.
-  // Toleran terhadap versi server beda (kalau server lama masih kirim field
-  // `aktif` yang cuma cek provider default). Mencegah layar buntu palsu.
-  // "Siap" = server bilang aktif, ATAU ada provider (bawaan/kustom) ber-kunci,
-  // ATAU daftar provider kustom dari endpoint TERPISAH sudah termuat (bukti
-  // provider tersimpan). Endpoint /providers terbukti jalan walau /ai bermasalah.
-  const adaProviderKustom = (daftarProvider || []).some((p) => p.adaKunci);
-  const siap = Boolean(status?.aktif)
-    || (status?.providers || []).some((p) => Number(p.kunci) > 0)
-    || adaProviderKustom
-    || (status?.models || []).length > 0;
-
   // DAFTAR PROVIDER UNTUK TOGGLE: gabung provider dari /ai (bawaan + kustom)
   // dengan yang dari /providers. Kalau /ai bermasalah, /providers menutupinya
   // supaya tombol provider tetap muncul (fix 2026-10-02).
@@ -1159,27 +1147,32 @@ export default function AnalisisAI() {
 
   return (
     <div className="space-y-4">
-      {/* Banner peringatan kalau belum ada provider siap (bukan penghalang). */}
-      {!siap && (
-        <div className="nx-card border-danger/40 px-4 py-3 sm:px-5">
-          <p className="text-sm font-bold text-danger">Belum ada provider AI yang siap dipakai</p>
-          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-            Klik <strong className="text-ink">Pakai</strong> di salah satu model tersimpan, atau tambah provider lewat <strong className="text-ink">Kelola provider &amp; model</strong>. Kalau provider sudah ada tapi tetap muncul ini, cek diagnostik di bawah.
-          </p>
-          {status?.errorMuatan && (
-            <p className="mt-1 text-[0.65rem] text-danger">Error muat status: {status.errorMuatan}</p>
-          )}
-          {status?.diag && (
-            <ul className="mt-2 space-y-0.5 text-[0.65rem] text-ink-faint">
-              <li>AI_PROVIDER: {status.diag.AI_PROVIDER || '(kosong)'} | AI_BASE_URL: {status.diag.AI_BASE_URL || '(kosong)'}</li>
-              <li>GROQ_API_KEY: {status.diag.adaGroq ? `${status.diag.jumlahGroq} kunci` : 'TIDAK ADA'} | OPENROUTER_API_KEY: {status.diag.adaOpenrouter ? `${status.diag.jumlahOpenrouter} kunci` : 'TIDAK ADA'}</li>
-              <li>Provider bawaan: {(status.diag.providerBawaanTerbaca || []).join(', ') || '-'}</li>
-              <li>Provider kustom: {(status.diag.providerKustom || []).join(', ') || '-'}</li>
-              {status.diag.errorDb && <li className="text-danger">Error DB: {status.diag.errorDb}</li>}
-            </ul>
-          )}
-        </div>
-      )}
+      {/* KARTU INFO PROVIDER (bukan validasi/blokir). AI selalu dianggap aktif -
+          mengingat provider selalu tersedia. Kartu ini hanya menampilkan
+          ringkasan supaya pemilik tahu provider mana yang aktif & berapa kunci. */}
+      {(() => {
+        const berKunci = providerToggle.filter((p) => Number(p.kunci) > 0);
+        const aktifLabel = providerToggle.find((p) => p.id === provider)?.label || provider || '-';
+        return (
+          <div className="nx-card px-4 py-3 sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className={`inline-block h-2 w-2 rounded-full ${berKunci.length ? 'bg-success' : 'bg-danger'}`} />
+                <p className="text-xs font-semibold text-ink">
+                  {berKunci.length ? `${berKunci.length} provider siap` : 'Belum ada provider ber-kunci'} - dipilih: {aktifLabel}
+                </p>
+              </div>
+              {status?.errorMuatan && <span className="text-[0.65rem] text-danger">muat status: {status.errorMuatan}</span>}
+            </div>
+            {providerToggle.length > 0 && (
+              <p className="mt-1 text-[0.65rem] text-ink-faint">
+                {providerToggle.map((p) => `${p.label}(${p.kunci || 0})`).join(' • ')}
+                {status?.diag?.errorDb ? ` • Error DB: ${status.diag.errorDb}` : ''}
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ==========================================
           PANEL PENGINGAT (muncul saat tombol lonceng diklik)
@@ -1284,11 +1277,10 @@ export default function AnalisisAI() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h3 className="font-display text-ink">Analisis AI</h3>
-            {/* Titik status - hijau kalau siap (pakai `siap`, bukan status.aktif
-                mentah, supaya cocok dengan logika banner). */}
+            {/* Titik status - hijau (AI selalu tersedia lewat provider apa pun). */}
             <span
-              title={siap ? 'Provider AI siap dipakai' : 'Belum ada provider siap'}
-              className={`inline-block h-2 w-2 rounded-full ${siap ? 'bg-success' : 'bg-danger'}`}
+              title="AI siap dipakai"
+              className="inline-block h-2 w-2 rounded-full bg-success"
             />
           </div>
           <div className="flex rounded-xl border border-border-soft bg-bg-soft/60 p-1">
