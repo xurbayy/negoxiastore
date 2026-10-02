@@ -870,11 +870,16 @@ export default function AnalisisAI() {
   }, [peran]);
   useEffect(() => { muatSaran(); }, [muatSaran]);
 
-  // Muat ulang saran + reset dismiss (tombol "Muat ulang").
+  // Muat ulang saran + reset dismiss. "Segar" = bypass saran agen, pakai
+  // snapshot real-time supaya topik SELALU BARU (permintaan pemilik 2026-10-02).
   const muatSaranSegar = useCallback(async () => {
     setSaranDismiss(new Set());
-    await muatSaran();
-  }, [muatSaran]);
+    try {
+      const res = await fetch('/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&segar=1', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
+    } catch { /* fallback */ }
+  }, [peran]);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang

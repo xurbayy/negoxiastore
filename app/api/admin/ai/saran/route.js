@@ -31,34 +31,34 @@ export async function GET(request) {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   const url = new URL(request.url);
   const peran = (url.searchParams.get('peran') || 'umum').trim().toLowerCase();
+  // segar=1: bypass saran agen, pakai snapshot real-time (untuk "Muat ulang").
+  const segar = url.searchParams.get('segar') === '1';
 
-  // 1) SARAN DARI AGEN (prioritas utama).
-  try {
-    await schemaReady();
-    const db = getDb();
-    // Ambil saran terbaru peran ini (maks 8 terakhir, masih relevan).
-    const r = await db.execute({
-      sql: 'SELECT saran, dibuat_at FROM ai_agen_saran WHERE peran = ? ORDER BY dibuat_at DESC LIMIT 8',
-      args: [peran],
-    });
-    const dariAgen = (r.rows || []).map((x, i) => ({
-      id: `agen-${peran}-${i}`,
-      label: String(x.saran).slice(0, 60),
-      tanya: String(x.saran),
-      sumber: 'agen',
-    }));
-    if (dariAgen.length) return json({ ok: true, saran: dariAgen, sumber: 'agen' });
-  } catch { /* lanjut ke fallback */ }
-
-  // 2) Fallback: saran dinamis dari snapshot (untuk peran umum).
-  if (peran === 'umum') {
-    let saran = [];
+  // 1) SARAN DARI AGEN (prioritas utama) - KECUALI mode segar.
+  if (!segar) {
     try {
-      const snap = await getLatestSnapshot();
-      saran = saranDinamis(snap).map((s) => ({ id: s.id, label: s.label, tanya: s.tanya, sumber: 'snapshot' }));
-    } catch { /* lanjut */ }
-    if (saran.length) return json({ ok: true, saran, sumber: 'snapshot' });
+      await schemaReady();
+      const db = getDb();
+      const r = await db.execute({
+        sql: 'SELECT saran, dibuat_at FROM ai_agen_saran WHERE peran = ? ORDER BY dibuat_at DESC LIMIT 8',
+        args: [peran],
+      });
+      const dariAgen = (r.rows || []).map((x, i) => ({
+        id: `agen-${peran}-${i}`,
+        label: String(x.saran).slice(0, 60),
+        tanya: String(x.saran),
+        sumber: 'agen',
+      }));
+      if (dariAgen.length) return json({ ok: true, saran: dariAgen, sumber: 'agen' });
+    } catch { /* lanjut ke fallback */ }
   }
+
+  // 2) SARAN DINAMIS dari snapshot (real-time) - termasuk mode segar.
+  try {
+    const snap = await getLatestSnapshot();
+    const saran = saranDinamis(snap).map((s) => ({ id: s.id, label: s.label, tanya: s.tanya, sumber: 'snapshot' }));
+    if (saran.length) return json({ ok: true, saran, sumber: segar ? 'snapshot-segar' : 'snapshot' });
+  } catch { /* lanjut */ }
 
   // 3) Fallback terakhir: statis.
   return json({
