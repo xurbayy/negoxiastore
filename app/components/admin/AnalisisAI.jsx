@@ -1219,7 +1219,15 @@ export default function AnalisisAI() {
   // Provider yang dipakai AGEN dikecualikan (dedicated ke agent).
   const [agentProviderId, setAgentProviderId] = useState('');
   useEffect(() => {
-    try { setAgentProviderId(window.localStorage.getItem('nexo_agen_provider') || ''); } catch { /* abaikan */ }
+    (async () => {
+      // Baca dari SERVER prefs dulu (lintas device), fallback localStorage.
+      try {
+        const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
+        const d = await res.json();
+        if (d.ok && d.prefs?.agentProvider) { setAgentProviderId(d.prefs.agentProvider); return; }
+      } catch { /* fallback */ }
+      try { setAgentProviderId(window.localStorage.getItem('nexo_agen_provider') || ''); } catch { /* abaikan */ }
+    })();
   }, []);
   const providerToggle = (() => {
     const hasil = [...(status?.providers || [])];
