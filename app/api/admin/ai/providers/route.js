@@ -231,7 +231,17 @@ export async function DELETE(request) {
   if (tipe === 'model') {
     await db.execute({ sql: 'DELETE FROM ai_models WHERE id = ?', args: [id] });
   } else {
+    // Hapus provider: ambil slug DULU, lalu hapus model tersimpan yang
+    // memakainya (permintaan pemilik 2026-10-02: model ikut terhapus).
+    const prov = await db.execute({ sql: 'SELECT slug FROM ai_providers WHERE id = ?', args: [id] });
+    const slug = prov.rows?.[0]?.slug;
     await db.execute({ sql: 'DELETE FROM ai_providers WHERE id = ?', args: [id] });
+    let modelTerhapus = 0;
+    if (slug) {
+      const del = await db.execute({ sql: 'DELETE FROM ai_models WHERE provider = ?', args: [slug] });
+      modelTerhapus = Number(del.rowsAffected ?? 0);
+    }
+    return json({ ok: true, modelTerhapus });
   }
   return json({ ok: true });
 }

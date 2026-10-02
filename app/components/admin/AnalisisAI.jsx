@@ -986,17 +986,22 @@ export default function AnalisisAI() {
 
   const hapusProvider = useCallback(async (id) => {
     const p = daftarProvider.find((x) => x.id === id);
+    const jumlahModel = daftarModel.filter((m) => m.provider === p?.slug).length;
     setKonfirmasi({
       judul: 'Hapus provider ini?',
-      body: `Provider "${p?.nama || ''}" akan dihapus permanen. Model yang memakainya perlu diubah manual.`,
+      body: `Provider "${p?.nama || ''}" akan dihapus permanen.${jumlahModel > 0 ? ` ${jumlahModel} model tersimpan yang memakainya JUGA ikut terhapus.` : ''}`,
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/providers?id=' + id, { method: 'DELETE' });
         const d = await res.json();
-        if (d.ok) { setPesanSimpan('✓ Provider dihapus.'); setTimeout(() => setPesanSimpan(null), 4000); await Promise.all([muatKelola(), muatStatusUlang()]); }
+        if (d.ok) {
+          setPesanSimpan(`✓ Provider dihapus${d.modelTerhapus ? ` + ${d.modelTerhapus} model ikut terhapus` : ''}.`);
+          setTimeout(() => setPesanSimpan(null), 4000);
+          await Promise.all([muatKelola(), muatStatusUlang()]);
+        }
         else { setPesanSimpan('Gagal: ' + (d.error || 'tidak diketahui')); setTimeout(() => setPesanSimpan(null), 4000); }
       },
     });
-  }, [daftarProvider, muatKelola, muatStatusUlang]);
+  }, [daftarProvider, daftarModel, muatKelola, muatStatusUlang]);
 
   const [modelMenyimpan, setModelMenyimpan] = useState(false);
   const simpanModel = useCallback(async () => {
