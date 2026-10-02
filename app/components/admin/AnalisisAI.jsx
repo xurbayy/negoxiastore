@@ -141,6 +141,20 @@ export default function AnalisisAI() {
   // Gambar terlampir untuk chat diskusi (data URL). Di-resize di klien supaya
   // ukurannya wajar (permintaan pemilik 2026-10-02: "gw bisa kirim gambar").
   const [gambar, setGambar] = useState([]);
+  // Drag & drop gambar (permintaan pemilik 2026-10-02).
+  const [dragAktif, setDragAktif] = useState(false);
+  // Reply pesan: { indeks, peran, cuplikan } (permintaan pemilik 2026-10-02).
+  const [balas, setBalas] = useState(null);
+  // Tambah gambar dari file (dipakai drag-drop & input).
+  const tambahGambarDariFile = useCallback(async (files) => {
+    const list = Array.from(files || []).filter((f) => f?.type?.startsWith('image/'));
+    if (!list.length) return;
+    const hasil = [];
+    for (const f of list.slice(0, 4 - gambar.length)) {
+      try { hasil.push(await bacaGambar(f)); } catch { /* lewati file rusak */ }
+    }
+    if (hasil.length) setGambar((arr) => [...arr, ...hasil].slice(0, 4));
+  }, [gambar.length]);
 
   // ==========================================
   // CHAT 2 ARAH (permintaan pemilik 2026-10-01)
@@ -663,8 +677,12 @@ export default function AnalisisAI() {
     // Boleh kirim gambar tanpa teks (pertanyaan default "jelaskan gambar ini").
     if ((!t && gambar.length === 0) || jalan) return;
     setTanya('');
-    const teks = t || 'Jelaskan gambar ini dan kaitkan dengan data NEXO kalau relevan.';
-    jalankan({ tanya: teks }, teks.length > 60 ? teks.slice(0, 60) + '...' : teks, teks);
+    // Kalau sedang balas pesan: sisipkan kutipan sebagai konteks ke AI.
+    const kutipan = balas ? `(Menjawab pesan ${balas.peran === 'ai' ? 'AI' : 'saya'} sebelumnya: "${String(balas.cuplikan).slice(0, 300)}")\n\n` : '';
+    const teks = kutipan + (t || 'Jelaskan gambar ini dan kaitkan dengan data NEXO kalau relevan.');
+    const tampil = (balas ? `↩ ${t || 'gambar'}` : (t || 'Jelaskan gambar ini'));
+    setBalas(null);
+    jalankan({ tanya: teks }, tampil.length > 60 ? tampil.slice(0, 60) + '...' : tampil, tampil);
   };
 
   // Hapus SELURUH percakapan dan mulai dari nol (seperti "New chat" ChatGPT).
@@ -2923,7 +2941,15 @@ export default function AnalisisAI() {
                       {disimpan.has('chat::' + String(m.isi).slice(0, 80)) ? 'Tersimpan di arsip' : 'Simpan ke arsip'}
                     </button>
                   )}
-                  {/* Hapus pesan ini (pemilik atau AI). */}
+                  {/* Balas pesan ini (reply) + Hapus. */}
+                  <button
+                    type="button"
+                    onClick={() => { setBalas({ indeks: i, peran: m.peran, cuplikan: m.isi || '' }); setTanya(''); ujungChat.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }); }}
+                    title="Balas pesan ini"
+                    className="ml-1.5 mt-2 rounded-lg border border-border-soft px-2.5 py-1 text-[0.68rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                  >
+                    ↩ Balas
+                  </button>
                   <button
                     type="button"
                     onClick={() => hapusSatuPesan(i)}
@@ -2947,8 +2973,35 @@ export default function AnalisisAI() {
         <div ref={ujungChat} />
       </div>
 
-      {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT. */}
-      <div className="z-10 rounded-2xl border border-border-soft bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)] sm:sticky sm:bottom-4">
+      {/* KOLOM KETIK di bawah percakapan - seperti ChatGPT.
+          Dukung DRAG & DROP gambar (permintaan pemilik 2026-10-02). */}
+      <div
+        className={`z-10 rounded-2xl border bg-card-cream p-2 shadow-[0_8px_28px_rgba(43,33,24,0.12)] sm:sticky sm:bottom-4 transition ${dragAktif ? 'border-accent ring-2 ring-accent/40' : 'border-border-soft'}`}
+        onDragOver={(e) => { e.preventDefault(); if (mode === 'diskusi') setDragAktif(true); }}
+        onDragLeave={(e) => { if (e.currentTarget === e.target) setDragAktif(false); }}
+        onDrop={async (e) => {
+          e.preventDefault();
+          setDragAktif(false);
+          if (mode === 'diskusi') await tambahGambarDariFile(e.dataTransfer?.files);
+        }}
+      >
+        {dragAktif && (
+          <p className="mb-2 rounded-lg bg-accent/10 px-3 py-2 text-center text-[0.7rem] font-semibold text-accent">
+            Lepaskan gambar di sini untuk melampirkan
+          </p>
+        )}
+        {/* Kutipan balasan (reply). */}
+        {balas && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border-l-2 border-accent bg-accent/5 px-2.5 py-1.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.65rem] font-bold text-accent">Membalas {balas.peran === 'ai' ? 'AI' : 'pesan saya'}</p>
+              <p className="truncate text-[0.7rem] text-ink-muted">{String(balas.cuplikan).slice(0, 120)}</p>
+            </div>
+            <button type="button" onClick={() => setBalas(null)} className="shrink-0 text-ink-faint hover:text-danger cursor-pointer" title="Batal balas">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        )}
         {/* Preview gambar terlampir. */}
         {gambar.length > 0 && (
           <div className="mb-2">
@@ -2989,12 +3042,7 @@ export default function AnalisisAI() {
               multiple
               className="hidden"
               onChange={async (e) => {
-                const files = Array.from(e.target.files || []).slice(0, 4 - gambar.length);
-                const hasil = [];
-                for (const f of files) {
-                  try { hasil.push(await bacaGambar(f)); } catch { /* lewati file rusak */ }
-                }
-                if (hasil.length) setGambar((arr) => [...arr, ...hasil].slice(0, 4));
+                await tambahGambarDariFile(e.target.files);
                 e.target.value = '';
               }}
             />
