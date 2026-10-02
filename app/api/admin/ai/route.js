@@ -215,11 +215,17 @@ export async function POST(request) {
   const riwayatMentah = mode === 'diskusi' && Array.isArray(body?.riwayat) ? body.riwayat : [];
   const riwayat = riwayatMentah
     .slice(-12)
-    .map((r) => ({
-      role: r?.role === 'ai' ? 'assistant' : 'user',
-      content: String(r?.isi || '').slice(0, 4000),
-    }))
-    .filter((r) => r.content);
+    .map((r) => {
+      const teks = String(r?.isi || '').slice(0, 4000);
+      const gbr = Array.isArray(r?.gambar) ? r.gambar.filter((g) => typeof g === 'string' && g.startsWith('data:image')).slice(0, 2) : [];
+      // Kalau pesan lama punya gambar, kirim sebagai content array (teks+gambar)
+      // supaya model tetap bisa merujuknya di pertanyaan lanjutan.
+      const content = gbr.length
+        ? [{ type: 'text', text: teks || '(gambar)' }, ...gbr.map((g) => ({ type: 'image_url', image_url: { url: g } }))]
+        : teks;
+      return { role: r?.role === 'ai' ? 'assistant' : 'user', content };
+    })
+    .filter((r) => r.content && (typeof r.content === 'string' ? r.content : r.content.length));
 
   let instruksi = '';
   if (idPintasan) {
@@ -431,6 +437,8 @@ export async function POST(request) {
     kunciDipakai: hasil.kunciDipakai,
     providerLabel: hasil.providerLabel,
     ukuranKonteks: konteks.length,
+    // Pemakaian token dari provider (kalau disediakan).
+    usage: hasil.usage || null,
   });
 }
 

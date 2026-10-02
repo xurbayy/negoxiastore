@@ -424,10 +424,14 @@ export default function AnalisisAI() {
     setJalan(true);
     const modeKirim = mode;
 
-    // Ambil riwayat SEBELUM pesan baru ditambahkan.
+    // Ambil riwayat SEBELUM pesan baru ditambahkan. IKUT sertakan gambar dari
+    // pesan lama supaya model tetap bisa merujuk gambar di pertanyaan lanjutan
+    // ("kalau logonya warna apa?"). Tanpa ini, model "lupa" gambarnya.
     const riwayatKirim = [];
     setPesan((p) => {
-      for (const m of p.slice(-12)) riwayatKirim.push({ role: m.peran === 'ai' ? 'ai' : 'gw', isi: m.isi });
+      for (const m of p.slice(-12)) {
+        riwayatKirim.push({ role: m.peran === 'ai' ? 'ai' : 'gw', isi: m.isi, gambar: Array.isArray(m.gambar) ? m.gambar : undefined });
+      }
       return p;
     });
 
@@ -482,6 +486,7 @@ export default function AnalisisAI() {
             // Model & provider aktual - biar terlihat di chat.
             modelDipakai: d.model || null,
             providerDipakai: d.provider || null,
+            usage: d.usage || null,
           }]);
         }
       } else {
@@ -1982,6 +1987,16 @@ export default function AnalisisAI() {
                     </span>
                   )}
                 </h3>
+                {/* Total token konteks percakapan ini (permintaan pemilik). */}
+                {(() => {
+                  const totalTok = pesan.reduce((s, m) => s + (Number(m?.usage?.totalTokens) || 0), 0);
+                  if (!totalTok) return null;
+                  return (
+                    <p className="mt-0.5 text-[0.7rem] font-semibold text-accent">
+                      Total token dipakai: {totalTok.toLocaleString('id-ID')}
+                    </p>
+                  );
+                })()}
                 <p className="mt-0.5 text-xs text-ink-muted">
                   Ngobrol bebas soal data NEXO - AI ingat percakapan ini.
                 </p>
@@ -2112,6 +2127,11 @@ export default function AnalisisAI() {
                     {m.peran === 'ai' && m.modelDipakai && (
                       <span className="rounded-full bg-card-cream px-1.5 py-0.5 text-[0.55rem] font-semibold normal-case tracking-normal text-ink-faint">
                         {m.providerDipakai || 'AI'} • {m.modelDipakai}
+                      </span>
+                    )}
+                    {m.peran === 'ai' && m.usage?.totalTokens != null && (
+                      <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[0.55rem] font-semibold normal-case tracking-normal text-accent" title={`Prompt ${m.usage.promptTokens ?? '-'} + Jawaban ${m.usage.completionTokens ?? '-'}`}>
+                        {m.usage.totalTokens.toLocaleString('id-ID')} token
                       </span>
                     )}
                   </p>

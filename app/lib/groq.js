@@ -714,8 +714,8 @@ export async function tanyaGroq(pesan, opsi = {}) {
       if (res.ok) {
         const ct = res.headers.get('content-type') || '';
         if (ct.includes('text/event-stream') || ct.includes('stream')) {
-          const teksSse = await bacaSSE(res);
-          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
+          const sse = await bacaSSE(res);
+          if (sse?.teks) return { ok: true, teks: sse.teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse.usage };
           terakhir = { kode: res.status, error: 'AI mengembalikan stream kosong.' };
           continue;
         }
@@ -723,12 +723,20 @@ export async function tanyaGroq(pesan, opsi = {}) {
         let data;
         try { data = await res.json(); } catch (_) { data = null; }
 
+        // Ambil info PEMAKAIAN TOKEN dari provider (permintaan pemilik
+        // 2026-10-02: "gw mau tampilin total token yang digunakan").
+        const usage = data?.usage ? {
+          promptTokens: data.usage.prompt_tokens ?? null,
+          completionTokens: data.usage.completion_tokens ?? null,
+          totalTokens: data.usage.total_tokens ?? null,
+        } : null;
+
         const teks = data?.choices?.[0]?.message?.content;
-        if (teks) return { ok: true, teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
+        if (teks) return { ok: true, teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage };
 
         if (!data?.choices) {
-          const teksSse = await bacaSSE(res);
-          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
+          const sse2 = await bacaSSE(res);
+          if (sse2?.teks) return { ok: true, teks: sse2.teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse2.usage };
         }
 
         terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
@@ -785,6 +793,7 @@ async function bacaSSE(res) {
       isi += decoder.decode(value, { stream: true });
     }
     let teks = '';
+    let usage = null;
     for (const b of isi.split('\n')) {
       if (!b.startsWith('data: ')) continue;
       const jsonStr = b.slice(6).trim();
@@ -793,8 +802,14 @@ async function bacaSSE(res) {
         const obj = JSON.parse(jsonStr);
         const delta = obj?.choices?.[0]?.delta?.content;
         if (delta) teks += delta;
+        // Ambil usage kalau SSE menyertakannya (biasanya di chunk terakhir).
+        if (obj?.usage) usage = {
+          promptTokens: obj.usage.prompt_tokens ?? null,
+          completionTokens: obj.usage.completion_tokens ?? null,
+          totalTokens: obj.usage.total_tokens ?? null,
+        };
       } catch (_) { /* bukan JSON valid */ }
     }
-    return teks.trim() || null;
+    return { teks: teks.trim() || null, usage };
   } catch { return null; }
 }
