@@ -888,7 +888,19 @@ export default function AnalisisAI() {
   // relevan (permintaan pemilik 2026-10-02: "langsung dari ai aja yang relevan").
   // Menggantikan tombol "Muat ulang".
   const [saranAI, setSaranAI] = useState(false);
+  // Cooldown 60 detik setelah generate - hemat token & cegah spam.
+  const [saranAICooldown, setSaranAICooldown] = useState(0);
+  useEffect(() => {
+    if (saranAICooldown <= 0) return;
+    const t = setTimeout(() => setSaranAICooldown((d) => d - 1), 1000);
+    return () => clearTimeout(t);
+  }, [saranAICooldown]);
   const muatSaranAI = useCallback(async () => {
+    if (saranAICooldown > 0) {
+      setPesanSimpan(`Tunggu ${saranAICooldown} detik lagi sebelum cari topik baru.`);
+      setTimeout(() => setPesanSimpan(null), 3000);
+      return;
+    }
     if (!provider?.trim() || !modelInput?.trim()) {
       setPesanSimpan('⚠️ Pilih provider & model dulu untuk cari topik AI.');
       setValidasiProvider(true);
@@ -898,6 +910,7 @@ export default function AnalisisAI() {
       return;
     }
     setSaranAI(true);
+    setSaranAICooldown(60); // mulai cooldown
     setSaranDismiss(new Set());
     try {
       const url = '/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&ai=1'
@@ -914,7 +927,7 @@ export default function AnalisisAI() {
       setTimeout(() => setPesanSimpan(null), 5000);
     }
     finally { setSaranAI(false); }
-  }, [peran, provider, modelInput]);
+  }, [peran, provider, modelInput, saranAICooldown]);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang
@@ -2402,9 +2415,9 @@ export default function AnalisisAI() {
               <button
                 type="button"
                 onClick={muatSaranAI}
-                disabled={saranAI}
-                title="AI cari topik paling relevan dari data terkini"
-                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[0.65rem] font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70 disabled:cursor-wait cursor-pointer"
+                disabled={saranAI || saranAICooldown > 0}
+                title={saranAICooldown > 0 ? `Tunggu ${saranAICooldown} detik` : 'AI cari topik paling relevan dari data terkini'}
+                className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[0.65rem] font-bold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
                 {saranAI ? (
                   <>
@@ -2412,6 +2425,13 @@ export default function AnalisisAI() {
                       <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                     </svg>
                     Memuat topik...
+                  </>
+                ) : saranAICooldown > 0 ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                    </svg>
+                    Tunggu {saranAICooldown}s
                   </>
                 ) : (
                   <>
@@ -2741,9 +2761,9 @@ export default function AnalisisAI() {
                 <button
                   type="button"
                   onClick={muatSaranAI}
-                  disabled={saranAI}
-                  title="AI cari topik paling relevan dari data terkini"
-                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[0.65rem] font-bold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70 disabled:cursor-wait cursor-pointer"
+                  disabled={saranAI || saranAICooldown > 0}
+                  title={saranAICooldown > 0 ? `Tunggu ${saranAICooldown} detik` : 'AI cari topik paling relevan dari data terkini'}
+                  className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-[0.65rem] font-bold text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
                   {saranAI ? (
                     <>
@@ -2751,6 +2771,13 @@ export default function AnalisisAI() {
                         <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                       </svg>
                       Memuat topik...
+                    </>
+                  ) : saranAICooldown > 0 ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                      </svg>
+                      Tunggu {saranAICooldown}s
                     </>
                   ) : (
                     <>
