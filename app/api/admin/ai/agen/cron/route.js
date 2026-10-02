@@ -1,8 +1,9 @@
 import { getDb, schemaReady } from '../../../../../lib/db';
 import { getLatestSnapshot } from '../../../../../lib/snapshot';
 import { susunKonteks } from '../../../../../lib/aiKonteks';
+import { susunKonteksKode } from '../../../../../lib/kodeBase';
 import { tanyaGroq } from '../../../../../lib/groq';
-import { PROMPT_AGEN, uraikanUsulan, validasiUsulan } from '../../../../../lib/aiAgen';
+import { PROMPT_AGEN, uraikanUsulan, uraikanSaran, validasiUsulan } from '../../../../../lib/aiAgen';
 import { json } from '../../../../../lib/api-helpers';
 import { hariIniWib } from '../../../../../lib/waktuWib';
 
@@ -34,21 +35,23 @@ export async function GET(request) {
     const [orders, log, feedback] = await Promise.all([
       db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 40'),
       db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'),
-      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 40'),
+      db.execute('SELECT kind, message, page, created_at, username, discord_id FROM web_feedback ORDER BY created_at DESC LIMIT 60'),
     ]);
     panel = {
       orders: orders.rows.map((r) => ({ plan: r.plan, amount: Number(r.amount), gateway: r.gateway, status: r.status, createdAt: Number(r.created_at) })),
       log: log.rows.map((r) => ({ action: r.action, status: r.status, result: r.result, createdAt: Number(r.created_at) })),
-      feedback: feedback.rows.map((r) => ({ kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at) })),
+      feedback: feedback.rows.map((r) => ({ kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at), username: r.username || null, discordId: r.discord_id || null })),
     };
   } catch { /* lanjut tanpa panel */ }
 
-  const konteks = await susunKonteks(snap, panel);
+  const konteks = await susunKonteks(snap, panel, { ringkas: true });
+  // Kode base juga (agen bisa deteksi celah eksploit di kode).
+  const konteksKode = susunKonteksKode(snap?.kodeBase);
   const hasil = await tanyaGroq([
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab bahasa Indonesia santai.' },
-    { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },
+    { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     { role: 'user', content: PROMPT_AGEN + '\n\nBuat laporan harian + usulan aksi.' },
-  ], { maxTokens: 1500, kecerdasan: 5 });
+  ], { maxTokens: 2000, kecerdasan: 6 });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error }, 502);
 
@@ -71,6 +74,16 @@ export async function GET(request) {
     args: [tgl, ringkasan || '(kosong)', temuan, hasil.model || null, hasil.provider || null, Date.now()],
   });
   const agenId = Number(ins.lastInsertRowid ?? 0);
+
+  // Simpan SARAN PER PERAN (kartu saran panel dari sini).
+  for (const s of uraikanSaran(hasil.teks)) {
+    for (const teksSaran of s.saran) {
+      await db.execute({
+        sql: 'INSERT INTO ai_agen_saran (peran, saran, dibuat_at) VALUES (?, ?, ?)',
+        args: [s.peran, teksSaran.slice(0, 300), Date.now()],
+      });
+    }
+  }
 
   let tersimpan = 0;
   for (const u of usulan) {

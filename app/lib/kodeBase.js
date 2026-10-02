@@ -16,7 +16,7 @@
 // lengkap. Kredensial (.env) TIDAK pernah dibaca. Ini menjaga payload tetap
 // kecil & aman.
 
-const BATAS_KODE = 6000; // batas karakter konteks kode (hemat token, respons cepat)
+const BATAS_KODE = 9000; // batas karakter konteks kode (cukup untuk cuplikan + sebagian daftar)
 
 /**
  * Bentuk konteks kode base dari ringkasan yang dikirim bot.
@@ -33,38 +33,53 @@ export function susunKonteksKode(kodeBase) {
     ].join('\n');
   }
 
-  const L = ['', '### KODE BASE BOT (ringkasan dari bot)'];
-  if (kodeBase.ringkas) L.push(kodeBase.ringkas);
-  L.push(`Total file dikirim: ${kodeBase.files.length}`);
+  const kepala = ['', '### KODE BASE BOT (ringkasan dari bot)'];
+  if (kodeBase.ringkas) kepala.push(kodeBase.ringkas);
+  kepala.push(`Total file dikirim: ${kodeBase.files.length}`);
 
-  // Daftar file + fungsi (ringkas).
-  L.push('');
-  L.push('Daftar file (path | baris | fungsi):');
-  for (const f of kodeBase.files) {
-    const funcs = Array.isArray(f.funcs) ? f.funcs.slice(0, 30).join(', ') : '';
-    L.push(`- ${f.path} | ${f.lines || '?'} baris | ${funcs}`);
-  }
-
-  // Cuplikan rawan (kalau ada) - ini yang paling berguna untuk bug/security.
+  // CUPLIKAN RAWAN DULUAN (paling penting untuk bug/security). Kalau total
+  // kepanjangan, yang dipotong adalah DAFTAR FILE (informasi lebih ringan),
+  // bukan cuplikan kode (bukti utama).
+  const cuplikanL = [];
   const adaCuplikan = kodeBase.files.some((f) => Array.isArray(f.cuplikan) && f.cuplikan.length);
   if (adaCuplikan) {
-    L.push('');
-    L.push('CUPLIKAN BAGIAN RAWAN (query DB, auth, reward, refund, dsb):');
+    cuplikanL.push('');
+    cuplikanL.push('CUPLIKAN BAGIAN RAWAN (query DB, auth, reward, refund, dsb):');
     for (const f of kodeBase.files) {
       if (!Array.isArray(f.cuplikan)) continue;
       for (const c of f.cuplikan) {
-        L.push('');
-        L.push(`- ${f.path} :: ${c.lokasi || '?'}`);
-        if (c.kode) L.push(String(c.kode).split('\n').map((x) => '  ' + x).join('\n'));
+        cuplikanL.push('');
+        cuplikanL.push(`- ${f.path} :: ${c.lokasi || '?'}`);
+        if (c.kode) cuplikanL.push(String(c.kode).split('\n').map((x) => '  ' + x).join('\n'));
       }
     }
   }
 
-  let teks = L.join('\n');
-  if (teks.length > BATAS_KODE) {
-    teks = teks.slice(0, BATAS_KODE) + '\n\n(Cuplikan kode dipangkas karena terlalu panjang. Kalau perlu detail bagian tertentu, minta pemilik menyebut file/fungsinya.)';
+  const daftarL = [];
+  daftarL.push('');
+  daftarL.push('Daftar file (path | baris | fungsi):');
+  for (const f of kodeBase.files) {
+    const funcs = Array.isArray(f.funcs) ? f.funcs.slice(0, 30).join(', ') : '';
+    daftarL.push(`- ${f.path} | ${f.lines || '?'} baris | ${funcs}`);
   }
-  return teks;
+
+  const teksKepala = kepala.join('\n');
+  const teksCuplikan = cuplikanL.join('\n');
+  const teksDaftar = daftarL.join('\n');
+
+  // Sisa jatah untuk daftar file setelah kepala + cuplikan.
+  const sisa = BATAS_KODE - teksKepala.length - teksCuplikan.length;
+  if (sisa <= 0) {
+    // Cuplikan saja sudah penuh - kirim kepala + cuplikan (tanpa daftar file).
+    return (teksKepala + teksCuplikan).slice(0, BATAS_KODE) +
+      '\n\n(Daftar file dipangkas. Kalau perlu detail bagian tertentu, sebut nama file/fungsinya.)';
+  }
+  if (teksDaftar.length > sisa) {
+    // Potong daftar file, pertahankan cuplikan utuh.
+    return teksKepala + teksCuplikan + '\n' + teksDaftar.slice(0, Math.max(0, sisa - 80)) +
+      '\n...\n(Daftar file dipangkas. Kalau perlu detail bagian tertentu, sebut nama file/fungsinya.)';
+  }
+  return teksKepala + teksCuplikan + teksDaftar;
 }
 
 /** Apakah ringkasan kode tersedia? */

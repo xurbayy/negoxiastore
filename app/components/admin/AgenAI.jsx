@@ -19,9 +19,10 @@ const WARNA_TINGKAT = {
   kritis: 'bg-danger/25 text-danger',
 };
 
-export default function AgenAI({ jalan, detikSisa }) {
+export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai }) {
   const [laporan, setLaporan] = useState([]);
   const [usulan, setUsulan] = useState([]);
+  const [pengingat, setPengingat] = useState([]);
   const [memuat, setMemuat] = useState(true);
   const [jalanAgen, setJalanAgen] = useState(false);
   const [pesan, setPesan] = useState(null);
@@ -34,7 +35,7 @@ export default function AgenAI({ jalan, detikSisa }) {
     try {
       const res = await fetch('/api/admin/ai/agen', { cache: 'no-store' });
       const d = await res.json();
-      if (d.ok) { setLaporan(d.laporan || []); setUsulan(d.usulan || []); }
+      if (d.ok) { setLaporan(d.laporan || []); setUsulan(d.usulan || []); setPengingat(d.pengingat || []); }
       else flash('Gagal memuat: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal memuat: ' + e.message); }
     finally { setMemuat(false); }
@@ -42,17 +43,36 @@ export default function AgenAI({ jalan, detikSisa }) {
 
   useEffect(() => { muat(); }, [muat]);
 
-  // Jalankan agen sekarang (analisis 1x). Hasil muncul sebagai laporan + usulan.
+  // Jalankan agen sekarang (analisis 1x). Pakai MODEL & PROVIDER yang dipilih
+  // pemilik di bar kontrol (permintaan pemilik 2026-10-02: "modelnya dari situ").
   const jalankanAgen = useCallback(async () => {
+    // Validasi: wajib ada model & provider (cegah request jalan ke default lalu timeout).
+    if (!provider?.trim() || !model?.trim()) {
+      flash('Pilih provider & model dulu di bar atas (klik "Lihat model" lalu "Pakai").');
+      return;
+    }
     setJalanAgen(true);
     try {
-      const res = await fetch('/api/admin/ai/agen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      const res = await fetch('/api/admin/ai/agen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: provider || undefined,
+          model: model || undefined,
+          // Token & kecerdasan DIPATOK server (agen jalan 24/7, efisien).
+        }),
+      });
       const d = await res.json();
-      if (d.ok) { flash(`Agen selesai. ${d.usulanTersimpan} usulan dibuat.`); await muat(); }
+      if (d.ok) {
+        flash(`Agen selesai. ${d.usulanTersimpan} usulan dibuat.`);
+        await muat();
+        // Beri tahu induk supaya kartu saran di tab lain ikut ter-refresh.
+        if (typeof onSelesai === 'function') onSelesai();
+      }
       else flash('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal: ' + e.message); }
     finally { setJalanAgen(false); }
-  }, [muat]);
+  }, [muat, provider, model, onSelesai]);
 
   // Putuskan usulan: setuju (kirim ke bot) / tolak.
   const putuskan = useCallback(async (id, putusan) => {
@@ -79,7 +99,11 @@ export default function AgenAI({ jalan, detikSisa }) {
           <div>
             <h3 className="font-display text-ink">Agen AI</h3>
             <p className="mt-0.5 text-xs text-ink-muted">
-              Memantau data &amp; mengusulkan aksi tiap hari jam 12.00 WIB. Aksi hanya jalan setelah kamu setujui.
+              Memantau data &amp; kode bot, mengusulkan aksi + saran. Aksi hanya jalan setelah kamu setujui.
+            </p>
+            {/* Model yang dipakai (dari bar kontrol) supaya jelas. */}
+            <p className="mt-0.5 text-[0.7rem] text-ink-faint">
+              Model: {provider || '-'} • {model || 'belum dipilih'}
             </p>
           </div>
           <button
@@ -109,11 +133,26 @@ export default function AgenAI({ jalan, detikSisa }) {
                     risiko {u.tingkat}
                   </span>
                   <span className="rounded bg-card-cream px-2 py-0.5 font-mono text-[0.6rem] text-ink-faint">{u.aksi}</span>
+                  {u.aksi === 'buat_pengingat' && (
+                    <span className="rounded bg-accent/15 px-2 py-0.5 text-[0.6rem] font-bold text-accent">PENGINGAT</span>
+                  )}
                 </div>
-                {u.alasan && <p className="mt-1.5 text-xs text-ink-muted"><strong className="text-ink">Alasan:</strong> {u.alasan}</p>}
-                {u.risiko && <p className="mt-1 text-xs text-danger"><strong>Risiko:</strong> {u.risiko}</p>}
-                {u.payload && (
-                  <p className="mt-1 break-all font-mono text-[0.65rem] text-ink-faint">{JSON.stringify(u.payload)}</p>
+                {/* Pengingat: tampilkan teks + tanggal dengan jelas. */}
+                {u.aksi === 'buat_pengingat' && u.payload ? (
+                  <div className="mt-1.5 rounded-lg bg-bg-soft/50 px-2.5 py-2">
+                    <p className="text-xs text-ink">{u.payload.teks || '-'}</p>
+                    <p className="mt-0.5 text-[0.7rem] text-ink-muted">
+                      Diingatkan: {u.payload.tanggal || '-'}{u.payload.jam ? ` pukul ${u.payload.jam} WIB` : ''}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {u.alasan && <p className="mt-1.5 text-xs text-ink-muted"><strong className="text-ink">Alasan:</strong> {u.alasan}</p>}
+                    {u.risiko && <p className="mt-1 text-xs text-danger"><strong>Risiko:</strong> {u.risiko}</p>}
+                    {u.payload && (
+                      <p className="mt-1 break-all font-mono text-[0.65rem] text-ink-faint">{JSON.stringify(u.payload)}</p>
+                    )}
+                  </>
                 )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   <button
@@ -121,7 +160,7 @@ export default function AgenAI({ jalan, detikSisa }) {
                     onClick={() => putuskan(u.id, 'setuju')}
                     className="rounded-lg border border-success/40 bg-success/10 px-3 py-1.5 text-xs font-bold text-success transition hover:bg-success/20 cursor-pointer"
                   >
-                    Setujui &amp; jalankan
+                    {u.aksi === 'buat_pengingat' ? 'Setujui - pasang pengingat' : 'Setujui & jalankan'}
                   </button>
                   <button
                     type="button"
@@ -131,6 +170,25 @@ export default function AgenAI({ jalan, detikSisa }) {
                     Tolak
                   </button>
                 </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* PENGINGAT AKTIF (dibuat dari usulan agen yang disetujui). */}
+      {pengingat.length > 0 && (
+        <div className="nx-card px-4 py-4 sm:px-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">
+            Pengingat aktif ({pengingat.length})
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {pengingat.map((p) => (
+              <li key={p.id} className={`flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 ${p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'}`}>
+                <span className={`text-[0.65rem] font-bold ${p.jatuhTempo ? 'text-danger' : 'text-ink-faint'}`}>
+                  {p.jatuhTempo ? 'SEKARANG' : new Date(p.waktuIngat).toLocaleString('id-ID')}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-ink">{p.teks}</span>
               </li>
             ))}
           </ul>

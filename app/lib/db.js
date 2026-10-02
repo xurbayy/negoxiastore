@@ -274,6 +274,17 @@ export async function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_ai_agen_usulan_status ON ai_agen_usulan(status, dibuat_at DESC);
 
+    -- SARAN AGEN PER PERAN (permintaan pemilik 2026-10-02).
+    -- Kartu saran di panel (Analisis Cepat + Saran Diskusi) diambil dari sini -
+    -- hasil cek agen (kode + data), bukan daftar statis.
+    CREATE TABLE IF NOT EXISTS ai_agen_saran (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        peran      TEXT NOT NULL,
+        saran      TEXT NOT NULL,
+        dibuat_at  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_agen_saran_peran ON ai_agen_saran(peran, dibuat_at DESC);
+
     -- PROVIDER AI KUSTOM (permintaan pemilik 2026-10-02).
     -- Pemilik ingin bisa MENAMBAH provider sendiri (nama + URL + api key),
     -- lalu menyimpan & mengelola MODEL yang dipakai. Provider bawaan

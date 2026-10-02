@@ -2,8 +2,9 @@ import { getSession, getAdminSession } from '../../../../lib/session';
 import { getDb, schemaReady } from '../../../../lib/db';
 import { getLatestSnapshot } from '../../../../lib/snapshot';
 import { susunKonteks } from '../../../../lib/aiKonteks';
+import { susunKonteksKode } from '../../../../lib/kodeBase';
 import { tanyaGroq } from '../../../../lib/groq';
-import { PROMPT_AGEN, uraikanUsulan, validasiUsulan, risikoAksi } from '../../../../lib/aiAgen';
+import { PROMPT_AGEN, uraikanUsulan, uraikanSaran, validasiUsulan, risikoAksi } from '../../../../lib/aiAgen';
 import { json } from '../../../../lib/api-helpers';
 import { hariIniWib } from '../../../../lib/waktuWib';
 
@@ -34,12 +35,18 @@ export async function GET() {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   await schemaReady();
   const db = getDb();
-  const [laporan, usulan] = await Promise.all([
+  const [laporan, usulan, pengingat] = await Promise.all([
     db.execute('SELECT id, tanggal, ringkasan, temuan, model, provider, dibuat_at FROM ai_agen ORDER BY dibuat_at DESC LIMIT 14'),
     db.execute("SELECT id, agen_id, judul, aksi, payload, alasan, risiko, status, hasil, dibuat_at FROM ai_agen_usulan ORDER BY dibuat_at DESC LIMIT 50"),
+    db.execute('SELECT id, teks, waktu_ingat, selesai FROM ai_reminders WHERE selesai = 0 ORDER BY waktu_ingat ASC LIMIT 20'),
   ]);
   return json({
     ok: true,
+    // PENGINGAT aktif (dibuat dari usulan agen yang disetujui).
+    pengingat: (pengingat.rows || []).map((r) => ({
+      id: Number(r.id), teks: r.teks, waktuIngat: Number(r.waktu_ingat),
+      jatuhTempo: Number(r.waktu_ingat) <= Date.now(),
+    })),
     laporan: (laporan.rows || []).map((r) => ({
       id: Number(r.id), tanggal: r.tanggal, ringkasan: r.ringkasan, temuan: r.temuan,
       model: r.model || null, provider: r.provider || null, dibuatAt: Number(r.dibuat_at),
@@ -73,16 +80,19 @@ export async function POST(request) {
     const [orders, log, feedback] = await Promise.all([
       db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 40'),
       db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'),
-      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 40'),
+      db.execute('SELECT kind, message, page, created_at, username, discord_id FROM web_feedback ORDER BY created_at DESC LIMIT 60'),
     ]);
     panel = {
       orders: orders.rows.map((r) => ({ plan: r.plan, amount: Number(r.amount), gateway: r.gateway, status: r.status, createdAt: Number(r.created_at) })),
       log: log.rows.map((r) => ({ action: r.action, status: r.status, result: r.result, createdAt: Number(r.created_at) })),
-      feedback: feedback.rows.map((r) => ({ kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at) })),
+      feedback: feedback.rows.map((r) => ({ kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at), username: r.username || null, discordId: r.discord_id || null })),
     };
   } catch { /* panel gagal - agen tetap jalan dari snapshot */ }
 
-  const konteks = await susunKonteks(snap, panel);
+  const konteks = await susunKonteks(snap, panel, { ringkas: true });
+  // KODE BASE (kalau bot mengirim): agen bisa mendeteksi celah eksploit di KODE,
+  // bukan cuma pola curang di data (permintaan pemilik 2026-10-02).
+  const konteksKode = susunKonteksKode(snap?.kodeBase);
   const instruksi = [
     PROMPT_AGEN,
     '',
@@ -91,13 +101,17 @@ export async function POST(request) {
 
   const hasil = await tanyaGroq([
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab dalam bahasa Indonesia santai.' },
-    { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },
+    { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     { role: 'user', content: instruksi },
   ], {
     provider: String(body?.provider || '').trim() || undefined,
     model: String(body?.model || '').trim() || undefined,
-    maxTokens: 1500,
-    kecerdasan: 5,
+    // TOKEN & KECERDASAN AGEN DIPATOK SERVER (permintaan pemilik 2026-10-02):
+    // agen jalan 24/7, jadi efisiensi diatur di sini - bukan dari UI.
+    // 2000 token cukup untuk Ringkasan + Temuan + SARAN + USULAN.
+    // IQ 6 = seimbang (analisis tajam tapi tidak bertele-tele).
+    maxTokens: 2000,
+    kecerdasan: 6,
   });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error, providerLabel: hasil.providerLabel }, 502);
@@ -123,6 +137,18 @@ export async function POST(request) {
     args: [tgl, ringkasan || '(kosong)', temuan, hasil.model || null, hasil.provider || null, Date.now()],
   });
   const agenId = Number(ins.lastInsertRowid ?? 0);
+
+  // Simpan SARAN PER PERAN (kartu saran panel diambil dari sini - dinamis).
+  let saranTersimpan = 0;
+  for (const s of uraikanSaran(hasil.teks)) {
+    for (const teksSaran of s.saran) {
+      await db.execute({
+        sql: 'INSERT INTO ai_agen_saran (peran, saran, dibuat_at) VALUES (?, ?, ?)',
+        args: [s.peran, teksSaran.slice(0, 300), Date.now()],
+      });
+      saranTersimpan++;
+    }
+  }
 
   // Simpan usulan yang LOLOS validasi saja (aman).
   let tersimpan = 0;

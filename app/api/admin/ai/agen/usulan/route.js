@@ -59,6 +59,27 @@ export async function PATCH(request) {
   const v = validasiUsulan({ aksi: row.aksi, payload });
   if (!v.ok) return json({ ok: false, error: v.alasan }, 400);
 
+  // KHUSUS PENGINGAT: tidak dikirim ke bot - disimpan sebagai pengingat
+  // (muncul di notif lonceng + panel Pengingat). Permintaan pemilik 2026-10-02:
+  // "agen bisa kirim notif pengingat, ada konfirmasi, kalau gw iya masuk notif".
+  if (row.aksi === 'buat_pengingat') {
+    const { wibKeEpoch, formatWib } = await import('../../../../../lib/waktuWib');
+    const [th, bl, tg] = String(payload.tanggal).split('-').map(Number);
+    const [jj, mm] = String(payload.jam || '09:00').split(':').map(Number);
+    const waktuIngat = wibKeEpoch(th, bl - 1, tg, jj || 9, mm || 0);
+    if (!Number.isFinite(waktuIngat)) return json({ ok: false, error: 'Tanggal pengingat tidak valid.' }, 400);
+    const insR = await db.execute({
+      sql: 'INSERT INTO ai_reminders (teks, waktu_ingat, selesai, dibuat_at) VALUES (?, ?, 0, ?)',
+      args: [String(payload.teks).slice(0, 300), waktuIngat, Date.now()],
+    });
+    const rid = Number(insR.lastInsertRowid ?? 0);
+    await db.execute({
+      sql: "UPDATE ai_agen_usulan SET status = 'disetujui', hasil = ?, diputus_at = ? WHERE id = ?",
+      args: [`Pengingat #${rid} dibuat untuk ${formatWib(waktuIngat)}.`, Date.now(), id],
+    });
+    return json({ ok: true, status: 'disetujui', pengingatId: rid, waktuTeks: formatWib(waktuIngat) });
+  }
+
   // Antrekan ke bot (bot mengeksekusi lewat whitelist-nya sendiri).
   await ready();
   const ins = await db.execute({
