@@ -267,6 +267,10 @@ export default function AnalisisAI() {
   // Field wajib yang kosong -> highlight merah (permintaan pemilik 2026-10-02).
   const [errProv, setErrProv] = useState({});
   const [errModel, setErrModel] = useState({});
+  // OAuth login akun (permintaan pemilik 2026-10-02).
+  const [daftarOAuth, setDaftarOAuth] = useState([]);
+  const [oauthProses, setOauthProses] = useState('');
+  const [pesanOAuth, setPesanOAuth] = useState(null);
   // Form model baru.
   const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
@@ -857,6 +861,47 @@ export default function AnalisisAI() {
     setTimeout(() => setPesanKelola(null), 5000);
   };
 
+  // OAuth: muat status, login (buka URL), putuskan.
+  const muatOAuth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ai/oauth/status', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setDaftarOAuth(d.providers || []);
+    } catch { /* abaikan */ }
+  }, []);
+  useEffect(() => { muatOAuth(); }, [muatOAuth]);
+  // Hasil login dari URL ?oauth=sukses-x / gagal-x.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const u = new URL(window.location.href);
+    const hasil = u.searchParams.get('oauth');
+    if (!hasil) return;
+    const sukses = hasil.startsWith('sukses-');
+    setPesanOAuth(sukses ? `✓ Berhasil login ${hasil.replace('sukses-', '')}. API key otomatis tersimpan.` : `Login gagal (${hasil.replace('gagal-', '')}). Coba lagi.`);
+    u.searchParams.delete('oauth');
+    window.history.replaceState({}, '', u.toString());
+    muatOAuth();
+    setTimeout(() => setPesanOAuth(null), 6000);
+  }, [muatOAuth]);
+  const loginOAuth = useCallback(async (id) => {
+    setOauthProses(id);
+    try {
+      const res = await fetch('/api/admin/ai/oauth/start?provider=' + encodeURIComponent(id), { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok && d.url) window.location.href = d.url;
+      else setPesanOAuth('Gagal buka login: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { setPesanOAuth('Gagal: ' + e.message); }
+    finally { setOauthProses(''); }
+  }, []);
+  const putusOAuth = useCallback(async (id) => {
+    try {
+      await fetch('/api/admin/ai/oauth/status?provider=' + encodeURIComponent(id), { method: 'DELETE' });
+      setPesanOAuth('Koneksi diputus.');
+      setTimeout(() => setPesanOAuth(null), 4000);
+      muatOAuth();
+    } catch { /* abaikan */ }
+  }, [muatOAuth]);
+
   const muatKelola = useCallback(async () => {
     setMemuatKelola(true);
     try {
@@ -1400,6 +1445,44 @@ export default function AnalisisAI() {
               ))}
             </ul>
           )}
+
+          {/* LOGIN AKUN (OAuth) - permintaan pemilik 2026-10-02 */}
+          <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-3 sm:p-4">
+            <p className="text-xs font-bold text-ink">Login Akun (OAuth)</p>
+            <p className="mt-0.5 text-[0.65rem] text-ink-muted">
+              Login pakai akun provider - API key otomatis, tidak perlu paste manual.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(daftarOAuth || []).map((o) => (
+                <div key={o.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${o.connected ? 'border-success/40 bg-success/10' : 'border-border-soft bg-card-cream'}`}>
+                  <span className="text-xs font-semibold text-ink">{o.label}</span>
+                  {o.connected ? (
+                    <>
+                      <span className="text-[0.6rem] font-bold text-success">✓ Terhubung</span>
+                      <button
+                        type="button"
+                        onClick={() => putusOAuth(o.id)}
+                        title="Putuskan koneksi"
+                        className="text-ink-faint transition hover:text-danger cursor-pointer"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => loginOAuth(o.id)}
+                      disabled={oauthProses === o.id}
+                      className="rounded bg-accent px-2 py-0.5 text-[0.65rem] font-bold text-white transition hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                    >
+                      {oauthProses === o.id ? 'Membuka...' : 'Login'}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {pesanOAuth && <p className="mt-2 text-[0.7rem] font-semibold text-accent">{pesanOAuth}</p>}
+          </div>
 
           {/* Form provider (tambah / edit) */}
           <div className={`mt-4 rounded-xl border p-3 sm:p-4 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>

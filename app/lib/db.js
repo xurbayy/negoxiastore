@@ -369,6 +369,35 @@ export async function ensureSchema() {
       updated_at  INTEGER NOT NULL
     )
   `);
+
+  // OAUTH PROVIDER (permintaan pemilik 2026-10-02: "login akun - OpenRouter
+  // OAuth PKCE"). Menyimpan token OAuth: access_token, refresh_token,
+  // expiry, dsb. Satu baris per admin+provider.
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ai_oauth (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      discord_id     TEXT NOT NULL,
+      provider       TEXT NOT NULL,
+      access_token   TEXT,
+      refresh_token  TEXT,
+      expires_at     INTEGER,
+      extra          TEXT,
+      label          TEXT,
+      created_at     INTEGER NOT NULL,
+      updated_at     INTEGER NOT NULL,
+      UNIQUE(discord_id, provider)
+    )
+  `);
+  // Token PKCE sementara saat proses login (state -> verifier).
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS ai_oauth_state (
+      state      TEXT PRIMARY KEY,
+      discord_id TEXT NOT NULL,
+      provider   TEXT NOT NULL,
+      verifier   TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `);
 }
 
 let _schemaReady = null;
