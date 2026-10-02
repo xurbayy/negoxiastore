@@ -31,6 +31,16 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   const [agentProvider, setAgentProvider] = useState('');
   const [agentModel, setAgentModel] = useState('');
   const [daftarProv, setDaftarProv] = useState([]);
+  // Kombinasi provider+model tersimpan (bisa dipilih cepat / dihapus).
+  const [daftarKombinasi, setDaftarKombinasi] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem('nexo_agen_kombinasi') || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_agen_kombinasi', JSON.stringify(daftarKombinasi)); } catch { /* abaikan */ }
+  }, [daftarKombinasi]);
+  const hapusKombinasi = useCallback((id) => {
+    setDaftarKombinasi((arr) => arr.filter((k) => k.id !== id));
+  }, []);
   // Auto-run: agen jalan otomatis tiap 6 jam saat toggle AKTIF.
   const [autoJalan, setAutoJalan] = useState(() => {
     try { return window.localStorage.getItem('nexo_agen_auto') === '1'; } catch { return false; }
@@ -192,21 +202,18 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
 
   return (
     <div className="space-y-3">
-      {/* Kepala + tombol jalankan */}
+      {/* Kepala + tombol aksi */}
       <div className="nx-card px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <h3 className="font-display text-ink">Agen AI</h3>
             <p className="mt-0.5 text-xs text-ink-muted">
-              Memantau data &amp; kode bot, mengusulkan aksi + saran. Aksi hanya jalan setelah kamu setujui.
-            </p>
-            {/* Model yang dipakai AGEN (bukan milik Analisis/Diskusi). */}
-            <p className="mt-0.5 text-[0.7rem] text-ink-faint">
-              Model: {agentProvider || '-'} • {agentModel || 'belum dipilih'}
+              Memantau data &amp; kode bot, mengusulkan aksi + saran.
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            {/* Toggle AUTO-RUN: tombol berubah fungsi sesuai status. */}
+          {/* Tombol aksi: horizontal, rapi. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Toggle AUTO-RUN */}
             <button
               type="button"
               onClick={() => {
@@ -215,53 +222,118 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
                 flash(baru ? 'Agen AKTIF - jalan otomatis tiap 6 jam.' : 'Agen MATI - hanya manual.');
                 if (baru) jalankanAgenRef.current?.();
               }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                autoJalan ? 'bg-danger/15 text-danger border border-danger/40 hover:bg-danger/25' : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition cursor-pointer ${
+                autoJalan
+                  ? 'bg-danger/10 text-danger border border-danger/40 hover:bg-danger/20'
+                  : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
               }`}
             >
+              <span className={`inline-block h-2 w-2 rounded-full ${autoJalan ? 'bg-danger' : 'bg-ink-faint'}`} />
               {autoJalan ? 'Matikan agent' : 'Aktifkan agent'}
             </button>
-            {/* Analisis sekarang: jalan 1x tanpa mengubah status auto-run. */}
+            {/* Analisis sekarang: jalan 1x tanpa ubah auto-run. */}
             <button
               type="button"
               onClick={jalankanAgen}
               disabled={jalanAgen || jalan || detikSisa > 0}
-              className="btn-primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary flex items-center gap-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {jalanAgen ? 'Menganalisis...' : 'Analisis sekarang'}
+              {jalanAgen ? (
+                <>
+                  <span className="pulse-dot" aria-hidden="true" />
+                  Menganalisis...
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  Analisis sekarang
+                </>
+              )}
             </button>
           </div>
         </div>
         {pesan && <p className="mt-2 text-xs font-semibold text-accent">{pesan}</p>}
-        {/* Provider & model TERPISAH untuk agen. */}
-        <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
-          <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider agen (terpisah dari Analisis/Diskusi)</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <select
-              value={agentProvider}
-              onChange={(e) => {
-                setAgentProvider(e.target.value);
-                setAgentModel(''); // reset model saat ganti provider
-                try { window.localStorage.setItem('nexo_agen_provider', e.target.value); } catch { /* abaikan */ }
-              }}
-              className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-sm text-ink focus:border-accent/50 focus:outline-none"
-            >
-              <option value="">Pilih provider...</option>
-              {daftarProv.map((p) => (
-                <option key={p.id} value={p.id}>{p.nama}</option>
-              ))}
-            </select>
-            <input
-              value={agentModel}
-              onChange={(e) => {
-                setAgentModel(e.target.value);
-                try { window.localStorage.setItem('nexo_agen_model', e.target.value); } catch { /* abaikan */ }
-              }}
-              placeholder="Nama model (mis. llama-3.3-70b-versatile)"
-              className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:border-accent/50 focus:outline-none"
-            />
+      </div>
+
+      {/* Provider & model AGEN - kartu terpisah, jelas dedicated. */}
+      <div className="nx-card border-accent/20 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[0.65rem] font-bold uppercase tracking-widest text-accent">
+            Provider & Model Agen
+          </p>
+          <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[0.6rem] font-bold text-accent">
+            Dedicated - tidak dipakai Analisis/Diskusi
+          </span>
+        </div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <select
+            value={agentProvider}
+            onChange={(e) => {
+              setAgentProvider(e.target.value);
+              setAgentModel('');
+            }}
+            className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink focus:border-accent/50 focus:outline-none"
+          >
+            <option value="">Pilih provider...</option>
+            {daftarProv.map((p) => (
+              <option key={p.id} value={p.id}>{p.nama}</option>
+            ))}
+          </select>
+          <input
+            value={agentModel}
+            onChange={(e) => setAgentModel(e.target.value)}
+            placeholder="Nama model (mis. llama-3.3-70b-versatile)"
+            className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent/50 focus:outline-none"
+          />
+        </div>
+        {/* Kombinasi tersimpan - pilih cepat, bisa dihapus. */}
+        {daftarKombinasi.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {daftarKombinasi.map((k) => (
+              <span key={k.id} className="flex items-center gap-1 rounded-full border border-border-soft bg-bg-soft/50 px-2.5 py-1">
+                <button
+                  type="button"
+                  onClick={() => { setAgentProvider(k.provider); setAgentModel(k.model); }}
+                  className="text-[0.7rem] font-semibold text-ink hover:text-accent cursor-pointer"
+                  title={`${k.provider} / ${k.model}`}
+                >
+                  {k.provider}/{k.model}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => hapusKombinasi(k.id)}
+                  title="Hapus kombinasi ini"
+                  className="text-ink-faint transition hover:text-danger cursor-pointer"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+              </span>
+            ))}
           </div>
-          <p className="mt-1.5 text-[0.6rem] text-ink-faint">Provider ini khusus agen. Provider untuk Analisis/Diskusi dipilih di tab masing-masing.</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!agentProvider || !agentModel) { flash('Pilih provider & model dulu.'); return; }
+              const baru = { id: Date.now(), provider: agentProvider, model: agentModel };
+              const daftar = daftarKombinasi.filter((k) => !(k.provider === agentProvider && k.model === agentModel));
+              setDaftarKombinasi([...daftar, baru]);
+              flash('Kombinasi tersimpan.');
+            }}
+            className="rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+          >
+            + Simpan kombinasi
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAgentProvider(''); setAgentModel(''); }}
+            className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+          >
+            Kosongkan
+          </button>
         </div>
       </div>
 
