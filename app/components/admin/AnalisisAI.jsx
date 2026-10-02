@@ -2139,13 +2139,12 @@ export default function AnalisisAI() {
                           <button
                             type="button"
                             onClick={async () => {
-                              // Simpan langsung ke server (tanpa buka form manual).
                               const label = m.id.split('/').pop().split(':')[0].slice(0, 40);
                               const providerId = m.providerId || provider || '';
                               // Cek duplikat.
                               const duplikat = daftarModel.find((x) => x.model === m.id && x.provider === providerId);
                               if (duplikat) {
-                                setPesanSimpan(`Model "${m.id}" sudah tersimpan.`);
+                                setPesanSimpan(`⚠ Model "${m.id}" sudah tersimpan di ${providerId}.`);
                                 setTimeout(() => setPesanSimpan(null), 4000);
                                 return;
                               }
@@ -2158,7 +2157,7 @@ export default function AnalisisAI() {
                                 });
                                 const d = await res.json();
                                 if (d.ok) {
-                                  setPesanSimpan(`Model "${label}" tersimpan permanen.`);
+                                  setPesanSimpan(`✓ Model "${label}" tersimpan permanen.`);
                                   setTimeout(() => setPesanSimpan(null), 4000);
                                   await Promise.all([muatKelola(), muatStatusUlang()]);
                                 } else {
@@ -2170,9 +2169,15 @@ export default function AnalisisAI() {
                                 setTimeout(() => setPesanSimpan(null), 4000);
                               }
                             }}
-                            className="rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                            className={`rounded-lg border px-2.5 py-1 text-[0.7rem] font-bold transition cursor-pointer ${
+                              daftarModel.some((x) => x.model === m.id && x.provider === (m.providerId || provider || ''))
+                                ? 'border-success/40 bg-success/5 text-success'
+                                : 'border-accent/40 text-accent hover:bg-accent/10'
+                            }`}
                           >
-                            Simpan permanen
+                            {daftarModel.some((x) => x.model === m.id && x.provider === (m.providerId || provider || ''))
+                              ? '✓ Tersimpan'
+                              : 'Simpan permanen'}
                           </button>
                         </div>
                       </div>
