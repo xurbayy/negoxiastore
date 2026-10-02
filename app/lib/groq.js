@@ -581,9 +581,10 @@ function terjemahPesan(teks) {
   const t = String(teks || '').trim();
   if (!t) return '';
   const pola = [
+    [/only available on agentic|agentic harness|productivity app|plugging it into a coding/i,
+      'Model ini cuma bisa dipakai lewat aplikasi coding agent tertentu (Cursor, Cline, dsb), TIDAK bisa lewat API biasa. Pilih model lain.'],
     [/only available with a subscription|buy a subscription|requires? a subscription|subscription required/i,
-      'Model ini hanya tersedia lewat LANGGANAN berbayar di provider ini.',
-      ' Berlangganan dulu di provider, atau pakai model lain.'],
+      'Model ini hanya tersedia lewat LANGGANAN berbayar di provider ini. Berlangganan dulu, atau pakai model lain.'],
     [/invalid api key|incorrect api key|authentication failed|unauthorized/i,
       'API key ditolak oleh provider.'],
     [/not found|does not exist|unknown model|no such model|model.*not.*found|no model found/i,
