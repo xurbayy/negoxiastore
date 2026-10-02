@@ -1183,21 +1183,102 @@ export default function AnalisisAI() {
               return (
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                 {tampil.map((m) => (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      onClick={() => { setModelInput(m.id); setModelProv((s) => ({ ...s, status: 'idle' })); }}
-                      title="Pakai model ini"
-                      className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
-                    >
-                      <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
-                      <span className="flex shrink-0 items-center gap-1">
-                        {/* Kemampuan model: bisa lihat gambar & bisa bernalar. */}
-                        {m.vision && <span title="Bisa lihat gambar (vision)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">LIHAT</span>}
-                        {m.reasoning && <span title="Bisa bernalar (reasoning)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">NALAR</span>}
-                        {m.gratis === true && <span className="rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
-                      </span>
-                    </button>
+                  <li key={m.id} className={`rounded-lg ${modelProv.dipilih === m.id ? 'bg-accent/10' : ''}`}>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Pilih model + buka pengaturan (max token & kecerdasan).
+                          setModelProv((s) => ({
+                            ...s,
+                            dipilih: s.dipilih === m.id ? null : m.id,
+                            setToken: s.setToken || '2000',
+                            setIq: s.setIq || '6',
+                          }));
+                        }}
+                        title="Pilih + atur model ini"
+                        className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-2 py-1 text-left transition hover:bg-accent/15 cursor-pointer"
+                      >
+                        <span className="min-w-0 flex-1 truncate font-mono text-[0.7rem] text-ink">{m.id}</span>
+                        <span className="flex shrink-0 items-center gap-1">
+                          {m.vision && <span title="Bisa lihat gambar (vision)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">LIHAT</span>}
+                          {m.reasoning && <span title="Bisa bernalar (reasoning)" className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-accent">NALAR</span>}
+                          {m.gratis === true && <span className="rounded bg-success/15 px-1.5 py-0.5 text-[0.6rem] font-bold text-success">GRATIS</span>}
+                        </span>
+                      </button>
+                      {/* Pakai cepat tanpa atur. */}
+                      <button
+                        type="button"
+                        onClick={() => { setModelInput(m.id); setModelSetting({ maxTokens: null, kecerdasan: null }); setModelProv((s) => ({ ...s, status: 'idle', dipilih: null })); }}
+                        title="Pakai model ini langsung (default)"
+                        className="shrink-0 rounded-lg border border-accent/40 px-2 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                      >
+                        Pakai
+                      </button>
+                    </div>
+                    {/* Pengaturan model terpilih: max token + kecerdasan. */}
+                    {modelProv.dipilih === m.id && (
+                      <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2">
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <label className="flex items-center gap-2 text-[0.65rem] text-ink-muted">
+                            <span className="shrink-0">Maks token</span>
+                            <input
+                              type="number" min="200" max="32000"
+                              value={modelProv.setToken ?? '2000'}
+                              onChange={(e) => setModelProv((s) => ({ ...s, setToken: e.target.value }))}
+                              className="w-full rounded border border-border-soft bg-bg-soft px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
+                            />
+                          </label>
+                          <label className="flex items-center gap-2 text-[0.65rem] text-ink-muted">
+                            <span className="shrink-0">Kecerdasan (1-10)</span>
+                            <input
+                              type="number" min="1" max="10"
+                              value={modelProv.setIq ?? '6'}
+                              onChange={(e) => setModelProv((s) => ({ ...s, setIq: e.target.value }))}
+                              className="w-full rounded border border-border-soft bg-bg-soft px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
+                            />
+                          </label>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setModelInput(m.id);
+                              setModelSetting({ maxTokens: Number(modelProv.setToken) || null, kecerdasan: Number(modelProv.setIq) || null });
+                              setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
+                            }}
+                            className="btn-primary text-[0.7rem]"
+                          >
+                            Pakai dengan setting ini
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setModelProv((s) => ({ ...s, dipilih: null }))}
+                            className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                          >
+                            Batal
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Simpan permanent sebagai model tersimpan.
+                              setFormModel({
+                                label: m.id.split('/').pop().split(':')[0].slice(0, 40),
+                                model: m.id, provider: provider || '',
+                                max_tokens: String(modelProv.setToken ?? ''), kecerdasan: String(modelProv.setIq ?? ''),
+                              });
+                              setKelola(true);
+                              setEditModelId(null);
+                              if (daftarProvider.length === 0) muatKelola();
+                              flashKelola('Form model terisi - klik "Simpan model" untuk menyimpan permanen.');
+                            }}
+                            className="rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                          >
+                            Simpan permanen
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
