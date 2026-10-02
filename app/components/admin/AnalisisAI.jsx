@@ -158,6 +158,10 @@ export default function AnalisisAI() {
   const [cekHasil, setCekHasil] = useState({ status: 'idle' });
   // Hasil tes koneksi provider (form tambah) - validasi URL base + API key.
   const [tesHasil, setTesHasil] = useState({ status: 'idle' });
+  // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
+  // 2026-10-02: "provider model itu ada CRUD-nya semua".
+  const [editProvId, setEditProvId] = useState(null);
+  const [editModelId, setEditModelId] = useState(null);
 
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
@@ -532,22 +536,38 @@ export default function AnalisisAI() {
       flashKelola('Nama dan URL wajib diisi.');
       return;
     }
+    const modeEdit = Boolean(editProvId);
     try {
-      const res = await fetch('/api/admin/ai/providers', {
-        method: 'POST',
+      const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editProvId : ''), {
+        method: modeEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipe: 'provider', ...formProv }),
       });
       const d = await res.json();
       if (d.ok) {
         setFormProv({ nama: '', base_url: '', api_key: '', env_key: '' });
-        flashKelola('Provider ditambahkan.');
+        setEditProvId(null);
+        flashKelola(modeEdit ? 'Provider diperbarui.' : 'Provider ditambahkan.');
         await Promise.all([muatKelola(), muatStatusUlang()]);
       } else {
         flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
       }
     } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [formProv, muatKelola, muatStatusUlang]);
+  }, [formProv, editProvId, muatKelola, muatStatusUlang]);
+
+  // Isi form dengan data provider yang mau diedit. Field key dikosongkan -
+  // kosong = jangan ubah kunci lama (dijaga di PATCH).
+  const mulaiEditProvider = useCallback((p) => {
+    setEditProvId(p.id);
+    setFormProv({ nama: p.nama, base_url: p.baseUrl, api_key: '', env_key: p.envKey || '' });
+    setTesHasil({ status: 'idle' });
+  }, []);
+
+  const batalEditProvider = useCallback(() => {
+    setEditProvId(null);
+    setFormProv({ nama: '', base_url: '', api_key: '', env_key: '' });
+    setTesHasil({ status: 'idle' });
+  }, []);
 
   const hapusProvider = useCallback(async (id) => {
     if (!window.confirm('Hapus provider ini? Model yang memakainya perlu diubah manual.')) return;
@@ -564,20 +584,32 @@ export default function AnalisisAI() {
       flashKelola('Label, model, dan provider wajib diisi.');
       return;
     }
+    const modeEdit = Boolean(editModelId);
     try {
-      const res = await fetch('/api/admin/ai/providers', {
-        method: 'POST',
+      const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editModelId : ''), {
+        method: modeEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipe: 'model', ...formModel }),
       });
       const d = await res.json();
       if (d.ok) {
         setFormModel({ label: '', model: '', provider: '' });
-        flashKelola('Model disimpan.');
+        setEditModelId(null);
+        flashKelola(modeEdit ? 'Model diperbarui.' : 'Model disimpan.');
         await Promise.all([muatKelola(), muatStatusUlang()]);
       } else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [formModel, muatKelola, muatStatusUlang]);
+  }, [formModel, editModelId, muatKelola, muatStatusUlang]);
+
+  const mulaiEditModel = useCallback((m) => {
+    setEditModelId(m.id);
+    setFormModel({ label: m.label, model: m.model, provider: m.provider });
+  }, []);
+
+  const batalEditModel = useCallback(() => {
+    setEditModelId(null);
+    setFormModel({ label: '', model: '', provider: '' });
+  }, []);
 
   const hapusModel = useCallback(async (id) => {
     try {
@@ -970,6 +1002,13 @@ export default function AnalisisAI() {
                   )}
                   <button
                     type="button"
+                    onClick={() => mulaiEditProvider(p)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => hapusProvider(p.id)}
                     className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
                   >
@@ -980,9 +1019,9 @@ export default function AnalisisAI() {
             </ul>
           )}
 
-          {/* Form provider baru */}
-          <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
-            <p className="text-xs font-bold text-ink-muted">Tambah provider</p>
+          {/* Form provider (tambah / edit) */}
+          <div className={`mt-3 rounded-xl border p-3 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
+            <p className="text-xs font-bold text-ink-muted">{editProvId ? 'Edit provider' : 'Tambah provider'}</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <input
                 value={formProv.nama}
@@ -1033,9 +1072,21 @@ export default function AnalisisAI() {
                 onClick={simpanProvider}
                 className="btn-primary text-xs"
               >
-                Simpan provider
+                {editProvId ? 'Simpan perubahan' : 'Simpan provider'}
               </button>
+              {editProvId && (
+                <button
+                  type="button"
+                  onClick={batalEditProvider}
+                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                >
+                  Batal
+                </button>
+              )}
             </div>
+            {editProvId && (
+              <p className="mt-1.5 text-[0.65rem] text-ink-faint">Kosongkan API key kalau tidak ingin mengubah kunci lama.</p>
+            )}
             {/* Hasil tes koneksi - jelas penyebabnya kalau gagal. */}
             {tesHasil.status === 'ok' && (
               <div className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs text-success">
@@ -1076,6 +1127,13 @@ export default function AnalisisAI() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => mulaiEditModel(m)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => hapusModel(m.id)}
                     className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
                   >
@@ -1086,9 +1144,9 @@ export default function AnalisisAI() {
             </ul>
           )}
 
-          {/* Form model baru */}
-          <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
-            <p className="text-xs font-bold text-ink-muted">Simpan model</p>
+          {/* Form model (simpan / edit) */}
+          <div className={`mt-3 rounded-xl border p-3 ${editModelId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
+            <p className="text-xs font-bold text-ink-muted">{editModelId ? 'Edit model' : 'Simpan model'}</p>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <input
                 value={formModel.label}
@@ -1113,13 +1171,24 @@ export default function AnalisisAI() {
                 ))}
               </select>
             </div>
-            <button
-              type="button"
-              onClick={simpanModel}
-              className="btn-primary mt-2 text-xs"
-            >
-              Simpan model
-            </button>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={simpanModel}
+                className="btn-primary text-xs"
+              >
+                {editModelId ? 'Simpan perubahan' : 'Simpan model'}
+              </button>
+              {editModelId && (
+                <button
+                  type="button"
+                  onClick={batalEditModel}
+                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:text-ink cursor-pointer"
+                >
+                  Batal
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
