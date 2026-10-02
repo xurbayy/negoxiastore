@@ -267,10 +267,8 @@ export default function AnalisisAI() {
   // Field wajib yang kosong -> highlight merah (permintaan pemilik 2026-10-02).
   const [errProv, setErrProv] = useState({});
   const [errModel, setErrModel] = useState({});
-  // OAuth login akun (permintaan pemilik 2026-10-02).
-  const [daftarOAuth, setDaftarOAuth] = useState([]);
-  const [oauthProses, setOauthProses] = useState('');
-  const [pesanOAuth, setPesanOAuth] = useState(null);
+  // Menu aksi model (dropdown) - supaya bar kontrol tidak penuh.
+  const [menuModel, setMenuModel] = useState(false);
   // Form model baru.
   const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
@@ -861,47 +859,6 @@ export default function AnalisisAI() {
     setTimeout(() => setPesanKelola(null), 5000);
   };
 
-  // OAuth: muat status, login (buka URL), putuskan.
-  const muatOAuth = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/ai/oauth/status', { cache: 'no-store' });
-      const d = await res.json();
-      if (d.ok) setDaftarOAuth(d.providers || []);
-    } catch { /* abaikan */ }
-  }, []);
-  useEffect(() => { muatOAuth(); }, [muatOAuth]);
-  // Hasil login dari URL ?oauth=sukses-x / gagal-x.
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const u = new URL(window.location.href);
-    const hasil = u.searchParams.get('oauth');
-    if (!hasil) return;
-    const sukses = hasil.startsWith('sukses-');
-    setPesanOAuth(sukses ? `✓ Berhasil login ${hasil.replace('sukses-', '')}. API key otomatis tersimpan.` : `Login gagal (${hasil.replace('gagal-', '')}). Coba lagi.`);
-    u.searchParams.delete('oauth');
-    window.history.replaceState({}, '', u.toString());
-    muatOAuth();
-    setTimeout(() => setPesanOAuth(null), 6000);
-  }, [muatOAuth]);
-  const loginOAuth = useCallback(async (id) => {
-    setOauthProses(id);
-    try {
-      const res = await fetch('/api/admin/ai/oauth/start?provider=' + encodeURIComponent(id), { cache: 'no-store' });
-      const d = await res.json();
-      if (d.ok && d.url) window.location.href = d.url;
-      else setPesanOAuth('Gagal buka login: ' + (d.error || 'tidak diketahui'));
-    } catch (e) { setPesanOAuth('Gagal: ' + e.message); }
-    finally { setOauthProses(''); }
-  }, []);
-  const putusOAuth = useCallback(async (id) => {
-    try {
-      await fetch('/api/admin/ai/oauth/status?provider=' + encodeURIComponent(id), { method: 'DELETE' });
-      setPesanOAuth('Koneksi diputus.');
-      setTimeout(() => setPesanOAuth(null), 4000);
-      muatOAuth();
-    } catch { /* abaikan */ }
-  }, [muatOAuth]);
-
   const muatKelola = useCallback(async () => {
     setMemuatKelola(true);
     try {
@@ -1446,44 +1403,6 @@ export default function AnalisisAI() {
             </ul>
           )}
 
-          {/* LOGIN AKUN (OAuth) - permintaan pemilik 2026-10-02 */}
-          <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-3 sm:p-4">
-            <p className="text-xs font-bold text-ink">Login Akun (OAuth)</p>
-            <p className="mt-0.5 text-[0.65rem] text-ink-muted">
-              Login pakai akun provider - API key otomatis, tidak perlu paste manual.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(daftarOAuth || []).map((o) => (
-                <div key={o.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${o.connected ? 'border-success/40 bg-success/10' : 'border-border-soft bg-card-cream'}`}>
-                  <span className="text-xs font-semibold text-ink">{o.label}</span>
-                  {o.connected ? (
-                    <>
-                      <span className="text-[0.6rem] font-bold text-success">✓ Terhubung</span>
-                      <button
-                        type="button"
-                        onClick={() => putusOAuth(o.id)}
-                        title="Putuskan koneksi"
-                        className="text-ink-faint transition hover:text-danger cursor-pointer"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => loginOAuth(o.id)}
-                      disabled={oauthProses === o.id}
-                      className="rounded bg-accent px-2 py-0.5 text-[0.65rem] font-bold text-white transition hover:opacity-90 disabled:opacity-50 cursor-pointer"
-                    >
-                      {oauthProses === o.id ? 'Membuka...' : 'Login'}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {pesanOAuth && <p className="mt-2 text-[0.7rem] font-semibold text-accent">{pesanOAuth}</p>}
-          </div>
-
           {/* Form provider (tambah / edit) */}
           <div className={`mt-4 rounded-xl border p-3 sm:p-4 ${editProvId ? 'border-accent/50 bg-accent/5' : 'border-border-soft bg-bg-soft/30'}`}>
             <p className="text-xs font-bold text-ink-muted">{editProvId ? 'Edit provider' : 'Tambah provider'}</p>
@@ -2013,7 +1932,7 @@ export default function AnalisisAI() {
             )}
           </div>
 
-          {/* Model input + aksi */}
+          {/* Model input + dropdown tersimpan + menu aksi (satu baris bersih). */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model</span>
             <input
@@ -2021,7 +1940,7 @@ export default function AnalisisAI() {
               value={modelInput}
               onChange={(e) => setModelInput(e.target.value)}
               placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
-              className={`flex-1 min-w-[180px] rounded-xl border px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30 transition ${validasiProvider ? 'border-danger/60 bg-danger/5' : 'border-border-soft bg-bg-soft/60'}`}
+              className={`flex-1 min-w-[160px] rounded-xl border px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30 transition ${validasiProvider ? 'border-danger/60 bg-danger/5' : 'border-border-soft bg-bg-soft/60'}`}
             />
             {/* Dropdown model tersimpan */}
             {(() => {
@@ -2047,52 +1966,43 @@ export default function AnalisisAI() {
                 </select>
               );
             })()}
-          </div>
-
-          {/* Aksi model: Cek + Lihat + Semua + Usage */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={cekModel}
-              disabled={cekHasil.status === 'cek'}
-              title="Cek model ini ada di provider atau tidak"
-              className="rounded-lg border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-            >
-              {cekHasil.status === 'cek' ? '...' : 'Cek'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (modelProv.status === 'ok') setModelProv((s) => ({ ...s, status: 'idle' }));
-                else muatModelProv(modelProv.hanyaGratis);
-              }}
-              disabled={modelProv.status === 'cek'}
-              title="Tampilkan daftar model provider"
-              className="rounded-lg border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-            >
-              {modelProv.status === 'cek' ? '...' : modelProv.status === 'ok' ? 'Tutup' : 'Lihat model'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (modelProv.status === 'ok' && modelProv.semuaProvider) setModelProv((s) => ({ ...s, status: 'idle' }));
-                else muatModelSemua(true);
-              }}
-              disabled={modelProv.status === 'cek'}
-              title="Semua model gratis dari semua provider"
-              className="rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-1.5 text-[0.7rem] font-bold text-accent transition hover:bg-accent/15 disabled:opacity-50 cursor-pointer"
-            >
-              {modelProv.status === 'cek' ? '...' : (modelProv.status === 'ok' && modelProv.semuaProvider) ? 'Tutup' : 'Semua model'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { if (usage.status === 'ok') setUsage({ status: 'idle' }); else muatUsage(); }}
-              disabled={usage.status === 'cek'}
-              title="Lihat pemakaian / sisa kuota provider"
-              className="rounded-lg border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
-            >
-              {usage.status === 'cek' ? '...' : usage.status === 'ok' ? 'Tutup' : 'Usage'}
-            </button>
+            {/* Menu aksi model (dropdown - hemat tempat) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuModel((v) => !v)}
+                title="Aksi model"
+                className="flex items-center gap-1 rounded-xl border border-border-soft bg-bg-soft/60 px-2.5 py-1.5 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                </svg>
+                Aksi
+              </button>
+              {menuModel && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuModel(false)} />
+                  <div className="absolute right-0 top-full z-40 mt-1 w-44 overflow-hidden rounded-xl border border-border-soft bg-card-cream shadow-lg">
+                    {[
+                      { label: cekHasil.status === 'cek' ? 'Cek...' : 'Cek model', fn: cekModel, dis: cekHasil.status === 'cek' },
+                      { label: modelProv.status === 'cek' ? '...' : (modelProv.status === 'ok' && !modelProv.semuaProvider ? 'Tutup daftar' : 'Lihat model'), fn: () => { if (modelProv.status === 'ok' && !modelProv.semuaProvider) setModelProv((s) => ({ ...s, status: 'idle' })); else muatModelProv(modelProv.hanyaGratis); setMenuModel(false); }, dis: modelProv.status === 'cek' },
+                      { label: modelProv.status === 'cek' ? '...' : (modelProv.status === 'ok' && modelProv.semuaProvider ? 'Tutup semua' : 'Semua model gratis'), fn: () => { if (modelProv.status === 'ok' && modelProv.semuaProvider) setModelProv((s) => ({ ...s, status: 'idle' })); else muatModelSemua(true); setMenuModel(false); }, dis: modelProv.status === 'cek' },
+                      { label: usage.status === 'ok' ? 'Tutup usage' : 'Lihat usage', fn: () => { if (usage.status === 'ok') setUsage({ status: 'idle' }); else muatUsage(); setMenuModel(false); }, dis: usage.status === 'cek' },
+                    ].map((it, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        disabled={it.dis}
+                        onClick={() => { if (it.label.includes('model')) setMenuModel(false); it.fn(); }}
+                        className="block w-full px-3 py-2 text-left text-xs font-semibold text-ink transition hover:bg-accent/10 disabled:opacity-40 cursor-pointer"
+                      >
+                        {it.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -2410,12 +2320,18 @@ export default function AnalisisAI() {
             Permintaan pemilik 2026-10-02: "token & kecerdasan ga bisa custom
             karena sudah lu sesuaikan, tapi model bisa gw pilih". */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          {mode !== 'agen' && (
-            <>
-              <span className="text-[0.7rem] text-ink-muted">
-                {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
-                {modelSetting.kecerdasan ? ` • IQ ${modelSetting.kecerdasan}/10` : ''}
-              </span>
+          {mode === 'agen' ? (
+            <span className="text-[0.7rem] text-ink-muted">
+              Token &amp; kecerdasan dioptimalkan otomatis untuk agen.
+            </span>
+          ) : (
+            <span className="rounded-full bg-bg-soft px-2.5 py-1 text-[0.7rem] font-semibold text-ink-muted">
+              {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
+              {modelSetting.kecerdasan ? ` · IQ ${modelSetting.kecerdasan}/10` : ''}
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-1.5">
+            {mode !== 'agen' && (
               <button
                 type="button"
                 onClick={() => setBukaSetting((v) => !v)}
@@ -2423,24 +2339,19 @@ export default function AnalisisAI() {
               >
                 {bukaSetting ? 'Tutup pengaturan' : 'Pengaturan'}
               </button>
-            </>
-          )}
-          {mode === 'agen' && (
-            <span className="text-[0.7rem] text-ink-muted">
-              Token &amp; kecerdasan dioptimalkan otomatis untuk agen (hemat kuota 24/7).
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              const buka = !kelola;
-              setKelola(buka);
-              if (buka && daftarProvider.length === 0) muatKelola();
-            }}
-            className="ml-auto rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-          >
-            {kelola ? 'Tutup kelola' : 'Kelola provider'}
-          </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                const buka = !kelola;
+                setKelola(buka);
+                if (buka && daftarProvider.length === 0) muatKelola();
+              }}
+              className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+            >
+              {kelola ? 'Tutup kelola' : 'Kelola provider'}
+            </button>
+          </div>
         </div>
 
         {/* PERAN AI - SELALU TAMPIL (bukan dilipat) supaya mudah diganti.
