@@ -1861,18 +1861,23 @@ export default function AnalisisAI() {
         {/* Kartu saran klik (sumber: SARAN_DISKUSI dari server). Selalu tampil
             supaya pemilik punya titik mulai - pertanyaan relevan soal data. */}
         {(status?.saranDiskusi || []).length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {(status.saranDiskusi || []).map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                disabled={jalan || detikSisa > 0}
-                onClick={() => jalankan({ saran: s.id }, s.label, s.label)}
-                className="rounded-full border border-border-soft bg-bg-soft px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-              >
-                {s.label}
-              </button>
-            ))}
+          <div className="mt-3">
+            <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
+              Saran cepat (sesuai data saat ini)
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {(status.saranDiskusi || []).map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={jalan || detikSisa > 0}
+                  onClick={() => jalankan({ tanya: s.tanya || s.label }, s.label, s.label)}
+                  className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

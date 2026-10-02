@@ -778,3 +778,74 @@ export const SARAN_DISKUSI = [
   { id: 'promo-berikutnya', label: 'Ide promo berikutnya', tanya: 'Promo apa yang sebaiknya dijalankan berikutnya? Pilih item/game yang tepat dan jelaskan alasannya pakai angka.' },
   { id: 'server-kosong', label: 'Server sepi kenapa?', tanya: 'Berapa server yang sepi/0 pemain dan menurutmu kenapa? Apa langkah paling masuk akal untuk menghidupkannya?' },
 ];
+
+// ==========================================
+// SARAN DINAMIS (permintaan pemilik 2026-10-02)
+// ==========================================
+// "saran pertanyaan juga munculkan, pintar, sesuai kondisi saat ini - jangan
+// statis." Fungsi ini MENGANALISIS snapshot nyata lalu menyusun saran yang
+// relevan dengan angka saat ini (game terpopuler, item menumpuk, server sepi,
+// pemain terkaya, dst). Kalau tidak ada data, kembali ke saran umum.
+export function saranDinamis(snap) {
+  if (!snap) return [];
+  const m = snap.monitor || {};
+  const out = [];
+  const push = (id, label, tanya) => { if (!out.some((x) => x.id === id)) out.push({ id, label, tanya }); };
+
+  // 1. Game terpopuler saat ini -> tanya kenapa + peluang.
+  const top = (m.topGamesToday || [])[0];
+  if (top?.game_type) {
+    push('dyn-game-top', `Kenapa ${top.game_type} laris?`, `Game "${top.game_type}" jadi yang paling sering dimainkan hari ini (${top.plays}x). Menurut data, kenapa itu menarik dan bagaimana cara memaksimalkannya?`);
+  }
+
+  // 2. Item menumpuk (stok tinggi, penjualan rendah).
+  const items = snap.shopItems || [];
+  const menumpuk = items.filter((i) => Number(i.stock) > 20).slice(0, 3);
+  if (menumpuk.length) {
+    push('dyn-item-numpuk', 'Item menumpuk, kenapa?', `Item berikut stoknya menumpuk: ${menumpuk.map((i) => `${i.name || i.itemKey}(${i.stock})`).join(', ')}. Kenapa tidak laku dan apa strategi untuk menggerakkannya?`);
+  }
+
+  // 3. Server sepi.
+  const servers = m.servers || [];
+  const nolPemain = servers.filter((s) => (Number(s.players) || 0) === 0).length;
+  if (servers.length && nolPemain > 0) {
+    push('dyn-server-sepi', `${nolPemain} server sepi`, `Ada ${nolPemain} dari ${servers.length} server tanpa pemain. Kenapa itu terjadi dan langkah paling masuk akal untuk menghidupkan kembali?`);
+  }
+
+  // 4. Penumpukan poin / pemain terkaya.
+  const kaya = (snap.richest || [])[0];
+  if (kaya?.username) {
+    push('dyn-terkaya', `Poin ${kaya.username}`, `Pemain ${kaya.username} memegang paling banyak poin. Apakah ini tanda penumpukan/inflasi? Apa dampaknya ke ekonomi dan apa yang sebaiknya dilakukan?`);
+  }
+
+  // 5. Retensi / pemain aktif.
+  if (typeof m.aktif24jam === 'number' && typeof m.totalUsers === 'number' && m.totalUsers > 0) {
+    const persen = Math.round((m.aktif24jam / m.totalUsers) * 100);
+    if (persen < 30) {
+      push('dyn-retensi', 'Retensi rendah', `Hanya ${persen}% pemain terdaftar aktif dalam 24 jam (${m.aktif24jam}/${m.totalUsers}). Kenapa dan apa langkah konkret untuk menaikkannya?`);
+    }
+  }
+
+  // 6. Promo yang tidak efektif (klaim rendah).
+  const klaim = m.promoClaimStat || [];
+  const promoLemah = klaim.filter((k) => (k.dipakai || 0) <= 2).slice(0, 2);
+  if (promoLemah.length) {
+    push('dyn-promo-lemah', 'Promo tidak efektif', `Promo ${promoLemah.map((k) => k.code).join(', ')} hanya dipakai sedikit (${promoLemah.map((k) => k.dipakai).join(', ')}x). Kenapa tidak menarik dan sebaiknya diubah atau dihentikan?`);
+  }
+
+  // 7. Pinjaman telat.
+  if ((m.pinjamanTelat?.jumlah || 0) > 0) {
+    push('dyn-pinjaman', `${m.pinjamanTelat.jumlah} pinjaman telat`, `Ada ${m.pinjamanTelat.jumlah} pinjaman bank telat (nilai ${Math.round(m.pinjamanTelat.nilai || 0).toLocaleString('id-ID')} poin). Apa dampaknya dan bagaimana menanganinya?`);
+  }
+
+  // 8. Error log.
+  if (Array.isArray(m.logError) && m.logError.length) {
+    push('dyn-error', 'Error terbaru', `Ada ${m.logError.length} catatan error. Sebutkan yang paling sering dan paling berbahaya, lalu urutan perbaikannya.`);
+  }
+
+  // Cadangan: selalu sediakan beberapa saran umum supaya kartu tidak kosong.
+  push('game-baru', 'Ide game baru', 'Usulkan 3 ide game BARU yang inovatif dan nyambung dengan minat pemain NEXO saat ini. Jangan ulang game yang sudah ada.');
+  push('yang-perlu-diperbaiki', 'Apa yang harus diperbaiki?', 'Dari semua data yang ada, 3 hal apa yang paling mendesak untuk diperbaiki? Urut dari yang paling berdampak.');
+
+  return out.slice(0, 8);
+}

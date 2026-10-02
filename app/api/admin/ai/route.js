@@ -1,6 +1,6 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getLatestSnapshot } from '../../../lib/snapshot';
-import { susunKonteks, PINTASAN, SARAN_DISKUSI, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
+import { susunKonteks, PINTASAN, SARAN_DISKUSI, saranDinamis, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
 import { tanyaGroq, infoProviderLengkap } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
@@ -440,6 +440,16 @@ export async function GET() {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   try {
     const info = await infoProviderLengkap();
+    // SARAN DINAMIS: susun dari snapshot terkini supaya relevan dengan kondisi
+    // saat ini (bukan daftar statis).
+    let saranDin = [];
+    try {
+      const snap = await getLatestSnapshot();
+      saranDin = saranDinamis(snap).map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }));
+    } catch { /* gagal ambil snapshot - pakai saran umum */ }
+    if (!saranDin.length) {
+      saranDin = SARAN_DISKUSI.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }));
+    }
     // DIAGNOSTIK (permintaan pemilik 2026-10-02): tampilkan env yang TERBACA
     // server, TANPA membocorkan isi kunci. Membantu melacak kenapa "belum aktif"
     // padahal env sudah diisi (mis. AI_PROVIDER salah, AI_BASE_URL nyangkut).
@@ -464,7 +474,7 @@ export async function GET() {
       providers: info.tersedia,
       models: info.models,
       pintasan: PINTASAN.map((p) => ({ id: p.id, label: p.label })),
-      saranDiskusi: SARAN_DISKUSI.map((s) => ({ id: s.id, label: s.label })),
+      saranDiskusi: saranDin,
       diag,
     });
   } catch (e) {
