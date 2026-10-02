@@ -875,13 +875,16 @@ export default function AnalisisAI() {
 
   // Muat ulang saran + reset dismiss. "Segar" = bypass saran agen, pakai
   // snapshot real-time supaya topik SELALU BARU (permintaan pemilik 2026-10-02).
+  const [saranMemuat, setSaranMemuat] = useState(false);
   const muatSaranSegar = useCallback(async () => {
+    setSaranMemuat(true);
     setSaranDismiss(new Set());
     try {
       const res = await fetch('/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&segar=1', { cache: 'no-store' });
       const d = await res.json();
       if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
     } catch { /* fallback */ }
+    finally { setSaranMemuat(false); }
   }, [peran]);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
@@ -896,15 +899,16 @@ export default function AnalisisAI() {
     muatKelola();
   }, [muatKelola]);
 
+  const [provMenyimpan, setProvMenyimpan] = useState(false);
   const simpanProvider = useCallback(async () => {
     if (!formProv.nama.trim() || !formProv.base_url.trim()) {
       flashKelola('Nama dan URL wajib diisi.');
       return;
     }
     const modeEdit = Boolean(editProvId);
-    // Auto-add keyBaru ke apiKeys jika belum di-klik "+ Tambah".
     const keysFinal = keyBaru.trim() ? [...apiKeys, keyBaru.trim()] : apiKeys;
     const kunciGabung = keysFinal.join(',');
+    setProvMenyimpan(true);
     try {
       const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editProvId : ''), {
         method: modeEdit ? 'PATCH' : 'POST',
@@ -923,6 +927,7 @@ export default function AnalisisAI() {
         flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
       }
     } catch (e) { flashKelola('Gagal: ' + e.message); }
+    finally { setProvMenyimpan(false); }
   }, [formProv, apiKeys, keyBaru, editProvId, muatKelola, muatStatusUlang]);
 
   // Isi form dengan data provider yang mau diedit. Field key dikosongkan -
@@ -958,13 +963,13 @@ export default function AnalisisAI() {
     });
   }, [daftarProvider, muatKelola, muatStatusUlang]);
 
+  const [modelMenyimpan, setModelMenyimpan] = useState(false);
   const simpanModel = useCallback(async () => {
     if (!formModel.label.trim() || !formModel.model.trim() || !formModel.provider.trim()) {
       flashKelola('Label, model, dan provider wajib diisi.');
       return;
     }
     const modeEdit = Boolean(editModelId);
-    // Cek duplikat: model + provider yang sama sudah ada.
     if (!modeEdit) {
       const duplikat = daftarModel.find((m) => m.model === formModel.model.trim() && m.provider === formModel.provider.trim());
       if (duplikat) {
@@ -972,6 +977,7 @@ export default function AnalisisAI() {
         return;
       }
     }
+    setModelMenyimpan(true);
     try {
       const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editModelId : ''), {
         method: modeEdit ? 'PATCH' : 'POST',
@@ -986,6 +992,7 @@ export default function AnalisisAI() {
         await Promise.all([muatKelola(), muatStatusUlang()]);
       } else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flashKelola('Gagal: ' + e.message); }
+    finally { setModelMenyimpan(false); }
   }, [formModel, editModelId, daftarModel, muatKelola, muatStatusUlang]);
 
   const mulaiEditModel = useCallback((m) => {
@@ -1437,9 +1444,10 @@ export default function AnalisisAI() {
               <button
                 type="button"
                 onClick={simpanProvider}
-                className="btn-primary text-xs"
+                disabled={provMenyimpan}
+                className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editProvId ? 'Simpan perubahan' : 'Simpan provider'}
+                {provMenyimpan ? 'Menyimpan...' : (editProvId ? 'Simpan perubahan' : 'Simpan provider')}
               </button>
               {editProvId && (
                 <button
@@ -1589,9 +1597,10 @@ export default function AnalisisAI() {
               <button
                 type="button"
                 onClick={simpanModel}
-                className="btn-primary text-xs"
+                disabled={modelMenyimpan}
+                className="btn-primary text-xs disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {editModelId ? 'Simpan perubahan' : 'Simpan model'}
+                {modelMenyimpan ? 'Menyimpan...' : (editModelId ? 'Simpan perubahan' : 'Simpan model')}
               </button>
               {editModelId && (
                 <button
@@ -2335,13 +2344,23 @@ export default function AnalisisAI() {
               <button
                 type="button"
                 onClick={muatSaranSegar}
+                disabled={saranMemuat}
                 title="Muat ulang saran dari data terbaru"
-                className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                className="flex items-center gap-1 rounded-lg border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                </svg>
-                Muat ulang
+                {saranMemuat ? (
+                  <>
+                    <span className="pulse-dot" aria-hidden="true" />
+                    Memuat...
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                    </svg>
+                    Muat ulang
+                  </>
+                )}
               </button>
             </div>
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti

@@ -54,8 +54,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     try { window.localStorage.setItem('nexo_agen_auto', autoJalan ? '1' : '0'); } catch { /* abaikan */ }
   }, [autoJalan]);
 
-  // Load daftar provider untuk dropdown agen (terpisah dari Analisis/Diskusi).
-  // Fetch dari /api/admin/ai yang mengembalikan SEMUA provider (bawaan + kustom).
+  // Load daftar provider + auto-fill dari provider/model Analisis/Diskusi.
   useEffect(() => {
     (async () => {
       try {
@@ -69,21 +68,35 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         }
       } catch { /* abaikan */ }
       // Muat dari SERVER dulu (persist lintas device), fallback localStorage.
+      let dapat = false;
       try {
         const res2 = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
         const d2 = await res2.json();
         if (d2.ok && d2.prefs) {
-          if (d2.prefs.agentProvider) setAgentProvider(d2.prefs.agentProvider);
-          if (d2.prefs.agentModel) setAgentModel(d2.prefs.agentModel);
-          return; // sudah dapat dari server
+          if (d2.prefs.agentProvider) { setAgentProvider(d2.prefs.agentProvider); dapat = true; }
+          if (d2.prefs.agentModel) { setAgentModel(d2.prefs.agentModel); dapat = true; }
         }
-      } catch { /* fallback ke localStorage */ }
-      try {
-        const sp = window.localStorage.getItem('nexo_agen_provider') || '';
-        const sm = window.localStorage.getItem('nexo_agen_model') || '';
-        if (sp) setAgentProvider(sp);
-        if (sm) setAgentModel(sm);
-      } catch { /* abaikan */ }
+      } catch { /* fallback */ }
+      if (!dapat) {
+        try {
+          const sp = window.localStorage.getItem('nexo_agen_provider') || '';
+          const sm = window.localStorage.getItem('nexo_agen_model') || '';
+          if (sp) { setAgentProvider(sp); dapat = true; }
+          if (sm) { setAgentModel(sm); dapat = true; }
+        } catch { /* abaikan */ }
+      }
+      // AUTO-FILL: kalau belum ada pilihan agent, pakai provider/model
+      // Analisis/Diskusi (dari prefs server) supaya agent langsung bisa jalan.
+      if (!dapat) {
+        try {
+          const res3 = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
+          const d3 = await res3.json();
+          if (d3.ok && d3.prefs) {
+            if (d3.prefs.provider) setAgentProvider(d3.prefs.provider);
+            if (d3.prefs.model) setAgentModel(d3.prefs.model);
+          }
+        } catch { /* abaikan */ }
+      }
     })();
   }, []);
 
