@@ -16,7 +16,7 @@
 // lengkap. Kredensial (.env) TIDAK pernah dibaca. Ini menjaga payload tetap
 // kecil & aman.
 
-const BATAS_KODE = 12000; // batas karakter konteks kode (hemat token)
+const BATAS_KODE = 6000; // batas karakter konteks kode (hemat token, respons cepat)
 
 /**
  * Bentuk konteks kode base dari ringkasan yang dikirim bot.

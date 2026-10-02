@@ -418,6 +418,13 @@ export default function AnalisisAI() {
     return () => clearTimeout(t);
   }, [detikSisa]);
   const jalankan = useCallback(async (muatan, judul, teksTampil) => {
+    // Validasi: wajib ada model & provider. Tanpa ini, request jalan ke default
+    // dan menggantung sampai timeout (kejadian nyata 2026-10-02).
+    if (!provider?.trim() || !modelInput?.trim()) {
+      setPesanSimpan('⚠️ Pilih provider & model dulu (klik "Lihat model" lalu "Pakai").');
+      setTimeout(() => setPesanSimpan(null), 5000);
+      return;
+    }
     const sisaTunggu = tungguSampai - Date.now();
     if (sisaTunggu > 0) {
       const detik = Math.ceil(sisaTunggu / 1000);
@@ -459,10 +466,10 @@ export default function AnalisisAI() {
     }
 
     try {
-      // Client-side timeout 45 detik - kalau API stuck (semua kunci rate-limited
-      // dan retry satu-satu), user dapat error cepat bukan loading tanpa batas.
+      // Client-side timeout 58 detik (server maxDuration 60s). Kalau API stuck,
+      // user dapat error cepat bukan loading tanpa batas.
       const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 45000);
+      const timer = setTimeout(() => ac.abort(), 58000);
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -519,7 +526,7 @@ export default function AnalisisAI() {
       }
     } catch (e) {
       const pesanError = e?.name === 'AbortError'
-        ? 'Timeout 45 detik - AI terlalu lama merespons. Coba lagi atau ganti provider.'
+        ? 'Timeout 58 detik - AI terlalu lama merespons. Coba lagi, kurangi maks token, atau ganti provider.'
         : 'Gagal menghubungi server: ' + (e?.message || e);
       if (modeKirim === 'diskusi') {
         setPesan((p) => [...p, { peran: 'ai', error: true, isi: pesanError, waktu: Date.now() }]);
