@@ -2072,17 +2072,24 @@ export default function AnalisisAI() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              // Simpan permanent sebagai model tersimpan.
-                              setFormModel({
-                                label: m.id.split('/').pop().split(':')[0].slice(0, 40),
-                                model: m.id, provider: m.providerId || provider || '',
-                                max_tokens: '', kecerdasan: '',
-                              });
-                              setKelola(true);
-                              setEditModelId(null);
-                              if (daftarProvider.length === 0) muatKelola();
-                              flashKelola('Form model terisi - klik "Simpan model" untuk menyimpan permanen.');
+                            onClick={async () => {
+                              // Simpan langsung ke server (tanpa buka form manual).
+                              const label = m.id.split('/').pop().split(':')[0].slice(0, 40);
+                              const providerId = m.providerId || provider || '';
+                              try {
+                                const res = await fetch('/api/admin/ai/providers', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ tipe: 'model', label, model: m.id, provider: providerId }),
+                                });
+                                const d = await res.json();
+                                if (d.ok) {
+                                  flashKelola(`Model "${label}" tersimpan permanen.`);
+                                  await Promise.all([muatKelola(), muatStatusUlang()]);
+                                } else {
+                                  flashKelola('Gagal simpan: ' + (d.error || 'tidak diketahui'));
+                                }
+                              } catch (e) { flashKelola('Gagal: ' + e.message); }
                             }}
                             className="rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
                           >
