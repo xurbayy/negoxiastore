@@ -93,25 +93,16 @@ export async function POST(request) {
   // KODE BASE (kalau bot mengirim): agen bisa mendeteksi celah eksploit di KODE,
   // bukan cuma pola curang di data (permintaan pemilik 2026-10-02).
   const konteksKode = susunKonteksKode(snap?.kodeBase);
-  // VARIASI LAPORAN: acak fokus analisis supaya laporan tidak monoton
-  // walau diminta di waktu yang sama (permintaan pemilik 2026-10-02).
-  const FOKUS = [
-    'Keamanan & eksploit: cari celah di kode, bypass transaksi, duplikasi item/poin.',
-    'Ekonomi & inflasi: pantau sinkron poin, magnet, refund, potongan ganda.',
-    'Pengalaman user: keluhan feedback, error UI, fitur rusak, UX membingungkan.',
-    'Operasional bot: sesi mati, antrean macet, cleaner salah sasaran, memory leak.',
-    'Pertumbuhan: user aktif, game populer, waktu main, peluang fitur baru.',
-    'Premium & billing: order stuck, grant gagal, rekonsiliasi premium, Midtrans.',
-    'Misi & progres: misi bug, XP tidak naik, streak hilang, reward salah.',
-    'Antrean & antrian: redeem menumpuk, bridge delay, poll adaptif, rate limit.',
-  ];
-  const fokus = FOKUS[Math.floor(Math.random() * FOKUS.length)];
+  // AGEN MENYELURUH: periksa SEMUA bidang sekaligus (permintaan pemilik
+  // 2026-10-02: "karena ga gw instruksi jadi menyeluruh ya semuanya").
   const instruksi = [
     PROMPT_AGEN,
     '',
-    `FOKUS ANALISIS KALI INI: ${fokus}`,
-    '',
-    'Buat laporan harian + usulan aksi berdasarkan DATA di atas. Sertakan juga temuan umum di luar fokus jika ada yang penting.',
+    'INSTRUKSI TAMBAHAN: Periksa SEMUA bidang di atas secara MENYELURUH.',
+    'Jangan hanya fokus satu topik - laporkan temuan dari SEMUA bagian.',
+    'Urutkan berdasarkan PRIORITAS: feedback pemain dulu, lalu exploit,',
+    'lalu error, lalu ekonomi, lalu sisanya.',
+    'Buat laporan lengkap + usulan aksi berdasarkan DATA di atas.',
   ].join('\n');
 
   const hasil = await tanyaGroq([
@@ -123,10 +114,10 @@ export async function POST(request) {
     model: String(body?.model || '').trim() || undefined,
     // TOKEN & KECERDASAN AGEN DIPATOK SERVER (permintaan pemilik 2026-10-02):
     // agen jalan 24/7, jadi efisiensi diatur di sini - bukan dari UI.
-    // 2000 token cukup untuk Ringkasan + Temuan + SARAN + USULAN.
-    // IQ 6 = seimbang (analisis tajam tapi tidak bertele-tele).
-    maxTokens: 2000,
-    kecerdasan: 6,
+    // 3000 token cukup untuk laporan MENYELURUH (semua bidang).
+    // IQ 7 = tajam untuk analisis menyeluruh.
+    maxTokens: 3000,
+    kecerdasan: 7,
   });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error, providerLabel: hasil.providerLabel }, 502);
