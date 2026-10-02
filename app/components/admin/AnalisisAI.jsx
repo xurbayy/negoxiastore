@@ -1238,7 +1238,7 @@ export default function AnalisisAI() {
                           setKeyBaru('');
                         }
                       }}
-                      placeholder={editProvId ? 'Kosongkan = tidak ubah kunci lama' : 'Tempel API key baru di sini'}
+                      placeholder={editProvId ? 'Tempel API key BARU (lama tetap tersimpan)' : 'Tempel API key baru di sini'}
                       type={lihatInputKunci ? 'text' : 'password'}
                       className="flex-1 min-w-[140px] rounded border border-border-soft bg-bg-soft/50 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
                     />
@@ -1313,7 +1313,7 @@ export default function AnalisisAI() {
               )}
             </div>
             {editProvId && (
-              <p className="mt-1.5 text-[0.65rem] text-ink-faint">Kosongkan API key kalau tidak ingin mengubah kunci lama.</p>
+              <p className="mt-1.5 text-[0.65rem] text-ink-faint">Tempel key baru = nambah. Kosongkan = biarkan key lama.</p>
             )}
             {/* Hasil tes koneksi - jelas penyebabnya kalau gagal. */}
             {tesHasil.status === 'ok' && (
