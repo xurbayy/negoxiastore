@@ -927,7 +927,8 @@ export default function AnalisisAI() {
         setApiKeys([]);
         setKeyBaru('');
         setEditProvId(null);
-        flashKelola(modeEdit ? 'Provider diperbarui.' : 'Provider ditambahkan.');
+        setPesanSimpan(modeEdit ? '✓ Provider diperbarui.' : '✓ Provider ditambahkan.');
+        setTimeout(() => setPesanSimpan(null), 4000);
         await Promise.all([muatKelola(), muatStatusUlang()]);
       } else {
         flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
@@ -963,8 +964,8 @@ export default function AnalisisAI() {
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/providers?id=' + id, { method: 'DELETE' });
         const d = await res.json();
-        if (d.ok) { flashKelola('Provider dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
-        else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+        if (d.ok) { setPesanSimpan('✓ Provider dihapus.'); setTimeout(() => setPesanSimpan(null), 4000); await Promise.all([muatKelola(), muatStatusUlang()]); }
+        else { setPesanSimpan('Gagal: ' + (d.error || 'tidak diketahui')); setTimeout(() => setPesanSimpan(null), 4000); }
       },
     });
   }, [daftarProvider, muatKelola, muatStatusUlang]);
@@ -979,7 +980,8 @@ export default function AnalisisAI() {
     if (!modeEdit) {
       const duplikat = daftarModel.find((m) => m.model === formModel.model.trim() && m.provider === formModel.provider.trim());
       if (duplikat) {
-        flashKelola(`Model "${formModel.model}" di provider "${formModel.provider}" sudah tersimpan.`);
+        setPesanSimpan(`⚠ Model "${formModel.model}" di provider "${formModel.provider}" sudah tersimpan.`);
+        setTimeout(() => setPesanSimpan(null), 4000);
         return;
       }
     }
@@ -994,7 +996,8 @@ export default function AnalisisAI() {
       if (d.ok) {
         setFormModel({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
         setEditModelId(null);
-        flashKelola(modeEdit ? 'Model diperbarui.' : 'Model disimpan.');
+        setPesanSimpan(modeEdit ? '✓ Model diperbarui.' : '✓ Model disimpan.');
+        setTimeout(() => setPesanSimpan(null), 4000);
         await Promise.all([muatKelola(), muatStatusUlang()]);
       } else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flashKelola('Gagal: ' + e.message); }
@@ -1023,8 +1026,8 @@ export default function AnalisisAI() {
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' });
         const d = await res.json();
-        if (d.ok) { flashKelola('Model dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
-        else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+        if (d.ok) { setPesanSimpan('✓ Model dihapus.'); setTimeout(() => setPesanSimpan(null), 4000); await Promise.all([muatKelola(), muatStatusUlang()]); }
+        else { setPesanSimpan('Gagal: ' + (d.error || 'tidak diketahui')); setTimeout(() => setPesanSimpan(null), 4000); }
       },
     });
   }, [daftarModel, muatKelola, muatStatusUlang]);
@@ -1503,21 +1506,27 @@ export default function AnalisisAI() {
               return (
                 <button
                   type="button"
-                  onClick={async () => {
-                    // Hapus semua duplikat (simpan yang pertama kali).
-                    const lihat2 = new Set();
-                    const unik = [];
-                    const hapusIds = [];
-                    for (const m of daftarModel) {
-                      const kunci = `${m.model}::${m.provider}`;
-                      if (lihat2.has(kunci)) hapusIds.push(m.id);
-                      else { lihat2.add(kunci); unik.push(m); }
-                    }
-                    for (const id of hapusIds) {
-                      try { await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' }); } catch { /* lanjut */ }
-                    }
-                    flashKelola(`${hapusIds.length} duplikat dihapus.`);
-                    await Promise.all([muatKelola(), muatStatusUlang()]);
+                  onClick={() => {
+                    setKonfirmasi({
+                      judul: `Hapus ${jumlahDuplikat} model duplikat?`,
+                      body: 'Model dengan nama & provider yang sama akan dihapus. Yang pertama kali disimpan tetap ada.',
+                      jalankan: async () => {
+                        setPesanSimpan('Menghapus duplikat...');
+                        const lihat2 = new Set();
+                        const hapusIds = [];
+                        for (const m of daftarModel) {
+                          const kunci = `${m.model}::${m.provider}`;
+                          if (lihat2.has(kunci)) hapusIds.push(m.id);
+                          else lihat2.add(kunci);
+                        }
+                        for (const id of hapusIds) {
+                          try { await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' }); } catch { /* lanjut */ }
+                        }
+                        setPesanSimpan(`✓ ${hapusIds.length} duplikat dihapus.`);
+                        setTimeout(() => setPesanSimpan(null), 4000);
+                        await Promise.all([muatKelola(), muatStatusUlang()]);
+                      },
+                    });
                   }}
                   className="rounded-lg border border-danger/40 px-2 py-0.5 text-[0.65rem] font-bold text-danger transition hover:bg-danger/10 cursor-pointer"
                 >
