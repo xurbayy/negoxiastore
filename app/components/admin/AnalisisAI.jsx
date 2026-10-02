@@ -1094,6 +1094,11 @@ export default function AnalisisAI() {
   // DAFTAR PROVIDER UNTUK TOGGLE: gabung provider dari /ai (bawaan + kustom)
   // dengan yang dari /providers. Kalau /ai bermasalah, /providers menutupinya
   // supaya tombol provider tetap muncul (fix 2026-10-02).
+  // Provider yang dipakai AGEN dikecualikan (dedicated ke agent).
+  const [agentProviderId, setAgentProviderId] = useState('');
+  useEffect(() => {
+    try { setAgentProviderId(window.localStorage.getItem('nexo_agen_provider') || ''); } catch { /* abaikan */ }
+  }, []);
   const providerToggle = (() => {
     const hasil = [...(status?.providers || [])];
     const adaSlug = new Set(hasil.map((p) => p.id));
@@ -1103,7 +1108,8 @@ export default function AnalisisAI() {
         adaSlug.add(p.slug);
       }
     }
-    return hasil;
+    // Kecualikan provider agent (dedicated).
+    return agentProviderId ? hasil.filter((p) => p.id !== agentProviderId) : hasil;
   })();
 
   // PENTING: kalau provider tersimpan (localStorage) tidak valid/tidak ada di
@@ -1630,6 +1636,11 @@ export default function AnalisisAI() {
               </button>
             ))}
           </div>
+          {agentProviderId && (
+            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[0.6rem] font-bold text-accent">
+              {status?.providers?.find((p) => p.id === agentProviderId)?.label || agentProviderId} → agent
+            </span>
+          )}
           <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Model</span>
           <input
             type="text"
