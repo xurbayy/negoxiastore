@@ -632,6 +632,10 @@ export default function AnalisisAI() {
     }
   }, []);
 
+  // Muat daftar provider kustom SAAT MOUNT (tidak menunggu panel kelola dibuka).
+  // Dipakai untuk menentukan "siap" walau endpoint /ai bermasalah.
+  useEffect(() => { muatKelola(); }, [muatKelola]);
+
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman.
   const muatStatusUlang = useCallback(async () => {
@@ -857,7 +861,14 @@ export default function AnalisisAI() {
   // "Siap" = server bilang aktif ATAU ada provider mana pun yang punya kunci.
   // Toleran terhadap versi server beda (kalau server lama masih kirim field
   // `aktif` yang cuma cek provider default). Mencegah layar buntu palsu.
-  const siap = Boolean(status?.aktif) || (status?.providers || []).some((p) => Number(p.kunci) > 0);
+  // "Siap" = server bilang aktif, ATAU ada provider (bawaan/kustom) ber-kunci,
+  // ATAU daftar provider kustom dari endpoint TERPISAH sudah termuat (bukti
+  // provider tersimpan). Endpoint /providers terbukti jalan walau /ai bermasalah.
+  const adaProviderKustom = (daftarProvider || []).some((p) => p.adaKunci);
+  const siap = Boolean(status?.aktif)
+    || (status?.providers || []).some((p) => Number(p.kunci) > 0)
+    || adaProviderKustom
+    || (status?.models || []).length > 0;
 
   const renderKelola = () => (
         <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
