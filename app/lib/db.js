@@ -242,6 +242,38 @@ export async function ensureSchema() {
         PRIMARY KEY (provider, model)
     );
 
+    -- AGEN AI (permintaan pemilik 2026-10-02).
+    -- Agen memantau data & memberi LAPORAN + USULAN AKSI berkala. Setiap usulan
+    -- punya: alasan, risiko, dan aksi yang akan dijalankan. Aksi TIDAK dijalankan
+    -- otomatis - menunggu persetujuan pemilik (status 'menunggu').
+    CREATE TABLE IF NOT EXISTS ai_agen (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        tanggal     TEXT NOT NULL,
+        ringkasan   TEXT NOT NULL,
+        temuan      TEXT,
+        usulan      TEXT,
+        model       TEXT,
+        provider    TEXT,
+        dibuat_at   INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_agen_tanggal ON ai_agen(tanggal);
+
+    -- USULAN AKSI AGEN (menunggu persetujuan pemilik).
+    CREATE TABLE IF NOT EXISTS ai_agen_usulan (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        agen_id     INTEGER NOT NULL,
+        judul       TEXT NOT NULL,
+        aksi        TEXT NOT NULL,
+        payload     TEXT,
+        alasan      TEXT,
+        risiko      TEXT,
+        status      TEXT DEFAULT 'menunggu',
+        hasil       TEXT,
+        dibuat_at   INTEGER NOT NULL,
+        diputus_at  INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_agen_usulan_status ON ai_agen_usulan(status, dibuat_at DESC);
+
     -- PROVIDER AI KUSTOM (permintaan pemilik 2026-10-02).
     -- Pemilik ingin bisa MENAMBAH provider sendiri (nama + URL + api key),
     -- lalu menyimpan & mengelola MODEL yang dipakai. Provider bawaan

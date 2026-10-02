@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import PilihPeran from './PilihPeran';
+import AgenAI from './AgenAI';
 import { pintasanPeranKlien, daftarPeranKlien } from '../../lib/aiPeranKlien';
 
 // ==========================================
@@ -1506,6 +1507,7 @@ export default function AnalisisAI() {
             {[
               ['analisis', 'Analisis', 'Laporan TEMUAN / SARAN / RISIKO'],
               ['diskusi', 'Diskusi', 'Chat 2 arah, bisa ditanya lanjut'],
+              ['agen', 'Agen', 'Agen memantau & mengusulkan aksi (butuh persetujuanmu)'],
             ].map(([id, label, ket]) => (
               <button
                 key={id}
@@ -1522,7 +1524,10 @@ export default function AnalisisAI() {
           </div>
         </div>
 
-        {/* Baris 2: provider + model manual. */}
+        {/* Baris 2: provider + model manual. Disembunyikan di mode Agen
+            (agen pakai provider/model default server) agar layar lega. */}
+        {mode !== 'agen' && (
+        <>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Provider</span>
           <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
@@ -1976,11 +1981,15 @@ export default function AnalisisAI() {
             <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. 1 = presisi, 10 = kreatif.</p>
           </div>
         )}
+        </>
+        )}
 
         <p className="mt-1.5 text-xs text-ink-muted">
           {mode === 'analisis'
             ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
-            : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
+            : mode === 'agen'
+              ? 'Agen memantau data & mengusulkan aksi - kamu yang memutuskan.'
+              : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
         </p>
       </div>
 
@@ -2130,6 +2139,15 @@ export default function AnalisisAI() {
             </div>
           ))}
         </>
+      )}
+
+      {/* ==========================================
+          MODE AGEN (pemantau otomatis + usulan aksi)
+          ==========================================
+          Permintaan pemilik 2026-10-02: agen memantau, usul aksi, pemilik
+          setujui. Komponen terpisah (AgenAI.jsx) supaya file ini tetap rapi. */}
+      {mode === 'agen' && (
+        <AgenAI jalan={jalan} detikSisa={detikSisa} />
       )}
 
       {/* ==========================================
