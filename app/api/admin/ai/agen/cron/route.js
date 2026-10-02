@@ -26,7 +26,24 @@ export async function GET(request) {
   const snap = await getLatestSnapshot();
   if (!snap) return json({ ok: false, error: 'Belum ada snapshot.' }, 400);
 
-  const konteks = await susunKonteks(snap, {});
+  // Data panel (pendapatan/log/feedback) supaya laporan menyeluruh.
+  let panel = {};
+  try {
+    const { getDb } = await import('../../../../../lib/db');
+    const db = getDb();
+    const [orders, log, feedback] = await Promise.all([
+      db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 40'),
+      db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'),
+      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 40'),
+    ]);
+    panel = {
+      orders: orders.rows.map((r) => ({ plan: r.plan, amount: Number(r.amount), gateway: r.gateway, status: r.status, createdAt: Number(r.created_at) })),
+      log: log.rows.map((r) => ({ action: r.action, status: r.status, result: r.result, createdAt: Number(r.created_at) })),
+      feedback: feedback.rows.map((r) => ({ kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at) })),
+    };
+  } catch { /* lanjut tanpa panel */ }
+
+  const konteks = await susunKonteks(snap, panel);
   const hasil = await tanyaGroq([
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab bahasa Indonesia santai.' },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },

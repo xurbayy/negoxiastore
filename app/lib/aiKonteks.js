@@ -383,6 +383,16 @@ export async function susunKonteks(snap, panel = {}) {
   L.push('');
   L.push('### BANK & GUILD');
   L.push('Pinjaman TELAT: ' + (m.pinjamanTelat?.jumlah ?? 0) + ' (nilai ' + rupiah(m.pinjamanTelat?.nilai) + ')');
+  // Daftar NAMA penunggak (permintaan pemilik 2026-10-02: agen harus bisa
+  // menyebut siapa & berapa lama, bukan cuma jumlah).
+  const tunggak = m.pinjamanTelat?.daftar || [];
+  if (tunggak.length) {
+    L.push('Penunggak (nama | hutang | jatuh tempo):');
+    for (const t of tunggak.slice(0, 10)) {
+      const hari = t.dueDate ? Math.max(0, Math.round((Date.now() - Number(t.dueDate)) / 86400000)) : null;
+      L.push(`- ${t.username || t.userId} | ${rupiah(t.totalDue)} | ${t.dueDate ? new Date(Number(t.dueDate)).toISOString().slice(0, 10) : '-'}${hari != null ? ` (telat ${hari} hari)` : ''}`);
+    }
+  }
   const gs = m.guildStat || {};
   L.push('Guild: ' + (gs.total ?? 0) + ' dibuat, ' + (gs.adaAnggota ?? 0) +
     ' punya anggota, ' + (gs.warSelesai ?? 0) + ' war selesai');
