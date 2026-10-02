@@ -45,18 +45,17 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   }, [autoJalan]);
 
   // Load daftar provider untuk dropdown agen (terpisah dari Analisis/Diskusi).
+  // Fetch dari /api/admin/ai yang mengembalikan SEMUA provider (bawaan + kustom).
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/admin/ai/providers', { cache: 'no-store' });
+        const res = await fetch('/api/admin/ai', { cache: 'no-store' });
         const d = await res.json();
-        if (d.ok) {
-          const daftar = [];
-          // Provider bawaan.
-          if (d.groq) daftar.push({ id: 'groq', nama: d.groq.nama || 'Groq' });
-          if (d.openrouter) daftar.push({ id: 'openrouter', nama: d.openrouter.nama || 'OpenRouter' });
-          // Provider kustom.
-          (d.daftar || []).forEach((p) => daftar.push({ id: p.id, nama: p.nama }));
+        if (d.ok && Array.isArray(d.providers)) {
+          // d.providers = [{ id, label, kunci, kustom }, ...]
+          const daftar = d.providers
+            .filter((p) => p.kunci > 0) // hanya provider yang punya key
+            .map((p) => ({ id: p.id, nama: p.label || p.id }));
           setDaftarProv(daftar);
           // Restore pilihan tersimpan.
           try {
