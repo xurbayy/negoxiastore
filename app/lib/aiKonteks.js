@@ -761,3 +761,20 @@ export const PINTASAN = [
     tanya: 'Beri gambaran menyeluruh isi snapshot ini. Sebutkan 5 hal paling penting yang perlu diperhatikan pemilik, urut dari yang paling berdampak, masing-masing dengan angka pendukung dan saran tindakan konkret.',
   },
 ];
+
+// ==========================================
+// SARAN MODE DISKUSI (permintaan pemilik 2026-10-02)
+// ==========================================
+// Di mode Diskusi, pemilik ingin CONTOH PERTANYAAN yang bisa langsung diklik -
+// relevan dengan data yang ada. Berbeda dari PINTASAN (yang minta laporan
+// tersusun), ini pertanyaan bebas yang jawabannya percakapan.
+export const SARAN_DISKUSI = [
+  { id: 'game-populer', label: 'Game paling banyak dimainkan?', tanya: 'Game apa yang paling banyak dimainkan minggu ini dan kenapa menurutmu itu menarik? Kasih angka pendukungnya.' },
+  { id: 'game-baru', label: 'Ide game baru', tanya: 'Usulkan 3 ide game BARU yang inovatif dan nyambung dengan minat pemain NEXO saat ini. Jangan ulang game yang sudah ada.' },
+  { id: 'item-laku', label: 'Item paling laku', tanya: 'Item apa yang paling laku di toko dan item apa yang menumpuk tidak terjual? Jelaskan dengan angka dan beri saran singkat.' },
+  { id: 'pemain-top', label: 'Siapa pemain teratas?', tanya: 'Siapa 5 pemain teratas dan apa yang menonjol dari mereka (level, poin, winstreak, premium)?' },
+  { id: 'kesehatan', label: 'Ekonomi sehat nggak?', tanya: 'Menurut data, apakah ekonomi NEXO sehat? Ada tanda inflasi atau penumpukan poin? Jelaskan singkat dengan angka.' },
+  { id: 'yang-perlu-diperbaiki', label: 'Apa yang harus diperbaiki?', tanya: 'Dari semua data yang ada, 3 hal apa yang paling mendesak untuk diperbaiki? Urut dari yang paling berdampak.' },
+  { id: 'promo-berikutnya', label: 'Ide promo berikutnya', tanya: 'Promo apa yang sebaiknya dijalankan berikutnya? Pilih item/game yang tepat dan jelaskan alasannya pakai angka.' },
+  { id: 'server-kosong', label: 'Server sepi kenapa?', tanya: 'Berapa server yang sepi/0 pemain dan menurutmu kenapa? Apa langkah paling masuk akal untuk menghidupkannya?' },
+];

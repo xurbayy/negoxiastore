@@ -157,7 +157,13 @@ export default function AnalisisAI() {
   // nah kalo yang chat buat gw diskusi kedepannya bakal gimana".
   //
   // Keduanya berbasis DATA yang sama; mode hanya mengubah BENTUK jawaban.
-  const [mode, setMode] = useState('analisis');
+  const [mode, setMode] = useState(() => {
+    try { return window.localStorage.getItem('nexo_ai_mode') || 'analisis'; } catch { return 'analisis'; }
+  });
+  // Simpan mode terakhir supaya tidak reset tiap buka panel (mudah diakses).
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_mode', mode); } catch { /* abaikan */ }
+  }, [mode]);
   // Provider & model AI (toggle di panel admin). Disimpan di localStorage
   // supaya pilihan pemilik tidak reset tiap reload.
   const [provider, setProvider] = useState(() => {
@@ -1811,10 +1817,27 @@ export default function AnalisisAI() {
               )}
             </div>
 
+        {/* Kartu saran klik (sumber: SARAN_DISKUSI dari server). Selalu tampil
+            supaya pemilik punya titik mulai - pertanyaan relevan soal data. */}
+        {(status?.saranDiskusi || []).length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(status.saranDiskusi || []).map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                disabled={jalan || detikSisa > 0}
+                onClick={() => jalankan({ saran: s.id }, s.label, s.label)}
+                className="rounded-full border border-border-soft bg-bg-soft px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {pesan.length === 0 ? (
-          <div className="mt-5 text-center">
-            <p className="text-sm text-ink-muted">Belum ada percakapan.</p>
-            <p className="mt-1 text-xs text-ink-faint">Ketik pertanyaanmu di kolom bawah untuk mulai.</p>
+          <div className="mt-5">
+            <p className="text-center text-sm text-ink-muted">Mulai dari salah satu pertanyaan ini, atau tulis sendiri di bawah.</p>
           </div>
         ) : (
           <ul className="mt-3 space-y-3">

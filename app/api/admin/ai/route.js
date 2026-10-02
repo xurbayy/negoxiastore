@@ -1,6 +1,6 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getLatestSnapshot } from '../../../lib/snapshot';
-import { susunKonteks, PINTASAN, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
+import { susunKonteks, PINTASAN, SARAN_DISKUSI, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
 import { tanyaGroq, infoProviderLengkap } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
@@ -184,6 +184,7 @@ export async function POST(request) {
 
   // Dua mode: tombol pintas (pakai instruksi bawaan) atau chat bebas.
   const idPintasan = String(body?.pintasan || '').trim();
+  const idSaran = String(body?.saran || '').trim();
   const tanyaBebas = String(body?.tanya || '').trim().slice(0, 2000);
 
   // ==========================================
@@ -225,6 +226,11 @@ export async function POST(request) {
     const p = PINTASAN.find((x) => x.id === idPintasan);
     if (!p) return json({ ok: false, error: 'Pintasan tidak dikenal.' }, 400);
     instruksi = p.tanya;
+  } else if (idSaran) {
+    // Saran mode DISKUSI - pertanyaan bebas yang relevan dengan data.
+    const s = SARAN_DISKUSI.find((x) => x.id === idSaran);
+    if (!s) return json({ ok: false, error: 'Saran tidak dikenal.' }, 400);
+    instruksi = s.tanya;
   } else if (tanyaBebas) {
     instruksi = tanyaBebas;
   } else {
@@ -457,6 +463,7 @@ export async function GET() {
       providers: info.tersedia,
       models: info.models,
       pintasan: PINTASAN.map((p) => ({ id: p.id, label: p.label })),
+      saranDiskusi: SARAN_DISKUSI.map((s) => ({ id: s.id, label: s.label })),
       diag,
     });
   } catch (e) {
