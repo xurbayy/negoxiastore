@@ -2431,14 +2431,13 @@ export default function AnalisisAI() {
                     </span>
                   )}
                 </h3>
-                {/* Total token konteks percakapan ini (permintaan pemilik). */}
+                {/* Token jawaban saja (bukan total input+output yang membingungkan). */}
                 {(() => {
-                  const totalTok = pesan.reduce((s, m) => s + (Number(m?.usage?.totalTokens) || 0), 0);
                   const totalJawab = pesan.reduce((s, m) => s + (Number(m?.usage?.completionTokens) || 0), 0);
-                  if (!totalTok) return null;
+                  if (!totalJawab) return null;
                   return (
                     <p className="mt-0.5 text-[0.7rem] font-semibold text-accent">
-                      Total token: {totalTok.toLocaleString('id-ID')} (jawaban {totalJawab.toLocaleString('id-ID')})
+                      Token jawaban: {totalJawab.toLocaleString('id-ID')}
                     </p>
                   );
                 })()}
