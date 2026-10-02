@@ -520,6 +520,12 @@ export default function AnalisisAI() {
     });
   }, []);
 
+  // Hapus SATU pesan dari percakapan (permintaan pemilik 2026-10-02:
+  // "setiap chat ini juga bisa gw hapus").
+  const hapusSatuPesan = useCallback((idx) => {
+    setPesan((p) => p.filter((_, i) => i !== idx));
+  }, []);
+
   // Hapus SELURUH laporan analisis (permintaan pemilik: bisa hapus manual).
   const hapusSemuaLaporan = useCallback(() => {
     setKonfirmasi({
@@ -1924,6 +1930,15 @@ export default function AnalisisAI() {
                       {disimpan.has('chat::' + String(m.isi).slice(0, 80)) ? 'Tersimpan di arsip' : 'Simpan ke arsip'}
                     </button>
                   )}
+                  {/* Hapus pesan ini (pemilik atau AI). */}
+                  <button
+                    type="button"
+                    onClick={() => hapusSatuPesan(i)}
+                    title="Hapus pesan ini"
+                    className="ml-1.5 mt-2 rounded-lg border border-border-soft px-2.5 py-1 text-[0.68rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                  >
+                    Hapus
+                  </button>
                 </div>
               </li>
             ))}
