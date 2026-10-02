@@ -31,6 +31,10 @@ export const RISIKO_AKSI = {
   set_price: 'rendah',
   set_announcement: 'rendah',
   create_promo: 'rendah',
+  // PENGINGAT (permintaan pemilik 2026-10-02): agen bisa mengingatkan pemilik
+  // pada tanggal tertentu (mis. jelang promo Idul Fitri). Bukan aksi ke bot -
+  // hanya notifikasi. Risiko paling rendah.
+  buat_pengingat: 'rendah',
   delete_promo: 'sedang',
   add_points: 'sedang',
   add_item: 'sedang',
@@ -71,6 +75,14 @@ export const PROMPT_AGEN = [
   'Kamu TIDAK menjalankan apa pun sendiri - setiap usulan menunggu persetujuan.',
   '',
   'TUGAS UTAMA - periksa SEMUA ini dan laporkan apa adanya (kalau kosong, bilang kosong):',
+  '0. FEEDBACK PEMAIN (PRIORITAS TERTINGGI - permintaan pemilik 2026-10-02):',
+  '   Baca bagian "FEEDBACK PEMAIN" di data. Kalau ADA feedback baru (keluhan,',
+  '   saran, laporan bug dari pemain), WAJIB jadi poin PERTAMA di Temuan.',
+  '   Untuk tiap feedback penting: sebutkan isinya, jenisnya (bug/keluhan/saran),',
+  '   halaman asalnya, dan APA yang harus dilakukan. Kalau feedback itu bug,',
+  '   usulkan aksi perbaikan (atau bilang butuh perbaikan kode kalau bukan aksi',
+  '   admin). Kalau feedback cuma pujian, cukup sebut singkat.',
+  '   Kalau TIDAK ADA feedback sama sekali, tulis "Tidak ada feedback baru hari ini."',
   '1. EKSPLOITASI / KECURANGAN: pemain dengan lonjakan poin tak wajar, pola transaksi',
   '   mencurigakan, klaim promo/redeem berlebihan, item/poin ganda, pinjaman tak wajar.',
   '2. PINJAMAN BANK: siapa yang menunggak (sebut NAMA + jumlah + berapa lama),',
@@ -83,6 +95,18 @@ export const PROMPT_AGEN = [
   '6. TOKO: item terlaris, item tak laku, stok kritis, harga janggal.',
   '7. KOMUNITAS: guild, war, partner/chemistry, retensi.',
   '8. ERROR: log error terakhir & dampaknya.',
+  '9. KODE BASE (kalau ada bagian "KODE BASE BOT" di data): periksa file & cuplikan',
+  '   kode yang dikirim. Cari bug, celah eksploit, atau masalah keamanan NYATA di',
+  '   file/fungsi yang terlihat. Sebut NAMA FILE & FUNGSI persis. Kalau bagian kode',
+  '   tidak ada di data, bilang "kode base belum terkirim" - jangan mengarang.',
+  '',
+  'KALAU ADA FEEDBACK YANG BUTUH TINDAKAN:',
+  '- Usulkan aksi yang tepat (blok [[USUL]]) kalau bisa ditangani lewat aksi admin',
+  '  (mis. pemain komplain item hilang -> cek, mungkin add_item; komplain harga ->',
+  '  set_discount).',
+  '- Kalau feedback butuh PERBAIKAN KODE (bukan aksi admin), TULIS di Temuan:',
+  '  "Butuh perbaikan kode: (file/fungsi)" - jangan usulkan aksi yang tidak ada.',
+  '- Selalu sebutkan risiko tiap usulan, pemilik yang memutuskan.',
   '',
   'FORMAT WAJIB (ikuti persis, huruf kapital di awal kata):',
   'Ringkasan: (3-5 baris - kondisi terpenting hari ini, WAJIB ada angka)',
@@ -93,6 +117,41 @@ export const PROMPT_AGEN = [
   '- sweetsucidial menunggak pinjaman 250.000 poin selama 5 hari (paling lama).',
   '- Server "NEXO Utama" naik 12 pemain hari ini; 24 server lain kosong.',
   '- 3 pemain klaim promo NEXOGIFT 8x dalam sehari (normalnya 1x).',
+  '',
+  // SARAN PERTANYAAN per peran (permintaan pemilik 2026-10-02): kartu saran di
+  // panel (Analisis Cepat + Saran Diskusi) diambil DARI SINI - jadi benar-benar
+  // berbasis hasil cek agen (kode + data), bukan daftar statis.
+  'Setelah Temuan, tulis SARAN PERTANYAAN untuk tiap peran dalam blok khusus.',
+  'Saran ini yang akan muncul sebagai tombol di panel. WAJIB spesifik & berbasis',
+  'temuanmu hari ini (sebut nama pemain/server/item konkret kalau ada).',
+  'Untuk peran bug/security/exploit/analyst: saran WAJIB menyebut NAMA FILE &',
+  'FUNGSI dari "KODE BASE BOT" yang benar-benar ada di data. Jangan mengarang nama.',
+  'Kalau kode base tidak ada, tulis saran berbasis DATA saja (jangan sebut file).',
+  '[[SARAN]]',
+  'peran: umum',
+  'saran: (pertanyaan analisis data umum yang relevan hari ini) | (pertanyaan 2) | (pertanyaan 3)',
+  '[[/SARAN]]',
+  '[[SARAN]]',
+  'peran: bug',
+  'saran: (cari bug spesifik di file/fungsi yang kamu lihat di kode) | (pertanyaan 2) | (pertanyaan 3)',
+  '[[/SARAN]]',
+  '[[SARAN]]',
+  'peran: security',
+  'saran: (audit keamanan spesifik: file/fungsi rawan) | (pertanyaan 2) | (pertanyaan 3)',
+  '[[/SARAN]]',
+  '[[SARAN]]',
+  'peran: exploit',
+  'saran: (celah curang spesifik yang kamu curigai dari data/kode) | (pertanyaan 2) | (pertanyaan 3)',
+  '[[/SARAN]]',
+  '[[SARAN]]',
+  'peran: analyst',
+  'saran: (perbaikan struktur/performa spesifik: file/fungsi) | (pertanyaan 2) | (pertanyaan 3)',
+  '[[/SARAN]]',
+  '',
+  'Contoh saran yang BAGUS (spesifik, bukan umum):',
+  '- "Kenapa sweetsucidial menunggak 5 hari?"',
+  '- "Cek race condition di addPoints database.js"',
+  '- "Apakah klaim NEXOGIFT 8x bisa diulang?"',
   '',
   'Lalu tulis USULAN AKSI dalam blok khusus. PENTING:',
   '- Usulan BERSIFAT OPSIONAL. Kalau temuanmu cuma perlu DILAPORKAN (tidak butuh',
@@ -113,7 +172,16 @@ export const PROMPT_AGEN = [
   'set_points, add_item, remove_item, set_level, set_streak, set_winstreak,',
   'clear_loan, set_chemistry, grant_premium, revoke_premium, reset_daily,',
   'reset_missions, clear_lock, add_title, set_admin_title, clear_admin_title,',
-  'timeout, ban, unban, giveaway, set_maintenance, wipe.',
+  'timeout, ban, unban, giveaway, set_maintenance, wipe, buat_pengingat.',
+  '',
+  'PENGINGAT (buat_pengingat) - pakai kalau ada sesuatu yang perlu DIINGATKAN',
+  'pada tanggal tertentu (mis. promo jelang hari besar, evaluasi promo, event).',
+  'Format payload: {"teks":"isi pengingat","tanggal":"YYYY-MM-DD","jam":"HH:MM"}',
+  'Contoh: {"teks":"Siapkan promo Idul Fitri","tanggal":"2027-03-19","jam":"09:00"}',
+  'KHUSUS FEEDBACK BARU (permintaan pemilik 2026-10-02): kalau ada feedback',
+  'PENTING yang perlu segera ditangani, usulkan pengingat HARI INI juga (pakai',
+  'tanggal hari ini, jam 1 jam dari sekarang) supaya pemilik langsung dapat notif.',
+  'Contoh: {"teks":"Tangani feedback bug: item hilang (pemain: budi)","tanggal":"<hari ini>","jam":"<1 jam lagi>"}',
   '',
   'ATURAN USULAN:',
   '- payload harus sesuai aksi (mis. ban: {"userId":"...","reason":"..."}).',
@@ -123,6 +191,28 @@ export const PROMPT_AGEN = [
   '- Kalau tidak ada yang layak, tulis "Tidak ada usulan hari ini."',
   '- Jangan mengarang angka. Kalau data tidak ada, katakan tidak ada.',
 ].join('\n');
+
+/**
+ * Urai blok [[SARAN]]...[[/SARAN]] dari jawaban agen.
+ * Format blok: "peran: bug" + "saran: t1 | t2 | t3".
+ * @returns {Array<{peran:string, saran:string[]}>}
+ */
+export function uraikanSaran(jawaban) {
+  const teks = String(jawaban || '');
+  const hasil = [];
+  const re = /\[\[\s*SARAN\s*\]\]([\s\S]*?)\[\[\s*\/\s*SARAN\s*\]\]/gi;
+  let m;
+  while ((m = re.exec(teks))) {
+    const blok = m[1];
+    const mPeran = blok.match(/^\s*peran\s*:\s*(.+)$/im);
+    const mSaran = blok.match(/^\s*saran\s*:\s*(.+)$/im);
+    if (!mPeran || !mSaran) continue;
+    const peran = mPeran[1].trim().toLowerCase();
+    const saran = mSaran[1].split('|').map((x) => x.trim()).filter(Boolean).slice(0, 6);
+    if (saran.length) hasil.push({ peran, saran });
+  }
+  return hasil;
+}
 
 /**
  * Urai blok [[USUL]]...[[/USUL]] dari jawaban AI.
@@ -150,7 +240,10 @@ export function uraikanUsulan(jawaban) {
     try { payload = JSON.parse(payloadRaw); } catch { payload = null; }
     usulan.push({ judul, aksi, payload, alasan, risiko, tingkat: risikoAksi(aksi) });
   }
-  const bersih = teks.replace(/\[\[\s*USUL\s*\]\][\s\S]*?\[\[\s*\/\s*USUL\s*\]\]/gi, '').replace(/\n{3,}/g, '\n\n').trim();
+  const bersih = teks
+    .replace(/\[\[\s*USUL\s*\]\][\s\S]*?\[\[\s*\/\s*USUL\s*\]\]/gi, '')
+    .replace(/\[\[\s*SARAN\s*\]\][\s\S]*?\[\[\s*\/\s*SARAN\s*\]\]/gi, '')
+    .replace(/\n{3,}/g, '\n\n').trim();
   return { bersih, usulan };
 }
 
@@ -175,6 +268,12 @@ export function validasiUsulan(u) {
   }
   if (['add_points', 'remove_points', 'set_points', 'ban', 'unban', 'wipe', 'timeout', 'grant_premium', 'revoke_premium'].includes(u.aksi) && !u.payload.userId) {
     return { ok: false, alasan: 'userId wajib untuk aksi ini.' };
+  }
+  // PENGINGAT: butuh teks + tanggal (YYYY-MM-DD). Jam opsional (default 09:00).
+  if (u.aksi === 'buat_pengingat') {
+    if (!u.payload.teks || typeof u.payload.teks !== 'string') return { ok: false, alasan: 'teks pengingat wajib.' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(u.payload.tanggal || ''))) return { ok: false, alasan: 'tanggal pengingat harus YYYY-MM-DD.' };
+    if (u.payload.jam && !/^\d{1,2}:\d{2}$/.test(String(u.payload.jam))) return { ok: false, alasan: 'jam harus HH:MM.' };
   }
   return { ok: true };
 }

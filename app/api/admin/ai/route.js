@@ -1,6 +1,6 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getLatestSnapshot } from '../../../lib/snapshot';
-import { susunKonteks, PINTASAN, SARAN_DISKUSI, saranDinamis, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
+import { susunKonteks, PINTASAN, SARAN_DISKUSI, saranDinamis, ATURAN_FORMAT } from '../../../lib/aiKonteks';
 import { tanyaGroq, infoProviderLengkap } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
@@ -166,7 +166,9 @@ function sistemPrompt(peranId) {
     '    dengan nama baru. Sebutkan APA YANG BERBEDA dari yang sudah ada.',
     '13. Boleh out of the box - selama alasannya bisa dilacak ke data.',
     '',
-    ATURAN_PENGINGAT,
+    // PENGINGAT DIPINDAH KE AGEN (permintaan pemilik 2026-10-02): chat/diskusi
+    // TIDAK lagi membuat pengingat. Agen yang mengusulkan pengingat (dengan
+    // konfirmasi pemilik). Jadi ATURAN_PENGINGAT tidak dipakai di sini.
     '',
     'FORMAT JAWABAN:',
     '- Untuk pertanyaan SPESIFIK: jawab langsung, tanpa judul bagian. Contoh:',
@@ -277,9 +279,9 @@ export async function POST(request) {
     const { getSnapshotSeries } = await import('../../../lib/snapshot');
     const db = getDb();
     const [orders, log, feedback, series] = await Promise.all([
-      db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 40'),
+      db.execute('SELECT plan, amount, gateway, status, created_at FROM orders ORDER BY created_at DESC LIMIT 100'),
       db.execute('SELECT action, status, result, created_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'),
-      db.execute('SELECT kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 40'),
+      db.execute('SELECT kind, message, page, created_at, username, discord_id FROM web_feedback ORDER BY created_at DESC LIMIT 60'),
       getSnapshotSeries(7),
     ]);
     panel = {
@@ -292,6 +294,9 @@ export async function POST(request) {
       })),
       feedback: feedback.rows.map((r) => ({
         kind: r.kind, message: r.message, page: r.page, createdAt: Number(r.created_at),
+        // Sertakan pemain supaya agen bisa sebut SIAPA yang mengeluh
+        // (permintaan pemilik 2026-10-02: "agen lebih peka terhadap feedback").
+        username: r.username || null, discordId: r.discord_id || null,
       })),
       series: Array.isArray(series) ? series : [],
     };
@@ -374,8 +379,17 @@ export async function POST(request) {
   //   analisis -> tersusun Temuan / Saran / Risiko (laporan siap baca)
   //   diskusi  -> jawaban langsung & singkat, boleh ditanya lanjut
   const penandaTugas = mode === 'analisis'
-    ? 'PERMINTAAN ANALISIS. Pakai format tiga bagian: "Temuan:", "Saran:", "Risiko:" (huruf kapital di awal kata saja, jangan capslock). Bahasa santai.'
-    : 'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian. Bahasa santai. Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.';
+    ? [
+      'PERMINTAAN ANALISIS. Jawaban WAJIB memuat TIGA bagian ini, berurutan, TANPA kecuali:',
+      '1. Temuan:',
+      '2. Saran:',
+      '3. Risiko:',
+      '(huruf kapital di awal kata saja, jangan capslock).',
+      'WAJIB ada ketiganya - jangan pernah melewatkan "Risiko:". Kalau tidak ada risiko nyata, tulis "Tidak ada risiko yang signifikan hari ini."',
+      'Jangan memakai huruf asing (Mandarin, Jepang, Korea, Cyrillic) - pakai huruf Latin saja.',
+      'Bahasa santai.',
+    ].join('\n')
+    : 'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian. Bahasa santai. Jangan memakai huruf asing (Mandarin/Jepang/Korea/Cyrillic) - pakai huruf Latin saja. Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.';
 
   // SUSUNAN PESAN (chat 2 arah):
   //   system  -> aturan main
@@ -441,21 +455,44 @@ export async function POST(request) {
   // dari jawaban yang ditampilkan ke pemilik.
   const { jawabanBersih, pengingat } = await prosesPengingat(hasil.teks);
 
-  // MODE ANALISIS: PASTIKAN keluaran bertiga bagian (Temuan/Saran/Risiko).
-  // Sebagian model lupa format walau sudah diminta (kejadian nyata: minimax
-  // menjawab teks polos). Kalau tidak ada ketiga penanda, rapikan agar
-  // strukturnya konsisten: taruh seluruh jawaban sebagai "Temuan" supaya
-  // pemilik tetap melihat ada bagiannya.
+  // MODE ANALISIS: PASTIKAN keluaran punya KETIGA bagian (Temuan/Saran/Risiko).
+  // Sebagian model lupa satu bagian (kejadian nyata 2026-10-02: minimax hanya
+  // menulis Temuan + Saran, "Risiko:" hilang; ada juga yang menyisipkan huruf
+  // Mandarin "解决"). Fungsi ini:
+  //   1. Membuang karakter non-Latin yang bocor (Mandarin/Kanji/Cyrillic).
+  //   2. Menambahkan bagian yang HILANG dengan catatan jujur.
   let jawabanFinal = jawabanBersih;
   if (mode === 'analisis' && jawabanBersih) {
-    const adaTemuan = /temuan\s*:/i.test(jawabanBersih);
-    const adaSaran = /saran\s*:/i.test(jawabanBersih);
-    const adaRisiko = /risiko\s*:/i.test(jawabanBersih);
+    // 1) Bersihkan karakter asing (Mandarin, Kanji, Cyrillic, Arab) yang bocor
+    //    dari model - diganti tanda hubung supaya kalimat tetap terbaca.
+    let teksBersih = jawabanBersih
+      .replace(/[\u4E00-\u9FFF\u3040-\u30FF\u0400-\u04FF\u0600-\u06FF]+/g, '-')
+      .replace(/\s*-\s*-\s*/g, ' - ')
+      .replace(/ {2,}/g, ' ');
+    // 2) Pastikan ketiga penanda ada.
+    const adaTemuan = /temuan\s*:/i.test(teksBersih);
+    const adaSaran = /saran\s*:/i.test(teksBersih);
+    const adaRisiko = /risiko\s*:/i.test(teksBersih);
     if (!adaTemuan && !adaSaran && !adaRisiko) {
-      jawabanFinal = 'Temuan:\n\n' + jawabanBersih.trim() +
-        '\n\nSaran:\n\n(lihat temuan di atas - model tidak memisahkan bagian. Coba ulangi atau ganti model yang lebih patuh format.)' +
-        '\n\nRisiko:\n\n- (belum dapat dipisah otomatis oleh model)';
+      // Model sama sekali tidak pakai format - bungkus seluruh jawaban.
+      teksBersih = 'Temuan:\n\n' + teksBersih.trim() +
+        '\n\nSaran:\n\n(model tidak memisahkan bagian - lihat temuan di atas)' +
+        '\n\nRisiko:\n\n(model tidak menyebutkan risiko - coba ulangi atau ganti model)';
+    } else {
+      // Tambahkan bagian yang HILANG saja (jangan sentuh yang sudah ada).
+      if (!adaRisiko) {
+        teksBersih = teksBersih.trim() +
+          '\n\nRisiko:\n\n(model tidak menyebutkan risiko pada jawaban ini - pertimbangkan dampaknya sendiri sebelum bertindak)';
+      }
+      if (!adaSaran) {
+        teksBersih = teksBersih.trim() +
+          '\n\nSaran:\n\n(model tidak memberi saran pada jawaban ini - coba ulangi atau ganti model)';
+      }
+      if (!adaTemuan) {
+        teksBersih = 'Temuan:\n\n(model tidak memisahkan temuan - lihat isi di bawah)\n\n' + teksBersih.trim();
+      }
     }
+    jawabanFinal = teksBersih;
   }
 
   return json({

@@ -21,8 +21,14 @@ const rupiah = (n) => Number(n || 0).toLocaleString('id-ID');
 /** Rakit konteks teks dari snapshot. Dipakai baik oleh chat maupun analisis cepat.
  *
  * ASYNC (fix 2026-10-01): perlu mengambil hari libur Indonesia dari Google
- * Calendar, dan itu operasi jaringan. Pemanggil harus memakai await. */
-export async function susunKonteks(snap, panel = {}) {
+ * Calendar, dan itu operasi jaringan. Pemanggil harus memakai await.
+ *
+ * @param {object} snap - snapshot bot
+ * @param {object} panel - data panel admin (opsional)
+ * @param {object} opsi - { ringkas?: boolean } - ringkas=true memotong bagian
+ *   yang PALING BESAR (profil mendalam 5 pemain) untuk hemat token. Dipakai
+ *   agen & saat kuota ketat. */
+export async function susunKonteks(snap, panel = {}, opsi = {}) {
   if (!snap) return 'TIDAK ADA DATA. Bot belum pernah mengirim snapshot.';
 
   const m = snap.monitor || {};
@@ -96,6 +102,17 @@ export async function susunKonteks(snap, panel = {}) {
   L.push(`Sesi sedang berjalan: ${Object.entries(m.live || {}).map(([k, v]) => k + "=" + v).join(", ") || "-"}`);
   L.push(`Pinjaman bank: ${Object.entries(m.loans || {}).map(([k, v]) => k + "=" + v).join(", ") || "-"}`);
   L.push(`Pemain terbanned: ${(m.bannedUsers || []).length}`);
+  // INDEKS BAGIAN: beri tahu AI bagian apa saja yang ADA di konteks ini, supaya
+  // tidak menjawab "tidak ada data" padahal ada (kejadian nyata 2026-10-02:
+  // ditanya pembayaran QRIS, AI bilang tidak ada - padahal bagian PENDAPATAN ada).
+  {
+    const adaPanel = panel && (panel.orders || panel.log || panel.feedback);
+    const daftarBagian = ['SERVER', 'GAME', 'TOKO', 'PENJUALAN TOKO', 'PROMO', 'MISI & TITLE', 'EKONOMI', 'TRANSAKSI', 'BANK & GUILD', 'PROFIL PEMAIN', 'REFERRAL', 'LOG ERROR'];
+    if (Array.isArray(panel?.orders) && panel.orders.length) daftarBagian.push('PENDAPATAN (order QRIS/gateway)');
+    if (adaPanel) { if (Array.isArray(panel?.log) && panel.log.length) daftarBagian.push('LOG PERINTAH ADMIN'); if (Array.isArray(panel?.feedback) && panel.feedback.length) daftarBagian.push('FEEDBACK PEMAIN'); }
+    L.push('Bagian yang TERSEDIA di konteks ini: ' + daftarBagian.join(', ') + '.');
+    L.push('Kalau pemilik bertanya soal pembayaran/QRIS/pendapatan, lihat bagian PENDAPATAN di bawah (kalau tidak ada di daftar ini, baru bilang tidak ada data).');
+  }
   L.push('');
 
   // ---------- Server ----------
@@ -402,10 +419,21 @@ export async function susunKonteks(snap, panel = {}) {
   // selengkap mungkin". Sebelumnya hanya rank + poin + level; sekarang bot
   // mengirim profil utuh 5 pemain teratas (inventory, transaksi, premium,
   // misi, guild, pinjaman, title).
+  //
+  // MODE RINGKAS (opsi.ringkas): bagian ini PALING BESAR (~4500 char untuk 5
+  // pemain). Kalau ringkas, cukup daftar ringkas 5 nama + poin (hemat token).
   L.push('');
   L.push('### PROFIL MENDALAM PEMAIN TERATAS');
   const profil = m.profilTeratas || [];
-  if (!profil.length) {
+  if (opsi.ringkas && profil.length) {
+    L.push('(Mode ringkas - hanya ringkasan)');
+    for (const orang of profil) {
+      const p = orang?.profile;
+      if (!p) continue;
+      L.push(`- ${p.username} | Lv${p.level} | ${rupiah(p.points)} poin | premium ${p.premiumStatus} | streak ${p.dailyStreak}`);
+    }
+    // Lanjut ke bagian berikutnya (REFERRAL) tanpa detail panjang.
+  } else if (!profil.length) {
     L.push('Bot belum mengirim profil mendalam (kode lama).');
   } else {
     for (const orang of profil) {
@@ -517,10 +545,29 @@ export async function susunKonteks(snap, panel = {}) {
   // bagian ini dilewati dengan sopan (bukan error).
 
   // ---------- PENDAPATAN (orders pembayaran) ----------
+  // Label DIPERJELAS (permintaan pemilik 2026-10-02): pertanyaan "pembayaran
+  // QRIS yang tersedia" sering dijawab "tidak ada data" karena AI mengira itu
+  // METODE pembayaran. Sekarang label menyebut "order pembayaran (termasuk
+  // QRIS manual)" + daftar metode yang ADA, supaya AI paham konteksnya.
   const orders = panel.orders;
   if (Array.isArray(orders) && orders.length) {
     L.push('');
-    L.push('### PENDAPATAN (order pembayaran)');
+    L.push('### PENDAPATAN (order pembayaran - termasuk QRIS manual & gateway lain)');
+    // Metode pembayaran yang benar-benar dipakai (dari data order).
+    // CATATAN PENTING (fix 2026-10-02): di database, QRIS manual disimpan
+    // sebagai gateway='manual' (bukan 'qris'). Pemilik & UI menyebutnya "QRIS
+    // manual". Tanpa terjemahan ini, AI tidak tahu bahwa 'manual' = QRIS.
+    const labelGateway = (g) => {
+      const s = String(g || '').toLowerCase();
+      if (s === 'manual') return 'manual (QRIS manual - diverifikasi admin)';
+      if (s === 'midtrans') return 'midtrans (otomatis: QRIS/VA/e-wallet)';
+      return s || '-';
+    };
+    const metodeAda = [...new Set(orders.map((o) => String(o.gateway || '').toLowerCase()).filter(Boolean))];
+    if (metodeAda.length) {
+      L.push('Metode/gateway yang ADA di data: ' + metodeAda.map(labelGateway).join('; '));
+      L.push('Jadi kalau ditanya "pembayaran QRIS", maksudnya gateway manual (QRIS manual) dan/atau midtrans.');
+    }
     const sukses = orders.filter((o) => o.status === 'paid');
     const pending = orders.filter((o) => o.status === 'pending');
     const gagal = orders.filter((o) => ['expired', 'canceled', 'failed'].includes(o.status));
@@ -533,13 +580,13 @@ export async function susunKonteks(snap, panel = {}) {
     // Sebaran per gateway - berguna melihat kanal mana yang jalan.
     const perGateway = {};
     for (const o of orders) perGateway[o.gateway || '-'] = (perGateway[o.gateway || '-'] || 0) + 1;
-    L.push('Per gateway: ' + Object.entries(perGateway).map(([g, n]) => `${g}=${n}`).join(', '));
+    L.push('Per gateway: ' + Object.entries(perGateway).map(([g, n]) => `${labelGateway(g)}=${n}`).join(', '));
 
     // 10 order terakhir supaya AI bisa melihat pola terbaru (bukan cuma total).
     L.push('10 order terakhir (tanggal | plan | nilai | gateway | status):');
     for (const o of orders.slice(0, 10)) {
       const tgl = o.createdAt ? new Date(Number(o.createdAt)).toISOString().slice(0, 10) : '-';
-      L.push(`- ${tgl} | ${o.plan || '-'} | ${rupiah(o.amount)} | ${o.gateway || '-'} | ${o.status}`);
+      L.push(`- ${tgl} | ${o.plan || '-'} | ${rupiah(o.amount)} | ${labelGateway(o.gateway)} | ${o.status}`);
     }
   }
 
@@ -576,20 +623,31 @@ export async function susunKonteks(snap, panel = {}) {
 
   // ---------- FEEDBACK PEMAIN ----------
   // Keluhan/masukan langsung dari pemain - sumber masalah yang tidak terlihat
-  // dari angka statistik.
+  // dari angka statistik. PRIORITAS TINGGI untuk agen (permintaan pemilik
+  // 2026-10-02: "agen lebih peka terhadap feedback, gercep kasih tau").
   const fb = panel.feedback;
   if (Array.isArray(fb) && fb.length) {
     L.push('');
-    L.push('### FEEDBACK PEMAIN');
+    L.push('### FEEDBACK PEMAIN (keluhan/masukan langsung dari pemain)');
     const perKind = {};
     for (const f of fb) perKind[f.kind || '-'] = (perKind[f.kind || '-'] || 0) + 1;
     L.push(`Total feedback: ${fb.length} | jenis: ` +
       Object.entries(perKind).map(([k, n]) => `${k}=${n}`).join(', '));
-    L.push('10 feedback terbaru (jenis | halaman | isi ringkas):');
-    for (const f of fb.slice(0, 10)) {
+    // Feedback BARU (3 hari terakhir) ditandai khusus - ini yang perlu gercep.
+    const batasBaru = Date.now() - 3 * 86400000;
+    const baru = fb.filter((f) => Number(f.createdAt) >= batasBaru);
+    if (baru.length) L.push(`FEEDBACK BARU (3 hari terakhir): ${baru.length} - PRIORITAS`);
+    L.push('20 feedback terbaru (tanggal | jenis | halaman | pemain | isi):');
+    for (const f of fb.slice(0, 20)) {
       const tgl = f.createdAt ? new Date(Number(f.createdAt)).toISOString().slice(0, 10) : '-';
-      L.push(`- ${tgl} | ${f.kind || '-'} | ${f.page || '-'} | ${String(f.message || '').replace(/\s+/g, ' ').slice(0, 150)}`);
+      const pemain = f.username || f.discordId || '-';
+      const baruTag = Number(f.createdAt) >= batasBaru ? '[BARU] ' : '';
+      L.push(`- ${baruTag}${tgl} | ${f.kind || '-'} | ${f.page || '-'} | ${pemain} | ${String(f.message || '').replace(/\s+/g, ' ').slice(0, 200)}`);
     }
+  } else {
+    L.push('');
+    L.push('### FEEDBACK PEMAIN');
+    L.push('(tidak ada feedback)');
   }
 
   // ---------- TREN 7 HARI ----------
@@ -641,7 +699,12 @@ export async function susunKonteks(snap, panel = {}) {
   // total ~5000-6000 token - masih ada sisa untuk percakapan lanjutan.
   // Kurangi batas konteks agar respons lebih cepat & total token lebih kecil
   // (permintaan pemilik 2026-10-02: hindari timeout). 8000 char ≈ 2000 token.
-  const BATAS_KONTEKS = 8000;
+  // BATAS KONTEKS. Dinaikkan dari 8000 (permintaan pemilik 2026-10-02) karena
+  // 8000 memotong bagian BELAKANG: REFERRAL, LOG ERROR, PENDAPATAN, LOG ADMIN,
+  // FEEDBACK, TREN - padahal agen butuh itu untuk laporan lengkap.
+  // 20000 char ~ 5000 token - cukup untuk SEMUA bagian (server, toko, promo,
+  // pinjaman bernama, profil pemain, log error, pendapatan, log admin, feedback).
+  const BATAS_KONTEKS = 20000;
   let teks = L.join('\n');
   if (teks.length > BATAS_KONTEKS) {
     // Buang bagian belakang sampai muat. Setiap bagian dipisah '### '.

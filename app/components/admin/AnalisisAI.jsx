@@ -195,8 +195,12 @@ export default function AnalisisAI() {
   const [daftarModel, setDaftarModel] = useState([]);
   const [memuatKelola, setMemuatKelola] = useState(false);
   const [pesanKelola, setPesanKelola] = useState(null);
-  // Form provider baru.
+  // Form provider baru. apiKeys = array of API key (bukan string koma) -
+  // permintaan pemilik 2026-10-02: "mau nambah api buat tombol tambah biar bisa
+  // masukkin tanpa koma".
   const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '' });
+  const [apiKeys, setApiKeys] = useState([]); // daftar key terpisah
+  const [keyBaru, setKeyBaru] = useState('');  // input key baru
   // Form model baru.
   const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
@@ -771,18 +775,17 @@ export default function AnalisisAI() {
   // Muat daftar provider kustom SAAT MOUNT (tidak menunggu panel kelola dibuka).
   useEffect(() => { muatKelola(); }, [muatKelola]);
 
-  // Muat SARAN DINAMIS dari endpoint terpisah (menyesuaikan kondisi data).
-  useEffect(() => {
-    let batal = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/admin/ai/saran', { cache: 'no-store' });
-        const d = await res.json();
-        if (!batal && d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
-      } catch { /* gagal - pakai fallback lokal */ }
-    })();
-    return () => { batal = true; };
-  }, []);
+  // Muat SARAN dari agen (prioritas) per peran. Fetch ulang saat peran berubah
+  // supaya kartu saran menyesuaikan peran yang dipilih (permintaan pemilik
+  // 2026-10-02: "saran diambil dari agen yang beneran cek").
+  const muatSaran = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum'), { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
+    } catch { /* gagal - pakai fallback lokal */ }
+  }, [peran]);
+  useEffect(() => { muatSaran(); }, [muatSaran]);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang
@@ -802,15 +805,18 @@ export default function AnalisisAI() {
       return;
     }
     const modeEdit = Boolean(editProvId);
+    const kunciGabung = apiKeys.join(',');
     try {
       const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editProvId : ''), {
         method: modeEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipe: 'provider', ...formProv }),
+        body: JSON.stringify({ tipe: 'provider', nama: formProv.nama, base_url: formProv.base_url, api_key: kunciGabung }),
       });
       const d = await res.json();
       if (d.ok) {
         setFormProv({ nama: '', base_url: '', api_key: '' });
+        setApiKeys([]);
+        setKeyBaru('');
         setEditProvId(null);
         flashKelola(modeEdit ? 'Provider diperbarui.' : 'Provider ditambahkan.');
         await Promise.all([muatKelola(), muatStatusUlang()]);
@@ -818,19 +824,24 @@ export default function AnalisisAI() {
         flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
       }
     } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [formProv, editProvId, muatKelola, muatStatusUlang]);
+  }, [formProv, apiKeys, editProvId, muatKelola, muatStatusUlang]);
 
   // Isi form dengan data provider yang mau diedit. Field key dikosongkan -
   // kosong = jangan ubah kunci lama (dijaga di PATCH).
   const mulaiEditProvider = useCallback((p) => {
     setEditProvId(p.id);
     setFormProv({ nama: p.nama, base_url: p.baseUrl, api_key: '' });
+    setApiKeys([]);
+    setKeyBaru('');
+    setLihatInputKunci(false);
     setTesHasil({ status: 'idle' });
   }, []);
 
   const batalEditProvider = useCallback(() => {
     setEditProvId(null);
     setFormProv({ nama: '', base_url: '', api_key: '' });
+    setApiKeys([]);
+    setKeyBaru('');
     setTesHasil({ status: 'idle' });
   }, []);
 
@@ -948,7 +959,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai/tes-koneksi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formProv),
+        body: JSON.stringify({ base_url: formProv.base_url, api_key: apiKeys.join(',') }),
       });
       const d = await res.json();
       if (d.ok) setTesHasil({ status: 'ok', pesan: d.pesan, url: d.urlDicek, contoh: d.contoh || [] });
@@ -1175,38 +1186,88 @@ export default function AnalisisAI() {
                 placeholder="URL base (mis. https://api.deepseek.com/v1)"
                 className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
               />
-              <div className="relative">
-                <input
-                  value={formProv.api_key}
-                  onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
-                  placeholder={editProvId ? 'Kosongkan = tidak ubah kunci lama (klik Lihat untuk melihat)' : 'API key (boleh beberapa, pisah koma)'}
-                  type={lihatInputKunci ? 'text' : 'password'}
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 pr-14 text-xs text-ink outline-none focus:border-accent"
-                />
-                <button
-                  type="button"
-                  onClick={async () => {
-                    // Mode edit + field kosong: tombol "Lihat" mengambil KUNCI
-                    // TERSIMPAN dari server lalu mengisinya (supaya bisa dilihat),
-                    // bukan sekadar toggle field kosong.
-                    if (editProvId && !formProv.api_key && !lihatInputKunci) {
-                      await toggleLihatKunci(editProvId);
-                      const asli = kunciTerlihat[editProvId];
-                      if (asli) { setFormProv((s) => ({ ...s, api_key: asli })); setLihatInputKunci(true); }
-                      else { setPesanSimpan('Kunci tersimpan tidak bisa dibaca (mungkin SESSION_SECRET beda).'); setTimeout(() => setPesanSimpan(null), 4000); }
-                      return;
-                    }
-                    setLihatInputKunci((v) => !v);
-                  }}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:text-ink cursor-pointer"
-                >
-                  {lihatInputKunci ? 'Sembunyi' : 'Lihat'}
-                </button>
+              <div className="col-span-2">
+                <div className="rounded-lg border border-border-soft bg-card-cream px-3 py-2">
+                  {/* Daftar API key - masing-masing baris terpisah. */}
+                  {apiKeys.length > 0 && (
+                    <ul className="mb-2 space-y-1">
+                      {apiKeys.map((k, i) => (
+                        <li key={i} className="flex items-center gap-2 rounded bg-bg-soft/50 px-2 py-1">
+                          <span className={`min-w-0 flex-1 truncate font-mono text-[0.7rem] ${lihatInputKunci ? 'text-ink' : 'text-ink-muted'}`}>
+                            {lihatInputKunci ? k : k.slice(0, 8) + '...' + k.slice(-4)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setApiKeys((arr) => arr.filter((_, j) => j !== i))}
+                            title="Hapus kunci ini"
+                            className="shrink-0 rounded p-0.5 text-[0.65rem] text-ink-faint transition hover:text-danger cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {/* Input key baru + tombol tambah. */}
+                  <div className="flex gap-1.5">
+                    <input
+                      value={keyBaru}
+                      onChange={(e) => setKeyBaru(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && keyBaru.trim()) {
+                          e.preventDefault();
+                          setApiKeys((arr) => [...arr, keyBaru.trim()]);
+                          setKeyBaru('');
+                        }
+                      }}
+                      placeholder={editProvId ? 'Kosongkan = tidak ubah kunci lama' : 'Tempel API key baru di sini'}
+                      type={lihatInputKunci ? 'text' : 'password'}
+                      className="flex-1 min-w-0 rounded border border-border-soft bg-bg-soft/50 px-2 py-1 text-[0.7rem] text-ink outline-none focus:border-accent"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { if (keyBaru.trim()) { setApiKeys((arr) => [...arr, keyBaru.trim()]); setKeyBaru(''); } }}
+                      disabled={!keyBaru.trim()}
+                      className="shrink-0 rounded border border-accent/40 px-2 py-1 text-[0.65rem] font-bold text-accent transition hover:bg-accent/10 disabled:opacity-40 cursor-pointer"
+                    >
+                      + Tambah
+                    </button>
+                    {/* Toggle lihat/sembunyikan - SVG icon (mata). */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (editProvId && !lihatInputKunci && apiKeys.length === 0) {
+                          await toggleLihatKunci(editProvId);
+                          const asli = kunciTerlihat[editProvId];
+                          if (asli) {
+                            setApiKeys(asli.split(',').map((k) => k.trim()).filter(Boolean));
+                            setLihatInputKunci(true);
+                          } else { setPesanSimpan('Kunci tersimpan tidak bisa dibaca.'); setTimeout(() => setPesanSimpan(null), 4000); }
+                          return;
+                        }
+                        setLihatInputKunci((v) => !v);
+                      }}
+                      title={lihatInputKunci ? 'Sembunyikan kunci' : 'Lihat kunci'}
+                      className="shrink-0 rounded border border-border-soft px-2 py-1 text-ink-muted transition hover:text-ink cursor-pointer"
+                    >
+                      {lihatInputKunci ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                          <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88"/>
+                          <path d="M1 1l22 22"/>
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-            <p className="mt-1 text-[0.65rem] text-ink-faint">
-              Boleh beberapa API key sekaligus, pisahkan dengan koma. Bot otomatis pindah ke kunci berikutnya saat satu kena limit.
-            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1420,7 +1481,7 @@ export default function AnalisisAI() {
 
           {pengingat.filter((p) => !p.selesai).length === 0 ? (
             <p className="mt-3 text-sm text-ink-muted">
-              Belum ada. Contoh: "ingetin gw pas Halloween mau masang promo".
+              Belum ada. Pengingat dibuat oleh <strong className="text-ink">Agen</strong> (tab Agen) - agen mengusulkan, kamu setujui.
             </p>
           ) : (
             <ul className="mt-3 space-y-2">
@@ -1524,10 +1585,9 @@ export default function AnalisisAI() {
           </div>
         </div>
 
-        {/* Baris 2: provider + model manual. Disembunyikan di mode Agen
-            (agen pakai provider/model default server) agar layar lega. */}
-        {mode !== 'agen' && (
-        <>
+        {/* Baris 2: provider + model manual. TETAP TAMPIL di semua mode
+            (permintaan pemilik 2026-10-02: "modelnya bisa gw pilih" - termasuk
+            di mode Agen supaya pemilik bisa memilih model agen). */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="hidden text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint sm:inline">Provider</span>
           <div className="flex flex-wrap rounded-xl border border-border-soft bg-bg-soft/60 p-1">
@@ -1916,19 +1976,32 @@ export default function AnalisisAI() {
           </div>
         )}
 
-        {/* Baris 3: ringkasan + pengaturan (dilipat) + kelola. Ringkas. */}
+        {/* Baris 3: ringkasan + pengaturan (dilipat) + kelola. Ringkas.
+            MODE AGEN: pengaturan token/IQ DISEMBUNYIKAN - agen sudah dioptimalkan
+            server (2000 token, IQ 6) supaya efisien karena jalan 24/7.
+            Permintaan pemilik 2026-10-02: "token & kecerdasan ga bisa custom
+            karena sudah lu sesuaikan, tapi model bisa gw pilih". */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-[0.7rem] text-ink-muted">
-            {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
-            {modelSetting.kecerdasan ? ` • IQ ${modelSetting.kecerdasan}/10` : ''}
-          </span>
-          <button
-            type="button"
-            onClick={() => setBukaSetting((v) => !v)}
-            className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-          >
-            {bukaSetting ? 'Tutup pengaturan' : 'Pengaturan'}
-          </button>
+          {mode !== 'agen' && (
+            <>
+              <span className="text-[0.7rem] text-ink-muted">
+                {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
+                {modelSetting.kecerdasan ? ` • IQ ${modelSetting.kecerdasan}/10` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => setBukaSetting((v) => !v)}
+                className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+              >
+                {bukaSetting ? 'Tutup pengaturan' : 'Pengaturan'}
+              </button>
+            </>
+          )}
+          {mode === 'agen' && (
+            <span className="text-[0.7rem] text-ink-muted">
+              Token &amp; kecerdasan dioptimalkan otomatis untuk agen (hemat kuota 24/7).
+            </span>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -1944,17 +2017,22 @@ export default function AnalisisAI() {
 
         {/* PERAN AI - SELALU TAMPIL (bukan dilipat) supaya mudah diganti.
             Analisis menyesuaikan peran yang dipilih. Permintaan pemilik
-            2026-10-02: "mana tombol toggle setiap role, munculin dong". */}
-        <PilihPeran
-          peran={status?.peran || []}
-          nilai={peran}
-          onPilih={setPeran}
-          disabled={jalan}
-          adaKodeBase={status?.adaKodeBase}
-        />
+            2026-10-02: "mana tombol toggle setiap role, munculin dong".
+            MODE AGEN: peran tidak relevan (agen pakai 5 peran sekaligus untuk
+            saran), jadi disembunyikan. */}
+        {mode !== 'agen' && (
+          <PilihPeran
+            peran={status?.peran || []}
+            nilai={peran}
+            onPilih={setPeran}
+            disabled={jalan}
+            adaKodeBase={status?.adaKodeBase}
+          />
+        )}
 
-        {/* PANEL PENGATURAN (max token + kecerdasan) - dilipat, hemat ruang. */}
-        {bukaSetting && (
+        {/* PANEL PENGATURAN (max token + kecerdasan) - dilipat, hemat ruang.
+            Tidak tampil di mode agen (dioptimalkan server). */}
+        {bukaSetting && mode !== 'agen' && (
           <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
@@ -1981,8 +2059,6 @@ export default function AnalisisAI() {
             <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. 1 = presisi, 10 = kreatif.</p>
           </div>
         )}
-        </>
-        )}
 
         <p className="mt-1.5 text-xs text-ink-muted">
           {mode === 'analisis'
@@ -2006,8 +2082,13 @@ export default function AnalisisAI() {
       {mode === 'analisis' && (
         <>
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Analisis Cepat</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
+                Analisis Cepat
+                {saranDin.some((s) => s.sumber === 'agen') && (
+                  <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
+                )}
+              </p>
               <span className="text-[0.65rem] text-ink-faint">Klik topik - langsung jalan</span>
             </div>
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
@@ -2016,8 +2097,8 @@ export default function AnalisisAI() {
                 di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(() => {
-                // Kalau peran BUKAN umum -> pakai pintasan khusus peran. Sumber:
-                // server (status.pintasanPeran) ATAU fallback klien (aiPeranKlien).
+                // PRIORITAS (permintaan pemilik 2026-10-02): kartu Analisis Cepat
+                // diambil dari SARAN AGEN (hasil cek nyata) - bukan statis.
                 const dariServer = status?.pintasanPeran?.[peran] || [];
                 const pintasanPeranIni = dariServer.length ? dariServer : pintasanPeranKlien(peran);
                 const PINTASAN_LOKAL = [
@@ -2031,15 +2112,20 @@ export default function AnalisisAI() {
                   { id: 'guild', label: 'Masalah Guild & War' },
                   { id: 'semua', label: 'Gambaran Menyeluruh' },
                 ];
-                const daftarPintasan = (peran !== 'umum' && pintasanPeranIni.length)
-                  ? pintasanPeranIni
-                  : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL);
+                const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
+                const daftarPintasan = saranAgen.length
+                  ? saranAgen.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
+                  : ((peran !== 'umum' && pintasanPeranIni.length)
+                    ? pintasanPeranIni
+                    : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
                 return daftarPintasan.map((p) => (
                   <button
                     key={p.id}
                     type="button"
                     disabled={jalan || detikSisa > 0}
-                    onClick={() => jalankan({ pintasan: p.id }, p.label)}
+                    // Saran agen punya `tanya` (teks bebas) -> kirim sebagai tanya.
+                    // Pintasan bawaan pakai id -> kirim sebagai pintasan.
+                    onClick={() => jalankan(p.tanya ? { tanya: p.tanya } : { pintasan: p.id }, p.label)}
                     className="flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-3 py-2 text-center text-xs font-semibold leading-tight text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:justify-start sm:px-3.5 sm:py-1.5 cursor-pointer"
                   >
                     {detikSisa > 0 ? `⏳ ${detikSisa}s` : p.label}
@@ -2147,7 +2233,15 @@ export default function AnalisisAI() {
           Permintaan pemilik 2026-10-02: agen memantau, usul aksi, pemilik
           setujui. Komponen terpisah (AgenAI.jsx) supaya file ini tetap rapi. */}
       {mode === 'agen' && (
-        <AgenAI jalan={jalan} detikSisa={detikSisa} />
+        <AgenAI
+          jalan={jalan}
+          detikSisa={detikSisa}
+          provider={provider}
+          model={modelInput}
+          // Setelah agen selesai, muat ulang saran supaya kartu saran di tab
+          // lain ikut memakai hasil agen terbaru.
+          onSelesai={muatSaran}
+        />
       )}
 
       {/* ==========================================
@@ -2269,16 +2363,23 @@ export default function AnalisisAI() {
           ];
           const dariServer = status?.pintasanPeran?.[peran] || [];
           const pintasanPeranIni = (dariServer.length ? dariServer : pintasanPeranKlien(peran)).map((x) => ({ id: x.id, label: x.label, tanya: x.tanya || x.label }));
-          // Prioritas: pintasan peran > saran dinamis (endpoint /saran) >
-          // saran dari /ai > fallback lokal statis.
-          const saran = (peran !== 'umum' && pintasanPeranIni.length)
-            ? pintasanPeranIni
-            : (saranDin.length ? saranDin
-              : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL));
+          // PRIORITAS (permintaan pemilik 2026-10-02): saran DARI AGEN (saranDin
+          // sekarang diisi hasil cek agen). Kalau agen belum jalan, pakai
+          // pintasan peran statis, lalu saran /ai, lalu fallback lokal.
+          const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
+          const saran = saranAgen.length
+            ? saranAgen
+            : ((peran !== 'umum' && pintasanPeranIni.length)
+              ? pintasanPeranIni
+              : (saranDin.length ? saranDin
+                : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL)));
           return (
             <div className="mt-3">
-              <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
+              <p className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
                 Saran cepat
+                {saranAgen.length > 0 && (
+                  <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[0.6rem] font-bold normal-case tracking-normal text-accent">dari Agen</span>
+                )}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {saran.map((s) => (

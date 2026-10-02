@@ -558,6 +558,11 @@ function bersihkanJawaban(teks) {
   out = out.replace(/<reasoning[^>]*>[\s\S]*?<\/reasoning>/gi, '');
   // Kalau tag pembuka/penutup tak berpasangan, buang tag-nya saja.
   out = out.replace(/<\/?(?:think(?:ing)?|reasoning)[^>]*>/gi, '');
+  // Buang karakter asing yang bocor dari model (Mandarin, Jepang, Korea,
+  // Cyrillic, Arab). Diganti tanda hubung supaya kalimat tetap terbaca.
+  // (Kejadian nyata: minimax menulis "tidak-解决-根本" di jawaban analisis.)
+  out = out.replace(/[\u4E00-\u9FFF\u3040-\u30FF\u0400-\u04FF\u0600-\u06FF\uAC00-\uD7AF\u1100-\u11FF]+/g, '-');
+  out = out.replace(/\s*-\s*-\s*/g, ' - ');
   return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
