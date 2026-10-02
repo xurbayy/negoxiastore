@@ -2387,9 +2387,10 @@ export default function AnalisisAI() {
 
       {/* ==========================================
           MODE ANALISIS (searah): tombol pintasan + laporan
-          ========================================== */}
-      {mode === 'analisis' && (
-        <>
+          ==========================================
+          SELALU ter-render (hidden saat bukan mode) supaya proses AI yang
+          sedang berjalan TIDAK terputus saat pindah tab. */}
+      <div className={mode === 'analisis' ? '' : 'hidden'}>
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">
@@ -2578,8 +2579,7 @@ export default function AnalisisAI() {
               )}
             </div>
           ))}
-        </>
-      )}
+      </div>
 
       {/* ==========================================
           MODE AGEN (pemantau otomatis + usulan aksi)
@@ -2603,9 +2603,9 @@ export default function AnalisisAI() {
           MODE DISKUSI (chat 2 arah)
           ==========================================
           Pemilik: "kalo yang chat buat gw diskusi kedepannya bakal gimana".
-          Pesan pemilik di kanan, balasan AI di kiri. */}
-      {mode === 'diskusi' && (
-        <>
+          Pesan pemilik di kanan, balasan AI di kiri.
+          SELALU ter-render (hidden saat bukan mode) supaya proses lanjut. */}
+      <div className={mode === 'diskusi' ? '' : 'hidden'}>
           <div ref={kotakHasil} className="scroll-mt-4" />
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-soft pb-3">
@@ -2950,8 +2950,7 @@ export default function AnalisisAI() {
           </button>
         </form>
       </div>
-        </>
-      )}
+      </div>
 
       {/* ==========================================
           ARSIP JAWABAN TERSIMPAN
