@@ -9,16 +9,28 @@
 // Komponen ini HANYA menampilkan pilihan peran; logika prompt ada di server
 // (app/lib/aiPeran.js). Dipisah supaya AnalisisAI.jsx tidak makin panjang.
 
+// Fallback: kalau server tidak mengirim daftar peran (mis. /ai gagal saat
+// deploy belum jalan), tetap tampilkan tombol peran bawaan. Prompt lengkap
+// ada di server (aiPeran.js) - di sini hanya label untuk UI.
+const PERAN_BAWAAN = [
+  { id: 'umum', label: 'Analis Umum', emoji: '📊', deskripsi: 'Analisis data NEXO biasa.' },
+  { id: 'bug', label: 'Bug Hunter', emoji: '🐛', deskripsi: 'Cari bug, race condition, dead code.' },
+  { id: 'security', label: 'Cyber Security', emoji: '🛡️', deskripsi: 'Audit keamanan: injection, auth, kredensial.' },
+  { id: 'exploit', label: 'Exploit Ekonomi', emoji: '💰', deskripsi: 'Cari celah curang & duplikasi reward.' },
+  { id: 'analyst', label: 'System Analyst', emoji: '⚙️', deskripsi: 'Arsitektur, performa, modularitas.' },
+];
+
 export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKodeBase }) {
-  if (!peran.length) return null;
-  const terpilih = peran.find((p) => p.id === nilai) || peran[0];
+  // Pakai peran dari server kalau ada; kalau kosong pakai bawaan.
+  const daftar = peran.length ? peran : PERAN_BAWAAN;
+  const terpilih = daftar.find((p) => p.id === nilai) || daftar[0];
   const peranButuhKode = nilai && nilai !== 'umum';
 
   return (
     <div className="mt-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Peran AI</span>
-        {peran.map((p) => (
+        {daftar.map((p) => (
           <button
             key={p.id}
             type="button"
