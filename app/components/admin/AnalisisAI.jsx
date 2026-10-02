@@ -1875,12 +1875,8 @@ export default function AnalisisAI() {
           </div>
         )}
 
-        {/* Baris 3: PENGATURAN (dilipat) + kelola. Ringkas agar layar lega. */}
+        {/* Baris 3: ringkasan + pengaturan (dilipat) + kelola. Ringkas. */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-[0.7rem] text-ink-muted">
-            Peran: <strong className="text-ink">{(status?.peran || []).find((p) => p.id === peran)?.label || peran}</strong>
-          </span>
-          <span className="text-ink-faint">•</span>
           <span className="text-[0.7rem] text-ink-muted">
             {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
             {modelSetting.kecerdasan ? ` • IQ ${modelSetting.kecerdasan}/10` : ''}
@@ -1905,7 +1901,18 @@ export default function AnalisisAI() {
           </button>
         </div>
 
-        {/* PANEL PENGATURAN (max token + kecerdasan + peran) - dilipat. */}
+        {/* PERAN AI - SELALU TAMPIL (bukan dilipat) supaya mudah diganti.
+            Analisis menyesuaikan peran yang dipilih. Permintaan pemilik
+            2026-10-02: "mana tombol toggle setiap role, munculin dong". */}
+        <PilihPeran
+          peran={status?.peran || []}
+          nilai={peran}
+          onPilih={setPeran}
+          disabled={jalan}
+          adaKodeBase={status?.adaKodeBase}
+        />
+
+        {/* PANEL PENGATURAN (max token + kecerdasan) - dilipat, hemat ruang. */}
         {bukaSetting && (
           <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -1931,13 +1938,6 @@ export default function AnalisisAI() {
               </label>
             </div>
             <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. 1 = presisi, 10 = kreatif.</p>
-            <PilihPeran
-              peran={status?.peran || []}
-              nilai={peran}
-              onPilih={setPeran}
-              disabled={jalan}
-              adaKodeBase={status?.adaKodeBase}
-            />
           </div>
         )}
 
