@@ -704,6 +704,27 @@ export async function tanyaGroq(pesan, opsi = {}) {
       } else if (kode === 429) {
         rangkai += ' [kuota kunci ini habis - coba lagi nanti]';
       }
+      // RETRY: error 5xx (server provider bermasalah) sering SEMENTARA. Kalau
+      // hanya ada 1 kunci, tanpa retry pemilik langsung gagal. Coba ulang
+      // sekali (jeda 800ms) untuk error server sebelum menyerah.
+      if (kode >= 500) {
+        try {
+          await new Promise((r) => setTimeout(r, 800));
+          const res2 = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kunci[i]}` },
+            body: JSON.stringify({ model, messages: pesan, max_tokens: batasToken, temperature: suhu }),
+            signal: AbortSignal.timeout(60000),
+          });
+          if (res2.ok) {
+            let d2;
+            try { d2 = await res2.json(); } catch (_) { d2 = null; }
+            const t2 = d2?.choices?.[0]?.message?.content;
+            if (t2) return { ok: true, teks: bersihkanJawaban(t2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: d2?.usage ? { promptTokens: d2.usage.prompt_tokens ?? null, completionTokens: d2.usage.completion_tokens ?? null, totalTokens: d2.usage.total_tokens ?? null } : null };
+          }
+        } catch { /* retry gagal - lanjut ke kunci berikutnya / menyerah */ }
+      }
+
       terakhir = { kode, error: bersihkanPesan(rangkai, kunci) };
       if (kode === 400 || kode === 404) break;
     } catch (e) {
