@@ -1603,56 +1603,54 @@ export default function AnalisisAI() {
           MERAH kalau ada pengingat. Panelnya hanya terbuka saat diklik -
           tidak memakan ruang saat tidak dibutuhkan. */}
       {bukaPengingat && (
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <div className="nx-card px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-display text-ink">
+            <h3 className="text-sm font-bold text-ink">
               Pengingat
-              <span className="ml-2 text-sm font-normal text-ink-muted">
-                ({pengingat.filter((p) => !p.selesai).length} aktif)
+              <span className="ml-1.5 text-xs font-normal text-ink-muted">
+                ({pengingat.filter((p) => !p.selesai).length})
               </span>
             </h3>
             <button
               type="button"
               onClick={() => setBukaPengingat(false)}
-              className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:text-ink cursor-pointer"
+              className="rounded-lg border border-border-soft px-2.5 py-1 text-xs font-semibold text-ink-muted transition hover:text-ink cursor-pointer"
             >
               Tutup
             </button>
           </div>
 
           {pengingat.filter((p) => !p.selesai).length === 0 ? (
-            <p className="mt-3 text-sm text-ink-muted">
-              Belum ada. Pengingat dibuat oleh <strong className="text-ink">Agen</strong> (tab Agen) - agen mengusulkan, kamu setujui.
+            <p className="mt-2 text-xs text-ink-muted">
+              Belum ada. Pengingat dibuat oleh <strong className="text-ink">Agen</strong> (tab Agen).
             </p>
           ) : (
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-2 space-y-1.5">
               {pengingat.filter((p) => !p.selesai).map((p) => (
                 <li
                   key={p.id}
-                  className={`flex flex-wrap items-start justify-between gap-2 rounded-xl border px-3.5 py-3 ${
+                  className={`flex flex-wrap items-center gap-2 rounded-lg border px-2.5 py-2 ${
                     p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-ink">{p.teks}</p>
-                    <p className={`mt-0.5 text-xs ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
+                    <p className="text-xs font-semibold text-ink line-clamp-2">{p.teks}</p>
+                    <p className={`text-[0.65rem] ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-faint'}`}>
                       {p.jatuhTempo ? 'SEKARANG - ' : ''}{p.waktuTeks}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-1.5">
+                  <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
                       onClick={() => tandaiSelesai(p.id, true)}
-                      className="rounded-lg border border-success/40 px-2.5 py-1 text-[0.7rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
-                      title="Tandai sudah dikerjakan"
+                      className="rounded border border-success/40 px-2 py-0.5 text-[0.65rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
                     >
                       Selesai
                     </button>
                     <button
                       type="button"
                       onClick={() => hapusPengingat(p.id)}
-                      className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-                      title="Hapus pengingat"
+                      className="rounded border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
                     >
                       Hapus
                     </button>
