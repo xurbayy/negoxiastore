@@ -1134,11 +1134,18 @@ export default function AnalisisAI() {
             <li>- Atau tambah provider sendiri lewat tombol <strong className="text-ink">Kelola provider &amp; model</strong> di bawah (API key disimpan terenkripsi di database, tanpa perlu deploy ulang).</li>
           </ul>
           <p className="mt-2 text-xs text-ink-faint">Beberapa kunci bisa dipisah koma supaya otomatis pindah saat satu kena batas kuota.</p>
-          {/* Diagnostik: tampilkan provider yang terbaca server supaya jelas. */}
-          {Array.isArray(status?.providers) && (
-            <p className="mt-2 text-[0.65rem] text-ink-faint">
-              Terbaca server: {status.providers.map((p) => `${p.label}(${p.kunci})`).join(', ') || 'tidak ada'}
-            </p>
+          {/* Diagnostik: tampilkan env yang terbaca server supaya jelas. */}
+          {status?.diag && (
+            <div className="mt-2 rounded-lg bg-bg-soft/50 px-3 py-2 text-[0.65rem] text-ink-muted">
+              <p className="font-bold text-ink-muted">Terbaca server:</p>
+              <ul className="mt-0.5 space-y-0.5">
+                <li>AI_PROVIDER: {status.diag.AI_PROVIDER || '(kosong)'}</li>
+                <li>AI_BASE_URL: {status.diag.AI_BASE_URL || '(kosong)'}</li>
+                <li>GROQ_API_KEY: {status.diag.adaGroq ? `${status.diag.jumlahGroq} kunci` : 'TIDAK ADA'}</li>
+                <li>OPENROUTER_API_KEY: {status.diag.adaOpenrouter ? `${status.diag.jumlahOpenrouter} kunci` : 'TIDAK ADA'}</li>
+                <li>Provider bawaan: {status.diag.providerBawaanTerbaca.join(', ') || '-'}</li>
+              </ul>
+            </div>
           )}
           <button
             type="button"

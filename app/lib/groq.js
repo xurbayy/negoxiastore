@@ -43,11 +43,13 @@ const PROVIDERS = {
 function resolveProvider(nama) {
   // 1) Provider pilihan UI (paling prioritas). Boleh provider bawaan ATAU
   //    slug provider kustom (tidak ada di PROVIDERS - ditangani pemanggil).
-  if (nama) return nama;
-  // 2) AI_PROVIDER env.
-  if (process.env.AI_PROVIDER) return process.env.AI_PROVIDER;
-  // 3) Custom HANYA kalau AI_BASE_URL diisi (legacy).
-  if (process.env.AI_BASE_URL) return 'custom';
+  if (nama && String(nama).trim()) return String(nama).trim();
+  // 2) AI_PROVIDER env - TAPI hanya kalau nilainya masuk akal (bawaan atau
+  //    tidak kosong). Nilai ngawur (mis. spasi) jangan sampai bikin mentok.
+  const envProv = String(process.env.AI_PROVIDER || '').trim();
+  if (envProv) return envProv;
+  // 3) Custom HANYA kalau AI_BASE_URL benar-benar diisi.
+  if (process.env.AI_BASE_URL && String(process.env.AI_BASE_URL).trim()) return 'custom';
   // 4) Default: groq (atau openrouter kalau GROQ_API_KEY kosong tapi
   //    OPENROUTER_API_KEY ada).
   if (!process.env.GROQ_API_KEY && process.env.OPENROUTER_API_KEY) return 'openrouter';

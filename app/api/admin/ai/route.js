@@ -433,6 +433,18 @@ export async function POST(request) {
 export async function GET() {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
   const info = await infoProviderLengkap();
+  // DIAGNOSTIK (permintaan pemilik 2026-10-02): tampilkan env yang TERBACA
+  // server, TANPA membocorkan isi kunci. Membantu melacak kenapa "belum aktif"
+  // padahal env sudah diisi (mis. AI_PROVIDER salah, AI_BASE_URL nyangkut).
+  const diag = {
+    AI_PROVIDER: process.env.AI_PROVIDER || null,
+    AI_BASE_URL: process.env.AI_BASE_URL ? 'diisi' : null,
+    adaGroq: Boolean(process.env.GROQ_API_KEY),
+    adaOpenrouter: Boolean(process.env.OPENROUTER_API_KEY),
+    jumlahGroq: (process.env.GROQ_API_KEY || '').split(',').filter((k) => k.trim()).length,
+    jumlahOpenrouter: (process.env.OPENROUTER_API_KEY || '').split(',').filter((k) => k.trim()).length,
+    providerBawaanTerbaca: info.tersedia.filter((t) => !t.kustom).map((t) => `${t.id}(${t.kunci})`),
+  };
   return json({
     ok: true,
     aktif: info.siap,
@@ -443,5 +455,6 @@ export async function GET() {
     providers: info.tersedia,
     models: info.models,
     pintasan: PINTASAN.map((p) => ({ id: p.id, label: p.label })),
+    diag,
   });
 }
