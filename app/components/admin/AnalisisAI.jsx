@@ -620,11 +620,11 @@ export default function AnalisisAI() {
       const res = await fetch(`/api/admin/ai/cek-model?provider=${encodeURIComponent(provider || '')}&model=${encodeURIComponent(m)}`, { cache: 'no-store' });
       const d = await res.json();
       if (!d.ok && d.tidakDidukung) {
-        setCekHasil({ status: 'gagal', pesan: d.error || 'Provider tidak mendukung cek model.' });
+        setCekHasil({ status: 'gagal', pesan: d.error || 'Provider tidak mendukung cek model.', url: d.urlDicek });
       } else if (!d.ok) {
-        setCekHasil({ status: 'gagal', pesan: d.error || 'Gagal cek model.' });
+        setCekHasil({ status: 'gagal', pesan: d.error || 'Gagal cek model.', url: d.urlDicek });
       } else if (d.ada) {
-        setCekHasil({ status: 'ada', label: d.label, jumlah: d.jumlah });
+        setCekHasil({ status: 'ada', label: d.label, jumlah: d.jumlah, url: d.urlDicek });
       } else {
         setCekHasil({ status: 'tidak', label: d.label, mirip: d.mirip || [] });
       }
@@ -847,9 +847,12 @@ export default function AnalisisAI() {
 
         {/* Hasil validasi model - hanya tampil setelah dicek. */}
         {cekHasil.status === 'ada' && (
-          <p className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
-            ✓ Model ada di {cekHasil.label}{cekHasil.jumlah ? ` (${cekHasil.jumlah} model tersedia)` : ''}.
-          </p>
+          <div className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs text-success">
+            <p className="font-semibold">✓ Model ada di {cekHasil.label}{cekHasil.jumlah ? ` (${cekHasil.jumlah} model tersedia)` : ''}.</p>
+            {cekHasil.url && (
+              <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">{cekHasil.url}</p>
+            )}
+          </div>
         )}
         {cekHasil.status === 'tidak' && (
           <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
@@ -872,9 +875,12 @@ export default function AnalisisAI() {
           </div>
         )}
         {cekHasil.status === 'gagal' && (
-          <p className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-semibold text-danger">
-            {cekHasil.pesan}
-          </p>
+          <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
+            <p className="font-semibold">{cekHasil.pesan}</p>
+            {cekHasil.url && (
+              <p className="mt-0.5 break-all font-mono text-[0.65rem] text-ink-muted">Dicek: {cekHasil.url}</p>
+            )}
+          </div>
         )}
 
         {/* Baris 3: keterangan singkat sesuai mode + tombol kelola. */}

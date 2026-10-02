@@ -241,16 +241,40 @@ export async function cekModelAda(namaProvider, modelDicari) {
       headers: { Authorization: `Bearer ${info.kunci[0]}` },
       signal: AbortSignal.timeout(20000),
     });
+    // Baca pesan error dari body kalau ada - supaya penyebabnya jelas.
+    let pesanApi = '';
+    if (!res.ok) {
+      try { const j = await res.json(); pesanApi = j?.error?.message || j?.message || ''; } catch { /* body bukan JSON */ }
+    }
     if (res.status === 404) {
-      return { ok: false, tidakDidukung: true, error: `Provider ${info.label} tidak menyediakan daftar model untuk dicek.`, label: info.label };
+      return {
+        ok: false, tidakDidukung: true,
+        error: `URL base sepertinya salah. Endpoint ${urlModels} tidak ditemukan (404). Pastikan URL base benar, contoh: https://api.openrouter.ai/api/v1`,
+        urlDicek: urlModels, label: info.label,
+      };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return {
+        ok: false,
+        error: `API key ditolak (HTTP ${res.status})${pesanApi ? ': ' + pesanApi : ''}. Periksa kunci provider ${info.label}.`,
+        urlDicek: urlModels, label: info.label,
+      };
     }
     if (!res.ok) {
-      return { ok: false, error: `Gagal mengambil daftar model (HTTP ${res.status}).`, label: info.label };
+      return {
+        ok: false,
+        error: `Gagal mengambil daftar model (HTTP ${res.status})${pesanApi ? ': ' + pesanApi : ''}. Cek URL base & kunci.`,
+        urlDicek: urlModels, label: info.label,
+      };
     }
     const data = await res.json().catch(() => null);
     const list = data?.data || data?.models || [];
     if (!Array.isArray(list) || list.length === 0) {
-      return { ok: false, tidakDidukung: true, error: `Provider ${info.label} tidak mengembalikan daftar model.`, label: info.label };
+      return {
+        ok: false, tidakDidukung: true,
+        error: `Provider ${info.label} membalas tapi tidak mengembalikan daftar model. URL base mungkin kurang tepat (${urlModels}).`,
+        urlDicek: urlModels, label: info.label,
+      };
     }
     const ids = list.map((m) => String(m?.id || m?.name || '')).filter(Boolean);
     const ada = ids.includes(dicari);
@@ -262,10 +286,14 @@ export async function cekModelAda(namaProvider, modelDicari) {
         mirip = ids.filter((x) => x.toLowerCase().includes(potong)).slice(0, 8);
       }
     }
-    return { ok: true, ada, tersedia: ids.slice(0, 400), mirip, label: info.label, jumlah: ids.length };
+    return { ok: true, ada, tersedia: ids.slice(0, 400), mirip, label: info.label, jumlah: ids.length, urlDicek: urlModels };
   } catch (e) {
-    const pesan = e?.name === 'TimeoutError' ? 'Cek model melewati 20 detik.' : (e?.message || String(e));
-    return { ok: false, error: pesan, label: info.label };
+    // Kegagalan jaringan/DNS hampir selalu berarti URL base salah atau
+    // provider tidak bisa dijangkau.
+    const pesan = e?.name === 'TimeoutError'
+      ? `Cek model melewati 20 detik. URL base mungkin lambat/salah: ${urlModels}`
+      : `Tidak bisa terhubung ke ${urlModels} - kemungkinan URL base salah. (${e?.message || e})`;
+    return { ok: false, error: pesan, urlDicek: urlModels, label: info.label };
   }
 }
 
