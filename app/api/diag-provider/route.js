@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDb, schemaReady } from '../../../lib/db';
-import { dekripsiKunci } from '../../../lib/aiCrypto';
+import { getDb, schemaReady } from '../../lib/db';
+import { dekripsiKunci } from '../../lib/aiCrypto';
 
 export const dynamic = 'force-dynamic';
 
