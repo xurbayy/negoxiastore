@@ -2043,28 +2043,38 @@ export default function AnalisisAI() {
           </div>
         )}
 
-        {/* Kartu saran klik (sumber: SARAN_DISKUSI dari server). Selalu tampil
-            supaya pemilik punya titik mulai - pertanyaan relevan soal data. */}
-        {(status?.saranDiskusi || []).length > 0 && (
-          <div className="mt-3">
-            <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
-              Saran cepat (sesuai data saat ini)
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {(status.saranDiskusi || []).map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  disabled={jalan || detikSisa > 0}
-                  onClick={() => jalankan({ tanya: s.tanya || s.label }, s.label, s.label)}
-                  className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-                >
-                  {s.label}
-                </button>
-              ))}
+        {/* Kartu saran klik (dari server; fallback lokal kalau server tak kirim). */}
+        {(() => {
+          const SARAN_LOKAL = [
+            { id: 'l-game', label: 'Game paling laris?', tanya: 'Game apa yang paling banyak dimainkan minggu ini dan kenapa menurutmu menarik? Kasih angka.' },
+            { id: 'l-baru', label: 'Ide game baru', tanya: 'Usulkan 3 ide game BARU yang inovatif dan nyambung minat pemain NEXO. Jangan ulang yang sudah ada.' },
+            { id: 'l-item', label: 'Item paling laku', tanya: 'Item apa yang paling laku dan mana yang menumpuk tidak terjual? Jelaskan dengan angka.' },
+            { id: 'l-ekonomi', label: 'Ekonomi sehat?', tanya: 'Menurut data, apakah ekonomi NEXO sehat? Ada tanda inflasi atau penumpukan poin?' },
+            { id: 'l-perbaiki', label: 'Apa yang diperbaiki?', tanya: 'Dari semua data, 3 hal apa yang paling mendesak diperbaiki? Urut dari yang paling berdampak.' },
+            { id: 'l-promo', label: 'Ide promo', tanya: 'Promo apa yang sebaiknya dijalankan berikutnya? Pilih item/game tepat dan jelaskan alasannya pakai angka.' },
+          ];
+          const saran = (status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL;
+          return (
+            <div className="mt-3">
+              <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
+                Saran cepat
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {saran.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    disabled={jalan || detikSisa > 0}
+                    onClick={() => jalankan({ tanya: s.tanya || s.label }, s.label, s.label)}
+                    className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/15 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {pesan.length === 0 ? (
           <div className="mt-5">
