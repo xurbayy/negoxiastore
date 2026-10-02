@@ -848,6 +848,11 @@ export default function AnalisisAI() {
     }
   }, [provider]);
 
+  // "Siap" = server bilang aktif ATAU ada provider mana pun yang punya kunci.
+  // Toleran terhadap versi server beda (kalau server lama masih kirim field
+  // `aktif` yang cuma cek provider default). Mencegah layar buntu palsu.
+  const siap = Boolean(status?.aktif) || (status?.providers || []).some((p) => Number(p.kunci) > 0);
+
   const renderKelola = () => (
         <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1121,7 +1126,7 @@ export default function AnalisisAI() {
     );
   }
 
-  if (!status?.aktif) {
+  if (!siap) {
     return (
       <div className="space-y-4">
         <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
