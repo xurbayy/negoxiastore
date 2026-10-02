@@ -231,11 +231,12 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
               <span className={`inline-block h-2 w-2 rounded-full ${autoJalan ? 'bg-danger' : 'bg-ink-faint'}`} />
               {autoJalan ? 'Matikan agent' : 'Aktifkan agent'}
             </button>
-            {/* Analisis sekarang: jalan 1x tanpa ubah auto-run. */}
+            {/* Analisis sekarang: jalan 1x tanpa ubah auto-run.
+                AGEN INDEPENDEN - tidak menunggu Analisis/Diskusi selesai. */}
             <button
               type="button"
               onClick={jalankanAgen}
-              disabled={jalanAgen || jalan || detikSisa > 0}
+              disabled={jalanAgen}
               className="btn-primary flex items-center gap-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
             >
               {jalanAgen ? (
