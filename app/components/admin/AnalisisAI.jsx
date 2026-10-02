@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import PilihPeran from './PilihPeran';
+import { pintasanPeranKlien, daftarPeranKlien } from '../../lib/aiPeranKlien';
 
 // ==========================================
 // AnalisisAI - tab asisten data di panel admin
@@ -2006,9 +2007,10 @@ export default function AnalisisAI() {
                 di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(() => {
-                // Kalau peran BUKAN umum -> pakai pintasan khusus peran dari
-                // server (status.pintasanPeran[peran]). Else -> pintasan umum.
-                const pintasanPeranIni = status?.pintasanPeran?.[peran] || [];
+                // Kalau peran BUKAN umum -> pakai pintasan khusus peran. Sumber:
+                // server (status.pintasanPeran) ATAU fallback klien (aiPeranKlien).
+                const dariServer = status?.pintasanPeran?.[peran] || [];
+                const pintasanPeranIni = dariServer.length ? dariServer : pintasanPeranKlien(peran);
                 const PINTASAN_LOKAL = [
                   { id: 'promo', label: 'Saran Promo' },
                   { id: 'sepi', label: 'Item & Game Sepi' },
@@ -2247,7 +2249,8 @@ export default function AnalisisAI() {
             { id: 'l-perbaiki', label: 'Apa yang diperbaiki?', tanya: 'Dari semua data, 3 hal apa yang paling mendesak diperbaiki? Urut dari yang paling berdampak.' },
             { id: 'l-promo', label: 'Ide promo', tanya: 'Promo apa yang sebaiknya dijalankan berikutnya? Pilih item/game tepat dan jelaskan alasannya pakai angka.' },
           ];
-          const pintasanPeranIni = (status?.pintasanPeran?.[peran] || []).map((x) => ({ id: x.id, label: x.label, tanya: x.label }));
+          const dariServer = status?.pintasanPeran?.[peran] || [];
+          const pintasanPeranIni = (dariServer.length ? dariServer : pintasanPeranKlien(peran)).map((x) => ({ id: x.id, label: x.label, tanya: x.tanya || x.label }));
           // Prioritas: pintasan peran > saran dinamis (endpoint /saran) >
           // saran dari /ai > fallback lokal statis.
           const saran = (peran !== 'umum' && pintasanPeranIni.length)

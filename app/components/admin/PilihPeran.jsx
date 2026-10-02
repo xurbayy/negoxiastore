@@ -9,20 +9,14 @@
 // Komponen ini HANYA menampilkan pilihan peran; logika prompt ada di server
 // (app/lib/aiPeran.js). Dipisah supaya AnalisisAI.jsx tidak makin panjang.
 
-// Fallback: kalau server tidak mengirim daftar peran (mis. /ai gagal saat
-// deploy belum jalan), tetap tampilkan tombol peran bawaan. Prompt lengkap
-// ada di server (aiPeran.js) - di sini hanya label untuk UI.
-const PERAN_BAWAAN = [
-  { id: 'umum', label: 'Analis Umum', deskripsi: 'Analisis data NEXO biasa.' },
-  { id: 'bug', label: 'Bug Hunter', deskripsi: 'Cari bug, race condition, dead code.' },
-  { id: 'security', label: 'Cyber Security', deskripsi: 'Audit keamanan: injection, auth, kredensial.' },
-  { id: 'exploit', label: 'Exploit Ekonomi', deskripsi: 'Cari celah curang & duplikasi reward.' },
-  { id: 'analyst', label: 'System Analyst', deskripsi: 'Arsitektur, performa, modularitas.' },
-];
+// Fallback: kalau server tidak mengirim daftar peran (mis. /ai gagal), tetap
+// tampilkan tombol peran. Sumber TUNGGAL: aiPeranKlien.js (modular, tidak
+// duplikat definisi).
+import { daftarPeranKlien } from '../../lib/aiPeranKlien';
 
 export default function PilihPeran({ peran = [], nilai, onPilih, disabled, adaKodeBase }) {
-  // Pakai peran dari server kalau ada; kalau kosong pakai bawaan.
-  const daftar = peran.length ? peran : PERAN_BAWAAN;
+  // Pakai peran dari server kalau ada; kalau kosong pakai fallback klien.
+  const daftar = peran.length ? peran : daftarPeranKlien();
   const terpilih = daftar.find((p) => p.id === nilai) || daftar[0];
   const peranButuhKode = nilai && nilai !== 'umum';
 
