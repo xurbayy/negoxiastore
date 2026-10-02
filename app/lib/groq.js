@@ -225,6 +225,56 @@ export async function infoProviderLengkap(providerTerpilih) {
  *
  * @returns {Promise<{ok:boolean, ada?:boolean, tersedia?:string[], label?:string, error?:string, tidakDidukung?:boolean}>}
  */
+/**
+ * Tes koneksi mentah (nama/URL/key belum tentu tersimpan). Dipakai tombol
+ * "Tes koneksi" di form tambah provider - supaya URL base & API key bisa
+ * divalidasi SEBELUM disimpan.
+ * @returns {Promise<{ok:boolean, pesan:string, urlDicek?:string, jumlah?:number, contoh?:string[]}>}
+ */
+export async function tesKoneksi({ baseUrl, apiKey, envKey }) {
+  const base = String(baseUrl || '').trim().replace(/\/+$/, '');
+  if (!base) return { ok: false, pesan: 'URL base kosong.' };
+  if (!/^https?:\/\//i.test(base)) {
+    return { ok: false, pesan: 'URL base harus dimulai dengan http:// atau https://' };
+  }
+  let kunci = String(apiKey || '').trim();
+  if (!kunci && envKey && process.env[envKey]) kunci = String(process.env[envKey]).split(',')[0].trim();
+  if (!kunci) return { ok: false, pesan: 'API key kosong (isi API key atau nama env yang ada isinya).' };
+
+  const urlModels = base.replace(/\/chat\/completions\/?$/, '') + '/models';
+  try {
+    const res = await fetch(urlModels, {
+      headers: { Authorization: `Bearer ${kunci}` },
+      signal: AbortSignal.timeout(20000),
+    });
+    let pesanApi = '';
+    if (!res.ok) {
+      try { const j = await res.json(); pesanApi = j?.error?.message || j?.message || ''; } catch { /* bukan JSON */ }
+    }
+    if (res.status === 404) {
+      return { ok: false, urlDicek: urlModels, pesan: `URL base sepertinya salah - endpoint ${urlModels} tidak ditemukan (404). Untuk OpenAI-compatible biasanya berakhir dengan /v1.` };
+    }
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, urlDicek: urlModels, pesan: `API key ditolak (HTTP ${res.status})${pesanApi ? ': ' + pesanApi : ''}.` };
+    }
+    if (!res.ok) {
+      return { ok: false, urlDicek: urlModels, pesan: `Server membalas HTTP ${res.status}${pesanApi ? ': ' + pesanApi : ''}. Cek URL base & key.` };
+    }
+    const data = await res.json().catch(() => null);
+    const list = data?.data || data?.models || [];
+    if (!Array.isArray(list) || list.length === 0) {
+      return { ok: false, urlDicek: urlModels, pesan: `Koneksi berhasil tapi tidak ada daftar model. URL base mungkin kurang tepat (${urlModels}).` };
+    }
+    const contoh = list.slice(0, 5).map((m) => String(m?.id || m?.name || '')).filter(Boolean);
+    return { ok: true, urlDicek: urlModels, jumlah: list.length, contoh, pesan: `Terhubung. ${list.length} model tersedia.` };
+  } catch (e) {
+    const pesan = e?.name === 'TimeoutError'
+      ? `Tidak merespons dalam 20 detik. URL base kemungkinan salah: ${urlModels}`
+      : `Tidak bisa terhubung ke ${urlModels} - kemungkinan URL base salah atau server mati. (${e?.message || e})`;
+    return { ok: false, urlDicek: urlModels, pesan };
+  }
+}
+
 export async function cekModelAda(namaProvider, modelDicari) {
   const nama = resolveProvider(namaProvider);
   const info = await providerInfo(nama);

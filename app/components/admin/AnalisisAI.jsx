@@ -156,6 +156,8 @@ export default function AnalisisAI() {
   const [lihatInputKunci, setLihatInputKunci] = useState(false);
   // Hasil validasi model: { status: 'idle'|'cek'|'ada'|'tidak'|'gagal', ... }
   const [cekHasil, setCekHasil] = useState({ status: 'idle' });
+  // Hasil tes koneksi provider (form tambah) - validasi URL base + API key.
+  const [tesHasil, setTesHasil] = useState({ status: 'idle' });
 
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
@@ -168,6 +170,11 @@ export default function AnalisisAI() {
   useEffect(() => {
     setCekHasil({ status: 'idle' });
   }, [provider, modelInput]);
+
+  // Hasil tes koneksi jadi basi begitu form provider diubah - reset.
+  useEffect(() => {
+    setTesHasil({ status: 'idle' });
+  }, [formProv.base_url, formProv.api_key, formProv.env_key]);
 
   // Kalau provider tersimpan (localStorage) tidak ada di daftar yang disediakan
   // server (mis. 'custom' sudah dihapus), paksa ke provider aktif server.
@@ -612,6 +619,23 @@ export default function AnalisisAI() {
   }, [kunciTerlihat]);
 
   // Cek apakah model benar-benar ada di provider yang dipilih.
+  // Tes koneksi provider (sebelum simpan): validasi URL base + API key.
+  const tesKoneksiProv = useCallback(async () => {
+    setTesHasil({ status: 'cek' });
+    try {
+      const res = await fetch('/api/admin/ai/tes-koneksi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formProv),
+      });
+      const d = await res.json();
+      if (d.ok) setTesHasil({ status: 'ok', pesan: d.pesan, url: d.urlDicek, contoh: d.contoh || [] });
+      else setTesHasil({ status: 'gagal', pesan: d.pesan || d.error || 'Gagal.', url: d.urlDicek });
+    } catch (e) {
+      setTesHasil({ status: 'gagal', pesan: e.message });
+    }
+  }, [formProv]);
+
   const cekModel = useCallback(async () => {
     const m = modelInput.trim();
     if (!m) { setCekHasil({ status: 'gagal', pesan: 'Isi nama model dulu.' }); return; }
@@ -995,13 +1019,40 @@ export default function AnalisisAI() {
                 className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
               />
             </div>
-            <button
-              type="button"
-              onClick={simpanProvider}
-              className="btn-primary mt-2 text-xs"
-            >
-              Simpan provider
-            </button>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={tesKoneksiProv}
+                disabled={tesHasil.status === 'cek'}
+                className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+              >
+                {tesHasil.status === 'cek' ? 'Tes...' : 'Tes koneksi'}
+              </button>
+              <button
+                type="button"
+                onClick={simpanProvider}
+                className="btn-primary text-xs"
+              >
+                Simpan provider
+              </button>
+            </div>
+            {/* Hasil tes koneksi - jelas penyebabnya kalau gagal. */}
+            {tesHasil.status === 'ok' && (
+              <div className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs text-success">
+                <p className="font-semibold">✓ {tesHasil.pesan}</p>
+                {tesHasil.contoh?.length > 0 && (
+                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Contoh: {tesHasil.contoh.join(', ')}</p>
+                )}
+              </div>
+            )}
+            {tesHasil.status === 'gagal' && (
+              <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
+                <p className="font-semibold">{tesHasil.pesan}</p>
+                {tesHasil.url && (
+                  <p className="mt-0.5 break-all font-mono text-[0.6rem] text-ink-muted">Dicek: {tesHasil.url}</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Model tersimpan */}
