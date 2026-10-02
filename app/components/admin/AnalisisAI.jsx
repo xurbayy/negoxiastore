@@ -394,10 +394,9 @@ export default function AnalisisAI() {
   // Di mode DISKUSI riwayat percakapan ikut dikirim supaya AI nyambung.
   // Di mode ANALISIS jawaban disimpan sebagai laporan (bukan gelembung chat).
   //
-  // JEDA MINIMUM (fix 2026-10-01): Groq menghitung KUOTA PER MENIT. Dua klik
-  // berturut-turut (mis. tombol 'Saran Promo' lalu 'Item & Game Sepi') dalam
-  // satu menit akan menghabiskan kuota dan request kedua ditolak dengan
-  // 'Request too large'. Diberi jeda 20 detik supaya kuota sempat pulih.
+  // JEDA MINIMUM: menghindari dua permintaan beruntun yang menghabiskan kuota
+  // per menit. Diberi jeda 5 detik (permintaan pemilik 2026-10-02: "cooldown
+  // per pesannya jangan kelamaan").
   const [tungguSampai, setTungguSampai] = useState(0);
   const [detikSisa, setDetikSisa] = useState(0);
   // Tick setiap detik selama cooldown supaya tombol menampilkan sisa waktu.
@@ -420,8 +419,8 @@ export default function AnalisisAI() {
       }]);
       return;
     }
-    setTungguSampai(Date.now() + 20000);
-    setDetikSisa(20);
+    setTungguSampai(Date.now() + 5000);
+    setDetikSisa(5);
     setJalan(true);
     const modeKirim = mode;
 
