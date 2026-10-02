@@ -1708,14 +1708,14 @@ export default function AnalisisAI() {
                   />
                   Bisa bernalar
                 </label>
-                <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer">
+                <label className="flex items-center gap-1.5 text-xs text-ink-muted cursor-pointer" title="Default aktif: sembunyikan model yang gagal uji">
                   <input
                     type="checkbox"
-                    checked={modelProv.filterLolos || false}
+                    checked={modelProv.filterLolos !== false}
                     onChange={(e) => setModelProv((s) => ({ ...s, filterLolos: e.target.checked }))}
                     className="cursor-pointer"
                   />
-                  Hanya yang lolos uji
+                  Sembunyikan yang gagal
                 </label>
                 {/* Uji model nyata: hanya tampilkan yang benar-benar bisa dipakai. */}
                 <button
@@ -1733,7 +1733,7 @@ export default function AnalisisAI() {
               const tampil = modelProv.models.filter((m) =>
                 (!modelProv.filterLihat || m.vision) &&
                 (!modelProv.filterNalar || m.reasoning) &&
-                (!modelProv.filterLolos || ujiHasil[`${m.providerId || ''}::${m.id}`]?.ok === true)
+                (modelProv.filterLolos === false || ujiHasil[`${m.providerId || ''}::${m.id}`]?.ok === true || ujiHasil[`${m.providerId || ''}::${m.id}`] === undefined)
               );
               if (tampil.length === 0) return <p className="mt-2 text-xs text-ink-muted">Tidak ada model yang cocok.</p>;
               return (

@@ -20,7 +20,7 @@ import { providerInfo } from './groq';
 import { getDb, schemaReady } from './db';
 
 const CACHE_MS = 24 * 60 * 60 * 1000; // 24 jam
-const MAKS_UJI = 40; // batasi per batch supaya tidak lama & tidak habis kuota
+const MAKS_UJI = 120; // batas per batch (hasil di-cache, jadi batch berikut cepat)
 
 /** Baca cache uji. */
 async function bacaCache(provider, model) {
