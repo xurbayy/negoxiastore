@@ -918,9 +918,44 @@ export function saranDinamis(snap) {
     push('dyn-error', 'Error terbaru', `Ada ${m.logError.length} catatan error. Sebutkan yang paling sering dan paling berbahaya, lalu urutan perbaikannya.`);
   }
 
+  // 9. Pemain baru vs lama (pertumbuhan).
+  if (typeof m.totalUsers === 'number' && m.totalUsers > 100) {
+    push('dyn-pertumbuhan', 'Strategi pertumbuhan', `Total ${m.totalUsers} pemain terdaftar. Bagaimana cara menaikkan jumlah pemain aktif mingguan ini?`);
+  }
+
+  // 10. Game paling populer vs jarang dimainkan.
+  const topGames = m.topGamesToday || [];
+  if (topGames.length >= 2) {
+    const palingSepi = topGames[topGames.length - 1];
+    push('dyn-game-sepi', `Kenapa ${palingSepi.game_type} sepi?`, `Game "${palingSepi.game_type}" hanya dimainkan ${palingSepi.plays}x hari ini. Kenapa tidak menarik dan bagaimana meningkatkannya?`);
+  }
+
+  // 11. Waktu main puncak.
+  if (typeof m.aktif24jam === 'number' && m.aktif24jam > 0) {
+    push('dyn-waktu-main', 'Pola waktu main', `Ada ${m.aktif24jam} pemain aktif 24 jam. Kapan waktu puncak aktivitas dan bagaimana memanfaatkannya untuk promo/event?`);
+  }
+
+  // 12. Evaluasi fitur terbaru.
+  push('dyn-evaluasi-fitur', 'Evaluasi fitur', 'Fitur apa yang paling sering dipakai pemain dan mana yang jarang? Apakah ada yang perlu dirombak atau dihapus?');
+
+  // 13. Bandingkan server.
+  const servers2 = m.servers || [];
+  const aktifServer = servers2.filter((s) => (Number(s.players) || 0) > 0).slice(0, 2);
+  if (aktifServer.length >= 2) {
+    push('dyn-banding-server', 'Bandingkan server', `Server "${aktifServer[0].name || aktifServer[0].guildId}" (${aktifServer[0].players} pemain) vs "${aktifServer[1].name || aktifServer[1].guildId}" (${aktifServer[1].players} pemain). Kenapa beda dan apa yang bisa ditiru?`);
+  }
+
   // Cadangan: selalu sediakan beberapa saran umum supaya kartu tidak kosong.
   push('game-baru', 'Ide game baru', 'Usulkan 3 ide game BARU yang inovatif dan nyambung dengan minat pemain NEXO saat ini. Jangan ulang game yang sudah ada.');
   push('yang-perlu-diperbaiki', 'Apa yang harus diperbaiki?', 'Dari semua data yang ada, 3 hal apa yang paling mendesak untuk diperbaiki? Urut dari yang paling berdampak.');
+  push('strategi-ekonomi', 'Strategi ekonomi', 'Bagaimana menyeimbangkan poin beredar supaya ekonomi tetap sehat? Ada tanda inflasi atau deflasi?');
+
+  // ACAK urutan supaya tidak selalu sama (permintaan pemilik 2026-10-02:
+  // "muat ulang masih sama si itu-itu aja").
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
 
   return out.slice(0, 8);
 }
