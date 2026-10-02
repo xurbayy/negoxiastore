@@ -522,8 +522,9 @@ export default function AnalisisAI() {
     // Validasi: wajib ada model & provider. Tanpa ini, request jalan ke default
     // dan menggantung sampai timeout (kejadian nyata 2026-10-02).
     if (!provider?.trim() || !modelInput?.trim()) {
-      setPesanSimpan('⚠️ Pilih provider & model dulu (klik "Lihat model" lalu "Pakai").');
-      setTimeout(() => setPesanSimpan(null), 5000);
+      setPesanSimpan('⚠️ Pilih provider & model dulu di bar kontrol (Provider + Model).');
+      setPanelTampil(true); // buka panel supaya provider/model terlihat
+      setTimeout(() => setPesanSimpan(null), 6000);
       return;
     }
     const sisaTunggu = tungguSampai - Date.now();
