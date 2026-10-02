@@ -271,6 +271,9 @@ export default function AnalisisAI() {
   const [pesan, setPesan] = useState([]);
   // DISKUSI TERSIMPAN (permintaan pemilik 2026-10-02: save/hapus/lanjutkan).
   const [daftarDiskusi, setDaftarDiskusi] = useState([]);
+  // Saran pertanyaan DINAMIS dari server (menyesuaikan kondisi data). Diambil
+  // dari endpoint terpisah /saran supaya tetap dapat walau /ai bermasalah.
+  const [saranDin, setSaranDin] = useState([]);
   const [bukaDiskusi, setBukaDiskusi] = useState(false);
   const [diskusiAktifId, setDiskusiAktifId] = useState(null); // id sesi yang sedang dilanjutkan
   const [memuatDiskusi, setMemuatDiskusi] = useState(false);
@@ -765,6 +768,19 @@ export default function AnalisisAI() {
   // Muat daftar provider kustom SAAT MOUNT (tidak menunggu panel kelola dibuka).
   // Muat daftar provider kustom SAAT MOUNT (tidak menunggu panel kelola dibuka).
   useEffect(() => { muatKelola(); }, [muatKelola]);
+
+  // Muat SARAN DINAMIS dari endpoint terpisah (menyesuaikan kondisi data).
+  useEffect(() => {
+    let batal = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/ai/saran', { cache: 'no-store' });
+        const d = await res.json();
+        if (!batal && d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
+      } catch { /* gagal - pakai fallback lokal */ }
+    })();
+    return () => { batal = true; };
+  }, []);
 
   // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
   // langsung menampilkan provider baru tanpa refresh halaman. Ikut muat ulang
@@ -2219,9 +2235,12 @@ export default function AnalisisAI() {
             { id: 'l-promo', label: 'Ide promo', tanya: 'Promo apa yang sebaiknya dijalankan berikutnya? Pilih item/game tepat dan jelaskan alasannya pakai angka.' },
           ];
           const pintasanPeranIni = (status?.pintasanPeran?.[peran] || []).map((x) => ({ id: x.id, label: x.label, tanya: x.label }));
+          // Prioritas: pintasan peran > saran dinamis (endpoint /saran) >
+          // saran dari /ai > fallback lokal statis.
           const saran = (peran !== 'umum' && pintasanPeranIni.length)
             ? pintasanPeranIni
-            : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL);
+            : (saranDin.length ? saranDin
+              : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL));
           return (
             <div className="mt-3">
               <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
