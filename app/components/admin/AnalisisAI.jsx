@@ -134,6 +134,21 @@ export default function AnalisisAI() {
     try { return window.localStorage.getItem('nexo_ai_model') || ''; } catch { return ''; }
   });
 
+  // ==========================================
+  // KELOLA PROVIDER & MODEL (permintaan pemilik 2026-10-02)
+  // ==========================================
+  // Pemilik bisa menambah provider (nama + URL + API key), menghapusnya, dan
+  // menyimpan model (label + nama model + provider) yang bisa diedit/dihapus.
+  const [kelola, setKelola] = useState(false);          // panel kelola terbuka?
+  const [daftarProvider, setDaftarProvider] = useState([]);
+  const [daftarModel, setDaftarModel] = useState([]);
+  const [memuatKelola, setMemuatKelola] = useState(false);
+  const [pesanKelola, setPesanKelola] = useState(null);
+  // Form provider baru.
+  const [formProv, setFormProv] = useState({ nama: '', base_url: '', api_key: '', env_key: '' });
+  // Form model baru.
+  const [formModel, setFormModel] = useState({ label: '', model: '', provider: '' });
+
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
   }, [provider]);
@@ -456,6 +471,110 @@ export default function AnalisisAI() {
     setTimeout(() => setPesanSimpan(null), 4000);
   }, []);
 
+  // ==========================================
+  // KELOLA PROVIDER & MODEL - muat, tambah, edit, hapus
+  // ==========================================
+  const flashKelola = (teks) => {
+    setPesanKelola(teks);
+    setTimeout(() => setPesanKelola(null), 5000);
+  };
+
+  const muatKelola = useCallback(async () => {
+    setMemuatKelola(true);
+    try {
+      const res = await fetch('/api/admin/ai/providers', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) {
+        setDaftarProvider(d.providers || []);
+        setDaftarModel(d.models || []);
+      } else {
+        flashKelola('Gagal memuat: ' + (d.error || 'tidak diketahui'));
+      }
+    } catch (e) {
+      flashKelola('Gagal memuat: ' + e.message);
+    } finally {
+      setMemuatKelola(false);
+    }
+  }, []);
+
+  // Muat ulang daftar status (provider bawaan + kustom + model) supaya toggle
+  // langsung menampilkan provider baru tanpa refresh halaman.
+  const muatStatusUlang = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/ai', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setStatus(d);
+    } catch { /* abaikan */ }
+  }, []);
+
+  const simpanProvider = useCallback(async () => {
+    if (!formProv.nama.trim() || !formProv.base_url.trim()) {
+      flashKelola('Nama dan URL wajib diisi.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/ai/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipe: 'provider', ...formProv }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setFormProv({ nama: '', base_url: '', api_key: '', env_key: '' });
+        flashKelola('Provider ditambahkan.');
+        await Promise.all([muatKelola(), muatStatusUlang()]);
+      } else {
+        flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+      }
+    } catch (e) { flashKelola('Gagal: ' + e.message); }
+  }, [formProv, muatKelola, muatStatusUlang]);
+
+  const hapusProvider = useCallback(async (id) => {
+    if (!window.confirm('Hapus provider ini? Model yang memakainya perlu diubah manual.')) return;
+    try {
+      const res = await fetch('/api/admin/ai/providers?id=' + id, { method: 'DELETE' });
+      const d = await res.json();
+      if (d.ok) { flashKelola('Provider dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
+      else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { flashKelola('Gagal: ' + e.message); }
+  }, [muatKelola, muatStatusUlang]);
+
+  const simpanModel = useCallback(async () => {
+    if (!formModel.label.trim() || !formModel.model.trim() || !formModel.provider.trim()) {
+      flashKelola('Label, model, dan provider wajib diisi.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/ai/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipe: 'model', ...formModel }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setFormModel({ label: '', model: '', provider: '' });
+        flashKelola('Model disimpan.');
+        await Promise.all([muatKelola(), muatStatusUlang()]);
+      } else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { flashKelola('Gagal: ' + e.message); }
+  }, [formModel, muatKelola, muatStatusUlang]);
+
+  const hapusModel = useCallback(async (id) => {
+    try {
+      const res = await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' });
+      const d = await res.json();
+      if (d.ok) { flashKelola('Model dihapus.'); await Promise.all([muatKelola(), muatStatusUlang()]); }
+      else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { flashKelola('Gagal: ' + e.message); }
+  }, [muatKelola, muatStatusUlang]);
+
+  // Pakai model tersimpan: isi provider + model di bar kontrol atas.
+  const pakaiModel = useCallback((m) => {
+    setProvider(m.provider);
+    setModelInput(m.model);
+    flashKelola(`Dipakai: ${m.label}`);
+  }, []);
+
   if (memuatStatus) {
     return (
       <div className="nx-card px-6 py-10 text-center text-sm text-ink-muted">
@@ -639,15 +758,194 @@ export default function AnalisisAI() {
             placeholder="Nama model (contoh: qwen/qwen3.8-27b:free)"
             className="flex-1 min-w-[200px] rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-1 focus:ring-ink-muted/30"
           />
+          {/* Dropdown model tersimpan - pilih cepat tanpa hafal nama model. */}
+          {(status.models || []).length > 0 && (
+            <select
+              value=""
+              onChange={(e) => {
+                const m = (status.models || []).find((x) => String(x.id) === e.target.value);
+                if (m) pakaiModel(m);
+              }}
+              title="Pilih dari model tersimpan"
+              className="rounded-xl border border-border-soft bg-bg-soft/60 px-2 py-1.5 text-xs text-ink outline-none focus:border-accent cursor-pointer"
+            >
+              <option value="">Model tersimpan...</option>
+              {(status.models || []).map((m) => (
+                <option key={m.id} value={m.id}>{m.label} - {m.model}</option>
+              ))}
+            </select>
+          )}
         </div>
 
-        {/* Baris 3: keterangan singkat sesuai mode. */}
-        <p className="mt-2 text-xs text-ink-muted">
-          {mode === 'analisis'
-            ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
-            : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
-        </p>
+        {/* Baris 3: keterangan singkat sesuai mode + tombol kelola. */}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-ink-muted">
+            {mode === 'analisis'
+              ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
+              : 'Ngobrol bebas - AI ingat percakapan sebelumnya.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const buka = !kelola;
+              setKelola(buka);
+              if (buka && daftarProvider.length === 0) muatKelola();
+            }}
+            className="rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+          >
+            {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
+          </button>
+        </div>
       </div>
+
+      {/* ==========================================
+          PANEL KELOLA PROVIDER & MODEL
+          ==========================================
+          Tambah provider kustom (nama + URL + API key), hapus, lalu simpan
+          model (label + nama model + provider) yang bisa dipakai ulang. */}
+      {kelola && (
+        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-ink">Kelola Provider & Model</h3>
+            {pesanKelola && <span className="text-xs font-semibold text-accent">{pesanKelola}</span>}
+          </div>
+
+          {/* Provider kustom tersimpan */}
+          <p className="mt-3 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider kustom</p>
+          {memuatKelola ? (
+            <p className="mt-2 text-sm text-ink-muted"><span className="pulse-dot" aria-hidden="true" /> Memuat...</p>
+          ) : daftarProvider.length === 0 ? (
+            <p className="mt-2 text-xs text-ink-muted">Belum ada provider kustom. Provider bawaan (Groq, OpenRouter) sudah tersedia di atas.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {daftarProvider.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
+                    <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-card-cream px-2 py-0.5 text-[0.6rem] text-ink-faint">
+                    {p.adaKunci ? p.kunciTersamar : (p.envKey || 'tanpa kunci')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => hapusProvider(p.id)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Form provider baru */}
+          <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+            <p className="text-xs font-bold text-ink-muted">Tambah provider</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input
+                value={formProv.nama}
+                onChange={(e) => setFormProv({ ...formProv, nama: e.target.value })}
+                placeholder="Nama (mis. DeepSeek)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={formProv.base_url}
+                onChange={(e) => setFormProv({ ...formProv, base_url: e.target.value })}
+                placeholder="URL base (mis. https://api.deepseek.com/v1)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={formProv.api_key}
+                onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
+                placeholder="API key (disimpan terenkripsi)"
+                type="password"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={formProv.env_key}
+                onChange={(e) => setFormProv({ ...formProv, env_key: e.target.value })}
+                placeholder="atau nama env (mis. DEEPSEEK_API_KEY)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={simpanProvider}
+              className="btn-primary mt-2 text-xs"
+            >
+              Simpan provider
+            </button>
+          </div>
+
+          {/* Model tersimpan */}
+          <p className="mt-4 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model tersimpan</p>
+          {daftarModel.length === 0 ? (
+            <p className="mt-2 text-xs text-ink-muted">Belum ada model tersimpan.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {daftarModel.map((m) => (
+                <li key={m.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-ink">{m.label}</p>
+                    <p className="truncate text-[0.7rem] text-ink-muted">{m.provider} • {m.model}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => pakaiModel(m)}
+                    className="shrink-0 rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                  >
+                    Pakai
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => hapusModel(m.id)}
+                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                  >
+                    Hapus
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Form model baru */}
+          <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+            <p className="text-xs font-bold text-ink-muted">Simpan model</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <input
+                value={formModel.label}
+                onChange={(e) => setFormModel({ ...formModel, label: e.target.value })}
+                placeholder="Label (mis. Nemotron Cepat)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <input
+                value={formModel.model}
+                onChange={(e) => setFormModel({ ...formModel, model: e.target.value })}
+                placeholder="Nama model (mis. nvidia/nemotron...:free)"
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              />
+              <select
+                value={formModel.provider}
+                onChange={(e) => setFormModel({ ...formModel, provider: e.target.value })}
+                className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs text-ink outline-none focus:border-accent"
+              >
+                <option value="">Pilih provider...</option>
+                {(status.providers || []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}{p.kustom ? ' (kustom)' : ''}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={simpanModel}
+              className="btn-primary mt-2 text-xs"
+            >
+              Simpan model
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ==========================================
           MODE ANALISIS (searah): tombol pintasan + laporan

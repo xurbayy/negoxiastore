@@ -213,6 +213,38 @@ export async function ensureSchema() {
         selesai_at  INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_ai_reminders_waktu ON ai_reminders(selesai, waktu_ingat);
+
+    -- PROVIDER AI KUSTOM (permintaan pemilik 2026-10-02).
+    -- Pemilik ingin bisa MENAMBAH provider sendiri (nama + URL + api key),
+    -- lalu menyimpan & mengelola MODEL yang dipakai. Provider bawaan
+    -- (groq/openrouter) tetap ada di kode; tabel ini untuk TAMBAHAN.
+    --
+    -- api_key_enc disimpan TERENKRIPSI (AES-256-GCM, kunci dari SESSION_SECRET).
+    -- Tidak pernah dikirim balik ke browser - UI hanya menampilkan versi
+    -- tersamar (sk-...abcd).
+    CREATE TABLE IF NOT EXISTS ai_providers (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama         TEXT NOT NULL,
+        slug         TEXT NOT NULL UNIQUE,
+        base_url     TEXT NOT NULL,
+        api_key_enc  TEXT,
+        env_key      TEXT,
+        created_at   INTEGER NOT NULL,
+        updated_at   INTEGER
+    );
+
+    -- MODEL AI yang DISIMPAN (permintaan pemilik 2026-10-02).
+    -- Satu daftar tersendiri: label ramah + nama model asli + provider
+    -- (slug provider bawaan 'groq'/'openrouter' ATAU slug provider kustom).
+    CREATE TABLE IF NOT EXISTS ai_models (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        label       TEXT NOT NULL,
+        model       TEXT NOT NULL,
+        provider    TEXT NOT NULL,
+        created_at  INTEGER NOT NULL,
+        updated_at  INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider);
   `);
 
   // Migrasi aman: kolom/tabel baru pada DB lama (lewatii error "duplicate column")

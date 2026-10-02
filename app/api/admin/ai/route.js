@@ -1,7 +1,7 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getLatestSnapshot } from '../../../lib/snapshot';
 import { susunKonteks, PINTASAN, ATURAN_FORMAT, ATURAN_PENGINGAT } from '../../../lib/aiKonteks';
-import { tanyaGroq, adaGroq, jumlahKunci, modelGroq, infoProvider } from '../../../lib/groq';
+import { tanyaGroq, infoProviderLengkap } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
 import { cariHariLibur } from '../../../lib/hariLibur';
@@ -178,13 +178,6 @@ function sistemPrompt() {
 
 export async function POST(request) {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
-
-  if (!adaGroq()) {
-    return json({
-      ok: false,
-      error: 'GROQ_API_KEY belum diisi di environment (Vercel > Settings > Environment Variables).',
-    }, 400);
-  }
 
   let body = null;
   try { body = await request.json(); } catch { body = null; }
@@ -409,7 +402,7 @@ export async function POST(request) {
     model: hasil.model,
     provider: hasil.provider,
     kunciDipakai: hasil.kunciDipakai,
-    totalKunci: jumlahKunci(),
+    providerLabel: hasil.providerLabel,
     ukuranKonteks: konteks.length,
   });
 }
@@ -418,15 +411,16 @@ export async function POST(request) {
 // "AI siap dipakai" atau peringatan konfigurasi, tanpa memanggil Groq).
 export async function GET() {
   if (!(await izinkan())) return json({ ok: false, error: 'forbidden' }, 403);
-  const info = infoProvider();
+  const info = await infoProviderLengkap();
   return json({
     ok: true,
-    aktif: adaGroq(),
-    jumlahKunci: jumlahKunci(),
+    aktif: info.kunci > 0,
+    jumlahKunci: info.kunci,
     model: info.model,
     provider: info.aktif,
     providerLabel: info.label,
     providers: info.tersedia,
+    models: info.models,
     pintasan: PINTASAN.map((p) => ({ id: p.id, label: p.label })),
   });
 }

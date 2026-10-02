@@ -41,10 +41,11 @@ const PROVIDERS = {
 };
 
 function resolveProvider(nama) {
-  // 1) Provider pilihan UI (paling prioritas).
-  if (nama && PROVIDERS[nama]) return nama;
+  // 1) Provider pilihan UI (paling prioritas). Boleh provider bawaan ATAU
+  //    slug provider kustom (tidak ada di PROVIDERS - ditangani pemanggil).
+  if (nama) return nama;
   // 2) AI_PROVIDER env.
-  if (process.env.AI_PROVIDER && PROVIDERS[process.env.AI_PROVIDER]) return process.env.AI_PROVIDER;
+  if (process.env.AI_PROVIDER) return process.env.AI_PROVIDER;
   // 3) Custom HANYA kalau AI_BASE_URL diisi (legacy).
   if (process.env.AI_BASE_URL) return 'custom';
   // 4) Default: groq (atau openrouter kalau GROQ_API_KEY kosong tapi
@@ -53,17 +54,74 @@ function resolveProvider(nama) {
   return 'groq';
 }
 
+/**
+ * Ambil definisi provider. Provider BAWAAN dari PROVIDERS; provider KUSTOM
+ * (slug tidak dikenal) diambil dari tabel ai_providers (key didekripsi).
+ * @param {string} namaProvider
+ * @returns {Promise<{url:string, envKey:string, label:string, kunci:string[], model:string, kustom?:boolean}|null>}
+ */
+export async function providerInfo(namaProvider) {
+  const nama = resolveProvider(namaProvider);
+  const bawaan = PROVIDERS[nama];
+  if (bawaan) {
+    return {
+      slug: nama,
+      url: baseUrl(nama),
+      envKey: bawaan.envKey,
+      label: bawaan.label,
+      kunci: daftarKunci(nama),
+      model: modelDipakai(nama),
+    };
+  }
+  // Provider kustom dari DB.
+  try {
+    const { getDb, schemaReady } = await import('./db');
+    const { dekripsiKunci } = await import('./aiCrypto');
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute({
+      sql: 'SELECT nama, slug, base_url, api_key_enc, env_key FROM ai_providers WHERE slug = ? LIMIT 1',
+      args: [nama],
+    });
+    const row = res.rows?.[0];
+    if (!row) return null;
+    // URL disimpan TANPA /chat/completions - tambahkan di sini (sama seperti
+    // provider bawaan yang menyimpan URL penuh).
+    const base = String(row.base_url || '').replace(/\/+$/, '');
+    const url = /\/chat\/completions$/.test(base) ? base : `${base}/chat/completions`;
+    const kunci = [];
+    const dek = dekripsiKunci(row.api_key_enc);
+    if (dek) kunci.push(...String(dek).split(',').map((k) => k.trim()).filter(Boolean));
+    // Env key opsional sebagai alternatif (mis. kalau key tidak disimpan di DB).
+    if (!kunci.length && row.env_key && process.env[row.env_key]) {
+      kunci.push(...String(process.env[row.env_key]).split(',').map((k) => k.trim()).filter(Boolean));
+    }
+    return {
+      slug: row.slug,
+      url,
+      envKey: row.env_key || 'API_KEY',
+      label: row.nama,
+      kunci,
+      model: '',
+      kustom: true,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function baseUrl(namaProvider) {
   const p = PROVIDERS[namaProvider];
   if (namaProvider === 'custom') {
     const custom = (process.env.AI_BASE_URL || '').replace(/\/+$/, '');
     return custom ? `${custom}/chat/completions` : '';
   }
-  return p.url;
+  return p?.url || '';
 }
 
 function daftarKunci(namaProvider) {
   const p = PROVIDERS[namaProvider];
+  if (!p) return [];
   const env = process.env[p.envKey] || '';
   return env.split(',').map((k) => k.trim()).filter(Boolean);
 }
@@ -78,6 +136,9 @@ export function namaProviderAktif() {
   return resolveProvider(process.env.AI_PROVIDER);
 }
 
+// Catatan: infoProvider() TETAP sinkron & murah (dipakai jalur lama), tapi
+// versi lengkap dengan provider kustom + model tersimpan ada di
+// infoProviderLengkap() (async, membaca DB).
 export function infoProvider() {
   const aktif = resolveProvider(process.env.AI_PROVIDER);
   // Custom hanya ditawarkan kalau AI_BASE_URL benar-benar diisi. Tanpa ini,
@@ -87,7 +148,7 @@ export function infoProvider() {
   );
   return {
     aktif,
-    label: PROVIDERS[aktif].label,
+    label: PROVIDERS[aktif]?.label || aktif,
     model: modelDipakai(aktif),
     kunci: daftarKunci(aktif).length,
     tersedia: daftar.map((k) => ({
@@ -96,6 +157,61 @@ export function infoProvider() {
       model: modelDipakai(k),
       kunci: daftarKunci(k).length,
     })),
+  };
+}
+
+/**
+ * Versi lengkap: provider bawaan + provider kustom dari DB + model tersimpan.
+ * Dipakai panel admin (async karena membaca DB).
+ */
+export async function infoProviderLengkap(providerTerpilih) {
+  const aktif = resolveProvider(providerTerpilih || process.env.AI_PROVIDER);
+  const bawaan = Object.keys(PROVIDERS).filter(
+    (k) => k !== 'custom' || Boolean(process.env.AI_BASE_URL)
+  );
+  const tersedia = bawaan.map((k) => ({
+    id: k,
+    label: PROVIDERS[k].label,
+    model: modelDipakai(k),
+    kunci: daftarKunci(k).length,
+    kustom: false,
+  }));
+
+  let modelTersimpan = [];
+  try {
+    const { getDb, schemaReady } = await import('./db');
+    await schemaReady();
+    const db = getDb();
+    const [prov, mod] = await Promise.all([
+      db.execute('SELECT slug, nama, base_url, env_key, api_key_enc FROM ai_providers ORDER BY nama ASC'),
+      db.execute('SELECT id, label, model, provider FROM ai_models ORDER BY label ASC'),
+    ]);
+    for (const r of (prov.rows || [])) {
+      tersedia.push({
+        id: r.slug,
+        label: r.nama,
+        model: '',
+        kunci: r.api_key_enc ? 1 : 0,
+        kustom: true,
+      });
+    }
+    modelTersimpan = (mod.rows || []).map((r) => ({
+      id: Number(r.id),
+      label: r.label,
+      model: r.model,
+      provider: r.provider,
+    }));
+  } catch { /* DB tidak siap - tampilkan provider bawaan saja */ }
+
+  // Info provider aktif (bisa kustom).
+  const aktifInfo = await providerInfo(aktif);
+  return {
+    aktif,
+    label: aktifInfo?.label || aktif,
+    model: modelDipakai(aktif),
+    kunci: (aktifInfo?.kunci || []).length,
+    tersedia,
+    models: modelTersimpan,
   };
 }
 
@@ -129,15 +245,20 @@ function bersihkanPesan(teks, kunci) {
 
 export async function tanyaGroq(pesan, opsi = {}) {
   const namaProvider = resolveProvider(opsi.provider);
-  const kunci = daftarKunci(namaProvider);
-  const url = baseUrl(namaProvider);
-  const model = modelDipakai(namaProvider, opsi.model);
+  const info = await providerInfo(namaProvider);
+  if (!info) {
+    return { ok: false, error: `Provider "${namaProvider}" tidak ditemukan.`, provider: namaProvider, providerLabel: namaProvider };
+  }
+  const kunci = info.kunci;
+  const url = info.url;
+  const model = (opsi.model && opsi.model.trim()) || info.model;
+  const label = info.label;
 
   if (!kunci.length) {
-    return { ok: false, error: `Kunci ${PROVIDERS[namaProvider].label} belum diisi. Cek environment variable ${PROVIDERS[namaProvider].envKey}.` };
+    return { ok: false, error: `Kunci ${label} belum diisi. Cek environment variable ${info.envKey} atau isi API key di panel provider.`, provider: namaProvider, providerLabel: label, envKey: info.envKey };
   }
   if (!url) {
-    return { ok: false, error: 'AI_BASE_URL belum diisi.' };
+    return { ok: false, error: `URL provider ${label} belum diisi.`, provider: namaProvider, providerLabel: label, envKey: info.envKey };
   }
 
   let terakhir = null;
@@ -163,7 +284,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
         const ct = res.headers.get('content-type') || '';
         if (ct.includes('text/event-stream') || ct.includes('stream')) {
           const teksSse = await bacaSSE(res);
-          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1, provider: namaProvider, model };
+          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
           terakhir = { kode: res.status, error: 'AI mengembalikan stream kosong.' };
           continue;
         }
@@ -172,11 +293,11 @@ export async function tanyaGroq(pesan, opsi = {}) {
         try { data = await res.json(); } catch (_) { data = null; }
 
         const teks = data?.choices?.[0]?.message?.content;
-        if (teks) return { ok: true, teks, kunciDipakai: i + 1, provider: namaProvider, model };
+        if (teks) return { ok: true, teks, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
 
         if (!data?.choices) {
           const teksSse = await bacaSSE(res);
-          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1, provider: namaProvider, model };
+          if (teksSse) return { ok: true, teks: teksSse, kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
         }
 
         terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
@@ -189,11 +310,11 @@ export async function tanyaGroq(pesan, opsi = {}) {
       const kode = res.status;
       let rangkai = pesanErr || ('HTTP ' + kode);
       if (/too large|TPM|tokens per minute/i.test(rangkai)) {
-        rangkai = `Data terlalu panjang untuk batas kuota ${PROVIDERS[namaProvider].label}. Coba lagi sebentar.`;
+        rangkai = `Data terlalu panjang untuk batas kuota ${label}. Coba lagi sebentar.`;
       } else if (kode === 403) {
         rangkai += ` [kunci ditolak atau nama MODEL salah. Cek model: ${model}]`;
       } else if (kode === 401) {
-        rangkai += ` [kunci ditolak: periksa ${PROVIDERS[namaProvider].envKey}]`;
+        rangkai += ` [kunci ditolak: periksa ${info.envKey} atau API key provider]`;
       } else if (kode === 429) {
         rangkai += ' [kuota kunci ini habis - coba lagi nanti]';
       }
@@ -211,11 +332,11 @@ export async function tanyaGroq(pesan, opsi = {}) {
   return {
     ok: false,
     kode: terakhir?.kode || 0,
-    error: (terakhir?.error || `Gagal menghubungi ${PROVIDERS[namaProvider].label}.`) + semuaDicoba,
+    error: (terakhir?.error || `Gagal menghubungi ${label}.`) + semuaDicoba,
     model,
     provider: namaProvider,
-    providerLabel: PROVIDERS[namaProvider].label,
-    envKey: PROVIDERS[namaProvider].envKey,
+    providerLabel: label,
+    envKey: info.envKey,
   };
 }
 
