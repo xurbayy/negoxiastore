@@ -202,73 +202,66 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
 
   return (
     <div className="space-y-3">
-      {/* Kepala + tombol aksi */}
+      {/* Kepala + tombol aksi - mobile friendly */}
       <div className="nx-card px-4 py-4 sm:px-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-display text-ink">Agen AI</h3>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              Memantau data &amp; kode bot, mengusulkan aksi + saran.
-            </p>
-          </div>
-          {/* Tombol aksi: horizontal, rapi. */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Toggle AUTO-RUN */}
-            <button
-              type="button"
-              onClick={() => {
-                const baru = !autoJalan;
-                setAutoJalan(baru);
-                flash(baru ? 'Agen AKTIF - jalan otomatis tiap 6 jam.' : 'Agen MATI - hanya manual.');
-                if (baru) jalankanAgenRef.current?.();
-              }}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition cursor-pointer ${
-                autoJalan
-                  ? 'bg-danger/10 text-danger border border-danger/40 hover:bg-danger/20'
-                  : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
-              }`}
-            >
-              <span className={`inline-block h-2 w-2 rounded-full ${autoJalan ? 'bg-danger' : 'bg-ink-faint'}`} />
-              {autoJalan ? 'Matikan agent' : 'Aktifkan agent'}
-            </button>
-            {/* Analisis sekarang: jalan 1x tanpa ubah auto-run.
-                AGEN INDEPENDEN - tidak menunggu Analisis/Diskusi selesai. */}
-            <button
-              type="button"
-              onClick={jalankanAgen}
-              disabled={jalanAgen}
-              className="btn-primary flex items-center gap-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {jalanAgen ? (
-                <>
-                  <span className="pulse-dot" aria-hidden="true" />
-                  Menganalisis...
-                </>
-              ) : (
-                <>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                  </svg>
-                  Analisis sekarang
-                </>
-              )}
-            </button>
-          </div>
+        <h3 className="font-display text-ink">Agen AI</h3>
+        <p className="mt-0.5 text-xs text-ink-muted">
+          Memantau data &amp; kode bot, mengusulkan aksi + saran.
+        </p>
+        {/* Tombol aksi: full width di mobile, side-by-side di desktop. */}
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <button
+            type="button"
+            onClick={() => {
+              const baru = !autoJalan;
+              setAutoJalan(baru);
+              flash(baru ? 'Agen AKTIF - jalan otomatis tiap 6 jam.' : 'Agen MATI - hanya manual.');
+              if (baru) jalankanAgenRef.current?.();
+            }}
+            className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold transition cursor-pointer sm:py-2 ${
+              autoJalan
+                ? 'bg-danger/10 text-danger border border-danger/40 hover:bg-danger/20'
+                : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
+            }`}
+          >
+            <span className={`inline-block h-2 w-2 rounded-full ${autoJalan ? 'bg-danger' : 'bg-ink-faint'}`} />
+            {autoJalan ? 'Matikan' : 'Aktifkan'}
+          </button>
+          <button
+            type="button"
+            onClick={jalankanAgen}
+            disabled={jalanAgen}
+            className="btn-primary flex items-center justify-center gap-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {jalanAgen ? (
+              <>
+                <span className="pulse-dot" aria-hidden="true" />
+                Menganalisis...
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                </svg>
+                Analisis sekarang
+              </>
+            )}
+          </button>
         </div>
         {pesan && <p className="mt-2 text-xs font-semibold text-accent">{pesan}</p>}
       </div>
 
-      {/* Provider & model AGEN - kartu terpisah, jelas dedicated. */}
+      {/* Provider & model AGEN - SELALU TAMPIL (tidak ikut panel sembunyi). */}
       <div className="nx-card border-accent/20 px-4 py-3 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[0.65rem] font-bold uppercase tracking-widest text-accent">
             Provider & Model Agen
           </p>
           <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[0.6rem] font-bold text-accent">
-            Dedicated - tidak dipakai Analisis/Diskusi
+            Dedicated
           </span>
         </div>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <div className="mt-2 space-y-2 sm:grid sm:grid-cols-2 sm:gap-2 sm:space-y-0">
           <select
             value={agentProvider}
             onChange={(e) => {
