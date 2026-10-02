@@ -371,41 +371,42 @@ export default function AnalisisAI() {
   const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
   // Muat percakapan & laporan dari SERVER (lintas device) via prefs.
-  // Fallback ke localStorage kalau server gagal.
+  // Polling tiap 10 detik supaya device lain ikut update (permintaan pemilik
+  // 2026-10-02: "buka di hp dan laptop ga singkron").
   const chatLoaded = useRef(false);
+  const lastChatLen = useRef(0);
   useEffect(() => {
-    (async () => {
+    let batal = false;
+    const muat = async () => {
       try {
         const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
         const d = await res.json();
-        if (d.ok && d.prefs) {
-          if (Array.isArray(d.prefs.chat) && d.prefs.chat.length) {
-            setPesan(d.prefs.chat);
+        if (batal || !d.ok || !d.prefs) return;
+        // Chat: update HANYA kalau ada pesan baru dari device lain
+        // (mencegah overwrite saat user sedang mengetik di device ini).
+        if (Array.isArray(d.prefs.chat)) {
+          const serverChat = d.prefs.chat;
+          if (serverChat.length > lastChatLen.current || (lastChatLen.current === 0 && serverChat.length > 0)) {
+            lastChatLen.current = serverChat.length;
+            setPesan(serverChat);
             chatLoaded.current = true;
-            return;
+          } else if (!chatLoaded.current && serverChat.length) {
+            lastChatLen.current = serverChat.length;
+            setPesan(serverChat);
+            chatLoaded.current = true;
           }
-          if (Array.isArray(d.prefs.laporan) && d.prefs.laporan.length) {
-            setLaporan(d.prefs.laporan);
-          }
         }
-      } catch { /* fallback ke localStorage */ }
-      // Fallback: localStorage.
-      try {
-        const simpan = window.localStorage.getItem('nexo_ai_chat');
-        if (simpan) {
-          const arr = JSON.parse(simpan);
-          if (Array.isArray(arr)) setPesan(arr.slice(-40));
+        if (Array.isArray(d.prefs.laporan) && d.prefs.laporan.length) {
+          setLaporan((prev) => {
+            if (prev.length === 0 && d.prefs.laporan.length > 0) return d.prefs.laporan;
+            return prev;
+          });
         }
-      } catch { /* data rusak */ }
-      try {
-        const simpanL = window.localStorage.getItem('nexo_ai_laporan');
-        if (simpanL) {
-          const arr = JSON.parse(simpanL);
-          if (Array.isArray(arr)) setLaporan(arr.slice(0, 30));
-        }
-      } catch { /* data rusak */ }
-      chatLoaded.current = true;
-    })();
+      } catch { /* offline */ }
+    };
+    muat();
+    const iv = setInterval(() => { if (!document.hidden) muat(); }, 10000);
+    return () => { batal = true; clearInterval(iv); };
   }, []);
 
   // Simpan percakapan & laporan ke SERVER + localStorage (debounced 2 detik).
@@ -417,10 +418,12 @@ export default function AnalisisAI() {
       try { window.localStorage.setItem('nexo_ai_chat', JSON.stringify(pesan.slice(-40))); } catch { /* penuh */ }
       try { window.localStorage.setItem('nexo_ai_laporan', JSON.stringify(laporan.slice(0, 30))); } catch { /* penuh */ }
       try {
+        const chatTersimpan = pesan.slice(-40);
+        lastChatLen.current = chatTersimpan.length; // cegah polling overwrite
         await fetch('/api/admin/ai/prefs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat: pesan.slice(-40), laporan: laporan.slice(0, 30) }),
+          body: JSON.stringify({ chat: chatTersimpan, laporan: laporan.slice(0, 30) }),
         });
       } catch { /* offline */ }
     }, 2000);
