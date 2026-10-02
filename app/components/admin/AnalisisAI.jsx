@@ -964,6 +964,14 @@ export default function AnalisisAI() {
       return;
     }
     const modeEdit = Boolean(editModelId);
+    // Cek duplikat: model + provider yang sama sudah ada.
+    if (!modeEdit) {
+      const duplikat = daftarModel.find((m) => m.model === formModel.model.trim() && m.provider === formModel.provider.trim());
+      if (duplikat) {
+        flashKelola(`Model "${formModel.model}" di provider "${formModel.provider}" sudah tersimpan.`);
+        return;
+      }
+    }
     try {
       const res = await fetch('/api/admin/ai/providers' + (modeEdit ? '?id=' + editModelId : ''), {
         method: modeEdit ? 'PATCH' : 'POST',
@@ -978,7 +986,7 @@ export default function AnalisisAI() {
         await Promise.all([muatKelola(), muatStatusUlang()]);
       } else flashKelola('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flashKelola('Gagal: ' + e.message); }
-  }, [formModel, editModelId, muatKelola, muatStatusUlang]);
+  }, [formModel, editModelId, daftarModel, muatKelola, muatStatusUlang]);
 
   const mulaiEditModel = useCallback((m) => {
     setEditModelId(m.id);
@@ -1466,7 +1474,44 @@ export default function AnalisisAI() {
           </div>
 
           {/* Model tersimpan */}
-          <p className="mt-4 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model tersimpan</p>
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Model tersimpan ({daftarModel.length})</p>
+            {(() => {
+              // Hitung duplikat (model+provider sama).
+              const lihat = new Set();
+              let jumlahDuplikat = 0;
+              for (const m of daftarModel) {
+                const kunci = `${m.model}::${m.provider}`;
+                if (lihat.has(kunci)) jumlahDuplikat++;
+                lihat.add(kunci);
+              }
+              if (jumlahDuplikat === 0) return null;
+              return (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    // Hapus semua duplikat (simpan yang pertama kali).
+                    const lihat2 = new Set();
+                    const unik = [];
+                    const hapusIds = [];
+                    for (const m of daftarModel) {
+                      const kunci = `${m.model}::${m.provider}`;
+                      if (lihat2.has(kunci)) hapusIds.push(m.id);
+                      else { lihat2.add(kunci); unik.push(m); }
+                    }
+                    for (const id of hapusIds) {
+                      try { await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' }); } catch { /* lanjut */ }
+                    }
+                    flashKelola(`${hapusIds.length} duplikat dihapus.`);
+                    await Promise.all([muatKelola(), muatStatusUlang()]);
+                  }}
+                  className="rounded-lg border border-danger/40 px-2 py-0.5 text-[0.65rem] font-bold text-danger transition hover:bg-danger/10 cursor-pointer"
+                >
+                  Hapus {jumlahDuplikat} duplikat
+                </button>
+              );
+            })()}
+          </div>
           {daftarModel.length === 0 ? (
             <p className="mt-2 text-xs text-ink-muted">Belum ada model tersimpan.</p>
           ) : (
@@ -2082,6 +2127,13 @@ export default function AnalisisAI() {
                               // Simpan langsung ke server (tanpa buka form manual).
                               const label = m.id.split('/').pop().split(':')[0].slice(0, 40);
                               const providerId = m.providerId || provider || '';
+                              // Cek duplikat.
+                              const duplikat = daftarModel.find((x) => x.model === m.id && x.provider === providerId);
+                              if (duplikat) {
+                                setPesanSimpan(`Model "${m.id}" sudah tersimpan.`);
+                                setTimeout(() => setPesanSimpan(null), 4000);
+                                return;
+                              }
                               setPesanSimpan('Menyimpan...');
                               try {
                                 const res = await fetch('/api/admin/ai/providers', {
