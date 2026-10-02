@@ -342,9 +342,13 @@ export default function AnalisisAI() {
   // Ambil status kesiapan sekali (tanpa memanggil Groq).
   useEffect(() => {
     let batal = false;
+    // Timeout 15 detik: kalau endpoint status lambat, jangan biarkan pemilik
+    // mentok di layar "Memeriksa kesiapan AI...".
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 15000);
     (async () => {
       try {
-        const res = await fetch('/api/admin/ai', { cache: 'no-store' });
+        const res = await fetch('/api/admin/ai', { cache: 'no-store', signal: ac.signal });
         const d = await res.json();
         if (!batal) {
           setStatus(d);
@@ -361,12 +365,13 @@ export default function AnalisisAI() {
           }
         }
       } catch (err) {
-        if (!batal) setStatus({ ok: false, aktif: false, errorMuatan: err?.message || String(err) });
+        if (!batal) setStatus({ ok: false, aktif: false, errorMuatan: err?.name === 'AbortError' ? 'timeout 15 detik' : (err?.message || String(err)) });
       } finally {
+        clearTimeout(timer);
         if (!batal) setMemuatStatus(false);
       }
     })();
-    return () => { batal = true; };
+    return () => { batal = true; clearTimeout(timer); };
   }, []);
 
   // Kirim satu permintaan. `muatan` = { tanya } atau { pintasan }.
