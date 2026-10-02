@@ -64,6 +64,30 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     finally { setMemuat(false); }
   }, []);
 
+  // Simpan laporan ke arsip (pindah ke ai_notes supaya bisa diakses dari Arsip Jawaban).
+  const simpanKeArsip = useCallback(async (l) => {
+    if (!l?.ringkasan) return;
+    try {
+      const res = await fetch('/api/admin/ai/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ judul: `Agen: ${(l.ringkasan || '').slice(0, 60)}`, pertanyaan: `Laporan agen ${l.tanggal || ''}`, jawaban: l.ringkasan + (l.temuan ? '\n\nTemuan:\n' + l.temuan : ''), sumber: 'agen', model: l.model || '' }),
+      });
+      const d = await res.json();
+      flash(d.ok ? 'Tersimpan di Arsip Jawaban.' : 'Gagal simpan: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { flash('Gagal simpan: ' + e.message); }
+  }, []);
+
+  // Hapus satu laporan agen.
+  const hapusLaporan = useCallback(async (id) => {
+    try {
+      const res = await fetch('/api/admin/ai/agen/laporan?id=' + id, { method: 'DELETE' });
+      const d = await res.json();
+      if (d.ok) { flash('Laporan dihapus.'); await muat(); }
+      else flash('Gagal hapus: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { flash('Gagal hapus: ' + e.message); }
+  }, [muat]);
+
   useEffect(() => { muat(); }, [muat]);
 
   // Jalankan agen sekarang (analisis 1x). Pakai MODEL & PROVIDER yang dipilih
@@ -249,9 +273,25 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         <div className="nx-card px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">Laporan terbaru</p>
-            <span className="text-[0.65rem] text-ink-faint">
-              {typeof laporanTerbaru.tanggal === 'string' ? laporanTerbaru.tanggal : '(tanggal lama)'} • {laporanTerbaru.provider || '-'} • {laporanTerbaru.model || '-'}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => simpanKeArsip(laporanTerbaru)}
+                className="rounded border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+              >
+                Simpan
+              </button>
+              <button
+                type="button"
+                onClick={() => hapusLaporan(laporanTerbaru.id)}
+                className="rounded border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+          <div className="mt-1 text-[0.6rem] text-ink-faint">
+            {typeof laporanTerbaru.tanggal === 'string' ? laporanTerbaru.tanggal : '(tanggal lama)'} • {laporanTerbaru.provider || '-'} • {laporanTerbaru.model || '-'}
           </div>
           <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{laporanTerbaru.ringkasan}</p>
           {laporanTerbaru.temuan && (
@@ -285,7 +325,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
               ))}
               {riwayatLain.map((l) => (
                 <div key={'l' + l.id} className="rounded-lg border border-border-soft bg-bg-soft/30 px-3 py-2">
-                  <p className="text-[0.65rem] text-ink-faint">{l.tanggal}</p>
+                  <p className="text-[0.65rem] text-ink-faint">{typeof l.tanggal === 'string' ? l.tanggal : '(tanggal lama)'}</p>
                   <p className="whitespace-pre-wrap text-xs text-ink-muted">{l.ringkasan}</p>
                 </div>
               ))}

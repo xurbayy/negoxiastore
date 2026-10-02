@@ -82,15 +82,18 @@ export async function GET(request) {
     ok: true,
     providers: (prov.rows || []).map((r) => {
       const dek = dekripsiKunci(r.api_key_enc);
+      // Pecah string koma menjadi daftar key terpisah (supaya CRUD per key).
+      const daftarKunci = dek ? String(dek).split(',').map((k) => k.trim()).filter(Boolean) : [];
       return {
         id: Number(r.id),
         nama: r.nama,
         slug: r.slug,
         baseUrl: r.base_url,
         envKey: r.env_key || '',
-        // Hanya bocorkan versi tersamar - kunci asli tidak pernah keluar.
-        kunciTersamar: dek ? samarkanKunci(dek) : '',
-        adaKunci: Boolean(dek),
+        // Daftar key tersamar (per key, bukan satu string gabungan).
+        kunci: daftarKunci.map((k) => ({ id: k.slice(0, 8) + '...' + k.slice(-4), tersamar: samarkanKunci(k) })),
+        jumlahKunci: daftarKunci.length,
+        adaKunci: daftarKunci.length > 0,
         createdAt: Number(r.created_at),
         updatedAt: r.updated_at ? Number(r.updated_at) : null,
       };

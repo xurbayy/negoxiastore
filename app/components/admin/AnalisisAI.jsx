@@ -1132,40 +1132,50 @@ export default function AnalisisAI() {
           ) : (
             <ul className="mt-2 space-y-1.5">
               {daftarProvider.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
-                    <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
-                  </div>
-                  {p.adaKunci ? (
+                <>
+                <li key={p.id} className="rounded-lg border border-border-soft bg-bg-soft/40 px-3 py-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{p.nama}</p>
+                      <p className="truncate text-[0.7rem] text-ink-muted">{p.baseUrl}</p>
+                    </div>
+                    <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-semibold text-ink-muted">
+                      {p.jumlahKunci || 0} key
+                    </span>
                     <button
                       type="button"
                       onClick={() => toggleLihatKunci(p.id)}
-                      title={kunciTerlihat[p.id] ? 'Sembunyikan API key' : 'Lihat API key'}
-                      className="shrink-0 max-w-[220px] truncate rounded-full bg-card-cream px-2 py-0.5 font-mono text-[0.6rem] text-ink-faint transition hover:bg-accent/15 hover:text-ink cursor-pointer"
+                      title={kunciTerlihat[p.id] ? 'Sembunyikan kunci' : 'Lihat kunci'}
+                      className="shrink-0 rounded border border-border-soft px-1.5 py-1 text-ink-muted transition hover:text-ink cursor-pointer"
                     >
-                      {kunciTerlihat[p.id] ? kunciTerlihat[p.id] : `${p.kunciTersamar} 👁`}
+                      {kunciTerlihat[p.id] ? '🙈' : '👁'}
                     </button>
-                  ) : (
-                    <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 text-[0.6rem] font-bold text-danger">
-                      tanpa kunci
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => mulaiEditProvider(p)}
-                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => hapusProvider(p.id)}
-                    className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-                  >
-                    Hapus
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => mulaiEditProvider(p)}
+                      className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => hapusProvider(p.id)}
+                      className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </li>
+                // Daftar key terlihat (saat toggle 👁 aktif)
+                {kunciTerlihat[p.id] && p.kunci && (
+                  <li className="ml-4 space-y-1 rounded-lg border border-border-soft bg-card-cream px-3 py-2">
+                    <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">API Key ({p.jumlahKunci})</p>
+                    {p.kunci.map((k) => (
+                      <p key={k.id} className="break-all font-mono text-[0.65rem] text-ink-muted">{k.tersamar}</p>
+                    ))}
+                  </li>
+                )}
+                </>
               ))}
             </ul>
           )}
