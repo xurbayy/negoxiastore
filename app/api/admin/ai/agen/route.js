@@ -4,7 +4,7 @@ import { getLatestSnapshot } from '../../../../lib/snapshot';
 import { susunKonteks } from '../../../../lib/aiKonteks';
 import { susunKonteksKode } from '../../../../lib/kodeBase';
 import { tanyaGroq } from '../../../../lib/groq';
-import { PROMPT_AGEN, uraikanUsulan, uraikanSaran, validasiUsulan, risikoAksi } from '../../../../lib/aiAgen';
+import { PROMPT_AGEN, uraikanUsulan, validasiUsulan, risikoAksi } from '../../../../lib/aiAgen';
 import { json } from '../../../../lib/api-helpers';
 import { hariIniWib } from '../../../../lib/waktuWib';
 
@@ -146,17 +146,10 @@ export async function POST(request) {
   });
   const agenId = Number(ins.lastInsertRowid ?? 0);
 
-  // Simpan SARAN PER PERAN (kartu saran panel diambil dari sini - dinamis).
-  let saranTersimpan = 0;
-  for (const s of uraikanSaran(hasil.teks)) {
-    for (const teksSaran of s.saran) {
-      await db.execute({
-        sql: 'INSERT INTO ai_agen_saran (peran, saran, dibuat_at) VALUES (?, ?, ?)',
-        args: [s.peran, teksSaran.slice(0, 300), Date.now()],
-      });
-      saranTersimpan++;
-    }
-  }
+  // CATATAN (permintaan pemilik 2026-10-02): agen TIDAK lagi menyimpan saran
+  // per peran. Saran cepat sekarang dari "Cari topik AI" (Analisis/Diskusi).
+  // Agen cukup fokus: laporan + usulan aksi. Ini meringankan tugas agen.
+  // Kartu saran tetap bisa dari ai_agen_saran LAMA (kalau masih ada).
 
   // Simpan usulan yang LOLOS validasi saja (aman).
   let tersimpan = 0;

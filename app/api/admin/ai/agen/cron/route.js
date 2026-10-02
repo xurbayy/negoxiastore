@@ -3,7 +3,7 @@ import { getLatestSnapshot } from '../../../../../lib/snapshot';
 import { susunKonteks } from '../../../../../lib/aiKonteks';
 import { susunKonteksKode } from '../../../../../lib/kodeBase';
 import { tanyaGroq } from '../../../../../lib/groq';
-import { PROMPT_AGEN, uraikanUsulan, uraikanSaran, validasiUsulan } from '../../../../../lib/aiAgen';
+import { PROMPT_AGEN, uraikanUsulan, validasiUsulan } from '../../../../../lib/aiAgen';
 import { json } from '../../../../../lib/api-helpers';
 import { hariIniWib } from '../../../../../lib/waktuWib';
 
@@ -75,15 +75,8 @@ export async function GET(request) {
   });
   const agenId = Number(ins.lastInsertRowid ?? 0);
 
-  // Simpan SARAN PER PERAN (kartu saran panel dari sini).
-  for (const s of uraikanSaran(hasil.teks)) {
-    for (const teksSaran of s.saran) {
-      await db.execute({
-        sql: 'INSERT INTO ai_agen_saran (peran, saran, dibuat_at) VALUES (?, ?, ?)',
-        args: [s.peran, teksSaran.slice(0, 300), Date.now()],
-      });
-    }
-  }
+  // Agen tidak lagi menyimpan saran per peran (permintaan pemilik 2026-10-02:
+  // saran cepat dari "Cari topik AI"). Agen fokus laporan + usulan aksi.
 
   let tersimpan = 0;
   for (const u of usulan) {
