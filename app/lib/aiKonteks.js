@@ -414,6 +414,49 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
   L.push('Guild: ' + (gs.total ?? 0) + ' dibuat, ' + (gs.adaAnggota ?? 0) +
     ' punya anggota, ' + (gs.warSelesai ?? 0) + ' war selesai');
 
+  // ---------- TRANSFER POIN ANTAR PEMAIN ----------
+  // Permintaan pemilik 2026-10-02: "semua kegiatan transfer point player satu
+  // sama lain ... sangat lengkap".
+  const tf = m.transferAntarPemain || {};
+  if (tf.ringkas) {
+    L.push('');
+    L.push('### TRANSFER POIN ANTAR PEMAIN');
+    L.push(`Ringkasan (200 terakhir): ${tf.ringkas.totalTransaksi ?? 0} transfer, total ${rupiah(tf.ringkas.totalPoinTransfer)}`);
+    const pair = tf.top || [];
+    if (pair.length) {
+      L.push('Pasangan transfer terbesar (dari -> ke | total | berapa kali | terakhir):');
+      for (const p of pair.slice(0, 15)) {
+        const hari = p.terakhir ? Math.floor((Date.now() - Number(p.terakhir)) / 86400000) : null;
+        L.push(`- ${p.dari} -> ${p.ke} | ${rupiah(p.total)} | ${p.jumlah}x${hari != null ? ` | ${hari} hari lalu` : ''}`);
+      }
+    } else {
+      L.push('Belum ada transfer poin antar pemain.');
+    }
+  }
+
+  // ---------- AKTIVITAS & AFK PEMAIN ----------
+  // Permintaan pemilik 2026-10-02: "afk yang paling banyak afk dan lainnya".
+  const ap = m.aktivitasPemain || {};
+  if (ap.seringMain || ap.afk) {
+    L.push('');
+    L.push('### AKTIVITAS & AFK PEMAIN');
+    L.push(`Belum pernah main: ${ap.belumPernahMain ?? 0} pemain | main sekali lalu hilang: ${ap.onceMain ?? ap.sekaliMain ?? 0} pemain`);
+    const sering = ap.seringMain || [];
+    if (sering.length) {
+      L.push('Paling sering main (30 hari):');
+      for (const s of sering.slice(0, 10)) {
+        L.push(`- ${s.username || s.userId} | ${s.main} game main`);
+      }
+    }
+    const afk = ap.afk || [];
+    if (afk.length) {
+      L.push('Paling lama TIDAK main (AFK/churn risk):');
+      for (const a of afk.slice(0, 15)) {
+        L.push(`- ${a.username || a.userId} | ${a.hariSejakMain == null ? 'belum pernah main' : a.hariSejakMain + ' hari tidak main'} | poin ${rupiah(a.points)}`);
+      }
+    }
+  }
+
   // ---------- PROFIL MENDALAM PEMAIN TERATAS ----------
   // Permintaan pemilik 2026-09-30: "data sweetsucidial kurang lengkap, gw mau
   // selengkap mungkin". Sebelumnya hanya rank + poin + level; sekarang bot
@@ -948,7 +991,17 @@ export function saranDinamis(snap) {
   // Cadangan: selalu sediakan beberapa saran umum supaya kartu tidak kosong.
   push('game-baru', 'Ide game baru', 'Usulkan 3 ide game BARU yang inovatif dan nyambung dengan minat pemain NEXO saat ini. Jangan ulang game yang sudah ada.');
   push('yang-perlu-diperbaiki', 'Apa yang harus diperbaiki?', 'Dari semua data yang ada, 3 hal apa yang paling mendesak untuk diperbaiki? Urut dari yang paling berdampak.');
-  push('strategi-ekonomi', 'Strategi ekonomi', 'Bagaimana menyeimbangkan poin beredar supaya ekonomi tetap sehat? Ada tanda inflasi atau deflasi?');
+    push('strategi-ekonomi', 'Strategi ekonomi', 'Bagaimana menyeimbangkan poin beredar supaya ekonomi tetap sehat? Ada tanda inflasi atau deflasi?');
+
+  // 14. Transfer poin antar pemain.
+  if ((m.transferAntarPemain?.ringkas?.totalTransaksi || 0) > 0) {
+    push('dyn-transfer', 'Pola transfer poin', `Ada ${m.transferAntarPemain.ringkas.totalTransaksi} transfer poin antar pemain (total ${Math.round(m.transferAntarPemain.ringkas.totalPoinTransfer || 0).toLocaleString('id-ID')} poin). Apakah ada pola mencurigakan seperti transfer melingkar atau pengumpulan poin ke satu akun?`);
+  }
+
+  // 15. Pemain AFK / churn.
+  if ((m.aktivitasPemain?.afk?.length || 0) > 0 || (m.aktivitasPemain?.belumPernahMain || 0) > 0) {
+    push('dyn-afk', 'Pemain AFK & churn', `Ada ${m.aktivitasPemain?.belumPernahMain || 0} pemain belum pernah main dan banyak yang lama tidak main. Siapa saja dan bagaimana cara menarik mereka kembali?`);
+  }
 
   // ACAK urutan supaya tidak selalu sama (permintaan pemilik 2026-10-02:
   // "muat ulang masih sama si itu-itu aja").
