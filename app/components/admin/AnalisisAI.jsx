@@ -1177,13 +1177,25 @@ export default function AnalisisAI() {
                 <input
                   value={formProv.api_key}
                   onChange={(e) => setFormProv({ ...formProv, api_key: e.target.value })}
-                  placeholder="API key (boleh beberapa, pisah koma)"
+                  placeholder={editProvId ? 'Kosongkan = tidak ubah kunci lama (klik Lihat untuk melihat)' : 'API key (boleh beberapa, pisah koma)'}
                   type={lihatInputKunci ? 'text' : 'password'}
                   className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 pr-14 text-xs text-ink outline-none focus:border-accent"
                 />
                 <button
                   type="button"
-                  onClick={() => setLihatInputKunci((v) => !v)}
+                  onClick={async () => {
+                    // Mode edit + field kosong: tombol "Lihat" mengambil KUNCI
+                    // TERSIMPAN dari server lalu mengisinya (supaya bisa dilihat),
+                    // bukan sekadar toggle field kosong.
+                    if (editProvId && !formProv.api_key && !lihatInputKunci) {
+                      await toggleLihatKunci(editProvId);
+                      const asli = kunciTerlihat[editProvId];
+                      if (asli) { setFormProv((s) => ({ ...s, api_key: asli })); setLihatInputKunci(true); }
+                      else { setPesanSimpan('Kunci tersimpan tidak bisa dibaca (mungkin SESSION_SECRET beda).'); setTimeout(() => setPesanSimpan(null), 4000); }
+                      return;
+                    }
+                    setLihatInputKunci((v) => !v);
+                  }}
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:text-ink cursor-pointer"
                 >
                   {lihatInputKunci ? 'Sembunyi' : 'Lihat'}
