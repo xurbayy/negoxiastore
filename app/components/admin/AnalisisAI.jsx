@@ -370,40 +370,62 @@ export default function AnalisisAI() {
   const jumlahPengingat = pengingatAktif.length;
   const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
-  // Muat percakapan terakhir dari localStorage supaya TIDAK HILANG saat
-  // refresh - perilaku yang diharapkan dari sebuah chat.
+  // Muat percakapan & laporan dari SERVER (lintas device) via prefs.
+  // Fallback ke localStorage kalau server gagal.
+  const chatLoaded = useRef(false);
   useEffect(() => {
-    try {
-      const simpan = window.localStorage.getItem('nexo_ai_chat');
-      if (simpan) {
-        const arr = JSON.parse(simpan);
-        if (Array.isArray(arr)) setPesan(arr.slice(-40));
-      }
-    } catch { /* data rusak / localStorage diblokir - mulai dari kosong */ }
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
+        const d = await res.json();
+        if (d.ok && d.prefs) {
+          if (Array.isArray(d.prefs.chat) && d.prefs.chat.length) {
+            setPesan(d.prefs.chat);
+            chatLoaded.current = true;
+            return;
+          }
+          if (Array.isArray(d.prefs.laporan) && d.prefs.laporan.length) {
+            setLaporan(d.prefs.laporan);
+          }
+        }
+      } catch { /* fallback ke localStorage */ }
+      // Fallback: localStorage.
+      try {
+        const simpan = window.localStorage.getItem('nexo_ai_chat');
+        if (simpan) {
+          const arr = JSON.parse(simpan);
+          if (Array.isArray(arr)) setPesan(arr.slice(-40));
+        }
+      } catch { /* data rusak */ }
+      try {
+        const simpanL = window.localStorage.getItem('nexo_ai_laporan');
+        if (simpanL) {
+          const arr = JSON.parse(simpanL);
+          if (Array.isArray(arr)) setLaporan(arr.slice(0, 30));
+        }
+      } catch { /* data rusak */ }
+      chatLoaded.current = true;
+    })();
   }, []);
 
-  // Simpan tiap kali percakapan berubah.
+  // Simpan percakapan & laporan ke SERVER + localStorage (debounced 2 detik).
+  const chatSaveRef = useRef(null);
   useEffect(() => {
-    try { window.localStorage.setItem('nexo_ai_chat', JSON.stringify(pesan.slice(-40))); } catch { /* penuh/diblokir */ }
-  }, [pesan]);
-
-  // LAPORAN ANALISIS juga disimpan di localStorage - permintaan pemilik
-  // 2026-10-02: "hasil ini kalo refresh ga ilang semua, kecuali gw hapus
-  // manual". Simpan berapa pun hasilnya (dibatasi 30 terbaru) supaya tidak
-  // membebani localStorage.
-  useEffect(() => {
-    try {
-      const simpan = window.localStorage.getItem('nexo_ai_laporan');
-      if (simpan) {
-        const arr = JSON.parse(simpan);
-        if (Array.isArray(arr)) setLaporan(arr.slice(0, 30));
-      }
-    } catch { /* data rusak / diblokir - mulai kosong */ }
-  }, []);
-
-  useEffect(() => {
-    try { window.localStorage.setItem('nexo_ai_laporan', JSON.stringify(laporan.slice(0, 30))); } catch { /* penuh/diblokir */ }
-  }, [laporan]);
+    if (!chatLoaded.current) return;
+    clearTimeout(chatSaveRef.current);
+    chatSaveRef.current = setTimeout(async () => {
+      try { window.localStorage.setItem('nexo_ai_chat', JSON.stringify(pesan.slice(-40))); } catch { /* penuh */ }
+      try { window.localStorage.setItem('nexo_ai_laporan', JSON.stringify(laporan.slice(0, 30))); } catch { /* penuh */ }
+      try {
+        await fetch('/api/admin/ai/prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat: pesan.slice(-40), laporan: laporan.slice(0, 30) }),
+        });
+      } catch { /* offline */ }
+    }, 2000);
+    return () => clearTimeout(chatSaveRef.current);
+  }, [pesan, laporan]);
 
   // Muat daftar arsip saat komponen dibuka.
   const muatArsip = useCallback(async () => {

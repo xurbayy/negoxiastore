@@ -67,6 +67,14 @@ export async function POST(request) {
     ...(body?.kecerdasan !== undefined ? { kecerdasan: Number(body.kecerdasan) || null } : {}),
     ...(body?.agentProvider !== undefined ? { agentProvider: String(body.agentProvider).slice(0, 80) } : {}),
     ...(body?.agentModel !== undefined ? { agentModel: String(body.agentModel).slice(0, 160) } : {}),
+    // Chat diskusi aktif (lintas device).
+    ...(body?.chat !== undefined
+      ? { chat: Array.isArray(body.chat) ? body.chat.slice(-40) : [] }
+      : {}),
+    // Laporan analisis aktif (lintas device).
+    ...(body?.laporan !== undefined
+      ? { laporan: Array.isArray(body.laporan) ? body.laporan.slice(-30) : [] }
+      : {}),
   };
 
   await db.execute({
