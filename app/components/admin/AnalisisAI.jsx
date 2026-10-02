@@ -368,7 +368,7 @@ export default function AnalisisAI() {
         else kotakHasil.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }, 80);
     }
-  }, [mode, tungguSampai]);
+  }, [mode, tungguSampai, provider, modelInput]);
 
   const kirimBebas = (e) => {
     e.preventDefault();
