@@ -207,11 +207,18 @@ export async function infoProviderLengkap(providerTerpilih) {
 
   // Info provider aktif (bisa kustom).
   const aktifInfo = await providerInfo(aktif);
+  // "siap" = ADA provider mana pun yang punya kunci (bawaan atau kustom).
+  // PENTING: dulu `aktif` hanya cek provider default (AI_PROVIDER). Kalau
+  // default-nya Groq tanpa kunci tapi pemilik pakai provider kustom, panel
+  // salah bilang "belum aktif". Sekarang dicek menyeluruh.
+  const adaKunciBawaan = ['groq', 'openrouter'].some((k) => daftarKunci(k).length > 0);
+  const adaKunciKustom = tersedia.some((t) => t.kustom && t.kunci > 0);
   return {
     aktif,
     label: aktifInfo?.label || aktif,
     model: modelDipakai(aktif),
     kunci: (aktifInfo?.kunci || []).length,
+    siap: (aktifInfo?.kunci || []).length > 0 || adaKunciBawaan || adaKunciKustom,
     tersedia,
     models: modelTersimpan,
   };

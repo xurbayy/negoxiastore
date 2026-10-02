@@ -435,7 +435,7 @@ export async function GET() {
   const info = await infoProviderLengkap();
   return json({
     ok: true,
-    aktif: info.kunci > 0,
+    aktif: info.siap,
     jumlahKunci: info.kunci,
     model: info.model,
     provider: info.aktif,

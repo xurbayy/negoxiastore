@@ -861,11 +861,13 @@ export default function AnalisisAI() {
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h3 className="font-display text-ink">Analisis AI belum aktif</h3>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          Isi <strong className="text-ink">GROQ_API_KEY</strong> di environment
-          (Vercel &gt; Settings &gt; Environment Variables), lalu deploy ulang.
-          Bisa lebih dari satu kunci dipisah koma supaya otomatis pindah saat
-          satu kena batas kuota.
+          Belum ada provider AI yang punya API key. Pilih salah satu:
         </p>
+        <ul className="mt-2 space-y-1 text-sm leading-relaxed text-ink-muted">
+          <li>- Isi <strong className="text-ink">GROQ_API_KEY</strong> atau <strong className="text-ink">OPENROUTER_API_KEY</strong> di environment (Vercel &gt; Settings &gt; Environment Variables), lalu deploy ulang.</li>
+          <li>- Atau tambah provider sendiri lewat tombol <strong className="text-ink">Kelola provider &amp; model</strong> di bawah (API key disimpan terenkripsi di database, tanpa perlu deploy ulang).</li>
+        </ul>
+        <p className="mt-2 text-xs text-ink-faint">Beberapa kunci bisa dipisah koma supaya otomatis pindah saat satu kena batas kuota.</p>
       </div>
     );
   }
