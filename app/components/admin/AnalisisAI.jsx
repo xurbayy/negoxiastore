@@ -1126,47 +1126,30 @@ export default function AnalisisAI() {
     );
   }
 
-  if (!siap) {
-    return (
-      <div className="space-y-4">
-        <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-          <h3 className="font-display text-ink">Analisis AI belum aktif</h3>
-          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-            Belum ada provider AI yang punya API key. Pilih salah satu:
-          </p>
-          <ul className="mt-2 space-y-1 text-sm leading-relaxed text-ink-muted">
-            <li>- Isi <strong className="text-ink">GROQ_API_KEY</strong> atau <strong className="text-ink">OPENROUTER_API_KEY</strong> di environment (Vercel &gt; Settings &gt; Environment Variables), lalu deploy ulang.</li>
-            <li>- Atau tambah provider sendiri lewat tombol <strong className="text-ink">Kelola provider &amp; model</strong> di bawah (API key disimpan terenkripsi di database, tanpa perlu deploy ulang).</li>
-          </ul>
-          <p className="mt-2 text-xs text-ink-faint">Beberapa kunci bisa dipisah koma supaya otomatis pindah saat satu kena batas kuota.</p>
-          {/* Diagnostik: tampilkan env yang terbaca server supaya jelas. */}
-          {status?.diag && (
-            <div className="mt-2 rounded-lg bg-bg-soft/50 px-3 py-2 text-[0.65rem] text-ink-muted">
-              <p className="font-bold text-ink-muted">Terbaca server:</p>
-              <ul className="mt-0.5 space-y-0.5">
-                <li>AI_PROVIDER: {status.diag.AI_PROVIDER || '(kosong)'}</li>
-                <li>AI_BASE_URL: {status.diag.AI_BASE_URL || '(kosong)'}</li>
-                <li>GROQ_API_KEY: {status.diag.adaGroq ? `${status.diag.jumlahGroq} kunci` : 'TIDAK ADA'}</li>
-                <li>OPENROUTER_API_KEY: {status.diag.adaOpenrouter ? `${status.diag.jumlahOpenrouter} kunci` : 'TIDAK ADA'}</li>
-                <li>Provider bawaan: {status.diag.providerBawaanTerbaca.join(', ') || '-'}</li>
-              </ul>
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => { setKelola((v) => !v); if (!kelola) muatKelola(); }}
-            className="btn-primary mt-3 text-sm"
-          >
-            {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
-          </button>
-        </div>
-        {kelola && renderKelola()}
-      </div>
-    );
-  }
+  // CATATAN DESAIN (fix 2026-10-02): dulu ada layar "belum aktif" yang
+  // MENGGANTIKAN seluruh halaman -> pemilik mentok. Sekarang TIDAK ADA layar
+  // buntu: panel selalu tampil, kalau belum siap cuma muncul banner peringatan
+  // di atas. Provider kustom yang tersimpan tetap bisa langsung dipakai.
 
   return (
     <div className="space-y-4">
+      {/* Banner peringatan kalau belum ada provider siap (bukan penghalang). */}
+      {!siap && (
+        <div className="nx-card border-danger/40 px-4 py-3 sm:px-5">
+          <p className="text-sm font-bold text-danger">Belum ada provider AI yang siap dipakai</p>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+            Pastikan <strong className="text-ink">GROQ_API_KEY</strong> / <strong className="text-ink">OPENROUTER_API_KEY</strong> terisi lalu redeploy, atau tambah provider sendiri lewat <strong className="text-ink">Kelola provider &amp; model</strong> (disimpan terenkripsi di database, tanpa redeploy).
+          </p>
+          {status?.diag && (
+            <ul className="mt-2 space-y-0.5 text-[0.65rem] text-ink-faint">
+              <li>AI_PROVIDER: {status.diag.AI_PROVIDER || '(kosong)'} | AI_BASE_URL: {status.diag.AI_BASE_URL || '(kosong)'}</li>
+              <li>GROQ_API_KEY: {status.diag.adaGroq ? `${status.diag.jumlahGroq} kunci` : 'TIDAK ADA'} | OPENROUTER_API_KEY: {status.diag.adaOpenrouter ? `${status.diag.jumlahOpenrouter} kunci` : 'TIDAK ADA'}</li>
+              <li>Provider bawaan terbaca: {(status.diag.providerBawaanTerbaca || []).join(', ') || '-'}</li>
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* ==========================================
           PANEL PENGINGAT (muncul saat tombol lonceng diklik)
           ==========================================
