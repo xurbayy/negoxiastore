@@ -185,15 +185,36 @@ export async function PATCH(request) {
   }
 
   // Edit provider. api_key opsional: kosong = jangan ubah kunci lama.
+  // Jika diisi: APPEND ke kunci lama (bukan replace) - permintaan pemilik
+  // 2026-10-02: "bisa nambah api key lebih dari satu".
+  // Kirim replace_keys: true untuk ganti SEMUA kunci (mis. hapus kunci lama).
   const nama = String(body?.nama || '').trim().slice(0, 60);
   const baseUrl = String(body?.base_url || '').trim().slice(0, 300);
   const apiKey = String(body?.api_key || '').trim().slice(0, 500);
+  const replaceKeys = body?.replace_keys === true;
   const envKey = body?.env_key === undefined ? undefined : String(body?.env_key || '').trim().slice(0, 60);
   if (!nama || !baseUrl) return json({ ok: false, error: 'Nama dan URL wajib diisi.' }, 400);
 
   const fields = ['nama = ?', 'base_url = ?', 'updated_at = ?'];
   const args = [nama, baseUrl, Date.now()];
-  if (apiKey) { fields.push('api_key_enc = ?'); args.push(enkripsiKunci(apiKey)); }
+  if (apiKey) {
+    if (replaceKeys) {
+      // Replace semua kunci (hapus yang lama).
+      fields.push('api_key_enc = ?');
+      args.push(enkripsiKunci(apiKey));
+    } else {
+      // Default: APPEND ke kunci lama, hindari duplikat.
+      const lama = await db.execute({ sql: 'SELECT api_key_enc FROM ai_providers WHERE id = ?', args: [id] });
+      const kunciLama = dekripsiKunci(lama.rows?.[0]?.api_key_enc);
+      const semuaKunci = kunciLama ? String(kunciLama).split(',').map((k) => k.trim()).filter(Boolean) : [];
+      const kunciBaruList = apiKey.split(',').map((k) => k.trim()).filter(Boolean);
+      for (const kb of kunciBaruList) {
+        if (!semuaKunci.includes(kb)) semuaKunci.push(kb);
+      }
+      fields.push('api_key_enc = ?');
+      args.push(enkripsiKunci(semuaKunci.join(',')));
+    }
+  }
   if (envKey !== undefined) { fields.push('env_key = ?'); args.push(envKey || null); }
   args.push(id);
   await db.execute({ sql: `UPDATE ai_providers SET ${fields.join(', ')} WHERE id = ?`, args });

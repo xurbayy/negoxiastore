@@ -27,6 +27,10 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   const [jalanAgen, setJalanAgen] = useState(false);
   const [pesan, setPesan] = useState(null);
   const [bukaRiwayat, setBukaRiwayat] = useState(false);
+  // Provider TERPISAH untuk agen (bukan milik Analisis/Diskusi).
+  const [agentProvider, setAgentProvider] = useState('');
+  const [agentModel, setAgentModel] = useState('');
+  const [daftarProv, setDaftarProv] = useState([]);
   // Auto-run: agen jalan otomatis tiap 6 jam saat toggle AKTIF.
   const [autoJalan, setAutoJalan] = useState(() => {
     try { return window.localStorage.getItem('nexo_agen_auto') === '1'; } catch { return false; }
@@ -40,6 +44,32 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     try { window.localStorage.setItem('nexo_agen_auto', autoJalan ? '1' : '0'); } catch { /* abaikan */ }
   }, [autoJalan]);
 
+  // Load daftar provider untuk dropdown agen (terpisah dari Analisis/Diskusi).
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/ai/providers', { cache: 'no-store' });
+        const d = await res.json();
+        if (d.ok) {
+          const daftar = [];
+          // Provider bawaan.
+          if (d.groq) daftar.push({ id: 'groq', nama: d.groq.nama || 'Groq' });
+          if (d.openrouter) daftar.push({ id: 'openrouter', nama: d.openrouter.nama || 'OpenRouter' });
+          // Provider kustom.
+          (d.daftar || []).forEach((p) => daftar.push({ id: p.id, nama: p.nama }));
+          setDaftarProv(daftar);
+          // Restore pilihan tersimpan.
+          try {
+            const sp = window.localStorage.getItem('nexo_agen_provider') || '';
+            const sm = window.localStorage.getItem('nexo_agen_model') || '';
+            if (sp) setAgentProvider(sp);
+            if (sm) setAgentModel(sm);
+          } catch { /* abaikan */ }
+        }
+      } catch { /* abaikan */ }
+    })();
+  }, []);
+
   // AUTO-RUN: saat toggle AKTIF, agen jalan otomatis tiap 6 jam (hemat token,
   // bukan terus-menerus). Interval hanya jalan saat tab aktif.
   const jalankanAgenRef = useRef(null);
@@ -47,11 +77,10 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     if (!autoJalan) return;
     const iv = setInterval(() => {
       if (document.hidden) return; // skip saat tab tersembunyi
-      if (!provider?.trim() || !model?.trim()) return; // belum pilih model
       jalankanAgenRef.current?.();
     }, 6 * 60 * 60 * 1000); // 6 jam
     return () => clearInterval(iv);
-  }, [autoJalan, provider, model]);
+  }, [autoJalan]);
 
   const muat = useCallback(async () => {
     setMemuat(true);
@@ -90,12 +119,12 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
 
   useEffect(() => { muat(); }, [muat]);
 
-  // Jalankan agen sekarang (analisis 1x). Pakai MODEL & PROVIDER yang dipilih
-  // pemilik di bar kontrol (permintaan pemilik 2026-10-02: "modelnya dari situ").
+  // Jalankan agen sekarang (analisis 1x). Pakai provider & model TERPISAH
+  // milik agen (bukan milik Analisis/Diskusi).
   const jalankanAgen = useCallback(async () => {
-    // Validasi: wajib ada model & provider (cegah request jalan ke default lalu timeout).
-    if (!provider?.trim() || !model?.trim()) {
-      flash('Pilih provider & model dulu di bar atas (klik "Lihat model" lalu "Pakai").');
+    // Validasi: wajib ada provider & model agen.
+    if (!agentProvider?.trim() || !agentModel?.trim()) {
+      flash('Pilih provider & model agen dulu di dropdown bawah.');
       return;
     }
     setJalanAgen(true);
@@ -104,22 +133,20 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: provider || undefined,
-          model: model || undefined,
-          // Token & kecerdasan DIPATOK server (agen jalan 24/7, efisien).
+          provider: agentProvider,
+          model: agentModel,
         }),
       });
       const d = await res.json();
       if (d.ok) {
         flash(`Agen selesai. ${d.usulanTersimpan} usulan dibuat.`);
         await muat();
-        // Beri tahu induk supaya kartu saran di tab lain ikut ter-refresh.
         if (typeof onSelesai === 'function') onSelesai();
       }
       else flash('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal: ' + e.message); }
     finally { setJalanAgen(false); }
-  }, [muat, provider, model, onSelesai]);
+  }, [muat, agentProvider, agentModel, onSelesai]);
 
   // Simpan referensi jalankanAgen untuk dipanggil dari interval auto-run.
   useEffect(() => { jalankanAgenRef.current = jalankanAgen; }, [jalankanAgen]);
@@ -155,7 +182,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {/* Toggle AUTO-RUN: agen jalan otomatis tiap 6 jam. */}
+            {/* Toggle AUTO-RUN: tombol berubah fungsi sesuai status. */}
             <button
               type="button"
               onClick={() => {
@@ -165,22 +192,53 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
                 if (baru) jalankanAgenRef.current?.();
               }}
               className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                autoJalan ? 'bg-success/15 text-success border border-success/40' : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
+                autoJalan ? 'bg-danger/15 text-danger border border-danger/40 hover:bg-danger/25' : 'border border-border-soft text-ink-muted hover:border-accent/60 hover:text-ink'
               }`}
             >
-              {autoJalan ? '● Agen aktif (6 jam)' : '○ Agen mati'}
+              {autoJalan ? 'Matikan agent' : 'Aktifkan agent'}
             </button>
+            {/* Analisis sekarang: jalan 1x tanpa mengubah status auto-run. */}
             <button
               type="button"
               onClick={jalankanAgen}
               disabled={jalanAgen || jalan || detikSisa > 0}
               className="btn-primary text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {jalanAgen ? 'Menganalisis...' : 'Jalankan sekarang'}
+              {jalanAgen ? 'Menganalisis...' : 'Analisis sekarang'}
             </button>
           </div>
         </div>
         {pesan && <p className="mt-2 text-xs font-semibold text-accent">{pesan}</p>}
+        {/* Provider & model TERPISAH untuk agen. */}
+        <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+          <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">Provider agen (terpisah dari Analisis/Diskusi)</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <select
+              value={agentProvider}
+              onChange={(e) => {
+                setAgentProvider(e.target.value);
+                setAgentModel(''); // reset model saat ganti provider
+                try { window.localStorage.setItem('nexo_agen_provider', e.target.value); } catch { /* abaikan */ }
+              }}
+              className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-sm text-ink focus:border-accent/50 focus:outline-none"
+            >
+              <option value="">Pilih provider...</option>
+              {daftarProv.map((p) => (
+                <option key={p.id} value={p.id}>{p.nama}</option>
+              ))}
+            </select>
+            <input
+              value={agentModel}
+              onChange={(e) => {
+                setAgentModel(e.target.value);
+                try { window.localStorage.setItem('nexo_agen_model', e.target.value); } catch { /* abaikan */ }
+              }}
+              placeholder="Nama model (mis. llama-3.3-70b-versatile)"
+              className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:border-accent/50 focus:outline-none"
+            />
+          </div>
+          <p className="mt-1.5 text-[0.6rem] text-ink-faint">Provider ini khusus agen. Provider untuk Analisis/Diskusi dipilih di tab masing-masing.</p>
+        </div>
       </div>
 
       {/* USULAN MENUNGGU PERSETUJUAN - paling penting, tampil di atas */}
