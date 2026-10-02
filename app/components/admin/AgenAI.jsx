@@ -175,9 +175,9 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
             <p className="mt-0.5 text-xs text-ink-muted">
               Memantau data &amp; kode bot, mengusulkan aksi + saran. Aksi hanya jalan setelah kamu setujui.
             </p>
-            {/* Model yang dipakai (dari bar kontrol) supaya jelas. */}
+            {/* Model yang dipakai AGEN (bukan milik Analisis/Diskusi). */}
             <p className="mt-0.5 text-[0.7rem] text-ink-faint">
-              Model: {provider || '-'} • {model || 'belum dipilih'}
+              Model: {agentProvider || '-'} • {agentModel || 'belum dipilih'}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -324,7 +324,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         </div>
       ) : !laporanTerbaru ? (
         <div className="nx-card px-4 py-6 text-center text-sm text-ink-muted">
-          Belum ada laporan. Klik "Jalankan agen sekarang" (laporan otomatis juga dibuat tiap jam 12.00 WIB).
+          Belum ada laporan. Klik "Analisis sekarang" (laporan otomatis juga dibuat tiap jam 12.00 WIB).
         </div>
       ) : (
         <div className="nx-card px-4 py-4 sm:px-5">
