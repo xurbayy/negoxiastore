@@ -5,6 +5,8 @@ import { tanyaGroq, infoProviderLengkap } from '../../../lib/groq';
 import { json } from '../../../lib/api-helpers';
 import { wibKeEpoch, formatWib, cariMomen } from '../../../lib/waktuWib';
 import { cariHariLibur } from '../../../lib/hariLibur';
+import { ambilPeran, daftarPeran, pintasanPeran } from '../../../lib/aiPeran';
+import { susunKonteksKode } from '../../../lib/kodeBase';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,10 +128,14 @@ async function izinkan() {
 //   SEKARANG: AI diminta MENJAWAB PERSIS YANG DITANYAKAN dulu, baru menambah
 //   bila relevan. Format tiga bagian hanya dipakai kalau pertanyaannya memang
 //   meminta analisis menyeluruh (tombol pintas).
-function sistemPrompt() {
+function sistemPrompt(peranId) {
+  const peran = ambilPeran(peranId);
   return [
     'Kamu asisten analisis data untuk NEXO Games, bot Discord mini-games berbahasa Indonesia.',
     'Pemilik bot memakai jawabanmu untuk mengambil keputusan (promo, harga, konten, komunitas).',
+    '',
+    // PERAN: ditambahkan dari modul aiPeran.js (modular).
+    peran.prompt,
     '',
     'CARA MENJAWAB (paling penting):',
     '1. JAWAB PERSIS YANG DITANYAKAN. Kalau ditanya satu hal, jawab satu hal itu.',
@@ -186,6 +192,8 @@ export async function POST(request) {
   const idPintasan = String(body?.pintasan || '').trim();
   const idSaran = String(body?.saran || '').trim();
   const tanyaBebas = String(body?.tanya || '').trim().slice(0, 2000);
+  // PERAN AI (modular): bug hunter / security / exploit / analyst / umum.
+  const peranId = String(body?.peran || 'umum').trim();
 
   // ==========================================
   // MODE JAWABAN (permintaan pemilik 2026-10-01)
@@ -229,7 +237,9 @@ export async function POST(request) {
 
   let instruksi = '';
   if (idPintasan) {
-    const p = PINTASAN.find((x) => x.id === idPintasan);
+    // Pintasan bisa dari PINTASAN umum ATAU pintasan khusus peran (modular).
+    const p = PINTASAN.find((x) => x.id === idPintasan)
+      || pintasanPeran(peranId).find((x) => x.id === idPintasan);
     if (!p) return json({ ok: false, error: 'Pintasan tidak dikenal.' }, 400);
     instruksi = p.tanya;
   } else if (idSaran) {
@@ -355,6 +365,10 @@ export async function POST(request) {
 
   const konteks = (await susunKonteks(snap, panel)) + konteksPemain;
 
+  // KODE BASE: kalau bot mengirim ringkasan kode, tambahkan ke konteks. Ini
+  // yang membuat peran bug/security/exploit/analyst bisa menganalisis kode.
+  const konteksKode = susunKonteksKode(snap?.kodeBase);
+
   // Tandai jenis tugas supaya AI tahu BENTUK jawaban yang diinginkan.
   // Inilah pembeda dua mode yang diminta pemilik:
   //   analisis -> tersusun Temuan / Saran / Risiko (laporan siap baca)
@@ -384,8 +398,8 @@ export async function POST(request) {
     : (penandaTugas + '\n\nPERTANYAAN: ' + instruksi);
 
   const pesan = [
-    { role: 'system', content: sistemPrompt() },
-    { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks },
+    { role: 'system', content: sistemPrompt(peranId) },
+    { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     ...riwayat,
     { role: 'user', content: kontenTerakhir },
   ];
@@ -468,9 +482,11 @@ export async function GET() {
     // SARAN DINAMIS: susun dari snapshot terkini supaya relevan dengan kondisi
     // saat ini (bukan daftar statis).
     let saranDin = [];
+    let snapKode = null;
     try {
       const snap = await getLatestSnapshot();
       saranDin = saranDinamis(snap).map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }));
+      snapKode = snap?.kodeBase || null;
     } catch { /* gagal ambil snapshot - pakai saran umum */ }
     if (!saranDin.length) {
       saranDin = SARAN_DISKUSI.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }));
@@ -500,6 +516,10 @@ export async function GET() {
       models: info.models,
       pintasan: PINTASAN.map((p) => ({ id: p.id, label: p.label })),
       saranDiskusi: saranDin,
+      // PERAN AI (modular) + pintasan per peran + status kode base.
+      peran: daftarPeran(),
+      pintasanPeran: Object.fromEntries(daftarPeran().map((p) => [p.id, pintasanPeran(p.id).map((x) => ({ id: x.id, label: x.label }))])),
+      adaKodeBase: Boolean(snapKode),
       diag,
     });
   } catch (e) {

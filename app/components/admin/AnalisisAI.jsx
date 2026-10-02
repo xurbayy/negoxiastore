@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmModal from './ConfirmModal';
+import PilihPeran from './PilihPeran';
 
 // ==========================================
 // AnalisisAI - tab asisten data di panel admin
@@ -160,6 +161,14 @@ export default function AnalisisAI() {
   const [mode, setMode] = useState(() => {
     try { return window.localStorage.getItem('nexo_ai_mode') || 'analisis'; } catch { return 'analisis'; }
   });
+  // PERAN AI (modular): umum / bug / security / exploit / analyst. Disimpan
+  // supaya tidak reset tiap buka.
+  const [peran, setPeran] = useState(() => {
+    try { return window.localStorage.getItem('nexo_ai_peran') || 'umum'; } catch { return 'umum'; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_peran', peran); } catch { /* abaikan */ }
+  }, [peran]);
   // Simpan mode terakhir supaya tidak reset tiap buka panel (mudah diakses).
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_mode', mode); } catch { /* abaikan */ }
@@ -448,7 +457,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, mode: modeKirim, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, kecerdasan: modelSetting.kecerdasan || undefined, gambar: gambarKirim.length ? gambarKirim : undefined }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, peran, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, kecerdasan: modelSetting.kecerdasan || undefined, gambar: gambarKirim.length ? gambarKirim : undefined }),
         signal: ac.signal,
       });
       clearTimeout(timer);
@@ -1810,6 +1819,16 @@ export default function AnalisisAI() {
             {kelola ? 'Tutup kelola' : 'Kelola provider & model'}
           </button>
         </div>
+
+        {/* PERAN AI (modular) - bug hunter / security / exploit / analyst. */}
+        <PilihPeran
+          peran={status?.peran || []}
+          nilai={peran}
+          onPilih={setPeran}
+          disabled={jalan}
+          adaKodeBase={status?.adaKodeBase}
+        />
+
         <p className="mt-1.5 text-xs text-ink-muted">
           {mode === 'analisis'
             ? 'Pilih topik cepat di bawah atau tulis pertanyaanmu sendiri.'
@@ -1840,9 +1859,9 @@ export default function AnalisisAI() {
                 di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(() => {
-                // Fallback: kalau server tidak kirim pintasan (GET /ai gagal),
-                // tetap tampilkan daftar bawaan. ID-nya SAMA dengan PINTASAN di
-                // server agar tetap dikenali saat dikirim.
+                // Kalau peran BUKAN umum -> pakai pintasan khusus peran dari
+                // server (status.pintasanPeran[peran]). Else -> pintasan umum.
+                const pintasanPeranIni = status?.pintasanPeran?.[peran] || [];
                 const PINTASAN_LOKAL = [
                   { id: 'promo', label: 'Saran Promo' },
                   { id: 'sepi', label: 'Item & Game Sepi' },
@@ -1854,7 +1873,9 @@ export default function AnalisisAI() {
                   { id: 'guild', label: 'Masalah Guild & War' },
                   { id: 'semua', label: 'Gambaran Menyeluruh' },
                 ];
-                const daftarPintasan = (status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL;
+                const daftarPintasan = (peran !== 'umum' && pintasanPeranIni.length)
+                  ? pintasanPeranIni
+                  : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL);
                 return daftarPintasan.map((p) => (
                   <button
                     key={p.id}
@@ -2067,7 +2088,8 @@ export default function AnalisisAI() {
           </div>
         )}
 
-        {/* Kartu saran klik (dari server; fallback lokal kalau server tak kirim). */}
+        {/* Kartu saran klik. Kalau peran non-umum: saran = pintasan peran
+            (teknis). Else: saran diskusi data biasa. */}
         {(() => {
           const SARAN_LOKAL = [
             { id: 'l-game', label: 'Game paling laris?', tanya: 'Game apa yang paling banyak dimainkan minggu ini dan kenapa menurutmu menarik? Kasih angka.' },
@@ -2077,7 +2099,10 @@ export default function AnalisisAI() {
             { id: 'l-perbaiki', label: 'Apa yang diperbaiki?', tanya: 'Dari semua data, 3 hal apa yang paling mendesak diperbaiki? Urut dari yang paling berdampak.' },
             { id: 'l-promo', label: 'Ide promo', tanya: 'Promo apa yang sebaiknya dijalankan berikutnya? Pilih item/game tepat dan jelaskan alasannya pakai angka.' },
           ];
-          const saran = (status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL;
+          const pintasanPeranIni = (status?.pintasanPeran?.[peran] || []).map((x) => ({ id: x.id, label: x.label, tanya: x.label }));
+          const saran = (peran !== 'umum' && pintasanPeranIni.length)
+            ? pintasanPeranIni
+            : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL);
           return (
             <div className="mt-3">
               <p className="mb-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-faint">
