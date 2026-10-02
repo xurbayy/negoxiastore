@@ -251,6 +251,11 @@ export default function AnalisisAI() {
   // dideklarasikan. Build tetap lolos karena JS menganggapnya variabel global
   // yang tidak ada; errornya baru muncul saat runtime.
   const [pesan, setPesan] = useState([]);
+  // DISKUSI TERSIMPAN (permintaan pemilik 2026-10-02: save/hapus/lanjutkan).
+  const [daftarDiskusi, setDaftarDiskusi] = useState([]);
+  const [bukaDiskusi, setBukaDiskusi] = useState(false);
+  const [diskusiAktifId, setDiskusiAktifId] = useState(null); // id sesi yang sedang dilanjutkan
+  const [memuatDiskusi, setMemuatDiskusi] = useState(false);
 
   // Hasil mode ANALISIS (searah): daftar laporan TEMUAN/SARAN/RISIKO.
   // Terpisah dari `pesan` supaya dua mode tidak saling mengotori tampilan.
@@ -525,6 +530,72 @@ export default function AnalisisAI() {
   const hapusSatuPesan = useCallback((idx) => {
     setPesan((p) => p.filter((_, i) => i !== idx));
   }, []);
+
+  // ==========================================
+  // DISKUSI TERSIMPAN (save / lanjut / hapus)
+  // ==========================================
+  const muatDiskusi = useCallback(async () => {
+    setMemuatDiskusi(true);
+    try {
+      const res = await fetch('/api/admin/ai/diskusi', { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setDaftarDiskusi(d.diskusi || []);
+    } catch { /* abaikan */ }
+    finally { setMemuatDiskusi(false); }
+  }, []);
+  useEffect(() => { muatDiskusi(); }, [muatDiskusi]);
+
+  // Simpan percakapan sekarang. Kalau sedang melanjutkan sesi (diskusiAktifId),
+  // perbarui (PATCH) supaya tidak menumpuk salinan.
+  const simpanDiskusi = useCallback(async () => {
+    if (pesan.length === 0) return;
+    const judul =
+      (pesan.find((m) => m.peran === 'gw')?.isi || 'Diskusi tanpa judul').slice(0, 80);
+    const muatan = { judul, pesan, model: modelInput || null, provider: provider || null };
+    try {
+      const res = await fetch(
+        '/api/admin/ai/diskusi' + (diskusiAktifId ? '?id=' + diskusiAktifId : ''),
+        { method: diskusiAktifId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(muatan) }
+      );
+      const d = await res.json();
+      if (d.ok) {
+        if (!diskusiAktifId && d.id) setDiskusiAktifId(d.id);
+        setPesanSimpan(diskusiAktifId ? 'Diskusi diperbarui.' : 'Diskusi disimpan.');
+        await muatDiskusi();
+      } else setPesanSimpan('Gagal simpan: ' + (d.error || 'tidak diketahui'));
+    } catch (e) { setPesanSimpan('Gagal simpan: ' + e.message); }
+    setTimeout(() => setPesanSimpan(null), 4000);
+  }, [pesan, modelInput, provider, diskusiAktifId, muatDiskusi]);
+
+  // Buka (lanjutkan) diskusi tersimpan.
+  const lanjutkanDiskusi = useCallback((d) => {
+    setPesan(Array.isArray(d.pesan) ? d.pesan : []);
+    setDiskusiAktifId(d.id);
+    if (d.provider) setProvider(d.provider);
+    if (d.model) setModelInput(d.model);
+    setMode('diskusi');
+    setBukaDiskusi(false);
+    setPesanSimpan(`Melanjutkan: ${d.judul}`);
+    setTimeout(() => setPesanSimpan(null), 4000);
+  }, []);
+
+  // Hapus SATU diskusi tersimpan (dengan konfirmasi).
+  const hapusDiskusi = useCallback((d) => {
+    setKonfirmasi({
+      judul: 'Hapus diskusi ini?',
+      body: `Diskusi "${d.judul}" akan dihapus permanen.`,
+      jalankan: async () => {
+        const res = await fetch('/api/admin/ai/diskusi?id=' + d.id, { method: 'DELETE' });
+        const r = await res.json();
+        if (r.ok) {
+          if (diskusiAktifId === d.id) setDiskusiAktifId(null);
+          await muatDiskusi();
+          setPesanSimpan('Diskusi dihapus.');
+          setTimeout(() => setPesanSimpan(null), 3000);
+        }
+      },
+    });
+  }, [diskusiAktifId, muatDiskusi]);
 
   // Hapus SELURUH laporan analisis (permintaan pemilik: bisa hapus manual).
   const hapusSemuaLaporan = useCallback(() => {
@@ -1846,17 +1917,77 @@ export default function AnalisisAI() {
                   Ngobrol bebas soal data NEXO - AI ingat percakapan ini.
                 </p>
               </div>
-              {pesan.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {pesan.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={simpanDiskusi}
+                    className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                    title="Simpan diskusi ini (bisa dilanjutkan kapan saja)"
+                  >
+                    {diskusiAktifId ? 'Perbarui' : 'Simpan diskusi'}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={mulaiBaru}
-                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
-                  title="Hapus seluruh percakapan dan mulai dari nol"
+                  onClick={() => { setBukaDiskusi((v) => !v); if (!bukaDiskusi) muatDiskusi(); }}
+                  className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-accent/50 hover:text-ink cursor-pointer"
+                  title="Daftar diskusi tersimpan"
                 >
-                  Mulai baru
+                  Tersimpan ({daftarDiskusi.length})
                 </button>
-              )}
+                {pesan.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={mulaiBaru}
+                    className="rounded-lg border border-border-soft px-3 py-1.5 text-xs font-semibold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                    title="Hapus seluruh percakapan dan mulai dari nol"
+                  >
+                    Mulai baru
+                  </button>
+                )}
+              </div>
             </div>
+
+        {/* Daftar diskusi tersimpan (save/hapus/lanjutkan). */}
+        {bukaDiskusi && (
+          <div className="mt-3 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+            <p className="text-xs font-bold text-ink-muted">Diskusi tersimpan</p>
+            {memuatDiskusi ? (
+              <p className="mt-2 text-xs text-ink-muted"><span className="pulse-dot" aria-hidden="true" /> Memuat...</p>
+            ) : daftarDiskusi.length === 0 ? (
+              <p className="mt-2 text-xs text-ink-muted">Belum ada. Tulis percakapan lalu klik "Simpan diskusi".</p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {daftarDiskusi.map((d) => (
+                  <li key={d.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border-soft bg-card-cream px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{d.judul}</p>
+                      <p className="text-[0.65rem] text-ink-faint">
+                        {Array.isArray(d.pesan) ? Math.ceil(d.pesan.length / 2) : 0} giliran • {new Date(d.updatedAt || d.createdAt).toLocaleString('id-ID')}
+                        {d.provider ? ` • ${d.provider}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => lanjutkanDiskusi(d)}
+                      className="shrink-0 rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
+                    >
+                      Lanjutkan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => hapusDiskusi(d)}
+                      className="shrink-0 rounded-lg border border-border-soft px-2.5 py-1 text-[0.7rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Kartu saran klik (sumber: SARAN_DISKUSI dari server). Selalu tampil
             supaya pemilik punya titik mulai - pertanyaan relevan soal data. */}

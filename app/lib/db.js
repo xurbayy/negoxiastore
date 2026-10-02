@@ -214,6 +214,21 @@ export async function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_ai_reminders_waktu ON ai_reminders(selesai, waktu_ingat);
 
+    -- DISKUSI TERSIMPAN (permintaan pemilik 2026-10-02).
+    -- "gw mau diskusi juga bisa gw save, bisa gw hapus, jadi bisa lanjutkan
+    -- diskusi kemarin." Menyimpan seluruh percakapan (JSON) dengan judul,
+    -- supaya bisa dibuka lagi & dilanjutkan kapan saja dari perangkat mana pun.
+    CREATE TABLE IF NOT EXISTS ai_diskusi (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        judul      TEXT NOT NULL,
+        pesan      TEXT NOT NULL,
+        model      TEXT,
+        provider   TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_diskusi_updated ON ai_diskusi(updated_at DESC);
+
     -- PROVIDER AI KUSTOM (permintaan pemilik 2026-10-02).
     -- Pemilik ingin bisa MENAMBAH provider sendiri (nama + URL + api key),
     -- lalu menyimpan & mengelola MODEL yang dipakai. Provider bawaan
