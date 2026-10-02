@@ -196,6 +196,8 @@ export default function AnalisisAI() {
   // Pengaturan model aktif: max token + kecerdasan (1-10). Diambil dari model
   // tersimpan saat dipilih, atau diubah manual di bar kontrol.
   const [modelSetting, setModelSetting] = useState({ maxTokens: null, kecerdasan: null });
+  // Info pemakaian / kuota provider (permintaan pemilik: "tau ini udah limit apa engga").
+  const [usage, setUsage] = useState({ status: 'idle' });
   // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
   // 2026-10-02: "provider model itu ada CRUD-nya semua".
   const [editProvId, setEditProvId] = useState(null);
@@ -217,6 +219,7 @@ export default function AnalisisAI() {
   useEffect(() => {
     setCekHasil({ status: 'idle' });
     setModelProv((s) => (s.status === 'ok' ? { ...s, status: 'idle' } : s));
+    setUsage({ status: 'idle' });
   }, [provider, modelInput]);
 
   // Hasil tes koneksi jadi basi begitu form provider diubah - reset.
@@ -832,6 +835,19 @@ export default function AnalisisAI() {
     }
   }, [provider, modelProv.hanyaGratis]);
 
+  // Cek pemakaian / kuota provider aktif.
+  const muatUsage = useCallback(async () => {
+    setUsage({ status: 'cek' });
+    try {
+      const res = await fetch(`/api/admin/ai/usage?provider=${encodeURIComponent(provider || '')}`, { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok) setUsage({ status: 'ok', data: d });
+      else setUsage({ status: 'gagal', pesan: d.error || 'Gagal cek kuota.' });
+    } catch (e) {
+      setUsage({ status: 'gagal', pesan: e.message });
+    }
+  }, [provider]);
+
   if (memuatStatus) {
     return (
       <div className="nx-card px-6 py-10 text-center text-sm text-ink-muted">
@@ -1055,7 +1071,68 @@ export default function AnalisisAI() {
           >
             {modelProv.status === 'cek' ? '...' : modelProv.status === 'ok' ? 'Tutup daftar' : 'Lihat model'}
           </button>
+          {/* Cek pemakaian / kuota provider. */}
+          <button
+            type="button"
+            onClick={() => { if (usage.status === 'ok') setUsage({ status: 'idle' }); else muatUsage(); }}
+            disabled={usage.status === 'cek'}
+            title="Lihat pemakaian / sisa kuota provider"
+            className="shrink-0 rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+          >
+            {usage.status === 'cek' ? '...' : usage.status === 'ok' ? 'Tutup usage' : 'Usage'}
+          </button>
         </div>
+
+        {/* Panel info pemakaian / kuota provider. */}
+        {usage.status === 'ok' && (
+          <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
+            <p className="text-xs font-bold text-ink">Pemakaian {usage.data.label}</p>
+            {/* OpenRouter: kredit + limit kunci + kuota harian gratis. */}
+            {usage.data.kredit && (
+              <ul className="mt-2 space-y-0.5 text-xs text-ink-muted">
+                <li>Kredit total: <strong className="text-ink">{usage.data.kredit.total}</strong> | terpakai: <strong className="text-ink">{usage.data.kredit.terpakai.toFixed(4)}</strong> | sisa: <strong className="text-ink">{usage.data.kredit.sisa.toFixed(4)}</strong></li>
+                {usage.data.kunci && (
+                  <li>Pemakaian kunci: harian {usage.data.kunci.harian.toFixed(4)} | bulanan {usage.data.kunci.bulanan.toFixed(4)} | total {usage.data.kunci.terpakai.toFixed(4)}
+                    {usage.data.kunci.limit != null && <> | limit {usage.data.kunci.limit}</>}
+                  </li>
+                )}
+                {usage.data.kunci?.freeTier && <li className="text-ink-faint">Akun tier gratis</li>}
+              </ul>
+            )}
+            {/* Kuota harian model gratis (OpenRouter). */}
+            {usage.data.harianGratis && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-ink-muted">Model gratis hari ini</span>
+                  <span className="font-semibold text-ink">{usage.data.harianGratis.terpakai}/{usage.data.harianGratis.limit} (sisa {usage.data.harianGratis.sisa})</span>
+                </div>
+                <div className="mt-1 h-2 overflow-hidden rounded-full bg-bg-soft">
+                  <div
+                    className={`h-full ${usage.data.harianGratis.sisa === 0 ? 'bg-danger' : 'bg-success'}`}
+                    style={{ width: `${usage.data.harianGratis.limit ? Math.min(100, (usage.data.harianGratis.terpakai / usage.data.harianGratis.limit) * 100) : 0}%` }}
+                  />
+                </div>
+                {usage.data.harianGratis.sisa === 0 && <p className="mt-1 text-[0.7rem] font-bold text-danger">Kuota harian model gratis HABIS - pakai model berbayar atau tunggu reset.</p>}
+              </div>
+            )}
+            {/* Groq / umum: rate limit token & request. */}
+            {usage.data.rate && (usage.data.rate.limitToken || usage.data.rate.limitRequest) && (
+              <ul className="mt-2 space-y-0.5 text-xs text-ink-muted">
+                {usage.data.rate.limitToken != null && (
+                  <li>Token: sisa <strong className="text-ink">{usage.data.rate.sisaToken}</strong> / {usage.data.rate.limitToken}{usage.data.rate.resetToken ? ` (reset ${usage.data.rate.resetToken})` : ''}</li>
+                )}
+                {usage.data.rate.limitRequest != null && (
+                  <li>Request: sisa <strong className="text-ink">{usage.data.rate.sisaRequest}</strong> / {usage.data.rate.limitRequest}</li>
+                )}
+              </ul>
+            )}
+            {usage.data.catatan && <p className="mt-2 text-xs text-ink-muted">{usage.data.catatan}</p>}
+            <p className="mt-2 text-[0.6rem] text-ink-faint">Info diambil langsung dari provider - hanya saat tombol ini diklik.</p>
+          </div>
+        )}
+        {usage.status === 'gagal' && (
+          <p className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-semibold text-danger">{usage.pesan}</p>
+        )}
 
         {/* Panel daftar model provider. */}
         {modelProv.status === 'ok' && (

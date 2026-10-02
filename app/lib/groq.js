@@ -365,6 +365,97 @@ export async function daftarModelProvider(namaProvider) {
   }
 }
 
+/**
+ * Ambil info PEMAKAIAN / kuota provider (permintaan pemilik 2026-10-02:
+ * "gw mau ada usage setiap provider jadi tau ini udah limit apa engga").
+ *
+ * Cara per provider:
+ *   - OpenRouter: GET /credits + GET /key -> kredit, penggunaan, limit harian
+ *     model gratis (free_model_daily_requests), sisa.
+ *   - Groq: kirim chat completion super-pendek lalu baca header
+ *     x-ratelimit-* (limit & sisa token/request + waktu reset).
+ *   - Kustom: coba /credits lalu /key (kalau provider OpenAI-compatible),
+ *     fallback ke rate-limit dari header /models.
+ *
+ * @returns {Promise<{ok:boolean, jenis:string, label?:string, error?:string, ...}>}
+ */
+export async function cekUsageProvider(namaProvider) {
+  const nama = resolveProvider(namaProvider);
+  const info = await providerInfo(nama);
+  if (!info) return { ok: false, error: `Provider "${nama}" tidak ditemukan.` };
+  if (!info.kunci.length) return { ok: false, error: `Kunci ${info.label} belum diisi.` };
+  const kunci = info.kunci[0];
+  const base = info.url.replace(/\/chat\/completions\/?$/, '');
+  const label = info.label;
+
+  // ---- OpenRouter: endpoint /credits + /key ----
+  try {
+    const [resKredit, resKey] = await Promise.all([
+      fetch(`${base}/credits`, { headers: { Authorization: `Bearer ${kunci}` }, signal: AbortSignal.timeout(15000) }),
+      fetch(`${base}/key`, { headers: { Authorization: `Bearer ${kunci}` }, signal: AbortSignal.timeout(15000) }),
+    ]);
+    if (resKey.ok) {
+      const dk = (await resKey.json().catch(() => null))?.data || {};
+      let kredit = null;
+      if (resKredit.ok) kredit = (await resKredit.json().catch(() => null))?.data || null;
+      const free = dk.free_model_daily_requests || null;
+      return {
+        ok: true, jenis: 'openrouter', label,
+        kredit: kredit ? {
+          total: Number(kredit.total_credits ?? 0),
+          terpakai: Number(kredit.total_usage ?? 0),
+          sisa: Math.max(0, Number(kredit.total_credits ?? 0) - Number(kredit.total_usage ?? 0)),
+        } : null,
+        kunci: {
+          limit: dk.limit ?? null,
+          sisaLimit: dk.limit_remaining ?? null,
+          terpakai: Number(dk.usage ?? 0),
+          harian: Number(dk.usage_daily ?? 0),
+          bulanan: Number(dk.usage_monthly ?? 0),
+          freeTier: Boolean(dk.is_free_tier),
+        },
+        harianGratis: free ? { terpakai: Number(free.used ?? 0), limit: Number(free.limit ?? 0), sisa: Number(free.remaining ?? 0) } : null,
+      };
+    }
+  } catch { /* bukan OpenRouter / gagal - lanjut ke cara Groq */ }
+
+  // ---- Groq / umum: rate-limit dari header chat completion ----
+  try {
+    const res = await fetch(info.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kunci}` },
+      body: JSON.stringify({ model: info.model || 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const h = (n) => res.headers.get(n);
+    const limReq = h('x-ratelimit-limit-requests');
+    const sisaReq = h('x-ratelimit-remaining-requests');
+    const limTok = h('x-ratelimit-limit-tokens');
+    const sisaTok = h('x-ratelimit-remaining-tokens');
+    const resetTok = h('x-ratelimit-reset-tokens');
+    if (limReq || limTok) {
+      return {
+        ok: true, jenis: 'ratelimit', label,
+        rate: {
+          limitRequest: limReq ? Number(limReq) : null,
+          sisaRequest: sisaReq ? Number(sisaReq) : null,
+          limitToken: limTok ? Number(limTok) : null,
+          sisaToken: sisaTok ? Number(sisaTok) : null,
+          resetToken: resetTok || null,
+          status: res.status,
+        },
+      };
+    }
+    // Tidak ada header rate-limit, tapi request berhasil -> provider hidup.
+    if (res.ok) return { ok: true, jenis: 'hidup', label, catatan: 'Provider merespons, tapi tidak menyediakan info kuota.' };
+    const pesanErr = res.status === 429 ? 'Kuota habis / rate limit tercapai.' : `HTTP ${res.status}.`;
+    return { ok: true, jenis: 'ratelimit', label, catatan: pesanErr, rate: { status: res.status } };
+  } catch (e) {
+    const pesan = e?.name === 'TimeoutError' ? 'Timeout saat cek kuota.' : (e?.message || String(e));
+    return { ok: false, error: pesan, label };
+  }
+}
+
 export async function cekModelAda(namaProvider, modelDicari) {
   const nama = resolveProvider(namaProvider);
   const info = await providerInfo(nama);
