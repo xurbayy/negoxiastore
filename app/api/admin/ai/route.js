@@ -417,7 +417,7 @@ export async function GET() {
     ok: true,
     aktif: adaGroq(),
     jumlahKunci: jumlahKunci(),
-    model: modelGroq(),
+    model: info.model,
     provider: info.aktif,
     providerLabel: info.label,
     providers: info.tersedia,

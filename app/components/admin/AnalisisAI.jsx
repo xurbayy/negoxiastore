@@ -125,9 +125,30 @@ export default function AnalisisAI() {
   //
   // Keduanya berbasis DATA yang sama; mode hanya mengubah BENTUK jawaban.
   const [mode, setMode] = useState('analisis');
-  // Provider & model AI (toggle di panel admin).
-  const [provider, setProvider] = useState('');
-  const [modelInput, setModelInput] = useState('');
+  // Provider & model AI (toggle di panel admin). Disimpan di localStorage
+  // supaya pilihan pemilik tidak reset tiap reload.
+  const [provider, setProvider] = useState(() => {
+    try { return window.localStorage.getItem('nexo_ai_provider') || ''; } catch { return ''; }
+  });
+  const [modelInput, setModelInput] = useState(() => {
+    try { return window.localStorage.getItem('nexo_ai_model') || ''; } catch { return ''; }
+  });
+
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
+  }, [provider]);
+  useEffect(() => {
+    try { window.localStorage.setItem('nexo_ai_model', modelInput || ''); } catch { /* abaikan */ }
+  }, [modelInput]);
+
+  // Kalau provider tersimpan (localStorage) tidak ada di daftar yang disediakan
+  // server (mis. 'custom' sudah dihapus), paksa ke provider aktif server.
+  useEffect(() => {
+    const daftar = status?.providers || [];
+    if (!daftar.length) return;
+    const valid = daftar.some((p) => p.id === provider);
+    if (!valid && status?.provider) setProvider(status.provider);
+  }, [status, provider]);
 
   // Percakapan mode DISKUSI (chat 2 arah): daftar pesan bergantian.
   // Struktur satu pesan: { peran: 'gw' | 'ai', isi, waktu, error? }
@@ -217,8 +238,17 @@ export default function AnalisisAI() {
         const d = await res.json();
         if (!batal) {
           setStatus(d);
-          if (d.provider) setProvider(d.provider);
-          if (d.model) setModelInput(d.model);
+          // Hanya inisialisasi provider/model dari server kalau pemilik belum
+          // pernah memilih (localStorage kosong). Jangan timpa pilihan manual.
+          try {
+            const adaPilihan = window.localStorage.getItem('nexo_ai_provider');
+            if (!adaPilihan && d.provider) setProvider(d.provider);
+            const adaModel = window.localStorage.getItem('nexo_ai_model');
+            if (!adaModel && d.model) setModelInput(d.model);
+          } catch {
+            if (d.provider) setProvider(d.provider);
+            if (d.model) setModelInput(d.model);
+          }
         }
       } catch {
         if (!batal) setStatus({ ok: false, aktif: false });

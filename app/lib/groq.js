@@ -41,10 +41,15 @@ const PROVIDERS = {
 };
 
 function resolveProvider(nama) {
+  // 1) Provider pilihan UI (paling prioritas).
   if (nama && PROVIDERS[nama]) return nama;
-  // AI_PROVIDER env harus prioritas atas AI_BASE_URL (legacy)
+  // 2) AI_PROVIDER env.
   if (process.env.AI_PROVIDER && PROVIDERS[process.env.AI_PROVIDER]) return process.env.AI_PROVIDER;
+  // 3) Custom HANYA kalau AI_BASE_URL diisi (legacy).
   if (process.env.AI_BASE_URL) return 'custom';
+  // 4) Default: groq (atau openrouter kalau GROQ_API_KEY kosong tapi
+  //    OPENROUTER_API_KEY ada).
+  if (!process.env.GROQ_API_KEY && process.env.OPENROUTER_API_KEY) return 'openrouter';
   return 'groq';
 }
 
@@ -75,12 +80,17 @@ export function namaProviderAktif() {
 
 export function infoProvider() {
   const aktif = resolveProvider(process.env.AI_PROVIDER);
+  // Custom hanya ditawarkan kalau AI_BASE_URL benar-benar diisi. Tanpa ini,
+  // tombol Custom muncul terus padahal tidak bisa dipakai (bingung pemilik).
+  const daftar = Object.keys(PROVIDERS).filter(
+    (k) => k !== 'custom' || Boolean(process.env.AI_BASE_URL)
+  );
   return {
     aktif,
     label: PROVIDERS[aktif].label,
     model: modelDipakai(aktif),
     kunci: daftarKunci(aktif).length,
-    tersedia: Object.keys(PROVIDERS).map((k) => ({
+    tersedia: daftar.map((k) => ({
       id: k,
       label: PROVIDERS[k].label,
       model: modelDipakai(k),
