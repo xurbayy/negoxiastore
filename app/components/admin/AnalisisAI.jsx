@@ -1208,35 +1208,8 @@ export default function AnalisisAI() {
                 ))}
               </select>
             </div>
-            {/* Pengaturan per-model: panjang jawaban + tingkat kecerdasan. */}
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
-                <span className="shrink-0">Maks token jawaban</span>
-                <input
-                  type="number"
-                  min="200"
-                  max="32000"
-                  value={formModel.max_tokens}
-                  onChange={(e) => setFormModel({ ...formModel, max_tokens: e.target.value })}
-                  placeholder="2000"
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
-                />
-              </label>
-              <label className="flex items-center gap-2 text-[0.7rem] text-ink-muted">
-                <span className="shrink-0">Kecerdasan (1-10)</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={formModel.kecerdasan}
-                  onChange={(e) => setFormModel({ ...formModel, kecerdasan: e.target.value })}
-                  placeholder="6"
-                  className="w-full rounded-lg border border-border-soft bg-card-cream px-2.5 py-1.5 text-xs text-ink outline-none focus:border-accent"
-                />
-              </label>
-            </div>
             <p className="mt-1 text-[0.65rem] text-ink-faint">
-              Kecerdasan: 1 = paling presisi/fokus, 10 = paling kreatif/eksploratif. Kosongkan untuk pakai default (6).
+              Maks token &amp; kecerdasan diatur sekali di bar kontrol atas (berlaku semua model). Di sini cukup label + nama model + provider.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
