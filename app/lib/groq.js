@@ -321,14 +321,34 @@ export async function daftarModelProvider(namaProvider) {
     const normal = list.map((m) => {
       const id = String(m?.id || m?.name || '');
       if (!id) return null;
-      // Deteksi gratis.
-      let gratis = null; // null = tidak diketahui
-      if (/[:/-]free\b|:free$|free$/i.test(id)) gratis = true;
-      const harga = m?.pricing?.prompt ?? m?.price ?? m?.harga;
-      if (harga !== undefined && harga !== null && harga !== '') {
-        const n = parseFloat(harga);
-        if (Number.isFinite(n)) gratis = n === 0;
+
+      // ==========================================
+      // DETEKSI GRATIS - HANYA PERCAYA DATA HARGA RESMI
+      // ==========================================
+      // PENTING (fix 2026-10-02): nama model berakhiran "free" BUKAN jaminan
+      // gratis. Contoh nyata: Apinex menamai model "free/deepseek-v4.1-flash"
+      // tapi sebenarnya butuh LANGGANAN berbayar. Kalau kita percaya nama,
+      // pemilik terkecoh dan request-nya gagal.
+      //
+      // Aturan baru:
+      //   - Ada data harga (pricing) -> pakai itu (0 = gratis, >0 = berbayar).
+      //   - Tidak ada data harga -> null (TIDAK DIKETAHUI). Jangan tebak dari
+      //     nama. Nama ":free" hanya jadi PETUNJUK lemah kalau tidak ada harga
+      //     sama sekali DAN id berakhiran ":free" persis (konvensi OpenRouter).
+      let gratis = null;
+      const hargaRaw = m?.pricing?.prompt ?? m?.pricing?.input ?? m?.price ?? m?.harga;
+      let adaHarga = false;
+      if (hargaRaw !== undefined && hargaRaw !== null && hargaRaw !== '') {
+        const n = parseFloat(String(hargaRaw).replace(/[^0-9.]/g, ''));
+        if (Number.isFinite(n)) { gratis = n === 0; adaHarga = true; }
       }
+      if (!adaHarga) {
+        // Konvensi OpenRouter: id diakhiri ":free" -> gratis. Provider lain
+        // (mis. Apinex) TIDAK memakai konvensi ini, jadi JANGAN percaya
+        // kata "free" di tengah/awal nama.
+        if (/:free$/i.test(id)) gratis = true;
+      }
+
       // Deteksi kemampuan (permintaan pemilik 2026-10-02: "test model bisa
       // vision atau reasoning, biar gw bisa tentuin mana yang bisa liat").
       const arch = m?.architecture || {};
@@ -347,7 +367,8 @@ export async function daftarModelProvider(namaProvider) {
       return {
         id,
         nama: m?.name || id,
-        gratis,
+        gratis,           // true=gratis, false=berbayar, null=tidak diketahui
+        adaHarga,
         konteks: m?.context_length || m?.context || null,
         vision,
         file,
@@ -356,7 +377,10 @@ export async function daftarModelProvider(namaProvider) {
     }).filter(Boolean);
 
     const gratis = normal.filter((m) => m.gratis === true);
-    return { ok: true, gratis, semua: normal, label: info.label, urlDicek: urlModels, jumlah: normal.length, jumlahGratis: gratis.length };
+    // Provider yang tidak mengirim data harga SAMA SEKALI -> tidak bisa
+    // memastikan mana yang gratis. UI harus jujur soal ini.
+    const bisaPastikan = normal.some((m) => m.adaHarga) || normal.some((m) => m.gratis === true);
+    return { ok: true, gratis, semua: normal, label: info.label, urlDicek: urlModels, jumlah: normal.length, jumlahGratis: gratis.length, bisaPastikan };
   } catch (e) {
     const pesan = e?.name === 'TimeoutError'
       ? `Tidak merespons dalam 20 detik. URL: ${urlModels}`
@@ -556,6 +580,38 @@ function bersihkanPesan(teks, kunci) {
     .replace(/sk-[A-Za-z0-9\-]{20,}/g, '[kunci-disembunyikan]');
 }
 
+/**
+ * Terjemahkan pesan error provider (Inggris) ke Indonesia. Kalau tidak ada
+ * pola yang cocok, kembalikan teks asli apa adanya (tidak menebak).
+ * Permintaan pemilik 2026-10-02: "semua validasi ini pake bahasa indonesia".
+ */
+function terjemahPesan(teks) {
+  const t = String(teks || '').trim();
+  if (!t) return '';
+  const pola = [
+    [/only available with a subscription|buy a subscription|requires? a subscription|subscription required/i,
+      'Model ini hanya tersedia lewat LANGGANAN berbayar di provider ini.',
+      ' Berlangganan dulu di provider, atau pakai model lain.'],
+    [/invalid api key|incorrect api key|authentication failed|unauthorized/i,
+      'API key ditolak oleh provider.'],
+    [/not found|does not exist|unknown model|no such model|model.*not.*found/i,
+      'Model tidak ditemukan di provider ini.'],
+    [/rate limit|too many requests|quota exceeded|insufficient quota/i,
+      'Kuota / batas permintaan provider tercapai.'],
+    [/insufficient (credit|balance|funds)|payment required|no credit/i,
+      'Kredit / saldo provider tidak cukup.'],
+    [/context length|too many tokens|maximum context/i,
+      'Data terlalu panjang untuk model ini.'],
+    [/service unavailable|server error|internal error|bad gateway|overloaded/i,
+      'Server provider sedang bermasalah. Coba lagi sebentar.'],
+  ];
+  for (const [re, id] of pola) {
+    if (re.test(t)) return id + ' [pesan provider: ' + t.slice(0, 160) + ']';
+  }
+  // Tidak dikenal -> kembalikan asli (ditandai supaya jelas ini dari provider).
+  return (t.length > 200 ? t.slice(0, 200) + '...' : t);
+}
+
 export async function tanyaGroq(pesan, opsi = {}) {
   const namaProvider = resolveProvider(opsi.provider);
   const info = await providerInfo(namaProvider);
@@ -634,8 +690,11 @@ export async function tanyaGroq(pesan, opsi = {}) {
       try { const j = await res.json(); pesanErr = j?.error?.message || JSON.stringify(j); } catch { pesanErr = ''; }
 
       const kode = res.status;
-      let rangkai = pesanErr || ('HTTP ' + kode);
-      if (/too large|TPM|tokens per minute/i.test(rangkai)) {
+      // Terjemahkan pesan provider (umumnya Inggris) ke Indonesia supaya
+      // pemilik paham sebabnya (permintaan pemilik 2026-10-02: "semua validasi
+      // ini pake bahasa indonesia").
+      let rangkai = terjemahPesan(pesanErr) || ('HTTP ' + kode);
+      if (/too large|TPM|tokens per minute/i.test(pesanErr || '')) {
         rangkai = `Data terlalu panjang untuk batas kuota ${label}. Coba lagi sebentar.`;
       } else if (kode === 403) {
         rangkai += ` [kunci ditolak atau nama MODEL salah. Cek model: ${model}]`;

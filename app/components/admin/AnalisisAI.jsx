@@ -1181,6 +1181,12 @@ export default function AnalisisAI() {
               );
               if (tampil.length === 0) return <p className="mt-2 text-xs text-ink-muted">Tidak ada model yang cocok.</p>;
               return (
+              <>
+              {modelProv.bisaPastikan === false && (
+                <p className="mt-2 rounded-lg bg-warning/10 px-3 py-1.5 text-[0.7rem] text-ink-muted">
+                  Provider ini tidak memberi data harga resmi, jadi status GRATIS tidak bisa dipastikan. Coba modelnya dulu lewat "Cek model" atau chat uji sebelum dipakai serius.
+                </p>
+              )}
               <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                 {tampil.map((m) => (
                   <li key={m.id} className={`rounded-lg ${modelProv.dipilih === m.id ? 'bg-accent/10' : ''}`}>
@@ -1282,6 +1288,7 @@ export default function AnalisisAI() {
                   </li>
                 ))}
               </ul>
+              </>
               );
             })()}
             {modelProv.url && (
