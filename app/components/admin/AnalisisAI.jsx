@@ -2074,6 +2074,7 @@ export default function AnalisisAI() {
                               // Simpan langsung ke server (tanpa buka form manual).
                               const label = m.id.split('/').pop().split(':')[0].slice(0, 40);
                               const providerId = m.providerId || provider || '';
+                              setPesanSimpan('Menyimpan...');
                               try {
                                 const res = await fetch('/api/admin/ai/providers', {
                                   method: 'POST',
@@ -2082,12 +2083,17 @@ export default function AnalisisAI() {
                                 });
                                 const d = await res.json();
                                 if (d.ok) {
-                                  flashKelola(`Model "${label}" tersimpan permanen.`);
+                                  setPesanSimpan(`Model "${label}" tersimpan permanen.`);
+                                  setTimeout(() => setPesanSimpan(null), 4000);
                                   await Promise.all([muatKelola(), muatStatusUlang()]);
                                 } else {
-                                  flashKelola('Gagal simpan: ' + (d.error || 'tidak diketahui'));
+                                  setPesanSimpan('Gagal: ' + (d.error || 'tidak diketahui'));
+                                  setTimeout(() => setPesanSimpan(null), 4000);
                                 }
-                              } catch (e) { flashKelola('Gagal: ' + e.message); }
+                              } catch (e) {
+                                setPesanSimpan('Gagal: ' + e.message);
+                                setTimeout(() => setPesanSimpan(null), 4000);
+                              }
                             }}
                             className="rounded-lg border border-accent/40 px-2.5 py-1 text-[0.7rem] font-bold text-accent transition hover:bg-accent/10 cursor-pointer"
                           >
