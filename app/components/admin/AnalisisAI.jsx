@@ -332,9 +332,17 @@ export default function AnalisisAI() {
           setPesan((p) => [...p, {
             peran: 'ai', error: true, waktu: Date.now(),
             isi: d.error + (d.petunjuk ? ' ' + d.petunjuk : ''),
+            modelDipakai: d.model || d.modelDipaka || null,
+            providerDipakai: d.provider || null,
           }]);
         } else {
-          setPesan((p) => [...p, { peran: 'ai', isi: d.jawaban, waktu: Date.now(), pertanyaan: muatan?.tanya || judul }]);
+          setPesan((p) => [...p, {
+            peran: 'ai', isi: d.jawaban, waktu: Date.now(),
+            pertanyaan: muatan?.tanya || judul,
+            // Model & provider aktual - biar terlihat di chat.
+            modelDipakai: d.model || null,
+            providerDipakai: d.provider || null,
+          }]);
         }
       } else {
         // Mode analisis: simpan sebagai laporan terpisah.
@@ -772,9 +780,14 @@ export default function AnalisisAI() {
                       ? 'bg-danger/10 text-danger'
                       : 'bg-bg-soft/60 text-ink'
                 }`}>
-                  <p className="mb-1 text-[0.6rem] font-bold uppercase tracking-widest text-ink-muted">
+                  <p className="mb-1 flex flex-wrap items-center gap-1.5 text-[0.6rem] font-bold uppercase tracking-widest text-ink-muted">
                     {m.peran === 'gw' ? 'Kamu' : m.error ? 'AI - gagal' : 'AI'}
                     {m.waktu ? ' - ' + new Date(m.waktu).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    {m.peran === 'ai' && m.modelDipakai && (
+                      <span className="rounded-full bg-card-cream px-1.5 py-0.5 text-[0.55rem] font-semibold normal-case tracking-normal text-ink-faint">
+                        {m.providerDipakai || 'AI'} • {m.modelDipakai}
+                      </span>
+                    )}
                   </p>
                   {m.error ? (
                     <p className="text-sm">{m.isi}</p>
