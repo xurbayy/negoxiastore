@@ -364,10 +364,14 @@ export default function AnalisisAI() {
   // Ambil status kesiapan sekali (tanpa memanggil Groq).
   useEffect(() => {
     let batal = false;
-    // Timeout 15 detik: kalau endpoint status lambat, jangan biarkan pemilik
-    // mentok di layar "Memeriksa kesiapan AI...".
+    // Pengaman GANDA:
+    //   1. AbortController membatalkan fetch kalau > 15 detik.
+    //   2. setTimeout KEDUA memaksa layar loading hilang setelah 16 detik,
+    //      apa pun yang terjadi (mis. res.json() menggantung). Tanpa ini,
+    //      pemilik bisa mentok di "Memeriksa kesiapan AI..." selamanya.
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 15000);
+    const timerPaksa = setTimeout(() => { if (!batal) setMemuatStatus(false); }, 16000);
     (async () => {
       try {
         const res = await fetch('/api/admin/ai', { cache: 'no-store', signal: ac.signal });
@@ -390,10 +394,11 @@ export default function AnalisisAI() {
         if (!batal) setStatus({ ok: false, aktif: false, errorMuatan: err?.name === 'AbortError' ? 'timeout 15 detik' : (err?.message || String(err)) });
       } finally {
         clearTimeout(timer);
+        clearTimeout(timerPaksa);
         if (!batal) setMemuatStatus(false);
       }
     })();
-    return () => { batal = true; clearTimeout(timer); };
+    return () => { batal = true; clearTimeout(timer); clearTimeout(timerPaksa); };
   }, []);
 
   // Kirim satu permintaan. `muatan` = { tanya } atau { pintasan }.
@@ -527,7 +532,7 @@ export default function AnalisisAI() {
         else kotakHasil.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }, 80);
     }
-  }, [mode, tungguSampai, provider, modelInput, modelSetting, gambar]);
+  }, [mode, tungguSampai, provider, modelInput, modelSetting, gambar, peran]);
 
   const kirimBebas = (e) => {
     e.preventDefault();
