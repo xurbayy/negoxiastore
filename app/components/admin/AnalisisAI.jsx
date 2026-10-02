@@ -2403,8 +2403,10 @@ export default function AnalisisAI() {
                 di bawah ambang nyaman). Di layar lebar kembali ke flex-wrap. */}
             <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {(() => {
-                // PRIORITAS (permintaan pemilik 2026-10-02): kartu Analisis Cepat
-                // diambil dari SARAN AGEN (hasil cek nyata) - bukan statis.
+                // PRIORITAS: 1) saran agen (hasil cek AI), 2) saran dinamis dari
+                // snapshot (real-time), 3) pintasan peran, 4) statis (darurat).
+                const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
+                const saranSnapshot = saranDin.filter((s) => s.sumber !== 'agen');
                 const dariServer = status?.pintasanPeran?.[peran] || [];
                 const pintasanPeranIni = dariServer.length ? dariServer : pintasanPeranKlien(peran);
                 const PINTASAN_LOKAL = [
@@ -2418,12 +2420,13 @@ export default function AnalisisAI() {
                   { id: 'guild', label: 'Masalah Guild & War' },
                   { id: 'semua', label: 'Gambaran Menyeluruh' },
                 ];
-                const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
                 const daftarPintasan = saranAgen.length
                   ? saranAgen.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
-                  : ((peran !== 'umum' && pintasanPeranIni.length)
-                    ? pintasanPeranIni
-                    : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
+                  : saranSnapshot.length
+                    ? saranSnapshot.map((s) => ({ id: s.id, label: s.label, tanya: s.tanya }))
+                    : ((peran !== 'umum' && pintasanPeranIni.length)
+                      ? pintasanPeranIni
+                      : ((status?.pintasan || []).length ? status.pintasan : PINTASAN_LOKAL));
                 const tampil = daftarPintasan.filter((p) => !saranDismiss.has(p.id));
                 return tampil.map((p) => (
                   <span key={p.id} className="relative inline-flex">
@@ -2676,16 +2679,16 @@ export default function AnalisisAI() {
           ];
           const dariServer = status?.pintasanPeran?.[peran] || [];
           const pintasanPeranIni = (dariServer.length ? dariServer : pintasanPeranKlien(peran)).map((x) => ({ id: x.id, label: x.label, tanya: x.tanya || x.label }));
-          // PRIORITAS (permintaan pemilik 2026-10-02): saran DARI AGEN (saranDin
-          // sekarang diisi hasil cek agen). Kalau agen belum jalan, pakai
-          // pintasan peran statis, lalu saran /ai, lalu fallback lokal.
+          // PRIORITAS: 1) saran agen, 2) saran dinamis snapshot, 3) pintasan peran, 4) statis.
           const saranAgen = saranDin.filter((s) => s.sumber === 'agen');
+          const saranSnapshot = saranDin.filter((s) => s.sumber !== 'agen');
           const saran = saranAgen.length
             ? saranAgen
-            : ((peran !== 'umum' && pintasanPeranIni.length)
-              ? pintasanPeranIni
-              : (saranDin.length ? saranDin
-                : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL)));
+            : saranSnapshot.length
+              ? saranSnapshot
+              : ((peran !== 'umum' && pintasanPeranIni.length)
+                ? pintasanPeranIni
+                : ((status?.saranDiskusi || []).length ? status.saranDiskusi : SARAN_LOKAL));
           return (
             <div className="mt-3">
               <div className="mb-1.5 flex items-center justify-between gap-2">
