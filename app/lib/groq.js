@@ -215,6 +215,60 @@ export async function infoProviderLengkap(providerTerpilih) {
   };
 }
 
+/**
+ * Cek apakah sebuah MODEL benar-benar ada di provider (permintaan pemilik
+ * 2026-10-02: "kasih validasi kalo model itu gada di providernya").
+ *
+ * Cara: panggil endpoint /models milik provider (OpenAI-compatible) lalu cari
+ * id model yang cocok. Provider yang tidak punya endpoint /models (atau
+ * menolak) tidak bisa divalidasi - dikembalikan { ok: false, tidakDidukung }.
+ *
+ * @returns {Promise<{ok:boolean, ada?:boolean, tersedia?:string[], label?:string, error?:string, tidakDidukung?:boolean}>}
+ */
+export async function cekModelAda(namaProvider, modelDicari) {
+  const nama = resolveProvider(namaProvider);
+  const info = await providerInfo(nama);
+  if (!info) return { ok: false, error: `Provider "${nama}" tidak ditemukan.` };
+  if (!info.kunci.length) return { ok: false, error: `Kunci ${info.label} belum diisi.` };
+  if (!info.url) return { ok: false, error: `URL ${info.label} belum diisi.` };
+  const dicari = String(modelDicari || '').trim();
+  if (!dicari) return { ok: false, error: 'Nama model kosong.' };
+
+  // Endpoint /models: buang "/chat/completions" dari URL, tambah "/models".
+  const urlModels = info.url.replace(/\/chat\/completions\/?$/, '/models');
+  try {
+    const res = await fetch(urlModels, {
+      headers: { Authorization: `Bearer ${info.kunci[0]}` },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (res.status === 404) {
+      return { ok: false, tidakDidukung: true, error: `Provider ${info.label} tidak menyediakan daftar model untuk dicek.`, label: info.label };
+    }
+    if (!res.ok) {
+      return { ok: false, error: `Gagal mengambil daftar model (HTTP ${res.status}).`, label: info.label };
+    }
+    const data = await res.json().catch(() => null);
+    const list = data?.data || data?.models || [];
+    if (!Array.isArray(list) || list.length === 0) {
+      return { ok: false, tidakDidukung: true, error: `Provider ${info.label} tidak mengembalikan daftar model.`, label: info.label };
+    }
+    const ids = list.map((m) => String(m?.id || m?.name || '')).filter(Boolean);
+    const ada = ids.includes(dicari);
+    // Saran mirip (kalau tidak ada) - pakai potongan nama.
+    let mirip = [];
+    if (!ada) {
+      const potong = dicari.split('/').pop()?.split(':')[0]?.toLowerCase() || '';
+      if (potong.length >= 3) {
+        mirip = ids.filter((x) => x.toLowerCase().includes(potong)).slice(0, 8);
+      }
+    }
+    return { ok: true, ada, tersedia: ids.slice(0, 400), mirip, label: info.label, jumlah: ids.length };
+  } catch (e) {
+    const pesan = e?.name === 'TimeoutError' ? 'Cek model melewati 20 detik.' : (e?.message || String(e));
+    return { ok: false, error: pesan, label: info.label };
+  }
+}
+
 export function adaGroq() {
   return daftarKunci(namaProviderAktif()).length > 0;
 }

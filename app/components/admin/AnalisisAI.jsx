@@ -154,6 +154,8 @@ export default function AnalisisAI() {
   // Toggle tampilkan input API key di FORM tambah provider (bukan kunci
   // tersimpan). Default tersembunyi (type=password).
   const [lihatInputKunci, setLihatInputKunci] = useState(false);
+  // Hasil validasi model: { status: 'idle'|'cek'|'ada'|'tidak'|'gagal', ... }
+  const [cekHasil, setCekHasil] = useState({ status: 'idle' });
 
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_provider', provider || ''); } catch { /* abaikan */ }
@@ -161,6 +163,11 @@ export default function AnalisisAI() {
   useEffect(() => {
     try { window.localStorage.setItem('nexo_ai_model', modelInput || ''); } catch { /* abaikan */ }
   }, [modelInput]);
+
+  // Hasil cek model jadi basi begitu provider/model diganti - reset.
+  useEffect(() => {
+    setCekHasil({ status: 'idle' });
+  }, [provider, modelInput]);
 
   // Kalau provider tersimpan (localStorage) tidak ada di daftar yang disediakan
   // server (mis. 'custom' sudah dihapus), paksa ke provider aktif server.
@@ -604,6 +611,28 @@ export default function AnalisisAI() {
     } catch (e) { flashKelola('Gagal lihat kunci: ' + e.message); }
   }, [kunciTerlihat]);
 
+  // Cek apakah model benar-benar ada di provider yang dipilih.
+  const cekModel = useCallback(async () => {
+    const m = modelInput.trim();
+    if (!m) { setCekHasil({ status: 'gagal', pesan: 'Isi nama model dulu.' }); return; }
+    setCekHasil({ status: 'cek' });
+    try {
+      const res = await fetch(`/api/admin/ai/cek-model?provider=${encodeURIComponent(provider || '')}&model=${encodeURIComponent(m)}`, { cache: 'no-store' });
+      const d = await res.json();
+      if (!d.ok && d.tidakDidukung) {
+        setCekHasil({ status: 'gagal', pesan: d.error || 'Provider tidak mendukung cek model.' });
+      } else if (!d.ok) {
+        setCekHasil({ status: 'gagal', pesan: d.error || 'Gagal cek model.' });
+      } else if (d.ada) {
+        setCekHasil({ status: 'ada', label: d.label, jumlah: d.jumlah });
+      } else {
+        setCekHasil({ status: 'tidak', label: d.label, mirip: d.mirip || [] });
+      }
+    } catch (e) {
+      setCekHasil({ status: 'gagal', pesan: e.message });
+    }
+  }, [provider, modelInput]);
+
   if (memuatStatus) {
     return (
       <div className="nx-card px-6 py-10 text-center text-sm text-ink-muted">
@@ -804,7 +833,49 @@ export default function AnalisisAI() {
               ))}
             </select>
           )}
+          {/* Validasi model: cek apakah model ini benar-benar ada di provider. */}
+          <button
+            type="button"
+            onClick={cekModel}
+            disabled={cekHasil.status === 'cek'}
+            title="Cek model ini ada di provider atau tidak"
+            className="shrink-0 rounded-xl border border-border-soft bg-bg-soft/60 px-3 py-1.5 text-xs font-bold text-ink-muted transition hover:border-accent/60 hover:text-ink disabled:opacity-50 cursor-pointer"
+          >
+            {cekHasil.status === 'cek' ? '...' : 'Cek model'}
+          </button>
         </div>
+
+        {/* Hasil validasi model - hanya tampil setelah dicek. */}
+        {cekHasil.status === 'ada' && (
+          <p className="mt-2 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
+            ✓ Model ada di {cekHasil.label}{cekHasil.jumlah ? ` (${cekHasil.jumlah} model tersedia)` : ''}.
+          </p>
+        )}
+        {cekHasil.status === 'tidak' && (
+          <div className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs text-danger">
+            <p className="font-semibold">Model tidak ditemukan di {cekHasil.label}.</p>
+            {cekHasil.mirip.length > 0 && (
+              <p className="mt-1 flex flex-wrap gap-1">
+                <span className="text-ink-muted">Mirip:</span>
+                {cekHasil.mirip.map((x) => (
+                  <button
+                    key={x}
+                    type="button"
+                    onClick={() => { setModelInput(x); setCekHasil({ status: 'idle' }); }}
+                    className="rounded bg-card-cream px-1.5 py-0.5 font-mono text-[0.65rem] text-ink transition hover:bg-accent/15 cursor-pointer"
+                  >
+                    {x}
+                  </button>
+                ))}
+              </p>
+            )}
+          </div>
+        )}
+        {cekHasil.status === 'gagal' && (
+          <p className="mt-2 rounded-lg bg-danger/10 px-3 py-1.5 text-xs font-semibold text-danger">
+            {cekHasil.pesan}
+          </p>
+        )}
 
         {/* Baris 3: keterangan singkat sesuai mode + tombol kelola. */}
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
