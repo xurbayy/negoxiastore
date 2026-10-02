@@ -457,40 +457,76 @@ export async function cekUsageProvider(namaProvider) {
   } catch { /* bukan OpenRouter / gagal - lanjut ke cara Groq */ }
 
   // ---- Groq / umum: rate-limit dari header chat completion ----
-  try {
-    const res = await fetch(info.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kunci}` },
-      body: JSON.stringify({ model: info.model || 'openai/gpt-oss-120b', messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
-      signal: AbortSignal.timeout(15000),
-    });
-    const h = (n) => res.headers.get(n);
-    const limReq = h('x-ratelimit-limit-requests');
-    const sisaReq = h('x-ratelimit-remaining-requests');
-    const limTok = h('x-ratelimit-limit-tokens');
-    const sisaTok = h('x-ratelimit-remaining-tokens');
-    const resetTok = h('x-ratelimit-reset-tokens');
-    if (limReq || limTok) {
-      return {
-        ok: true, jenis: 'ratelimit', label,
-        rate: {
-          limitRequest: limReq ? Number(limReq) : null,
-          sisaRequest: sisaReq ? Number(sisaReq) : null,
-          limitToken: limTok ? Number(limTok) : null,
-          sisaToken: sisaTok ? Number(sisaTok) : null,
-          resetToken: resetTok || null,
-          status: res.status,
-        },
-      };
-    }
-    // Tidak ada header rate-limit, tapi request berhasil -> provider hidup.
-    if (res.ok) return { ok: true, jenis: 'hidup', label, catatan: 'Provider merespons, tapi tidak menyediakan info kuota.' };
-    const pesanErr = res.status === 429 ? 'Kuota habis / rate limit tercapai.' : `HTTP ${res.status}.`;
-    return { ok: true, jenis: 'ratelimit', label, catatan: pesanErr, rate: { status: res.status } };
-  } catch (e) {
-    const pesan = e?.name === 'TimeoutError' ? 'Timeout saat cek kuota.' : (e?.message || String(e));
-    return { ok: false, error: pesan, label };
+  // Butuh MODEL yang valid. Untuk provider kustom `info.model` kosong, jadi
+  // ambil model pertama dari /models dulu (fix: RouterWay balas HTTP 400
+  // karena model default tidak dikenali providernya).
+  let modelUji = info.model;
+  if (!modelUji) {
+    try {
+      const resM = await fetch(base + '/models', {
+        headers: { Authorization: `Bearer ${kunci}` },
+        signal: AbortSignal.timeout(12000),
+      });
+      if (resM.ok) {
+        const dM = await resM.json().catch(() => null);
+        const list = dM?.data || dM?.models || [];
+        if (Array.isArray(list) && list.length) {
+          modelUji = String(list[0]?.id || list[0]?.name || '');
+        }
+      }
+    } catch { /* lanjut tanpa model - biar pesan error provider yang jelas */ }
   }
+
+  if (modelUji) {
+    try {
+      const res = await fetch(info.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kunci}` },
+        body: JSON.stringify({ model: modelUji, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const h = (n) => res.headers.get(n);
+      const limReq = h('x-ratelimit-limit-requests');
+      const sisaReq = h('x-ratelimit-remaining-requests');
+      const limTok = h('x-ratelimit-limit-tokens');
+      const sisaTok = h('x-ratelimit-remaining-tokens');
+      const resetTok = h('x-ratelimit-reset-tokens');
+      if (limReq || limTok) {
+        return {
+          ok: true, jenis: 'ratelimit', label,
+          rate: {
+            limitRequest: limReq ? Number(limReq) : null,
+            sisaRequest: sisaReq ? Number(sisaReq) : null,
+            limitToken: limTok ? Number(limTok) : null,
+            sisaToken: sisaTok ? Number(sisaTok) : null,
+            resetToken: resetTok || null,
+            status: res.status,
+          },
+        };
+      }
+      // Tidak ada header rate-limit, tapi request berhasil -> provider hidup.
+      if (res.ok) return { ok: true, jenis: 'hidup', label, catatan: 'Provider merespons, tapi tidak menyediakan info kuota.' };
+      // Gagal: baca pesan provider supaya jelas.
+      let pesanApi = '';
+      try { const j = await res.json(); pesanApi = j?.error?.message || j?.message || ''; } catch { /* bukan JSON */ }
+      const teksErr = pesanApi || `HTTP ${res.status}`;
+      const catatan = res.status === 429
+        ? 'Kuota habis / rate limit tercapai.'
+        : res.status === 401 || res.status === 403
+          ? 'API key ditolak provider.'
+          : `Provider menolak permintaan uji (${teksErr}). Info kuota tidak tersedia.`;
+      return { ok: true, jenis: 'ratelimit', label, catatan, rate: { status: res.status } };
+    } catch (e) {
+      const pesan = e?.name === 'TimeoutError' ? 'Timeout saat cek kuota.' : (e?.message || String(e));
+      return { ok: false, error: pesan, label };
+    }
+  }
+
+  // Tidak ada /models dan tidak tahu model uji apa -> jujur saja.
+  return {
+    ok: true, jenis: 'hidup', label,
+    catatan: 'Provider ini tidak menyediakan info kuota (tidak ada endpoint /models atau model uji).',
+  };
 }
 
 export async function cekModelAda(namaProvider, modelDicari) {
