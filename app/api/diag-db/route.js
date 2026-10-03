@@ -1,4 +1,4 @@
-import { json } from '../../../lib/api-helpers';
+import { json } from '../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ export async function GET() {
   }
 
   try {
-    const { getDb, schemaReady } = await import('../../../lib/db');
+    const { getDb, schemaReady } = await import('../../lib/db');
     out.langkah.push('import db OK');
     await schemaReady();
     out.langkah.push('schemaReady OK');
