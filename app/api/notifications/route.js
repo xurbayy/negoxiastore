@@ -1,6 +1,6 @@
 import { getSession } from '../../lib/session';
 import { getDb, schemaReady } from '../../lib/db';
-import { getLatestSnapshot } from '../../lib/snapshot';
+import { getLivePromos } from '../../lib/liveCatalog';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +18,8 @@ export async function GET() {
   try {
     await schemaReady();
     const db = getDb();
-    const snap = await getLatestSnapshot();
-    const promoCodes = snap?.promoCodes || [];
+    // Baca LANGSUNG dari DB bot (2026-10-03), bukan snapshot push.
+    const promoCodes = (await getLivePromos()) || [];
 
     if (!promoCodes.length) {
       return NextResponse.json({ ok: true, notifications: [] });

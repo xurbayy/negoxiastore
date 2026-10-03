@@ -1,6 +1,6 @@
 import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
-import { getLatestSnapshot } from '../../../lib/snapshot';
+import { getLiveSettings, getLiveDiscounts } from '../../../lib/liveCatalog';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -62,8 +62,16 @@ export async function GET() {
     for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
     return h.toString(36);
   };
-  const snap = await getLatestSnapshot();
-  if (snap) {
+  // Baca LANGSUNG dari DB bot (2026-10-03): settings + diskon aktif.
+  // Bentuk data disamakan dengan snapshot lama supaya logika di bawah tetap.
+  const [liveSet, liveDisc] = await Promise.all([getLiveSettings(), getLiveDiscounts()]);
+  const snap = {
+    flashSales: (liveDisc || []).map((d) => ({
+      itemKey: d.item_key, discountPrice: d.discount_price, expiresAt: d.expires_at, originalPrice: null,
+    })),
+    announcements: liveSet?.announcements || {},
+  };
+  if (snap.flashSales.length || snap.announcements.global || snap.announcements.shop) {
     // a) Flash sale aktif
     for (const fs of snap.flashSales || []) {
       const did = `d:flash:${fs.itemKey}:${Number(fs.expiresAt)}`;

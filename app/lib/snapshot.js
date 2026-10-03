@@ -147,6 +147,94 @@ export async function getBotHeartbeat() {
   return r;
 }
 
+// ==========================================
+// LEADERBOARD LANGSUNG DARI DB BOT (2026-10-03)
+// ==========================================
+// Dulu leaderboard menunggu snapshot push bot. Sekarang baca LANGSUNG dari
+// tabel bot (public.users) - selalu ada data walau bot sedang restart.
+// Bentuk hasil SAMA dengan snapshot.leaderboard supaya UI tidak perlu diubah.
+export async function getLiveLeaderboard(limit = 10) {
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute(
+      `SELECT user_id, username, points, level, xp, avatar_url
+         FROM public.users
+        ORDER BY points DESC
+        LIMIT ?`,
+      [limit]
+    );
+    return res.rows.map((row, i) => ({
+      rank: i + 1,
+      userId: String(row.user_id),
+      username: row.username || 'Pemain',
+      points: Number(row.points || 0),
+      level: Number(row.level || 1),
+      xp: Number(row.xp || 0),
+      avatarUrl: row.avatar_url || null,
+    }));
+  });
+  return r || [];
+}
+
+// Leaderboard GUILD langsung dari DB bot (public.guilds + jumlah member).
+export async function getLiveGuildBoard(limit = 10) {
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute(
+      `SELECT g.guild_code, g.name, g.points,
+              (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
+         FROM public.guilds g
+        ORDER BY g.points DESC
+        LIMIT ?`,
+      [limit]
+    );
+    return res.rows.map((row, i) => ({
+      rank: i + 1,
+      code: row.guild_code,
+      name: row.name || 'Guild',
+      points: Number(row.points || 0),
+      members: Number(row.members || 0),
+    }));
+  });
+  return r || [];
+}
+
+// BANK langsung dari DB bot (public.bank_loans) - 2026-10-03.
+// Bentuk hasil SAMA dengan snapshot.loans / snapshot.monitor.loans.
+export async function getLiveBank() {
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const now = Date.now();
+    const [rows, ringkas] = await Promise.all([
+      db.execute(
+        `SELECT b.user_id, u.username, b.amount, b.total_due, b.due_date
+           FROM public.bank_loans b LEFT JOIN public.users u ON u.user_id = b.user_id
+          ORDER BY b.total_due DESC LIMIT 50`
+      ),
+      db.execute(
+        `SELECT COUNT(*) AS count,
+                COUNT(*) FILTER (WHERE due_date < ?) AS overdue,
+                COALESCE(SUM(total_due),0) AS owed
+           FROM public.bank_loans`,
+        [now]
+      ),
+    ]);
+    const s = ringkas.rows[0] || {};
+    return {
+      loans: rows.rows.map((l) => ({
+        userId: String(l.user_id), username: l.username || 'Unknown',
+        amount: Number(l.amount || 0), totalDue: Number(l.total_due || 0),
+        dueDate: Number(l.due_date || 0), overdue: Number(l.due_date) < now,
+      })),
+      monitor: { count: Number(s.count || 0), overdue: Number(s.overdue || 0), owed: Number(s.owed || 0) },
+    };
+  });
+  return r;
+}
+
 // Format angka gaya id-ID (1.234.567) dan uptime - lihat lib/formatClient.js
 // (SATU sumber). Dulu file ini punya salinan sendiri.
 export { fmt, fmtUptime } from './formatClient';

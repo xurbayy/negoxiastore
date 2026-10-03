@@ -72,12 +72,22 @@ function siapkanServer(snap) {
 export default async function KomunitasPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
-  const snap = await getLatestSnapshot();
-  const { daftar, total, tanpaInvite } = siapkanServer(snap);
+  // SERVER LANGSUNG DARI DB BOT (2026-10-03): tidak menunggu push bot.
+  // Fallback ke snapshot kalau query DB gagal.
+  const { getLiveServers } = await import('../lib/liveCatalog');
+  const liveServers = await getLiveServers();
+  const snap = liveServers ? null : await getLatestSnapshot();
+  const { daftar, total, tanpaInvite } = liveServers
+    ? {
+        daftar: liveServers,
+        total: liveServers.length,
+        tanpaInvite: liveServers.filter((s) => !s.invite).length,
+      }
+    : siapkanServer(snap);
   // Sebagian/total server belum punya link invite. Server TETAP ditampilkan
   // (permintaan pemilik 2026-09-30) - yang hilang hanya tombol Gabung-nya.
   // Keterangan ini murni penjelasan, bukan alasan menyembunyikan daftar.
-  const adaTanpaInvite = snap && total > 0 && tanpaInvite > 0;
+  const adaTanpaInvite = total > 0 && tanpaInvite > 0;
 
   // Diagnosa dari bot (monitor.inviteDiag) - dirakit di utils/webBridge.js
   // sehingga tetap terkirim walau utils/guildInvite.js sendiri gagal dimuat.
@@ -114,11 +124,9 @@ export default async function KomunitasPage() {
               BERDETAK tiap detik dan bisa diklik - jadi baris ini hanya
               pengulangan yang tidak menambah informasi. Yang tersisa cuma
               peringatan kalau bot benar-benar belum mengirim data. */}
-          {!snap && (
-            <p className="mt-3 text-xs text-danger">
-              ⚠ Bot belum mengirim data. Daftar akan muncul setelah bot online.
-            </p>
-          )}
+          {/* Peringatan "Bot belum mengirim data" DIHAPUS (2026-10-03):
+              daftar server dibaca LANGSUNG dari database (Supabase), tidak
+              lagi bergantung pada bot mengirim/push. */}
 
           {adaTanpaInvite && (
             <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-ink">

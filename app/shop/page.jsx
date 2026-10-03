@@ -18,13 +18,17 @@ export const dynamic = 'force-dynamic';
 export default async function ShopPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
-  const snap = await getLatestSnapshot();
-  const items = snap?.shopItems || [];
-  const cats = snap?.shopCategories || [];
+  // KATALOG LANGSUNG DARI DB BOT (2026-10-03): tidak menunggu push bot.
+  // Fallback ke snapshot kalau query DB gagal.
+  const { getLiveShop } = await import('../lib/liveCatalog');
+  const live = await getLiveShop();
+  const snap = live ? null : await getLatestSnapshot();
+  const items = live?.shopItems || snap?.shopItems || [];
+  const cats = live?.shopCategories || snap?.shopCategories || [];
   const titles = snap?.titleCatalog || [];
-  const discounts = snap?.discounts || [];
+  const discounts = live?.discounts || snap?.discounts || [];
   const discountMap = {};
-  for (const d of discounts) discountMap[d.item_key] = d;
+  for (const d of discounts) discountMap[d.item_key || d.itemKey] = d;
 
   return (
     <>
@@ -37,13 +41,12 @@ export default async function ShopPage() {
             NEXO Shop.
           </h1>
           <div className="accent-bar mt-4" aria-hidden="true" />
-          {!snap && (
-            <p className="mt-3 text-sm text-danger">⚠ Bot belum mengirim katalog. Ketik <code className="text-ink">nxshop</code> di Discord untuk melihat langsung.</p>
-          )}
+          {/* Peringatan "Bot belum mengirim katalog" DIHAPUS (2026-10-03):
+              katalog dibaca LANGSUNG dari database, tidak lagi bergantung push. */}
 
           <ShopClient items={items} cats={cats} titles={titles} discountMap={discountMap} />
 
-          {items.length === 0 && titles.length === 0 && snap && (
+          {items.length === 0 && titles.length === 0 && (
             <div className="nx-card mt-10 px-6 py-10 text-center text-ink-muted">
               Katalog kosong. Ketik <code className="text-ink">nxshop</code> di Discord untuk melihat item langsung.
             </div>

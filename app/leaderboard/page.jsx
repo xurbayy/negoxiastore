@@ -20,12 +20,22 @@ export const dynamic = 'force-dynamic';
 export default async function LeaderboardPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
-  const snap = await getLatestSnapshot();
-  const players = snap?.leaderboard || [];
-  const guilds = snap?.guildBoard || [];
-  // Pemegang NEXO Pass aktif (dari premiumMembers snapshot bot) -> badge logo
-  // kecil di ujung nama pemain yang beli pass.
-  const premiumIds = (snap?.premiumMembers || []).map((m) => String(m.userId));
+  // LEADERBOARD LANGSUNG DARI DB BOT (2026-10-03): sejak satu database
+  // (Supabase), data dibaca langsung dari public.users - tidak menunggu push
+  // bot. Fallback ke snapshot kalau query DB gagal.
+  const { getLiveLeaderboard, getLiveGuildBoard, getLivePremiumIds } = await import('../lib/snapshot');
+  const [livePlayers, liveGuilds, livePremium] = await Promise.all([
+    getLiveLeaderboard(10),
+    getLiveGuildBoard(10),
+    getLivePremiumIds(),
+  ]);
+  const snap = livePlayers.length ? null : await getLatestSnapshot();
+  const players = livePlayers.length ? livePlayers : (snap?.leaderboard || []);
+  const guilds = liveGuilds.length ? liveGuilds : (snap?.guildBoard || []);
+  // Pemegang NEXO Pass aktif -> badge logo di ujung nama pemain.
+  const premiumIds = livePremium.length
+    ? livePremium
+    : (snap?.premiumMembers || []).map((m) => String(m.userId));
 
   // Highlight baris milik user yang sedang login (bandingkan via userId)
   // - logika isMe pindah ke LeaderboardClient (client component).
@@ -41,14 +51,10 @@ export default async function LeaderboardPage() {
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Leaderboard <span className="font-display text-ink">NEXO</span>
           </h1>
-          {/* Baris "Diperbarui X · data live dari bot" DIHAPUS (permintaan
-              pemilik 2026-10-01) - sudah ada indikator mengambang di kanan
-              bawah (AutoRefresh). Peringatan bot offline TETAP ada. */}
-          {!snap && (
-            <p className="mt-2 text-sm text-danger">
-              ⚠ Bot belum mengirim data. Leaderboard akan muncul setelah bot online.
-            </p>
-          )}
+          {/* Peringatan "Bot belum mengirim data" DIHAPUS (2026-10-03):
+              leaderboard sekarang dibaca LANGSUNG dari database (Supabase),
+              jadi tidak lagi bergantung pada bot mengirim/push data.
+              Kalau memang belum ada pemain, tabel menampilkan "Belum ada data". */}
 
           {/* Pemain -> Guild (client: baris pemain bisa diklik ->
               kartu profil + PP fresh; guild tetap server component) */}

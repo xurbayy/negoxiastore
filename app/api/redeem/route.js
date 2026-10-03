@@ -67,11 +67,12 @@ export async function POST(request) {
   //    pernah klaim lalu kodenya DIHAPUS admin tetap disambut "Kamu sudah
   //    klaim kode ini" - menyesatkan, karena kodenya sendiri sudah tidak ada
   //    di database. Pesan yang jujur: "sudah tidak tersedia".
-  //    Sumber kebenaran = promoCodes pada snapshot bot terbaru; flag
-  //    exhausted di cache saja tidak bisa membedakan "dihapus" vs "habis".
-  const snap = await getLatestSnapshot();
-  if (snap) {
-    const snapCode = (snap.promoCodes || []).find(
+  //    Sumber kebenaran = tabel bot LANGSUNG (public.promo_codes, 2026-10-03);
+  //    dulu dari snapshot push, sekarang dibaca langsung dari DB.
+  const { getLivePromos } = await import('../../lib/liveCatalog');
+  const livePromos = await getLivePromos();
+  if (livePromos) {
+    const snapCode = livePromos.find(
       (p) => String(p.code || '').toUpperCase() === code,
     );
     if (!snapCode) {

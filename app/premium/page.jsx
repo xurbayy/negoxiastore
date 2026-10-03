@@ -1,15 +1,10 @@
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
-import { getLatestSnapshot } from '../lib/snapshot';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
 import PremiumClient from '../components/PremiumClient';
 import { emojiSrc } from '../lib/emojis';
-
-function isBotOnline(snap) {
-  return Boolean(snap && Date.now() - Number(snap.ts) <= 3 * 60 * 1000);
-}
 
 export const metadata = {
   title: 'NEXO Pass Premium',
@@ -21,8 +16,11 @@ export const metadata = {
 export default async function PremiumPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
-  const snap = await getLatestSnapshot();
-  const botOnline = isBotOnline(snap);
+  // Status bot LANGSUNG dari heartbeat DB (2026-10-03) - tidak lagi dari
+  // snapshot push. Kalau heartbeat < 3 menit, bot dianggap online.
+  const { getBotHeartbeat } = await import('../lib/snapshot');
+  const heartbeat = await getBotHeartbeat();
+  const botOnline = Boolean(heartbeat && Date.now() - heartbeat <= 3 * 60 * 1000);
 
   let initialOrder = null;
   if (session) {

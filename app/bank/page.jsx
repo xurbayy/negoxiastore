@@ -19,9 +19,13 @@ export const dynamic = 'force-dynamic';
 export default async function BankPage() {
   const session = await getSession();
   const premiumActive = session ? await userHasPremium(session.discordId) : false;
-  const snap = await getLatestSnapshot();
-  const loans = snap?.loans || [];
-  const mon = snap?.monitor?.loans || {};
+  // BANK LANGSUNG DARI DB BOT (2026-10-03): tidak lagi menunggu push bot.
+  // Fallback ke snapshot kalau query DB gagal.
+  const { getLiveBank } = await import('../lib/snapshot');
+  const liveBank = await getLiveBank();
+  const snap = liveBank ? null : await getLatestSnapshot();
+  const loans = liveBank?.loans || snap?.loans || [];
+  const mon = liveBank?.monitor || snap?.monitor?.loans || {};
 
   return (
     <>
@@ -33,13 +37,9 @@ export default async function BankPage() {
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Bank <span className="font-display text-ink">Watch</span>
           </h1>
-          {/* Baris "Diperbarui X · data live dari bot" DIHAPUS (permintaan
-              pemilik 2026-10-01) - sudah ada indikator mengambang di kanan
-              bawah (AutoRefresh). Peringatan bot offline TETAP ada supaya
-              pengunjung tahu datanya belum masuk. */}
-          {!snap && (
-            <p className="mt-2 text-sm text-danger">⚠ Bot belum mengirim data bank.</p>
-          )}
+          {/* Peringatan "Bot belum mengirim data bank" DIHAPUS (2026-10-03):
+              data dibaca LANGSUNG dari database (Supabase), tidak lagi
+              bergantung pada bot mengirim/push. */}
 
           {/* Ringkasan */}
           <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
