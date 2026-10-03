@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
+import { avatarUser } from '../lib/avatarClient';
 
 // Kartu profil mini pemain di halaman Leaderboard: muncul saat nama pemain
 // diklik. Data 100% dari snapshot bot (leaderboard + richest) - tidak ada
@@ -20,8 +21,6 @@ export default function PlayerProfileCard({ player, onClose }) {
   }, [onClose]);
 
   if (!player) return null;
-
-  const initials = String(player.username || '?').slice(0, 2).toUpperCase();
 
   // Daftar sel dibangun eksplisit, lalu jumlah kolom grid DIHITUNG dari
   // panjang daftar ini. Dulu grid dipatok grid-cols-3/4 secara terpisah dari
@@ -73,16 +72,21 @@ export default function PlayerProfileCard({ player, onClose }) {
             {player.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={player.avatarUrl}
+                src={avatarUser(player.userId, player.avatarUrl, 128)}
                 alt={player.username}
                 width={64}
                 height={64}
                 className="h-16 w-16 rounded-full ring-2 ring-accent shadow-[0_0_20px_rgba(241,154,26,0.35)]"
               />
             ) : (
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent font-display text-xl text-white shadow-[0_0_20px_rgba(241,154,26,0.35)]">
-                {initials}
-              </span>
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUser(player.userId, null, 128)}
+                alt={player.username}
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded-full ring-2 ring-accent shadow-[0_0_20px_rgba(241,154,26,0.35)]"
+              />
             )}
             <div className="min-w-0">
               <p className="truncate font-display text-lg text-card-cream">{player.username}</p>

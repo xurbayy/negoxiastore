@@ -175,6 +175,7 @@ import { getSession } from './lib/session';
 import { isUserBanned } from './lib/snapshot';
 import CookieConsent from './components/CookieConsent';
 import AdSense from './components/AdSense';
+import EmojiHydrator from './components/EmojiHydrator';
 
 export default async function RootLayout({ children }) {
   const session = await getSession();
@@ -187,6 +188,7 @@ export default async function RootLayout({ children }) {
     <html lang="id" data-scroll-behavior="smooth" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
         <AdSense />
+        <EmojiHydrator />
         {banInfo ? (
           <main className="relative flex min-h-screen flex-col items-center justify-center px-5 text-center bg-bg text-ink">
             <div className="bg-grid absolute inset-0" aria-hidden="true" />

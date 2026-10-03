@@ -24,21 +24,11 @@ async function safeQuery(fn) {
 
 // Snapshot monitor terbaru dari bot (null kalau belum pernah push / DB mati).
 export async function getLatestSnapshot() {
-  // ==========================================
-  // SWR CACHE (2026-10-03, permintaan pemilik): "muncul dulu, perbarui di
-  // belakang". Halaman publik menampilkan data CACHE LANGSUNG (0 query DB)
-  // dan menyegarkan di latar hanya kalau cache sudah basi. Ini memangkas
-  // latensi halaman dari ratusan ms (bolak-balik ke Supabase) menjadi ~0.
-  //   - SEGAR < 15 dtk : langsung pakai cache (0 query)
-  //   - BASI  >= 15 dtk: refresh latar + tetap serahkan cache lama (stale)
-  //     ke pemanggil, SEHINGGA halaman tidak pernah menunggu.
-  //   - DB mati        : cache sampai 5 menit tetap disajikan (fallback lama).
-  // ==========================================
+  // TANPA CACHE (permintaan pemilik 2026-10-03): setiap panggilan query DB
+  // langsung supaya yang tampil selalu terbaru. `_lastGood` tetap disimpan
+  // HANYA sebagai cadangan kalau DB sedang error (supaya halaman tidak blank),
+  // bukan untuk menyajikan data lama saat DB sehat.
   const kini = Date.now();
-  const STALE_MS = 15_000;
-  if (_lastGood?.snap && _lastGood.snapAt && kini - _lastGood.snapAt < STALE_MS) {
-    return _lastGood.snap;
-  }
   const r = await safeQuery(async () => {
     await schemaReady();
     const db = getDb();
@@ -50,7 +40,7 @@ export async function getLatestSnapshot() {
     _lastGood = { ...(_lastGood || {}), snap: r, at: kini, snapAt: kini };
     return r;
   }
-  // DB error: pakai cache proses (maks 5 menit) supaya halaman tetap hidup.
+  // DB error: pakai cadangan proses (maks 5 menit) supaya halaman tetap hidup.
   if (_lastGood?.snap && Date.now() - _lastGood.at < 5 * 60_000) return _lastGood.snap;
   return null;
 }
@@ -115,10 +105,8 @@ export async function getSnapshotSeries(days = 7) {
 //   - web tetap hidup walau bot sedang mati/restart (tidak ada "bot offline")
 // Tabel bot ada di schema 'public' (web ada di schema 'web').
 export async function getLiveStats() {
+  // TANPA CACHE: angka dihitung langsung dari DB tiap panggilan.
   const kini = Date.now();
-  if (_lastGood?.live && _lastGood.liveAt && kini - _lastGood.liveAt < 30_000) {
-    return _lastGood.live;
-  }
   const r = await safeQuery(async () => {
     await schemaReady();
     const db = getDb();

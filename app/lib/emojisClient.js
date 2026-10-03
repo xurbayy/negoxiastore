@@ -1,12 +1,46 @@
-// Versi client-safe dari emoji helper (import JSON langsung, tanpa server-only).
+// Versi client-safe dari emoji helper.
+// - Bawaan: file JSON statis (langsung tersedia, sinkron).
+// - Dinamis: katalog dari database (di-push bot) di-hydrate lewat
+//   hydrateEmojiCatalog() lalu menimpa/menambah entri statis.
+// PENTING: resolver ini DIPAKAI SINKRON di banyak komponen, jadi struktur
+// objeknya tetap sinkron; data DB hanya memperkaya peta di belakang layar.
 import emojiData from './web-emojis.json';
 
 const byName = {};
 const byAlias = {};
-for (const e of emojiData.emojis) {
+const byId = {}; // id Discord -> entri (untuk hydrate & lookup)
+function daftar(e) {
+  if (!e || !e.id || !e.url) return;
+  const id = String(e.id);
+  byId[id] = e;
   if (!byName[e.name]) byName[e.name] = e;
   for (const a of e.aliases || []) {
     if (!byAlias[a]) byAlias[a] = e;
+  }
+}
+for (const e of emojiData.emojis) daftar(e);
+
+// Hydrate dari katalog DB (bentuk ringkas: { n,a,i,u,an }).
+// Entri BARU dari DB ditambahkan; entri dengan id sama DIPERBARUI (nama/url)
+// supaya kalau bot ganti emoji, web ikut berubah tanpa deploy ulang.
+export function hydrateEmojiCatalog(ringkas) {
+  if (!Array.isArray(ringkas)) return;
+  for (const r of ringkas) {
+    const e = { name: r.n, aliases: r.a || [], id: String(r.i), url: r.u, animated: Number(r.an) === 1 };
+    if (!e.id || !e.url || !e.name) continue;
+    const lama = byId[e.id];
+    if (lama) {
+      // Perbarui entri yang sudah ada (nama & url bisa berubah di sisi bot).
+      lama.url = e.url;
+      lama.animated = e.animated;
+      lama.aliases = e.aliases;
+      if (lama.name !== e.name) {
+        // Nama berubah: daftarkan nama baru, biarkan alias lama tetap resolve.
+        byName[e.name] = lama;
+      }
+    } else {
+      daftar(e);
+    }
   }
 }
 

@@ -94,52 +94,28 @@ function emojiUrl(emoji, map) {
 // ==========================================
 // SWR CACHE (2026-10-03, permintaan pemilik: "loading gak kelamaan")
 // ==========================================
-// Data katalog (shop, titles, promo, settings, servers) jarang berubah.
-// Halaman mengembalikan hasil CACHE LANGSUNG (0 query DB) selama masih
-// segar; setelah basi, refresh di latar sambil tetap menyajikan cache lama
-// -> halaman TIDAK PERNAH menunggu Supabase. Config dinamis (nilai dari DB
-// yang admin sering ubah: maintenance, pengumuman) TTL-nya lebih pendek.
-const _swrCache = new Map(); // key -> { val, at }
-
-// Invalidasi cache katalog. Dipanggil panel admin SETELAH menulis ke DB
-// (restock/harga/diskon) supaya /shop publik langsung menampilkan data baru -
-// tanpa ini, pengunjung masih melihat cache SWR lama sampai TTL habis.
-export function invalidateCatalog(keys = ['shop', 'discounts', 'titles', 'promos', 'settings', 'servers']) {
-  for (const k of keys) _swrCache.delete(k);
-}
-
-async function swr(key, ttlMs, fetcher) {
-  const now = Date.now();
-  const hit = _swrCache.get(key);
-  if (hit && now - hit.at < ttlMs) return hit.val;       // segar -> instan
-  if (hit) {
-    // Basi: FETCH DULU (jangan sajikan data lama), karena TTL-nya sudah sangat
-    // pendek (5 dtk) sehingga menunggu query DB singkat tidak terasa. Ini
-    // membuat perubahan admin langsung terlihat pada request setelah TTL,
-    // bukan baru pada request kedua sesudahnya.
-    try {
-      const v = await fetcher();
-      if (v) { _swrCache.set(key, { val: v, at: Date.now() }); return v; }
-    } catch { /* DB gagal -> sajikan cache lama sebagai cadangan */ }
-    return hit.val;
-  }
-  // belum ada cache -> harus fetch (hanya request pertama tiap TTL)
+// TANPA CACHE (permintaan pemilik 2026-10-03)
+// ==========================================
+// Dulu ada cache SWR (sajikan data lama, refresh di latar). Pemilik meminta
+// cache DIHAPUS TOTAL untuk semua pembaca (admin & user biasa) supaya yang
+// tampil selalu data terkini - tidak ada lagi "kok masih lama berubahnya".
+// Setiap pemanggilan sekarang query DB langsung. Query-nya ringan (indexed,
+// puluhan baris) dan halaman sudah punya AutoRefresh, jadi aman.
+async function swr(_key, _ttlMs, fetcher) {
   try {
-    const v = await fetcher();
-    if (v) _swrCache.set(key, { val: v, at: now });
-    return v;
-  } catch { return null; }
+    return await fetcher();
+  } catch {
+    return null;
+  }
 }
-// TTL katalog pendek (5 dtk): admin sering mengubah harga/diskon dari panel,
-// dan perubahan itu harus cepat terlihat di /shop. 5 dtk cukup menyerap
-// lonjakan trafik, tapi masih "hampir langsung" setelah admin menyimpan.
-// (Dulu 60 dtk: admin mengubah diskon lalu bingung karena web masih lama.)
-const TTL_CATALOG = 5_000;
-const TTL_CONFIG  = 5_000;   // settings/pengumuman juga sering diubah
+
+// Dipertahankan sebagai no-op supaya pemanggil lama (endpoint admin) tidak
+// perlu diubah; tanpa cache, tidak ada yang perlu di-invalidasi.
+export function invalidateCatalog() { /* no-op: cache sudah dihapus */ }
 
 // SHOP ITEMS langsung dari DB bot.
 export async function getLiveShop() {
-  return swr('shop', TTL_CATALOG, async () => {
+  return swr('shop', 0, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -202,7 +178,7 @@ export async function getLiveShop() {
 
 // TITLES langsung dari DB bot (katalog statis bot + dimiliki user via user_titles).
 export async function getLiveTitles() {
-  return swr('titles', TTL_CATALOG, async () => {
+  return swr('titles', 0, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -226,7 +202,7 @@ export async function getLiveTitles() {
 // Sekarang dibaca langsung dari tabel bot: public.promo_codes + public.settings.
 
 export async function getLivePromos() {
-  return swr('promos', TTL_CONFIG, async () => {
+  return swr('promos', 0, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -250,7 +226,7 @@ export async function getLivePromos() {
 }
 
 export async function getLiveSettings() {
-  return swr('settings', TTL_CONFIG, async () => {
+  return swr('settings', 0, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -275,7 +251,7 @@ export async function getLiveSettings() {
 
 // DISKON AKTIF (flash sale) langsung dari DB bot.
 export async function getLiveDiscounts() {
-  return swr('discounts', TTL_CATALOG, async () => {
+  return swr('discounts', 0, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -307,7 +283,7 @@ export async function getLiveDiscounts() {
 //   iconUrl = ikon server dari tabel yang sama
 // Fallback ke "Server <id>" kalau bot belum sempat mengisi guild_infos.
 export async function getLiveServers() {
-  return swr('servers', TTL_CATALOG, async () => {
+  return swr('servers', 0, async () => {
   try {
     await schemaReady();
     const db = getDb();

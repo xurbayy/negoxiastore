@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
+import { avatarUser } from '../lib/avatarClient';
 import PlayerProfileCard from '../components/PlayerProfileCard';
 import ShareCardButton from '../components/ShareCardButton';
 
@@ -74,11 +75,10 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                       >
                         {p.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.avatarUrl} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full border border-border-soft group-hover:border-accent" />
+                          <img src={avatarUser(p.userId, p.avatarUrl, 56)} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full border border-border-soft group-hover:border-accent" />
                         ) : (
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[0.65rem] font-bold text-accent-hover">
-                            {String(p.username || '?').slice(0, 2).toUpperCase()}
-                          </span>
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUser(p.userId, null, 56)} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full border border-border-soft group-hover:border-accent" />
                         )}
                         <span className="truncate">{p.username}</span>
                         {hasPass(p.userId) && (

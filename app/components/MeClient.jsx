@@ -7,6 +7,7 @@ import { emojiSrc } from '../lib/emojisClient';
 // dan gameName. Dulu file ini punya salinan sendiri-sendiri (fmt, stripEmoji,
 // GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
 import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh } from '../lib/formatClient';
+import { avatarUser } from '../lib/avatarClient';
 import ShareCardButton from './ShareCardButton';
 // sisaHari: dihitung SAAT RENDER (bukan daysLeft dari bot yang bisa basi).
 import { sisaHari } from '../lib/premiumPlan';
@@ -421,15 +422,16 @@ export default function MeClient({ betaGames = null }) {
         <div className="px-6 py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-4">
-              {/* Avatar with gaming glow */}
-              {p.avatarUrl || freshAvatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.avatarUrl || freshAvatar} alt="" width={64} height={64} className="h-16 w-16 rounded-full ring-2 ring-accent/80 shadow-[0_0_24px_rgba(241,154,26,0.3)]" />
-              ) : (
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent font-display text-xl text-white shadow-[0_0_24px_rgba(241,154,26,0.3)]">
-                  {(freshName || '?').slice(0, 2).toUpperCase()}
-                </span>
-              )}
+              {/* Avatar with gaming glow - fallback avatar default Discord
+                  (dari user_id) kalau belum ada avatar_url, supaya tidak kosong. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={avatarUser(p.userId || state.user?.discordId, p.avatarUrl || freshAvatar, 128)}
+                alt=""
+                width={64}
+                height={64}
+                className="h-16 w-16 rounded-full ring-2 ring-accent/80 shadow-[0_0_24px_rgba(241,154,26,0.3)]"
+              />
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="font-display text-2xl text-card-cream" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.3)' }}>{p.username}</h1>
