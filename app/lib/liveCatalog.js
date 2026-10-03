@@ -118,7 +118,13 @@ export async function getLiveShop() {
           category: shopCategory(it),
           discountPrice: disc[it.item_key] || null,
         })),
-      shopCategories: SHOP_CATEGORIES,
+      // KATEGORI JUGA DAPAT emojiUrl (fix 2026-10-03): dulu SHOP_CATEGORIES
+      // dikirim mentah (cuma teks "<a:globe:...>") dan ShopClient PlainEmoji
+      // mengabaikan format itu -> ikon kategori kosong di halaman shop.
+      shopCategories: SHOP_CATEGORIES.map((c) => ({
+        ...c,
+        emojiUrl: emojiUrl(c.emoji, emap),
+      })),
       discounts: discounts.rows.map((d) => ({ itemKey: d.item_key, discountPrice: Number(d.discount_price), expiresAt: Number(d.expires_at) })),
     };
   } catch {
