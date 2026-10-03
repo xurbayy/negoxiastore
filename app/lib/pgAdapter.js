@@ -98,8 +98,11 @@ async function _exec(sql, args) {
 
 function createPgClient() {
   return {
-    async execute(stmt) {
-      if (typeof stmt === 'string') return _exec(stmt, []);
+    // Dua bentuk didukung (kompatibel @libsql/client + gaya ringkas):
+    //   execute('SELECT ...', [args])        <- dipakai lib/snapshot.js
+    //   execute({ sql: 'SELECT ...', args }) <- dipakai halaman lain
+    async execute(stmt, args2) {
+      if (typeof stmt === 'string') return _exec(stmt, args2 || []);
       if (stmt && typeof stmt === 'object') return _exec(stmt.sql, stmt.args);
       throw new Error('execute: bentuk statement tidak dikenal');
     },
