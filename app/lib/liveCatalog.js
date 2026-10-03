@@ -329,7 +329,12 @@ export async function getLiveServers() {
     // "Link belum tersedia"; sekarang dibuang langsung dari sumber data,
     // jadi fallback snapshot (siapkanServer) juga harus menyaring dengan
     // aturan yang sama.
-    .filter((s) => Boolean(s.invite));
+    //
+    // SYARAT MINIMAL 20 PEMAIN (permintaan pemilik 2026-10-03): server baru
+    // muncul di leaderboard komunitas kalau sudah >= 20 pemain unik main.
+    // Server kecil tidak ikut tampil, tapi URUTAN kejar-kejarannya (peringkat)
+    // TETAP SAMA: pemain -> game -> poin.
+    .filter((s) => Boolean(s.invite) && Number(s.players) >= 20);
   } catch {
     return null;
   }

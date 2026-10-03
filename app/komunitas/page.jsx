@@ -55,10 +55,11 @@ function siapkanServer(snap) {
     invite: invites[s.guildId]?.url || null, // null = tombol Gabung tidak tampil
   }));
 
-  // Buang server tanpa pemain ATAU tanpa invite (revisi 2026-10-03).
-  // Dibandingkan dengan angka, bukan string, supaya '0' dari JSON tidak
-  // lolos sebagai truthy.
-  const adaPemain = semua.filter((s) => s.players > 0 && s.invite);
+  // Buang server tanpa pemain ATAU tanpa invite (revisi 2026-10-03), dan
+  // TERAPKAN SYARAT MINIMAL 20 PEMAIN (permintaan pemilik 2026-10-03) - sama
+  // persis dengan getLiveServers supaya jalur live & fallback konsisten.
+  // Dibandingkan dengan angka, bukan string, supaya '0' dari JSON tidak lolos.
+  const adaPemain = semua.filter((s) => s.players >= 20 && s.invite);
 
   return {
     daftar: adaPemain.slice(0, 100), // maksimal 100 server
