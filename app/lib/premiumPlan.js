@@ -29,7 +29,11 @@ export const LIFETIME_THRESHOLD_DAYS = 50 * 365;
  * @returns {number} sisa hari, minimal 0
  */
 export function sisaHari(expiresAt) {
-  const t = typeof expiresAt === 'string' ? Date.parse(expiresAt) : Number(expiresAt);
+  // Postgres mengirim BIGINT sebagai STRING ("1792607055358"). Date.parse()
+  // menolak bentuk itu (NaN) sehingga SEMUA member tampil "0 hari".
+  // Angka murni (semua digit, > 10 karakter) harus dibaca Number() langsung.
+  const raw = typeof expiresAt === 'string' ? expiresAt.trim() : expiresAt;
+  const t = /^\d{11,}$/.test(String(raw)) ? Number(raw) : Date.parse(raw);
   if (!Number.isFinite(t)) return 0;
   return Math.max(0, Math.ceil((t - Date.now()) / 86400000));
 }

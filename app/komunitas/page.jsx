@@ -65,7 +65,6 @@ function siapkanServer(snap) {
   return {
     daftar: adaPemain.slice(0, 100), // maksimal 100 server
     total: adaPemain.length,          // jumlah yang BENAR-BENAR tampil
-    tanpaInvite: adaPemain.filter((s) => !s.invite).length,
   };
 }
 
@@ -77,24 +76,15 @@ export default async function KomunitasPage() {
   const { getLiveServers } = await import('../lib/liveCatalog');
   const liveServers = await getLiveServers();
   const snap = liveServers ? null : await getLatestSnapshot();
-  const { daftar, total, tanpaInvite } = liveServers
+  const { daftar, total } = liveServers
     ? {
         daftar: liveServers,
         total: liveServers.length,
-        tanpaInvite: liveServers.filter((s) => !s.invite).length,
       }
     : siapkanServer(snap);
-  // Sebagian/total server belum punya link invite. Server TETAP ditampilkan
-  // (permintaan pemilik 2026-09-30) - yang hilang hanya tombol Gabung-nya.
-  // Keterangan ini murni penjelasan, bukan alasan menyembunyikan daftar.
-  const adaTanpaInvite = total > 0 && tanpaInvite > 0;
-
-  // Diagnosa dari bot (monitor.inviteDiag) - dirakit di utils/webBridge.js
-  // sehingga tetap terkirim walau utils/guildInvite.js sendiri gagal dimuat.
-  // Kalau ada, halaman bisa menyebut PENYEBAB PASTINYA + server mana saja,
-  // bukan cuma menduga dua kemungkinan.
-  const diag = snap?.monitor?.inviteDiag || null;
-  const alasannya = Array.isArray(diag?.alasan) ? diag.alasan : [];
+  // Notice "server belum punya link invite" DIHAPUS (permintaan pemilik
+  // 2026-10-03): server tanpa invite tetap tampil di daftar, cukup tanpa
+  // tombol Gabung - tanpa kotak peringatan apa pun di atas daftar.
 
   return (
     <>
@@ -128,45 +118,8 @@ export default async function KomunitasPage() {
               daftar server dibaca LANGSUNG dari database (Supabase), tidak
               lagi bergantung pada bot mengirim/push. */}
 
-          {adaTanpaInvite && (
-            <div className="mt-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-ink">
-              {diag && diag.gagal > 0 ? (
-                <>
-                  <p>
-                    <strong>{tanpaInvite} dari {total} server</strong> belum punya link invite,
-                    jadi tombol Gabung-nya belum muncul. Servernya tetap ditampilkan di daftar.
-                  </p>
-                  {alasannya.length > 0 && (
-                    <ul className="mt-1.5 list-disc space-y-1 pl-4">
-                      {alasannya.map((a, i) => (
-                        <li key={i}>
-                          <strong>{a.teks}</strong> - {a.jumlah} server
-                          {a.server?.length > 0 && (
-                            <span className="text-ink-muted">
-                              {' '}({a.server.join(', ')}{a.sisa ? `, +${a.sisa} lagi` : ''})
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {diag.modulHilang && (
-                    <p className="mt-1.5">
-                      Modul invite gagal dimuat: <code>{diag.modulHilang}</code>. Pastikan file{' '}
-                      <strong>utils/guildInvite.js</strong> ada di folder bot hosting.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p>
-                  <strong>{tanpaInvite} dari {total} server</strong> belum punya link invite.
-                  Penyebab tersering: bot belum diberi izin{' '}
-                  <strong>Create Instant Invite</strong> di server itu. Servernya tetap
-                  ditampilkan di daftar, hanya tombol Gabung-nya yang belum muncul.
-                </p>
-              )}
-            </div>
-          )}
+          {/* Notice "server belum punya link invite" DIHAPUS (2026-10-03).
+              Daftar server langsung tampil tanpa kotak peringatan. */}
 
           <KomunitasClient servers={daftar} />
 

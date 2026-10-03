@@ -71,10 +71,23 @@ async function emojiUrlMap() {
   } catch { return {}; }
 }
 
+// FALLBACK EMOJI STATIS (fix 2026-10-03): emoji_registry hanya berisi emoji
+// admin-title (5 baris), jadi emoji kategori/item shop dari bot
+// (<:chair:1519576885418393600> dst.) tidak punya URL dan tampil kosong di web.
+// web-emojis.json memuat SEMUA emoji resmi bot by ID - cocokkan dari ID di
+// teks emoji, tidak perlu bot push apa pun.
+import emojiData from './web-emojis.json';
+const staticEmojiById = {};
+for (const e of emojiData.emojis) {
+  const id = String(e.id || (e.url || '').match(/emojis\/(\d+)/)?.[1] || '');
+  if (id && !staticEmojiById[id]) staticEmojiById[id] = e.url;
+}
+
 function emojiUrl(emoji, map) {
   const m = String(emoji || '').match(/<a?:[A-Za-z0-9_]+:(\d+)>/);
   if (!m) return null;
-  return map[m[1]] || null;
+  // Registry DB dulu (emoji dinamis admin-title), lalu katalog statis bot.
+  return map[m[1]] || staticEmojiById[m[1]] || null;
 }
 
 // SHOP ITEMS langsung dari DB bot.
