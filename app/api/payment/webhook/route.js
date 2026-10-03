@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { getDb, schemaReady } from '../../../lib/db';
 import { getLatestSnapshot } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
+import { notifyQueue } from '../../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,6 +107,11 @@ export async function POST(request) {
           sql: "INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, 'pending', ?)",
           args: [orow.discord_id, now],
         });
+        // INSTAN (2026-10-03): ping bot via Postgres NOTIFY supaya grant
+        // NEXO Pass aktif dalam <1 detik setelah webhook masuk (bukan
+        // nunggu poll bot berikutnya). Gagal = tidak fatal, poll tetap
+        // menarik antrean.
+        notifyQueue(['grant_premium']).catch(() => {});
       }
     }
   } else if (failed) {

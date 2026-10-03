@@ -2,6 +2,7 @@ import { getSession, getAdminSession } from '../../../lib/session';
 import { getDb } from '../../../lib/db';
 import { json, ready } from '../../../lib/api-helpers';
 import { touchActivity } from '../../../lib/activity';
+import { notifyQueue } from '../../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,6 +66,8 @@ export async function POST(request) {
     sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
     args: [action, JSON.stringify(clamped), actorId, 'pending', Date.now()],
   });
+  // Ping instan ke bot (LISTEN/NOTIFY) - gagal tidak fatal.
+  notifyQueue([action]).catch(() => {});
 
   await touchActivity();
   return json({ ok: true, id: Number(res.lastInsertRowid) });

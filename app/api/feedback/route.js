@@ -1,4 +1,5 @@
 import { getSession } from '../../lib/session';
+import { notifyQueue } from '../../lib/pgNotifyWeb';
 import { getDb } from '../../lib/db';
 import { json, ready } from '../../lib/api-helpers';
 import { rateLimit } from '../../lib/rate-limit';
@@ -42,6 +43,8 @@ export async function POST(request) {
     sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
     args: ['web_feedback', JSON.stringify({ userId: session.discordId, username: session.username, kind, message, page }), session.discordId, 'pending', now],
   });
+  // Ping instan ke bot (LISTEN/NOTIFY).
+  notifyQueue(['web_feedback']).catch(() => {});
   await touchActivity().catch(() => {});
 
   return json({ ok: true, message: 'Terkirim! Terima kasih sudah membantu NEXO jadi lebih baik.' });

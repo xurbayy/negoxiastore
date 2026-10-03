@@ -3,6 +3,7 @@ import { getAdminSession, getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
 import { touchActivity } from '../../../lib/activity';
 import { PLAN_DAYS } from '../../../lib/premiumPlan';
+import { notifyQueue } from '../../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,8 @@ export async function POST(request) {
         sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'admin_manual', 'pending', ?)",
         args: [JSON.stringify({ userId: order.discord_id, tier: 'pro', days: PLAN_DAYS }), now],
       });
+      // Ping instan ke bot (LISTEN/NOTIFY).
+      notifyQueue(['grant_premium']).catch(() => {});
       await db.execute({
         sql: "INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, 'pending', ?)",
         args: [order.discord_id, now],

@@ -2,6 +2,7 @@ import { getSession, getAdminSession } from '../../../../../lib/session';
 import { getDb, schemaReady } from '../../../../../lib/db';
 import { validasiUsulan } from '../../../../../lib/aiAgen';
 import { json, ready } from '../../../../../lib/api-helpers';
+import { notifyQueue } from '../../../../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +87,8 @@ export async function PATCH(request) {
     sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
     args: [row.aksi, JSON.stringify(payload), actorId, 'pending', Date.now()],
   });
+  // Ping instan ke bot (LISTEN/NOTIFY).
+  notifyQueue([row.aksi]).catch(() => {});
   const cmdId = Number(ins.lastInsertRowid ?? 0);
   await db.execute({ sql: "UPDATE ai_agen_usulan SET status = 'disetujui', hasil = ?, diputus_at = ? WHERE id = ?", args: [`Perintah #${cmdId} dikirim ke bot.`, Date.now(), id] });
 
