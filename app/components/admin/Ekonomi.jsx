@@ -58,6 +58,7 @@ export default function Ekonomi({ send }) {
           <AmountAction label="Set Level" hint="1-1000" disabled={!uid || busy} onSubmit={(v) => submit('set_level', { userId: uid, level: v })} />
           <AmountAction label="Set Daily Streak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_streak', { userId: uid, value: v })} />
           <AmountAction label="Set Winstreak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_winstreak', { userId: uid, value: v })} />
+          <AmountAction label="Set RPG Level" hint="1-100 (season berjalan)" disabled={!uid || busy} onSubmit={(v) => submit('set_rpg_level', { userId: uid, level: v })} />
           <AmountAction label="Giveaway Semua Player" hint="maks 250.000 - DESTRUKTIF" danger disabled={busy} onSubmit={(v) => submit('giveaway', { amount: v }, true)} />
           <AmountAction label="Bebaskan Hutang" hint="clear loan user ini" disabled={!uid || busy} onSubmit={() => submit('clear_loan', { userId: uid }, true)} />
         </div>

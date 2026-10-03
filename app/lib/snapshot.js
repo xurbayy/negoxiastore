@@ -81,11 +81,22 @@ export async function getSnapshotSeries(days = 7) {
   });
   let series = null;
   if (rows) {
+    // FIX 2026-10-03: Postgres melowercase alias ("AS gamesToday" ->
+    // "gamestoday"), sehingga mapping r.gamesToday selalu undefined -> semua
+    // titik null -> grafik "Belum cukup data". Baca key CASE-INSENSITIVE.
+    const get = (r, name) => {
+      if (r[name] != null) return r[name];
+      const lower = name.toLowerCase();
+      if (r[lower] != null) return r[lower];
+      const upper = name.toUpperCase();
+      if (r[upper] != null) return r[upper];
+      return null;
+    };
     series = rows.map((r) => ({
       ts: Number(r.ts),
-      gamesToday: r.gamesToday == null ? null : Number(r.gamesToday),
-      totalMoney: r.totalMoney == null ? null : Number(r.totalMoney),
-      totalUsers: r.totalUsers == null ? null : Number(r.totalUsers),
+      gamesToday: get(r, 'gamesToday') == null ? null : Number(get(r, 'gamesToday')),
+      totalMoney: get(r, 'totalMoney') == null ? null : Number(get(r, 'totalMoney')),
+      totalUsers: get(r, 'totalUsers') == null ? null : Number(get(r, 'totalUsers')),
     }));
     _lastGood = _lastGood ? { ..._lastGood, series, at: Date.now() } : { snap: null, series, at: Date.now() };
     return series;
