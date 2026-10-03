@@ -14,11 +14,13 @@ const PRUNE_KEY = 'prune:last…d_at';
 const PRUNE_EVERY_MS = 10 * 60_000;
 
 async function tryExec(db, sql, args = []) {
-  try { await db.execute({ sql, args }); } catch {}
+  try { await db.execute({ sql, args }); return true; } catch { return false; }
 }
 
 // DELETE dengan LIMIT tidak didukung SQLite murni -> pakai subquery id.
-// Untuk tabel tanpa kolom id (webhook_events), pakai rowid.
+// PostgreSQL (2026-10-03): webhook_events sudah punya kolom id, dan rowid
+// TIDAK ADA di Postgres. deleteLimitedByRowid jadi fallback 2 tahap: coba
+// id dulu (jalan di PG), kalau gagal baru rowid (SQLite lama).
 async function deleteLimited(db, table, whereSql, args, limit = 5000) {
   await tryExec(
     db,
@@ -28,11 +30,20 @@ async function deleteLimited(db, table, whereSql, args, limit = 5000) {
 }
 
 async function deleteLimitedByRowid(db, table, whereSql, args, limit = 5000) {
-  await tryExec(
+  // Jalur utama (Postgres): webhook_events punya kolom id.
+  const ok = await tryExec(
     db,
-    `DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE ${whereSql} ORDER BY rowid ASC LIMIT ${Number(limit)})`,
+    `DELETE FROM ${table} WHERE id IN (SELECT id FROM ${table} WHERE ${whereSql} ORDER BY id ASC LIMIT ${Number(limit)})`,
     args
   );
+  if (!ok) {
+    // Jalur lama (SQLite): tabel tanpa kolom id -> rowid.
+    await tryExec(
+      db,
+      `DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE ${whereSql} ORDER BY rowid ASC LIMIT ${Number(limit)})`,
+      args
+    );
+  }
 }
 
 async function pruneNow(db, now) {
