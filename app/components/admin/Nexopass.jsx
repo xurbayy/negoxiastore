@@ -8,7 +8,9 @@ import { sisaHari, isLifetime as isLifetimePremium } from '../../lib/premiumPlan
 
 // NEXO Pass: daftar member premium aktif + grant/revoke.
 export default function Nexopass({ send, data }) {
-  const members = data.snapshot?.premiumMembers || [];
+  // DATA LIVE DARI DB (2026-10-03): dulu dari snapshot push (bisa basi 60+ dtk)
+  // -> admin mengira grant/revoke gagal. Sekarang dari data.premiumMembers.
+  const members = data.premiumMembers || data.snapshot?.premiumMembers || [];
   const [confirm, setConfirm] = useState(null); // { action, payload, label }
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);

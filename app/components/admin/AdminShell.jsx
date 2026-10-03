@@ -85,11 +85,13 @@ export default function AdminShell({ username, avatar = null }) {
   const [toast, setToast] = useState(null); // { message, isError }
 
   // Badge sidebar: angka dari data yang sudah ada (pending command, sanksi, feedback).
+  // Moderasi & NEXO Pass pakai data DB langsung (data.bannedUsers / premiumMembers)
+  // supaya angkanya tidak menunggu snapshot push.
   const badges = data ? {
     log: (data.log || []).filter((r) => r.status === 'pending').length,
-    moderasi: (data.snapshot?.monitor?.bannedUsers || []).length,
+    moderasi: (data.bannedUsers || data.snapshot?.monitor?.bannedUsers || []).length,
     feedback: (data.feedback || []).length,
-    nexopass: (data.snapshot?.premiumMembers || []).length,
+    nexopass: (data.premiumMembers || data.snapshot?.premiumMembers || []).length,
     manualorders: (data.orders || []).filter((r) => r.status === 'pending' && r.gateway === 'manual').length,
   } : {};
 

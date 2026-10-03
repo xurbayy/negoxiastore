@@ -9,7 +9,11 @@ import { fmtRingkas } from '../../lib/formatClient';
 export default function RedeemManager({ send, data }) {
   const cacheByCode = {};
   for (const c of data.promoCache || []) cacheByCode[c.code] = c;
-  const codes = (data.snapshot?.promoCodes || []).map((p) => {
+  // DATA LIVE DARI DB (2026-10-03): dulu dari snapshot push (bisa basi 60+ dtk)
+  // -> admin mengira kode gagal dibuat. Sekarang dari data.promoCodes (query
+  // langsung). Fallback ke snapshot kalau field DB tak ada.
+  const sumberKode = data.promoCodes || data.snapshot?.promoCodes || [];
+  const codes = sumberKode.map((p) => {
     const c = cacheByCode[String(p.code).toUpperCase()];
     return { ...p, live: c ? { remaining: c.remaining, exhausted: c.exhausted } : null };
   });

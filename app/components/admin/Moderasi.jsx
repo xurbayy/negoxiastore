@@ -18,7 +18,9 @@ export default function Moderasi({ send, data }) {
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
-  const rawList = data?.snapshot?.monitor?.bannedUsers || [];
+  // DATA LIVE DARI DB (2026-10-03): dulu dari snapshot push (basi 60+ dtk).
+  // Sekarang dari data.bannedUsers (query langsung banned_users).
+  const rawList = data?.bannedUsers || data?.snapshot?.monitor?.bannedUsers || [];
   const bannedOf = (b) => b.user_id ?? b.userId;
   const timeoutOf = (b) => Number(b.timeout_until ?? b.timeoutUntil) || 0;
   const filteredList = rawList.filter((b) => {

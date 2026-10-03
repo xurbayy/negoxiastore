@@ -6,10 +6,10 @@ import RichText from './RichText';
 
 // Titles: (1) beri Title katalog ke user (add_title),
 // (2) pasang/hapus Admin Title custom (set_admin_title / clear_admin_title),
-// (3) daftar pemegang Admin Title dari snapshot (adminTitleHolders) - emoji
-// di-render lewat RichText, sinkron otomatis tiap push bot (60 dtk).
+// (3) daftar pemegang Admin Title LANGSUNG dari DB (adminTitleHolders query),
+// di-render lewat RichText - muncul segera, tidak menunggu push bot.
 export default function Titles({ send, data }) {
-  const holders = data.snapshot?.monitor?.adminTitleHolders || [];
+  const holders = data.adminTitleHolders || data.snapshot?.monitor?.adminTitleHolders || [];
   const titles = data.snapshot?.titleCatalog || [];
   const [tForm, setTForm] = useState({ userId: '', titleKey: '' });
   const [aForm, setAForm] = useState({ userId: '', text: '' });
@@ -74,10 +74,10 @@ export default function Titles({ send, data }) {
         <p className={`rounded-xl border px-4 py-3 text-sm ${feedback.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{feedback.text}</p>
       )}
 
-      {/* Daftar pemegang admin title (sinkron snapshot) */}
+      {/* Daftar pemegang admin title (live dari DB) */}
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
         <h2 className="font-display text-ink">Pemegang Admin Title : {holders.length}</h2>
-        <p className="mt-1 text-xs text-ink-muted">Data ikut snapshot bot, jadi baru muncul dalam 60 detik setelah dipasang atau dicabut, termasuk lewat nxadmin Discord.</p>
+        <p className="mt-1 text-xs text-ink-muted">Data langsung dari database - perubahan (termasuk lewat nxadmin Discord) muncul otomatis dalam beberapa detik.</p>
         {holders.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada.</p> : (
           <ul className="mt-3 space-y-2 text-sm">
             {holders.map((h) => (
