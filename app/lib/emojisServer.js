@@ -25,19 +25,25 @@ const STATIC_EMOJIS = Array.isArray(emojiData?.emojis) ? emojiData.emojis : [];
 // TANPA CACHE (permintaan pemilik): katalog emoji dibaca dari DB setiap
 // pemanggilan supaya begitu bot push emoji baru, web langsung ikut berubah.
 
-// Buat tabel kalau belum ada (idempotent). Dipanggil sebelum tulis/baca.
-async function ensureTable(db) {
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS web.emoji_catalog (
-      id          TEXT PRIMARY KEY,        -- emoji id Discord (unik)
-      name        TEXT NOT NULL,
-      aliases     TEXT DEFAULT '',         -- dipisah koma
-      animated    INTEGER DEFAULT 0,
-      url         TEXT NOT NULL,
-      usage       TEXT,
-      updated_at  INTEGER NOT NULL
-    )
-  `);
+// Buat tabel kalau belum ada. SEKALI per proses saja (di-memoize) supaya
+// tidak mengirim CREATE TABLE tiap request - tiap round-trip ke pooler
+// Supabase ~180 ms, dan itu berulang di setiap baca/tulis.
+let _tableReady = null;
+function ensureTable(db) {
+  if (!_tableReady) {
+    _tableReady = db.execute(`
+      CREATE TABLE IF NOT EXISTS web.emoji_catalog (
+        id          TEXT PRIMARY KEY,        -- emoji id Discord (unik)
+        name        TEXT NOT NULL,
+        aliases     TEXT DEFAULT '',         -- dipisah koma
+        animated    INTEGER DEFAULT 0,
+        url         TEXT NOT NULL,
+        usage       TEXT,
+        updated_at  INTEGER NOT NULL
+      )
+    `).catch((e) => { _tableReady = null; throw e; });
+  }
+  return _tableReady;
 }
 
 function normalizeRow(r) {
@@ -98,24 +104,25 @@ export async function replaceEmojiCatalog(emojis) {
   }
   if (!bersih.length) throw new Error('Tidak ada emoji valid di payload.');
 
-  // Ganti seluruh isi tabel dalam satu transaksi supaya web tidak melihat
-  // katalog setengah terisi saat push sedang berjalan.
-  await db.execute('BEGIN');
-  try {
-    await db.execute('DELETE FROM web.emoji_catalog');
-    for (const e of bersih) {
-      await db.execute({
-        sql: `INSERT INTO web.emoji_catalog (id, name, aliases, animated, url, usage, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?)
-              ON CONFLICT(id) DO UPDATE SET name=excluded.name, aliases=excluded.aliases,
-                animated=excluded.animated, url=excluded.url, usage=excluded.usage, updated_at=excluded.updated_at`,
-        args: [e.id, e.name, e.aliases, e.animated, e.url, e.usage, now],
-      });
-    }
-    await db.execute('COMMIT');
-  } catch (err) {
-    await db.execute('ROLLBACK').catch(() => {});
-    throw err;
+  // Ganti seluruh isi tabel. PENTING: pakai INSERT MULTI-VALUES per batch,
+  // BUKAN satu query per emoji. Versi lama melakukan 127 query berurutan
+  // (~250 ms masing-masing lewat pooler Supabase) = >30 detik, sehingga bot
+  // timeout di 10 detik dan push SELALU gagal. Satu query batch selesai <1 dtk.
+  await db.execute('DELETE FROM web.emoji_catalog');
+
+  const BATCH = 200; // 200 baris x 7 kolom = 1400 parameter (aman di bawah batas PG)
+  for (let i = 0; i < bersih.length; i += BATCH) {
+    const keping = bersih.slice(i, i + BATCH);
+    const valuesSql = keping.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(',');
+    const args = [];
+    for (const e of keping) args.push(e.id, e.name, e.aliases, e.animated, e.url, e.usage, now);
+    await db.execute({
+      sql: `INSERT INTO web.emoji_catalog (id, name, aliases, animated, url, usage, updated_at)
+            VALUES ${valuesSql}
+            ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name, aliases=EXCLUDED.aliases,
+              animated=EXCLUDED.animated, url=EXCLUDED.url, usage=EXCLUDED.usage, updated_at=EXCLUDED.updated_at`,
+      args,
+    });
   }
 
   return { count: bersih.length };

@@ -1,11 +1,21 @@
 # PATCH BOT — Push Katalog Emoji ke Web
 
-**Tanggal:** 2026-10-03 (revisi)
+**Tanggal:** 2026-10-03 (revisi 2)
 **Untuk:** repo bot NEXO (`E:\NEGOXIA\BOT HOSTING\NEXO`)
+
+> ## ✅ SUDAH DITERAPKAN LANGSUNG (2026-10-03)
+> Perubahan berikut **sudah saya tulis langsung** ke repo bot:
+> - `utils/webBridge.js`: `_collectEmojis()`, `pushEmojis()` (timeout 25 dtk + 1x retry),
+>   dipanggil fire-and-forget di `pushCycle()`, dan `pushEmojis` di-export.
+> - `index.js`: event `GuildEmojiCreate/Delete/Update` memanggil `webBridge.pushEmojis(client, true)`.
+>
+> Yang kamu perlu lakukan: **restart bot**. Tidak perlu tempel manual lagi.
+> Isi dokumen di bawah disimpan sebagai referensi/riwayat.
+
 **Tujuan:** bot mengirim daftar emoji resminya ke web (`POST /api/bot/emojis`),
 supaya web memakai emoji dari DB — bukan file `web-emojis.json` statis yang bisa basi.
 
-Sisi **web sudah selesai & teruji**. Tinggal tambahkan pemicu push di bot.
+Sisi **web sudah selesai & teruji**. Patch sisi bot juga sudah diterapkan (lihat di atas).
 
 ---
 
