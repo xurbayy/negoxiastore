@@ -33,6 +33,7 @@ export async function GET() {
       out.langkah.push('getLiveStats OK');
     }
 
+    out.safe_error_terakhir = mod._lastSafeError;
     out.ok = true;
   } catch (e) {
     out.ok = false;

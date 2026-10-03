@@ -4,14 +4,18 @@ import { getDb, schemaReady } from './db';
 // tidak bisa dihubungi. Jadi error Turso (timeout, dns, dsb) ditelan + cache
 // snapshot terakhir yang sukses dipakai sementara.
 let _lastGood = null; // { snap, series, at }
+// Error terakhir dari safeQuery (untuk diagnostik /api/diag-leaderboard).
+export let _lastSafeError = null;
 
 async function safeQuery(fn) {
-  // Blip jaringan ke Turso (ConnectTimeout) sering cuma sekali lewat ->
-  // retry 1x dengan jeda pendek sebelum nyerah ke cache.
+  // Blip jaringan (ConnectTimeout/dns) sering cuma sekali lewat -> retry 1x
+  // dengan jeda pendek sebelum nyerah. Error TERAKHIR dicatat supaya bisa
+  // dilihat lewat endpoint diagnostik (jangan sampai gagal senyap).
   for (let i = 0; i < 2; i++) {
     try {
       return await fn();
-    } catch {
+    } catch (e) {
+      _lastSafeError = { pesan: String(e?.message || e), code: e?.code || null, waktu: Date.now() };
       if (i === 0) await new Promise((res) => setTimeout(res, 250));
     }
   }
