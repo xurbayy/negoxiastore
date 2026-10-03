@@ -10,7 +10,7 @@ import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh } from '../lib/formatClie
 import ShareCardButton from './ShareCardButton';
 // sisaHari: dihitung SAAT RENDER (bukan daysLeft dari bot yang bisa basi).
 import { sisaHari } from '../lib/premiumPlan';
-import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
+import { stripEmojiToken as stripEmoji } from '../lib/textUtil';
 // Isi skeleton profil yang SAMA dengan app/me/loading.jsx (anti skeleton dobel).
 import { MeSkeletonBody } from './PageSkeleton';
 

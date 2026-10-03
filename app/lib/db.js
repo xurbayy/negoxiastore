@@ -1,14 +1,16 @@
-import { createClient } from '@libsql/client';
+import { createPgClient } from './pgAdapter.js';
 
-// Turso (libsql) client - singleton.
-// Kalau TURSO_URL tidak diset (dev tanpa DB), pakai file SQLite lokal
-// di .data/ supaya semua halaman tetap bisa dites tanpa akun Turso.
+// PostgreSQL (Supabase) client - singleton, via adapter yang meniru antarmuka
+// @libsql/client (Turso). Kode halaman tetap memakai db.execute({sql,args}) +
+// res.rows / res.rowsAffected / res.lastInsertRowid tanpa perubahan.
+//
+// MIGRASI 2026-10-03: dulu Turso/libSQL (SQLite). Sekarang Postgres supaya
+// bot + web memakai SATU database (tanpa sinkronisasi bridge).
 let _db = null;
 
-// Blip jaringan ke region Turso (ConnectTimeout/fetch failed/ECONNRESET)
-// sering cuma sekali lewat. Retry 1x dengan jeda 300ms di SEMUA execute()
-// supaya satu timeout tidak langsung jadi 500 / crash di tiap halaman.
-const TRANSIENT = /ConnectTimeout|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up/i;
+// Blip jaringan sering sekali lewat. Retry 1x dengan jeda 300ms di SEMUA
+// execute() supaya satu timeout tidak langsung jadi 500 / crash.
+const TRANSIENT = /ConnectTimeout|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|Connection terminated|timeout/i;
 function withTransientRetry(client) {
   const wrap = (name) => {
     const orig = client[name].bind(client);
@@ -30,15 +32,7 @@ function withTransientRetry(client) {
 
 export function getDb() {
   if (_db) return _db;
-  const url = process.env.TURSO_URL;
-  const token = process.env.TURSO_AUTH_TOKEN || process.env.TURSO_TOKEN;
-
-  if (!url) {
-    // fallback lokal (dev / preview tanpa Turso)
-    _db = withTransientRetry(createClient({ url: 'file:.data/nexo-web.db' }));
-  } else {
-    _db = withTransientRetry(createClient({ url, authToken: token }));
-  }
+  _db = withTransientRetry(createPgClient());
   return _db;
 }
 

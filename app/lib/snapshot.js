@@ -95,10 +95,9 @@ export { timeAgo } from './formatClient';
 // bisa beda antar halaman. Sekarang meneruskan ke sumber kanonik itu.
 export { gameName } from './formatClient';
 
-// Buang token emoji Discord (<:name:id> / <a:name:id>) dari string (nama guild dll).
-export function stripEmojiToken(str) {
-  return String(str || '').replace(/<a?:[A-Za-z0-9_]+:\d+>/g, '').trim();
-}
+// Buang token emoji Discord - DIPINDAH ke textUtil.js (client-safe) supaya
+// Client Component tak ikut menarik DB. Re-export di sini agar import lama tetap jalan.
+export { stripEmojiToken } from './textUtil';
 
 // Apakah user ini sedang premium? DUA sumber, yang terbaru menang:
 //  1. premiumMembers di snapshot bot (segar tiap 60 detik dari push)

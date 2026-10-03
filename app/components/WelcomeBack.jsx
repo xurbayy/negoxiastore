@@ -3,7 +3,7 @@ import { getSessionProfile } from '../lib/welcome';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 // stripEmojiToken dari lib/snapshot - SATU sumber (dulu file ini punya salinan
 // fungsi yang sama, padahal regex-nya identik).
-import { stripEmojiToken as stripEmoji } from '../lib/snapshot';
+import { stripEmojiToken as stripEmoji } from '../lib/textUtil';
 
 // Kartu sambutan utk user yang sudah login: ringkasan profil dari cache bot
 // (kalau snapshot data_requests tersedia) + shortcut ke fitur utama.
