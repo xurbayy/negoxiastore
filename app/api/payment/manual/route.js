@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
-import { getLatestSnapshot, userHasPremium } from '../../../lib/snapshot';
+import { getLatestSnapshot, getBotHeartbeat, userHasPremium } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
 import { rateLimitGlobal } from '../../../lib/rate-limit';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';
@@ -102,8 +102,11 @@ export async function GET() {
     args: [session.discordId],
   });
   
-  const liveSnap = await getLatestSnapshot();
-  const botOnline = Boolean(liveSnap && Date.now() - Number(liveSnap.ts) <= 3 * 60 * 1000);
+  // BOT ONLINE (2026-10-03): dari HEARTBEAT DB (bridge_meta.last_seen, ditulis
+  // bot tiap poll) - bukan snapshot push. Snapshot bisa basi padahal bot
+  // sehat, dan sebaliknya - heartbeat lebih akurat.
+  const heartbeat = await getBotHeartbeat();
+  const botOnline = Boolean(heartbeat && Date.now() - heartbeat <= 3 * 60 * 1000);
   if (!res.rows.length) return NextResponse.json({ ok: true, order: null, botOnline });
 
   let row = res.rows[0];
