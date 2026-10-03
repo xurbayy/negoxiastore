@@ -1,24 +1,26 @@
-import { getLatestSnapshot } from '../lib/snapshot';
+import { getLiveStats } from '../lib/snapshot';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 
-// LiveSnapshot: strip statistik nyata dari snapshot bot terakhir.
-// Kalau bot belum pernah push / offline -> tampil strip "menunggu data".
+// LiveSnapshot: statistik LANGSUNG dari database (Supabase).
+// Sejak migrasi ke SATU database (2026-10-03), web menghitung angka langsung
+// dari tabel bot - TIDAK lagi menunggu bot "push" snapshot. Jadi:
+//   - angka selalu real-time
+//   - tidak ada lagi peringatan "Bot terakhir terlihat..." walau bot restart
 export default async function LiveSnapshot() {
-  const snap = await getLatestSnapshot();
+  const live = await getLiveStats();
 
-  if (!snap) {
+  if (!live) {
     return (
       <div className="relative mx-auto mt-14 max-w-6xl px-5">
         <div className="nx-card flex flex-wrap items-center justify-center gap-3 px-6 py-5 text-center text-sm text-ink-muted">
           <span className="pulse-dot" aria-hidden="true" />
-          Menunggu data live dari bot… Statistik akan muncul otomatis dalam ±1 menit setelah bot online.
+          Memuat statistik…
         </div>
       </div>
     );
   }
 
-  const m = snap.monitor || {};
-  const stale = computeStale(snap.ts);
+  const m = live;
 
   // CATATAN: kartu "Sesi LIVE" DIHAPUS (permintaan pemilik, 2026-09-16) - angka
   // sesi berjalan naik-turun cepat dan tidak berguna untuk pengunjung web.
@@ -41,20 +43,6 @@ export default async function LiveSnapshot() {
           </div>
         ))}
       </div>
-      {/* Baris "Diperbarui X lalu · data diperbarui tiap 1 menit" DIHAPUS
-          (permintaan pemilik 2026-10-01). Sudah ada indikator kecil mengambang
-          di kanan bawah (AutoRefresh) yang berdenyut dan bisa diklik - baris
-          ini hanya mengulang informasi yang sama. Yang tersisa hanya peringatan
-          kalau bot benar-benar sudah lama tidak terlihat. */}
-      {stale && (
-        <p className="mt-3 text-center text-xs text-danger">
-          ⚠ Bot terakhir terlihat lebih dari 3 menit lalu.
-        </p>
-      )}
     </div>
   );
-}
-
-function computeStale(ts) {
-  return Date.now() - ts > 3 * 60_000;
 }

@@ -1,6 +1,6 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { getDb } from '../../../lib/db';
-import { getSnapshotSeries, getLatestSnapshot } from '../../../lib/snapshot';
+import { getSnapshotSeries, getLatestSnapshot, getBotHeartbeat, getLiveStats } from '../../../lib/snapshot';
 import { getPromoCache } from '../../../lib/promo-cache';
 import { json, ready } from '../../../lib/api-helpers';
 
@@ -20,6 +20,9 @@ export async function GET() {
 
   await ready();
   const [snap, series] = await Promise.all([getLatestSnapshot(), getSnapshotSeries(7)]);
+  // Heartbeat + statistik LANGSUNG dari DB bot (Supabase) - tidak bergantung
+  // snapshot push, jadi status bot akurat walau bridge push belum jalan.
+  const [heartbeat, liveStats] = await Promise.all([getBotHeartbeat(), getLiveStats()]);
   const db = getDb();
 
   const orders = await db.execute(
@@ -42,6 +45,8 @@ export async function GET() {
       actorId: admin ? `admin:${admin.adminUsername}` : session?.discordId,
       snapshot: snap,
       series,
+      botHeartbeat: heartbeat,
+      liveStats,
       feedback: feedback.rows.map((r) => ({
         id: Number(r.id),
         discordId: r.discord_id,

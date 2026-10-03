@@ -80,6 +80,73 @@ export async function getSnapshotSeries(days = 7) {
   return [];
 }
 
+// ==========================================
+// LIVE STATS LANGSUNG DARI DATABASE BOT (2026-10-03)
+// ==========================================
+// Setelah migrasi ke SATU database PostgreSQL (Supabase), web TIDAK perlu
+// menunggu bot "push" snapshot. Web bisa menghitung statistik LANGSUNG dari
+// tabel bot (public.users, public.premium, public.game_scores). Ini membuat:
+//   - angka selalu real-time (bukan data terakhir bot push)
+//   - web tetap hidup walau bot sedang mati/restart (tidak ada "bot offline")
+// Tabel bot ada di schema 'public' (web ada di schema 'web').
+export async function getLiveStats() {
+  const kini = Date.now();
+  if (_lastGood?.live && _lastGood.liveAt && kini - _lastGood.liveAt < 30_000) {
+    return _lastGood.live;
+  }
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    // Query ke schema public (tabel bot) - beri prefix public. eksplisit
+    // supaya tidak terpengaruh search_path web.
+    const res = await db.execute(`
+      SELECT
+        (SELECT COUNT(*) FROM public.users)                        AS totalUsers,
+        (SELECT COALESCE(SUM(points), 0) FROM public.users)        AS totalMoney,
+        (SELECT COUNT(*) FROM public.premium WHERE expires_at > ?) AS premiumCount,
+        (SELECT COUNT(*) FROM public.game_scores
+           WHERE played_at >= ?)                                   AS gamesToday
+    `, [kini, kini - 86400000]);
+    const row = res.rows[0] || {};
+    return {
+      totalUsers: Number(row.totalusers ?? row.totalUsers ?? 0),
+      totalMoney: Number(row.totalmoney ?? row.totalMoney ?? 0),
+      premiumCount: Number(row.premiumcount ?? row.premiumCount ?? 0),
+      gamesToday: Number(row.gamestoday ?? row.gamesToday ?? 0),
+    };
+  });
+  if (r) {
+    _lastGood = { ...(_lastGood || {}), live: r, liveAt: kini };
+    return r;
+  }
+  // DB error: pakai cache proses (maks 5 menit) supaya halaman tetap hidup.
+  if (_lastGood?.live && Date.now() - _lastGood.liveAt < 5 * 60_000) return _lastGood.live;
+  return null;
+}
+
+// Daftar userId premium AKTIF langsung dari tabel bot (untuk badge).
+export async function getLivePremiumIds() {
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute('SELECT user_id FROM public.premium WHERE expires_at > ?', [Date.now()]);
+    return res.rows.map((x) => String(x.user_id));
+  });
+  return r || [];
+}
+
+// Heartbeat bot LANGSUNG dari tabel bot (public.bridge_meta.last_seen).
+// Dipakai untuk status "bot online/offline" tanpa bergantung snapshot push.
+export async function getBotHeartbeat() {
+  const r = await safeQuery(async () => {
+    await schemaReady();
+    const db = getDb();
+    const res = await db.execute("SELECT value FROM public.bridge_meta WHERE key = 'last_seen'");
+    return res.rows.length ? Number(res.rows[0].value) : null;
+  });
+  return r;
+}
+
 // Format angka gaya id-ID (1.234.567) dan uptime - lihat lib/formatClient.js
 // (SATU sumber). Dulu file ini punya salinan sendiri.
 export { fmt, fmtUptime } from './formatClient';

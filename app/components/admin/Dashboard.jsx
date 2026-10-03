@@ -143,6 +143,9 @@ const DAY_MS = 86400000;
 
 export default function Dashboard({ data }) {
   const snap = data.snapshot;
+  // Heartbeat bot LANGSUNG dari DB (public.bridge_meta.last_seen) - akurat
+  // walau snapshot push belum masuk. Fallback ke snap.ts untuk kompatibilitas.
+  const heartbeat = data.botHeartbeat || snap?.ts || 0;
   const fullSeries = useMemo(() => data.series || [], [data.series]);
   const [range, setRange] = useState(7); // 1 | 7 hari
   const series = useMemo(() => {
@@ -172,7 +175,8 @@ export default function Dashboard({ data }) {
   const invites = (m.invites && typeof m.invites === 'object')
     ? m.invites
     : (snap.invites && typeof snap.invites === 'object' ? snap.invites : {});
-  const stale = nowMs() - snap.ts > 3 * 60_000;
+  // Stale = bot tidak terlihat >3 menit (pakai heartbeat DB, bukan snapshot push).
+  const stale = heartbeat > 0 && nowMs() - heartbeat > 3 * 60_000;
   // Peta beta dari payload bot: key (dice/sum/heal) -> nama & mode resmi.
   const betaMap = {};
   for (const b of snap.betaGames || []) betaMap[String(b.key).toLowerCase()] = b;

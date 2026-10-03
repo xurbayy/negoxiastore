@@ -227,12 +227,20 @@ export async function POST(request) {
     return json({ ok: false, error: 'Kirim salah satu: pintasan atau tanya.' }, 400);
   }
 
-  const snap = await getLatestSnapshot();
+  // Snapshot push bot (opsional sekarang). Sejak migrasi ke SATU database
+  // PostgreSQL (2026-10-03), AI TIDAK lagi bergantung pada push: kalau snapshot
+  // kosong/basi, AI tetap jalan dengan data LANGSUNG dari tabel bot (public.*).
+  let snap = await getLatestSnapshot();
+  const { getLiveStats, getBotHeartbeat } = await import('../../../lib/snapshot');
+  const [liveStats, heartbeat] = await Promise.all([getLiveStats(), getBotHeartbeat()]);
   if (!snap) {
-    return json({
-      ok: false,
-      error: 'Belum ada snapshot dari bot. Pastikan bot online dan bridge aktif.',
-    }, 400);
+    // Bangun snapshot minimal dari live stats supaya AI tetap punya konteks.
+    snap = {
+      ts: heartbeat || Date.now(),
+      monitor: liveStats || {},
+      bot: { online: heartbeat ? (Date.now() - heartbeat < 3 * 60000) : false, lastSeen: heartbeat },
+      _fromLiveDb: true,
+    };
   }
 
   // ==========================================
@@ -256,6 +264,45 @@ export async function POST(request) {
       db.execute('SELECT kind, message, page, created_at, username, discord_id FROM web_feedback ORDER BY created_at DESC LIMIT 60'),
       getSnapshotSeries(7),
     ]);
+
+    // ==========================================
+    // DATA BOT LANGSUNG (public.*) - 2026-10-03
+    // ==========================================
+    // Sejak SATU database (Supabase), AI bisa membaca SELURUH tabel bot
+    // langsung: pemain terkaya, top game, ekonomi, premium, misi, guild, dll.
+    // Ini melengkapi snapshot push supaya AI punya gambaran penuh.
+    let botData = {};
+    try {
+      const [topPlayers, topGames, economy, premiumRows, guildRows, missionRows, txRows] = await Promise.all([
+        db.execute('SELECT username, points, level, xp, total_won, total_bet FROM public.users ORDER BY points DESC LIMIT 20'),
+        db.execute('SELECT game_type, COUNT(*) AS plays, COALESCE(SUM(points),0) AS points FROM public.game_scores GROUP BY game_type ORDER BY plays DESC LIMIT 20'),
+        db.execute(`SELECT
+            (SELECT COUNT(*) FROM public.users) AS total_users,
+            (SELECT COALESCE(SUM(points),0) FROM public.users) AS total_points,
+            (SELECT COALESCE(SUM(total_won),0) FROM public.users) AS total_won,
+            (SELECT COALESCE(SUM(total_bet),0) FROM public.users) AS total_bet,
+            (SELECT COUNT(*) FROM public.transactions) AS total_tx,
+            (SELECT COUNT(*) FROM public.game_scores) AS total_scores,
+            (SELECT COUNT(*) FROM public.inventory) AS total_inventory`),
+        db.execute('SELECT user_id, tier, expires_at FROM public.premium WHERE expires_at > ? ORDER BY expires_at DESC LIMIT 50', [Date.now()]),
+        db.execute('SELECT guild_code, name, points FROM public.guilds ORDER BY points DESC LIMIT 20').catch(() => ({ rows: [] })),
+        db.execute("SELECT COUNT(*) AS total FROM public.daily_missions").catch(() => ({ rows: [{ total: 0 }] })),
+        db.execute('SELECT type, COUNT(*) AS jumlah, COALESCE(SUM(amount),0) AS total FROM public.transactions GROUP BY type ORDER BY jumlah DESC LIMIT 15').catch(() => ({ rows: [] })),
+      ]);
+      botData = {
+        topPlayers: topPlayers.rows.map((r) => ({ username: r.username, points: Number(r.points), level: Number(r.level), xp: Number(r.xp), totalWon: Number(r.total_won), totalBet: Number(r.total_bet) })),
+        topGames: topGames.rows.map((r) => ({ game: r.game_type, plays: Number(r.plays), points: Number(r.points) })),
+        economy: economy.rows[0] ? Object.fromEntries(Object.entries(economy.rows[0]).map(([k, v]) => [k, Number(v)])) : {},
+        premiumMembers: premiumRows.rows.map((r) => ({ userId: String(r.user_id), tier: r.tier, expiresAt: Number(r.expires_at) })),
+        guilds: guildRows.rows.map((r) => ({ code: r.guild_code, name: r.name, points: Number(r.points) })),
+        dailyMissionRows: Number(missionRows.rows[0]?.total || 0),
+        transactionsByType: txRows.rows.map((r) => ({ type: r.type, jumlah: Number(r.jumlah), total: Number(r.total) })),
+        liveStats: liveStats || null,
+        botOnline: heartbeat ? (Date.now() - heartbeat < 3 * 60000) : false,
+        botLastSeen: heartbeat,
+      };
+    } catch (e) { /* sebagian tabel gagal -> AI tetap jalan dengan data yang ada */ }
+
     panel = {
       orders: orders.rows.map((r) => ({
         plan: r.plan, amount: Number(r.amount), gateway: r.gateway, status: r.status,
@@ -271,6 +318,7 @@ export async function POST(request) {
         username: r.username || null, discordId: r.discord_id || null,
       })),
       series: Array.isArray(series) ? series : [],
+      bot: botData,
     };
   } catch { /* data panel gagal diambil -> AI tetap jalan dengan snapshot saja */ }
 
