@@ -50,8 +50,10 @@ export async function getLatestSnapshot() {
 // Series snapshot untuk grafik admin (7 hari terakhir).
 // HEMAT (audit E1): dulu query ini narik SEMUA baris (±10.000 payload penuh
 // 20-60KB = ratusan MB + parse JSON segunanya tiap poll 5 detik). Sekarang:
-// sampling 1 titik per jam (maks 168 titik) + json_extract agregat di DB,
-// payload penuh tidak pernah keluar dari Turso.
+// sampling 1 titik per jam (maks 168 titik) + agregat di DB.
+// FIX (migrasi Postgres 2026-10-03): json_extract() itu fungsi SQLite - TIDAK
+// ada di Postgres (error 42883 -> grafik admin kosong). Ganti dengan cast
+// jsonb: data::jsonb #>> '{monitor,gamesToday}' (hasil TEXT, sama persis).
 export async function getSnapshotSeries(days = 7) {
   const since = Date.now() - days * 86400000;
   const rows = await safeQuery(async () => {
@@ -59,13 +61,13 @@ export async function getSnapshotSeries(days = 7) {
     const db = getDb();
     const res = await db.execute({
       sql: `SELECT ts,
-                   json_extract(data, '$.monitor.gamesToday')  AS gamesToday,
-                   json_extract(data, '$.monitor.totalMoney')  AS totalMoney,
-                   json_extract(data, '$.monitor.totalUsers')  AS totalUsers
+                   (data::jsonb #>> '{monitor,gamesToday}')  AS gamesToday,
+                   (data::jsonb #>> '{monitor,totalMoney}')  AS totalMoney,
+                   (data::jsonb #>> '{monitor,totalUsers}')  AS totalUsers
             FROM monitor_snapshots
-            WHERE id IN (SELECT MAX(id) FROM monitor_snapshots WHERE ts >= ? GROUP BY ts / 3600000)
+            WHERE ts >= ? AND id IN (SELECT MAX(id) FROM monitor_snapshots WHERE ts >= ? GROUP BY ts / 3600000)
             ORDER BY ts ASC`,
-      args: [since],
+      args: [since, since],
     });
     return res.rows;
   });
