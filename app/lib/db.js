@@ -14,10 +14,13 @@ const TRANSIENT = /ConnectTimeout|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|so
 function withTransientRetry(client) {
   const wrap = (name) => {
     const orig = client[name].bind(client);
-    client[name] = async (stmt) => {
+    // PENTING: teruskan SEMUA argumen (stmt, args). Dulu hanya `stmt` yang
+    // diteruskan -> args terbuang -> PG error 'there is no parameter $1'
+    // (semua query ber-parameter gagal senyap).
+    client[name] = async (...args) => {
       for (let i = 0; i < 2; i++) {
         try {
-          return await orig(stmt);
+          return await orig(...args);
         } catch (e) {
           if (i === 1 || !TRANSIENT.test(String(e?.message) + ' ' + String(e?.cause?.message))) throw e;
           await new Promise((res) => setTimeout(res, 300));
