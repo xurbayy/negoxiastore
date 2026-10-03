@@ -140,11 +140,12 @@ function KartuServer({ server, rank }) {
         </div>
       </div>
 
-      {/* Tombol join.
-          Server yang belum punya invite tetap tampil (permintaan pemilik
-          2026-09-30) - tombolnya diganti keterangan, BUKAN link mati. */}
-      <div className="shrink-0">
-        {server.invite ? (
+      {/* Tombol join. KEBIJAKAN PEMILIK (revisi 2026-10-03): server tanpa
+          invite sudah DISARING di sumber data (liveCatalog + siapkanServer),
+          jadi baris ini selalu punya link. Guard `server.invite` dipertahankan
+          cuma sebagai pengaman kalau suatu saat data tidak lolos filter. */}
+      {server.invite && (
+        <div className="shrink-0">
           <a
             href={server.invite}
             target="_blank"
@@ -156,17 +157,8 @@ function KartuServer({ server, rank }) {
             </svg>
             Gabung
           </a>
-        ) : (
-          <span
-            /* whitespace-nowrap: teks dua kata ini jangan terlipat di layar
-               sempit - tinggi kartu jadi tidak rata dengan baris lain. */
-            className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full border border-border-soft bg-bg-soft px-5 py-2.5 text-xs text-ink-faint sm:w-auto"
-            title="Server ini belum bisa dibuatkan link invite oleh bot."
-          >
-            Link belum tersedia
-          </span>
-        )}
-      </div>
+        </div>
+      )}
     </li>
   );
 }

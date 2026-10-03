@@ -20,16 +20,13 @@ export const dynamic = 'force-dynamic';
 /**
  * Gabungkan data server dari snapshot bot dengan invite permanennya.
  *
- * ATURAN DAFTAR (permintaan pemilik 2026-09-30):
- *   Hanya server yang BENAR-BENAR ADA PEMAINNYA yang ditampilkan.
- *   Server dengan pemain 0 disembunyikan seluruhnya - supaya daftar ini
- *   akurat sebagai papan "server paling ramai main NEXO", bukan campuran
- *   server yang bot-nya baru masuk dan belum dipakai siapa pun.
+ * ATURAN DAFTAR (permintaan pemilik; revisi 2026-10-03):
+ *   Hanya server yang BENAR-BENAR ADA PEMAINNYA dan PUNYA LINK INVITE yang
+ *   ditampilkan. Server tanpa invite DISBURUH SELURUHNYA - tidak ada lagi
+ *   label "Link belum tersedia" dan tidak ada notice "belum punya link
+ *   invite". Daftar ini papan "server paling ramai main NEXO yang bisa
+ *   kamu gabung", bukan inventaris semua server.
  *   (Data live: 44 server bot, 24 di antaranya masih 0 pemain.)
- *
- *   Untuk server YANG TAMPIL, invite hanya pelengkap: kalau link-nya belum
- *   bisa dibuat bot, tombol Gabung diganti keterangan - server tetap muncul
- *   karena pemainnya sudah ada. Tidak pernah ada tautan mati.
  *
  * LOKASI DATA (penting - jangan diubah sembarangan):
  *   Bot menaruh `servers` dan `invites` di DALAM `monitor` (hasil
@@ -39,7 +36,7 @@ export const dynamic = 'force-dynamic';
  *
  * Bot sudah mengurutkan berdasarkan: pemain -> game -> poin. Web tidak
  * mengurutkan ulang supaya peringkat konsisten dengan yang bot hitung.
- * Karena yang pemain-0 sudah dibuang, urutan bot tetap terjaga apa adanya.
+ * Karena yang pemain-0 / tanpa-invite sudah dibuang, urutan bot tetap terjaga.
  */
 function siapkanServer(snap) {
   const mon = snap?.monitor || {};
@@ -58,9 +55,10 @@ function siapkanServer(snap) {
     invite: invites[s.guildId]?.url || null, // null = tombol Gabung tidak tampil
   }));
 
-  // Buang server tanpa pemain. Dibandingkan dengan angka, bukan string,
-  // supaya '0' dari JSON tidak lolos sebagai truthy.
-  const adaPemain = semua.filter((s) => s.players > 0);
+  // Buang server tanpa pemain ATAU tanpa invite (revisi 2026-10-03).
+  // Dibandingkan dengan angka, bukan string, supaya '0' dari JSON tidak
+  // lolos sebagai truthy.
+  const adaPemain = semua.filter((s) => s.players > 0 && s.invite);
 
   return {
     daftar: adaPemain.slice(0, 100), // maksimal 100 server

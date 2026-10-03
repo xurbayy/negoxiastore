@@ -269,7 +269,14 @@ export async function getLiveServers() {
         members: Number((meta && meta.member_count) || 0),
         invite: inv[s.guild_id] || null,
       };
-    });
+    })
+    // KEBIJAKAN PEMILIK (revisi 2026-10-03): server TANPA link invite tidak
+    // ditampilkan sama sekali di halaman komunitas - bukan cuma disembunyikan
+    // tombol Gabungnya. Dulu (2026-09-30) masih ditampilkan dengan label
+    // "Link belum tersedia"; sekarang dibuang langsung dari sumber data,
+    // jadi fallback snapshot (siapkanServer) juga harus menyaring dengan
+    // aturan yang sama.
+    .filter((s) => Boolean(s.invite));
   } catch {
     return null;
   }
