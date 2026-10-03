@@ -1,14 +1,14 @@
 // ==========================================
 // app/lib/pgAdapter.js
-// Adapter PostgreSQL yang MENIRU antarmuka @libsql/client (Turso), supaya
+// Adapter PostgreSQL (async, pool) dengan antarmuka execute({sql,args}) supaya
 // kode web yang memakai `db.execute({ sql, args })` + `res.rows` /
 // `res.rowsAffected` / `res.lastInsertRowid` TIDAK perlu diubah.
 //
-// KENAPA: migrasi SQLite/Turso -> PostgreSQL (Supabase). Alih-alih menulis
+// KENAPA: migrasi dari engine lama ke PostgreSQL (Supabase). Alih-alih menulis
 // ulang 223 pemanggilan .execute(), kita ganti engine-nya di satu tempat ini.
 //
 // PEMETAAN:
-//   - `?` placeholder -> `$1,$2,...` (libsql pakai `?`, Postgres pakai `$n`).
+//   - placeholder `?` -> `$1,$2,...` (gaya SQLite -> gaya Postgres).
 //   - execute(sql) / execute({sql,args}) -> { rows, rowsAffected, lastInsertRowid }
 //   - executeMultiple(sql) -> menjalankan banyak statement (DDL skema).
 //   - INSERT OR IGNORE/REPLACE -> ON CONFLICT (via translator bersama).
@@ -98,7 +98,7 @@ async function _exec(sql, args) {
 
 function createPgClient() {
   return {
-    // Dua bentuk didukung (kompatibel @libsql/client + gaya ringkas):
+    // Dua bentuk didukung (gaya lama + gaya ringkas):
     //   execute('SELECT ...', [args])        <- dipakai lib/snapshot.js
     //   execute({ sql: 'SELECT ...', args }) <- dipakai halaman lain
     async execute(stmt, args2) {

@@ -26,7 +26,7 @@ export async function POST() {
     return json({ ok: false, error: 'Terlalu sering refresh. Tunggu beberapa menit ya.', retryAfterMs: 60_000 }, 429);
   }
 
-  // DB bisa gagal sesaat (blip Turso). Balas error yang rapi + pesan ramah,
+  // DB bisa gagal sesaat \(blip jaringan\). Balas error yang rapi + pesan ramah,
   // bukan 500 mentah yang bikin UI menampilkan "Something went wrong".
   try {
     await ready();

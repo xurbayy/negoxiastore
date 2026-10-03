@@ -1,10 +1,10 @@
 import { createPgClient } from './pgAdapter.js';
 
-// PostgreSQL (Supabase) client - singleton, via adapter yang meniru antarmuka
-// @libsql/client (Turso). Kode halaman tetap memakai db.execute({sql,args}) +
+// PostgreSQL (Supabase) client - singleton async via pg Pool (max 5).
+// Antarmuka dipertahankan: db.execute({sql,args}) +
 // res.rows / res.rowsAffected / res.lastInsertRowid tanpa perubahan.
 //
-// MIGRASI 2026-10-03: dulu Turso/libSQL (SQLite). Sekarang Postgres supaya
+// MIGRASI 2026-10-03: Sekarang Postgres murni (async) supaya
 // bot + web memakai SATU database (tanpa sinkronisasi bridge).
 let _db = null;
 

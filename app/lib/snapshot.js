@@ -1,7 +1,7 @@
 import { getDb, schemaReady } from './db';
 
 // Aturan spec: SEMUA halaman harus tetap render walau bot/database sedang
-// tidak bisa dihubungi. Jadi error Turso (timeout, dns, dsb) ditelan + cache
+// tidak bisa dihubungi. Jadi error koneksi \(timeout, dns, dsb\) ditelan + cache
 // snapshot terakhir yang sukses dipakai sementara.
 let _lastGood = null; // { snap, series, at }
 // Error terakhir dari safeQuery (untuk diagnostik /api/diag-leaderboard).
