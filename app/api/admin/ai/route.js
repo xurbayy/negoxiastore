@@ -285,7 +285,9 @@ export async function POST(request) {
             (SELECT COUNT(*) FROM public.game_scores) AS total_scores,
             (SELECT COUNT(*) FROM public.inventory) AS total_inventory`),
         db.execute('SELECT user_id, tier, expires_at FROM public.premium WHERE expires_at > ? ORDER BY expires_at DESC LIMIT 50', [Date.now()]),
-        db.execute('SELECT guild_code, name, points FROM public.guilds ORDER BY points DESC LIMIT 20').catch(() => ({ rows: [] })),
+        // kolom guilds di Postgres = total_points (bukan points - fix 2026-10-03;
+        // query lama error senyap -> AI tak pernah dapat data guild).
+        db.execute('SELECT guild_code, name, total_points FROM public.guilds ORDER BY total_points DESC LIMIT 20').catch(() => ({ rows: [] })),
         db.execute("SELECT COUNT(*) AS total FROM public.daily_missions").catch(() => ({ rows: [{ total: 0 }] })),
         db.execute('SELECT type, COUNT(*) AS jumlah, COALESCE(SUM(amount),0) AS total FROM public.transactions GROUP BY type ORDER BY jumlah DESC LIMIT 15').catch(() => ({ rows: [] })),
       ]);
@@ -294,7 +296,7 @@ export async function POST(request) {
         topGames: topGames.rows.map((r) => ({ game: r.game_type, plays: Number(r.plays), points: Number(r.points) })),
         economy: economy.rows[0] ? Object.fromEntries(Object.entries(economy.rows[0]).map(([k, v]) => [k, Number(v)])) : {},
         premiumMembers: premiumRows.rows.map((r) => ({ userId: String(r.user_id), tier: r.tier, expiresAt: Number(r.expires_at) })),
-        guilds: guildRows.rows.map((r) => ({ code: r.guild_code, name: r.name, points: Number(r.points) })),
+        guilds: guildRows.rows.map((r) => ({ code: r.guild_code, name: r.name, points: Number(r.total_points) })),
         dailyMissionRows: Number(missionRows.rows[0]?.total || 0),
         transactionsByType: txRows.rows.map((r) => ({ type: r.type, jumlah: Number(r.jumlah), total: Number(r.total) })),
         liveStats: liveStats || null,
