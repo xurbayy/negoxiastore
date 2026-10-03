@@ -9,13 +9,31 @@ import { useEffect, useRef } from 'react';
 // dulu di dashboard AdSense (https://adsense.google.com) -> "Unit iklan" -> baru.
 export default function AdUnit({ slot, format = 'auto', className = '' }) {
   const pushed = useRef(false);
+  const ref = useRef(null);
 
   useEffect(() => {
     if (pushed.current) return;
     pushed.current = true;
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (_) { /* AdSense belum load / blocked - abaikan */ }
+    const push = () => {
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        return true;
+      } catch (_) { return false; } // AdSense belum load / blocked
+    };
+    push();
+    // RETRY (fix 2026-10-03): kalau script adsbygoogle belum terload saat unit
+    // dirender (navigasi cepat / jaringan lambat), unit bisa "hilang" permanen.
+    // Cek ulang 2x dengan jeda; berhenti kalau iklan sudah terisi (adsbygoogle
+    // menandai elemen dengan data-ad-status).
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      const el = ref.current;
+      const terisi = el && el.getAttribute('data-ad-status');
+      if (terisi || tries >= 3) { clearInterval(t); return; }
+      push();
+    }, 1500);
+    return () => clearInterval(t);
   }, []);
 
   const slotId = slot || process.env.NEXT_PUBLIC_ADSENSE_SLOT || '';
@@ -42,6 +60,7 @@ export default function AdUnit({ slot, format = 'auto', className = '' }) {
     // lebar tetap menyesuaikan ruang.
     <div className={`mx-auto max-h-28 w-full overflow-hidden ${className}`}>
       <ins
+        ref={ref}
         className="adsbygoogle block"
         style={{ display: 'block', width: '100%', height: '100%' }}
         data-ad-client={process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-2706837395470018'}

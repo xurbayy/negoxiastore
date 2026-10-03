@@ -15,7 +15,7 @@ export default function AdSense() {
       async
       src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`}
       crossOrigin="anonymous"
-      strategy="afterInteractive"
+      strategy="afterInteractive" // tetap non-blocking; unit punya retry-observer sendiri
     />
   );
 }

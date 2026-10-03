@@ -4,6 +4,7 @@ import { userHasPremium } from '../lib/snapshot';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
+import AdUnit from '../components/AdUnit';
 import ShopClient from './ShopClient';
 
 export const metadata = {
@@ -37,6 +38,12 @@ export default async function ShopPage() {
       <main className="relative mx-auto max-w-5xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative">
+          <div className="mb-4">
+            <AdUnit
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_SHOP || process.env.NEXT_PUBLIC_ADSENSE_SLOT}
+              format="auto"
+            />
+          </div>
           <h1 className="font-display text-3xl tracking-tight text-ink md:text-4xl">
             NEXO Shop.
           </h1>

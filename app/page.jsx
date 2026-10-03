@@ -2,6 +2,7 @@ import { getSession } from './lib/session';
 import { userHasPremium } from './lib/snapshot';
 import ScrollProgress from './components/ScrollProgress';
 import Navbar from './components/Navbar';
+import AdUnit from './components/AdUnit';
 import Hero from './components/Hero';
 import LiveSnapshot from './components/LiveSnapshot';
 import Games from './components/Games';
