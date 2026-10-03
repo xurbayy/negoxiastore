@@ -4,7 +4,6 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
 import PremiumClient from '../components/PremiumClient';
-import AdUnit from '../components/AdUnit';
 import { emojiSrc } from '../lib/emojis';
 
 export const metadata = {
@@ -54,12 +53,6 @@ export default async function PremiumPage() {
               <img src={emojiSrc('download3')} alt="" width={16} height={16} className="h-4 w-4" />
             )}
             NEXO Pass
-          </div>
-          <div className="mb-4">
-            <AdUnit
-              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT}
-              format="auto"
-            />
           </div>
           <h1 className="mt-5 font-display text-3xl text-ink md:text-5xl">
             Satu Pass, <span className="font-display text-ink">Semua Perk</span>

@@ -6,7 +6,6 @@ import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
-import AdUnit from '../components/AdUnit';
 import LeaderboardClient from '../leaderboard/LeaderboardClient';
 
 export const metadata = {
@@ -49,12 +48,6 @@ export default async function LeaderboardPage() {
       <main className="relative mx-auto max-w-4xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative">
-          <div className="mb-4">
-            <AdUnit
-              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT}
-              format="auto"
-            />
-          </div>
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Leaderboard <span className="font-display text-ink">NEXO</span>
           </h1>
