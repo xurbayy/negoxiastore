@@ -51,7 +51,7 @@ export default async function LeaderboardPage() {
         <div className="relative">
           <div className="mb-4">
             <AdUnit
-              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD || process.env.NEXT_PUBLIC_ADSENSE_SLOT}
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT}
               format="auto"
             />
           </div>

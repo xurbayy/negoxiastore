@@ -29,7 +29,7 @@ export default async function RedeemPage({ searchParams }) {
               Slot PER-HALAMAN dari env - lihat catatan di /komunitas. */}
           <div className="mb-4">
             <AdUnit
-              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_REDEEM || process.env.NEXT_PUBLIC_ADSENSE_SLOT}
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT}
               format="auto"
             />
           </div>

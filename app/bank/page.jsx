@@ -37,7 +37,7 @@ export default async function BankPage() {
         <div className="relative">
           <div className="mb-4">
             <AdUnit
-              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_BANK || process.env.NEXT_PUBLIC_ADSENSE_SLOT}
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT}
               format="auto"
             />
           </div>

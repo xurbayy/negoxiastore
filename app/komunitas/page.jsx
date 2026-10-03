@@ -99,7 +99,7 @@ export default async function KomunitasPage() {
               langsung kosong kalau env baru belum diisi. */}
           <div className="mb-4">
             <AdUnit
-              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_KOMUNITAS || process.env.NEXT_PUBLIC_ADSENSE_SLOT}
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT}
               format="auto"
             />
           </div>
