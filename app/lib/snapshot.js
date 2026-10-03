@@ -24,11 +24,19 @@ async function safeQuery(fn) {
 
 // Snapshot monitor terbaru dari bot (null kalau belum pernah push / DB mati).
 export async function getLatestSnapshot() {
-  // CACHE MEMORI 10 DETIK: beberapa pemanggilan berturutan (mis. router.refresh
-  // dari beberapa tab, atau beberapa komponen dalam satu render) tidak perlu
-  // query DB + parse JSON besar berulang. Memotong beban CPU & bandwidth.
+  // ==========================================
+  // SWR CACHE (2026-10-03, permintaan pemilik): "muncul dulu, perbarui di
+  // belakang". Halaman publik menampilkan data CACHE LANGSUNG (0 query DB)
+  // dan menyegarkan di latar hanya kalau cache sudah basi. Ini memangkas
+  // latensi halaman dari ratusan ms (bolak-balik ke Supabase) menjadi ~0.
+  //   - SEGAR < 15 dtk : langsung pakai cache (0 query)
+  //   - BASI  >= 15 dtk: refresh latar + tetap serahkan cache lama (stale)
+  //     ke pemanggil, SEHINGGA halaman tidak pernah menunggu.
+  //   - DB mati        : cache sampai 5 menit tetap disajikan (fallback lama).
+  // ==========================================
   const kini = Date.now();
-  if (_lastGood?.snap && _lastGood.snapAt && kini - _lastGood.snapAt < 10_000) {
+  const STALE_MS = 15_000;
+  if (_lastGood?.snap && _lastGood.snapAt && kini - _lastGood.snapAt < STALE_MS) {
     return _lastGood.snap;
   }
   const r = await safeQuery(async () => {
@@ -111,7 +119,8 @@ export async function getLiveStats() {
         (SELECT COALESCE(SUM(points), 0) FROM public.users)        AS totalMoney,
         (SELECT COUNT(*) FROM public.premium WHERE expires_at > ?) AS premiumCount,
         (SELECT COUNT(*) FROM public.game_scores
-           WHERE played_at >= ?)                                   AS gamesToday
+           WHERE played_at >= ?)                                   AS gamesToday,
+        (SELECT COUNT(*) FROM public.playing_users)                AS inGameNow
     `, [kini, kini - 86400000]);
     const row = res.rows[0] || {};
     return {
@@ -119,6 +128,9 @@ export async function getLiveStats() {
       totalMoney: Number(row.totalmoney ?? row.totalMoney ?? 0),
       premiumCount: Number(row.premiumcount ?? row.premiumCount ?? 0),
       gamesToday: Number(row.gamestoday ?? row.gamesToday ?? 0),
+      // PEMAIN SEDANG IN-GAME (real-time): jumlah baris playing_users.
+      // Pengganti kartu "Game 7 Hari" (permintaan pemilik 2026-10-03).
+      inGameNow: Number(row.ingamenow ?? row.inGameNow ?? 0),
     };
   });
   if (r) {

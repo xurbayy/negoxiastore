@@ -199,7 +199,15 @@ export default function Dashboard({ data }) {
     { label: 'Poin Beredar', value: fmt(m.totalMoney), pick: (s) => s.totalMoney, color: '#C74B3C' },
     { label: 'Member NEXO Pass', value: fmt(m.premiumCount), pick: null },
     { label: 'Game Hari Ini', value: fmt(m.gamesToday), pick: (s) => s.gamesToday },
-    { label: 'Game 7 Hari', value: fmt(m.gamesWeek), pick: null },
+    // "Game 7 Hari" diganti "Pemain In-Game" (permintaan pemilik 2026-10-03):
+    // lebih berguna untuk memantau kondisi LIVE daripada kumulatif mingguan.
+    // Sumber: liveStats.inGameNow (public.playing_users, real-time dari DB).
+    {
+      label: 'Pemain In-Game',
+      value: fmt(data.liveStats?.inGameNow ?? 0),
+      sub: 'sedang main sekarang',
+      pick: null,
+    },
     {
       label: 'Item Terjual',
       value: botKirimItem ? fmt(totalItemTerjual) : '-',
@@ -229,9 +237,8 @@ export default function Dashboard({ data }) {
           tersimpan di antrean, hanya eksekusinya menunggu bot online. */}
       <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-white ${stale ? 'bg-danger' : 'bg-success'}`}>
         <p className="text-sm font-bold">
-          {stale
-            ? '⚠ BOT OFFLINE · bot terakhir terlihat ' + timeAgo(heartbeat) + ' — semua aksi admin TERSIMPAN dan dieksekusi otomatis saat bot kembali online'
-            : '● BOT ONLINE · terlihat ' + timeAgo(heartbeat) + ' · data langsung dari database'}
+          {/* SEDERHANA (permintaan pemilik 2026-10-03): cukup BOT ONLINE / BOT OFFLINE */}
+          {stale ? '⚠ BOT OFFLINE' : '● BOT ONLINE'}
         </p>
         <p className="text-xs text-white/80">
           {snap.bot?.guildCount ?? 0} server · snapshot {timeAgo(snap.ts)}

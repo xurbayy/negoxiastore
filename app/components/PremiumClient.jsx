@@ -198,7 +198,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       
       {!online && (
         <div className="max-w-md rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-center text-sm text-warning shadow-sm">
-          <strong>Perhatian:</strong> Sistem bot Nexo sedang offline/maintenance. Pesanan mungkin agak terlambat diproses.
+          <strong>⚠ BOT OFFLINE</strong> - pesanan tetap tersimpan dan otomatis diproses saat bot kembali online.
         </div>
       )}
 

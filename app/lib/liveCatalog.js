@@ -90,8 +90,38 @@ function emojiUrl(emoji, map) {
   return map[m[1]] || staticEmojiById[m[1]] || null;
 }
 
+
+// ==========================================
+// SWR CACHE (2026-10-03, permintaan pemilik: "loading gak kelamaan")
+// ==========================================
+// Data katalog (shop, titles, promo, settings, servers) jarang berubah.
+// Halaman mengembalikan hasil CACHE LANGSUNG (0 query DB) selama masih
+// segar; setelah basi, refresh di latar sambil tetap menyajikan cache lama
+// -> halaman TIDAK PERNAH menunggu Supabase. Config dinamis (nilai dari DB
+// yang admin sering ubah: maintenance, pengumuman) TTL-nya lebih pendek.
+const _swrCache = new Map(); // key -> { val, at }
+async function swr(key, ttlMs, fetcher) {
+  const now = Date.now();
+  const hit = _swrCache.get(key);
+  if (hit && now - hit.at < ttlMs) return hit.val;       // segar -> instan
+  if (hit) {
+    // basi -> refresh di latar, tapi tetap balikkan cache lama SEKARANG.
+    fetcher().then((v) => { if (v) _swrCache.set(key, { val: v, at: Date.now() }); }).catch(() => {});
+    return hit.val;
+  }
+  // belum ada cache -> harus fetch (hanya request pertama tiap TTL)
+  try {
+    const v = await fetcher();
+    if (v) _swrCache.set(key, { val: v, at: now });
+    return v;
+  } catch { return null; }
+}
+const TTL_CATALOG = 60_000;   // katalog jarang berubah
+const TTL_CONFIG  = 10_000;   // settings/pengumuman lebih dinamis
+
 // SHOP ITEMS langsung dari DB bot.
 export async function getLiveShop() {
+  return swr('shop', TTL_CATALOG, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -130,10 +160,12 @@ export async function getLiveShop() {
   } catch {
     return null;
   }
+  });
 }
 
 // TITLES langsung dari DB bot (katalog statis bot + dimiliki user via user_titles).
 export async function getLiveTitles() {
+  return swr('titles', TTL_CATALOG, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -147,6 +179,7 @@ export async function getLiveTitles() {
   } catch {
     return { owners: {}, emojiMap: {} };
   }
+  });
 }
 
 // ==========================================
@@ -156,6 +189,7 @@ export async function getLiveTitles() {
 // Sekarang dibaca langsung dari tabel bot: public.promo_codes + public.settings.
 
 export async function getLivePromos() {
+  return swr('promos', TTL_CONFIG, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -175,9 +209,11 @@ export async function getLivePromos() {
   } catch {
     return null;
   }
+  });
 }
 
 export async function getLiveSettings() {
+  return swr('settings', TTL_CONFIG, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -197,10 +233,12 @@ export async function getLiveSettings() {
   } catch {
     return null;
   }
+  });
 }
 
 // DISKON AKTIF (flash sale) langsung dari DB bot.
 export async function getLiveDiscounts() {
+  return swr('discounts', TTL_CATALOG, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -216,6 +254,7 @@ export async function getLiveDiscounts() {
   } catch {
     return null;
   }
+  });
 }
 
 // ==========================================
@@ -231,6 +270,7 @@ export async function getLiveDiscounts() {
 //   iconUrl = ikon server dari tabel yang sama
 // Fallback ke "Server <id>" kalau bot belum sempat mengisi guild_infos.
 export async function getLiveServers() {
+  return swr('servers', TTL_CATALOG, async () => {
   try {
     await schemaReady();
     const db = getDb();
@@ -280,4 +320,5 @@ export async function getLiveServers() {
   } catch {
     return null;
   }
+  });
 }
