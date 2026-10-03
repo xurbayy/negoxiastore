@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { NexoLogo } from '../ui';
 // Isi skeleton panel yang SAMA dengan app/admin/loading.jsx (anti skeleton dobel).
 import { AdminSkeletonBody, AdminAiSkeletonBody } from '../PageSkeleton';
+import AutoRefresh from '../AutoRefresh';
 import Dashboard from './Dashboard';
 import AnalisisAI from './AnalisisAI';
 import Ekonomi from './Ekonomi';
@@ -584,14 +585,20 @@ export default function AdminShell({ username, avatar = null }) {
         </div>
       </aside>
 
+      {/* AutoRefresh: menyegarkan server-component /admin berkala + saat tab
+          kembali terlihat. Komentar lama di bawah MENGAKU ini sudah ada, padahal
+          TIDAK pernah dirender -> diperbaiki 2026-10-03 (permintaan pemilik:
+          "data harus langsung berubah"). */}
+      <AutoRefresh intervalMs={5000} />
+
       {/* Konten */}
       <div className="min-w-0 flex-1">
         {/* Bar identitas mobile DIPINDAH ke <header> fixed di atas (lihat
             penanda "Bar atas admin"), supaya berlaku di semua ukuran dan
             tidak lagi menempel hanya di dalam kolom konten. */}
         {/* Indikator "Live · diperbarui" DIHAPUS (permintaan pemilik
-            2026-10-01) - sudah ada indikator mengambang AutoRefresh di
-            kanan bawah. Bar kosong ini dihapus sepenuhnya. */}
+            2026-10-01). Penyegaran ditangani <AutoRefresh /> di atas (5 dtk)
+            + poll /api/admin/data tiap 5 dtk di efek AdminShell. */}
 
         {/* ref + id + scroll-mt: dipakai untuk melompat ke atas setiap kali
             tab diganti, supaya halaman yang dituju LANGSUNG terlihat.
