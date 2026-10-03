@@ -1,8 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
+
+// Sisa waktu flash sale dalam format ramah baca: "2j 14m", "14m 03s", atau
+// "kurang dari 1m". Dipakai di badge kartu item supaya pembeli tahu kapan
+// harga diskon berakhir (permintaan pemilik: jangan cuma "Flash Sale" tanpa
+// waktu - flash sale lain di halaman ini punya hitungan mundur, shop harus sama).
+function sisaWaktu(expiresAt) {
+  const ms = Number(expiresAt) - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}j ${m}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
+// Hitungan mundur yang berdetak tiap detik untuk elemen yang menampilkannya.
+// Satu interval per komponen; berhenti otomatis saat unmount.
+function useDetak() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
+}
 
 function ItemEmoji({ item }) {
   if (item.emojiUrl) {
@@ -24,12 +50,28 @@ function PlainEmoji({ value, className = '' }) {
 
 function ItemCard({ it, discount }) {
   const disc = discount[it.itemKey];
-  const hasDisc = disc && Number(disc.original_price) !== Number(it.price);
+  // PENTING (kontrak bot): saat flash sale, bot MENIMPA shop_items.price jadi
+  // harga diskon dan menyimpan harga asli di shop_discounts.original_price.
+  // Jadi it.price === harga DISKON, dan harga asli HANYA boleh dari
+  // disc.hargaAsli. Kalau harga asli tak tersedia, jangan coret apa pun
+  // (lebih baik tampil harga tunggal daripada harga coret yang salah).
+  const hargaAsli = disc?.hargaAsli ?? null;
+  const hargaTerpasang = Number(it.price);
+  // Harga yang ditampilkan saat TIDAK ada flash sale = it.price (harga normal
+  // setelah diskon kedaluwarsa bot restore). Saat sale aktif = it.price juga
+  // (sudah harga diskon), dan harga coret dari disc.hargaAsli.
+  const adaDiskon = Boolean(disc) && hargaAsli !== null && hargaAsli > hargaTerpasang;
+  const berakhir = disc?.berakhirPada || null;
+  useDetak(); // berdetak tiap detik untuk memperbarui sisa waktu di badge
+  const sisa = berakhir ? sisaWaktu(berakhir) : null;
+  // Diskon yang waktunya sudah lewat (mis. cache SWR 60 dtk) -> jangan tampilkan
+  // badge/harga coret kadaluarsa; pengunjung melihat harga normal sampai refresh.
+  const saleAktif = adaDiskon && (berakhir === null || sisa !== null);
   return (
     <li className="nx-card relative px-5 py-5">
-      {hasDisc && (
+      {saleAktif && (
         <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-danger px-3 py-1 text-[0.68rem] font-extrabold uppercase tracking-wider text-white">
-          Flash Sale
+          Flash Sale{sisa ? ` · ${sisa}` : ''}
         </span>
       )}
       <div className="flex items-start gap-3">
@@ -41,13 +83,13 @@ function ItemCard({ it, discount }) {
       </div>
       <div className="mt-4 flex items-end justify-between">
         <div>
-          {hasDisc && (
+          {saleAktif && (
             <span className="mr-2 text-xs text-ink-muted line-through">
-              {fmtRingkas(disc.original_price)}
+              {fmtRingkas(hargaAsli)}
             </span>
           )}
-          <span className={`font-display ${hasDisc ? 'text-danger' : 'text-ink'}`}>
-            {fmtRingkas(it.price)}
+          <span className={`font-display ${saleAktif ? 'text-danger' : 'text-ink'}`}>
+            {fmtRingkas(hargaTerpasang)}
           </span>
           {emojiSrc('goldcoin') && (
             // eslint-disable-next-line @next/next/no-img-element

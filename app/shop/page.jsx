@@ -27,8 +27,36 @@ export default async function ShopPage() {
   const cats = live?.shopCategories || snap?.shopCategories || [];
   const titles = snap?.titleCatalog || [];
   const discounts = live?.discounts || snap?.discounts || [];
+  // Normalisasi bentuk diskon dari DUA sumber: liveCatalog (camelCase:
+  // { itemKey, discountPrice, originalPrice, expiresAt }) dan snapshot lama
+  // (snake_case: { item_key, discount_price, original_price, expires_at }).
+  // Bentuk kanonik: { itemKey, hargaDiskon, hargaAsli, berakhirPada }.
   const discountMap = {};
-  for (const d of discounts) discountMap[d.item_key || d.itemKey] = d;
+  for (const d of discounts) {
+    const key = d.itemKey || d.item_key;
+    if (!key) continue;
+    discountMap[key] = {
+      itemKey: key,
+      hargaDiskon: Number(d.discountPrice ?? d.discount_price ?? 0),
+      hargaAsli: Number(d.originalPrice ?? d.original_price ?? 0) || null,
+      berakhirPada: Number(d.expiresAt ?? d.expires_at ?? 0) || null,
+    };
+  }
+  // Sumber kedua: tiap item live SUDAH membawa originalPrice/discountExpiresAt
+  // (diambil dari JOIN tabel diskon). Dipakai kalau array `discounts` kosong
+  // atau bentuknya tak terduga, supaya badge tetap muncul.
+  for (const it of items) {
+    if (discountMap[it.itemKey]) continue;
+    if (it.discountPrice === null || it.discountPrice === undefined) continue;
+    discountMap[it.itemKey] = {
+      itemKey: it.itemKey,
+      hargaDiskon: Number(it.discountPrice),
+      // harga asli dari kolom original_price; kalau kosong, StoreClient akan
+      // jatuh ke it.price secara hati-hati (lihat ItemCard).
+      hargaAsli: Number(it.originalPrice ?? 0) || null,
+      berakhirPada: Number(it.discountExpiresAt ?? 0) || null,
+    };
+  }
 
   return (
     <>

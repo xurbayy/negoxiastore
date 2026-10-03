@@ -615,7 +615,7 @@ export default function AdminShell({ username, avatar = null }) {
             {tab === 'ai' && <AnalisisAI />}
             {tab === 'dashboard' && <Dashboard data={data} />}
             {tab === 'ekonomi' && <Ekonomi send={send} data={data} />}
-            {tab === 'shop' && <ShopManager send={send} data={data} />}
+            {tab === 'shop' && <ShopManager />}
             {tab === 'bank' && <BankManager send={send} data={data} />}
             {tab === 'nexopass' && <Nexopass send={send} data={data} />}
             {tab === 'players' && <PlayerLookup />}

@@ -100,13 +100,27 @@ function emojiUrl(emoji, map) {
 // -> halaman TIDAK PERNAH menunggu Supabase. Config dinamis (nilai dari DB
 // yang admin sering ubah: maintenance, pengumuman) TTL-nya lebih pendek.
 const _swrCache = new Map(); // key -> { val, at }
+
+// Invalidasi cache katalog. Dipanggil panel admin SETELAH menulis ke DB
+// (restock/harga/diskon) supaya /shop publik langsung menampilkan data baru -
+// tanpa ini, pengunjung masih melihat cache SWR lama sampai TTL habis.
+export function invalidateCatalog(keys = ['shop', 'discounts', 'titles', 'promos', 'settings', 'servers']) {
+  for (const k of keys) _swrCache.delete(k);
+}
+
 async function swr(key, ttlMs, fetcher) {
   const now = Date.now();
   const hit = _swrCache.get(key);
   if (hit && now - hit.at < ttlMs) return hit.val;       // segar -> instan
   if (hit) {
-    // basi -> refresh di latar, tapi tetap balikkan cache lama SEKARANG.
-    fetcher().then((v) => { if (v) _swrCache.set(key, { val: v, at: Date.now() }); }).catch(() => {});
+    // Basi: FETCH DULU (jangan sajikan data lama), karena TTL-nya sudah sangat
+    // pendek (5 dtk) sehingga menunggu query DB singkat tidak terasa. Ini
+    // membuat perubahan admin langsung terlihat pada request setelah TTL,
+    // bukan baru pada request kedua sesudahnya.
+    try {
+      const v = await fetcher();
+      if (v) { _swrCache.set(key, { val: v, at: Date.now() }); return v; }
+    } catch { /* DB gagal -> sajikan cache lama sebagai cadangan */ }
     return hit.val;
   }
   // belum ada cache -> harus fetch (hanya request pertama tiap TTL)
@@ -116,8 +130,12 @@ async function swr(key, ttlMs, fetcher) {
     return v;
   } catch { return null; }
 }
-const TTL_CATALOG = 60_000;   // katalog jarang berubah
-const TTL_CONFIG  = 10_000;   // settings/pengumuman lebih dinamis
+// TTL katalog pendek (5 dtk): admin sering mengubah harga/diskon dari panel,
+// dan perubahan itu harus cepat terlihat di /shop. 5 dtk cukup menyerap
+// lonjakan trafik, tapi masih "hampir langsung" setelah admin menyimpan.
+// (Dulu 60 dtk: admin mengubah diskon lalu bingung karena web masih lama.)
+const TTL_CATALOG = 5_000;
+const TTL_CONFIG  = 5_000;   // settings/pengumuman juga sering diubah
 
 // SHOP ITEMS langsung dari DB bot.
 export async function getLiveShop() {
@@ -127,11 +145,23 @@ export async function getLiveShop() {
     const db = getDb();
     const [items, discounts, emap] = await Promise.all([
       db.execute('SELECT item_key, name, description, price, stock, game_type, effect_type, emoji, is_active FROM public.shop_items ORDER BY price ASC'),
-      db.execute('SELECT item_key, discount_price, expires_at FROM public.shop_discounts WHERE expires_at > ?', [Date.now()]).catch(() => ({ rows: [] })),
+      // KONTRAK BOT (utils/database.js adminSetDiscount): saat flash sale aktif,
+      // bot menyimpan HARGA ASLI di shop_discounts.original_price DAN menimpa
+      // shop_items.price jadi harga diskon. Karena itu kolom original_price
+      // WAJIB ikut di-SELECT - tanpa ini kartu tidak punya harga asli untuk
+      // dicoret (dulu inilah sebab badge "Flash Sale" tak pernah muncul saat
+      // katalog dibaca langsung dari DB).
+      db.execute('SELECT item_key, original_price, discount_price, expires_at FROM public.shop_discounts WHERE expires_at > ?', [Date.now()]).catch(() => ({ rows: [] })),
       emojiUrlMap(),
     ]);
     const disc = {};
-    for (const d of discounts.rows) disc[d.item_key] = Number(d.discount_price);
+    for (const d of discounts.rows) {
+      disc[d.item_key] = {
+        discountPrice: Number(d.discount_price),
+        originalPrice: d.original_price === null || d.original_price === undefined ? null : Number(d.original_price),
+        expiresAt: Number(d.expires_at),
+      };
+    }
 
     return {
       shopItems: items.rows
@@ -146,7 +176,9 @@ export async function getLiveShop() {
           emoji: it.emoji,
           emojiUrl: emojiUrl(it.emoji, emap),
           category: shopCategory(it),
-          discountPrice: disc[it.item_key] || null,
+          discountPrice: disc[it.item_key] ? disc[it.item_key].discountPrice : null,
+          originalPrice: disc[it.item_key] ? disc[it.item_key].originalPrice : null,
+          discountExpiresAt: disc[it.item_key] ? disc[it.item_key].expiresAt : null,
         })),
       // KATEGORI JUGA DAPAT emojiUrl (fix 2026-10-03): dulu SHOP_CATEGORIES
       // dikirim mentah (cuma teks "<a:globe:...>") dan ShopClient PlainEmoji
@@ -155,7 +187,12 @@ export async function getLiveShop() {
         ...c,
         emojiUrl: emojiUrl(c.emoji, emap),
       })),
-      discounts: discounts.rows.map((d) => ({ itemKey: d.item_key, discountPrice: Number(d.discount_price), expiresAt: Number(d.expires_at) })),
+      discounts: Object.entries(disc).map(([itemKey, d]) => ({
+        itemKey,
+        discountPrice: d.discountPrice,
+        originalPrice: d.originalPrice,
+        expiresAt: d.expiresAt,
+      })),
     };
   } catch {
     return null;
