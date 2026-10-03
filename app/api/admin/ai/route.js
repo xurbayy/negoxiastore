@@ -291,6 +291,26 @@ export async function POST(request) {
         db.execute("SELECT COUNT(*) AS total FROM public.daily_missions").catch(() => ({ rows: [{ total: 0 }] })),
         db.execute('SELECT type, COUNT(*) AS jumlah, COALESCE(SUM(amount),0) AS total FROM public.transactions GROUP BY type ORDER BY jumlah DESC LIMIT 15').catch(() => ({ rows: [] })),
       ]);
+      // DATA REDEEM & EKONOMI TAMBAHAN (2026-10-03, permintaan pemilik:
+      // "AI cerdas beneran, baca database, bukan halu") - AI sekarang
+      // melihat redeem code, klaim, bank, title, item populer, dan
+      // retensi pemain langsung dari tabel bot.
+      const [redeemCodes, redeemClaims, bankLoans, titleRows, itemRows, retention, shopStock, redeemWebStat] = await Promise.all([
+        db.execute('SELECT code, reward_type, reward_value, quota, claimed_count FROM public.promo_codes ORDER BY created_at DESC LIMIT 15').catch(() => ({ rows: [] })),
+        db.execute('SELECT code, COUNT(*) AS dipakai FROM public.promo_claims GROUP BY code ORDER BY dipakai DESC LIMIT 15').catch(() => ({ rows: [] })),
+        db.execute('SELECT COUNT(*) AS aktif, COALESCE(SUM(total_due),0) AS total_due FROM public.bank_loans').catch(() => ({ rows: [{ aktif: 0, total_due: 0 }] })),
+        db.execute('SELECT title_key, COUNT(*) AS owners FROM public.user_titles GROUP BY title_key ORDER BY owners DESC LIMIT 10').catch(() => ({ rows: [] })),
+        db.execute("SELECT item_key, COUNT(*) AS dibeli, COALESCE(SUM(amount),0) AS poin FROM public.transactions WHERE item_key IS NOT NULL GROUP BY item_key ORDER BY dibeli DESC LIMIT 12").catch(() => ({ rows: [] })),
+        db.execute(`SELECT
+            (SELECT COUNT(*) FROM public.users WHERE created_at > $1) AS baru_30d,
+            (SELECT COUNT(*) FROM public.game_scores WHERE played_at > $1) AS game_30d,
+            (SELECT COUNT(DISTINCT user_id) FROM public.game_scores WHERE played_at > $2) AS aktif_7d,
+            (SELECT COUNT(DISTINCT user_id) FROM public.game_scores WHERE played_at > $1) AS aktif_30d`,
+          [Date.now() - 30 * 86400000, Date.now() - 7 * 86400000]).catch(() => ({ rows: [{}] })),
+        db.execute('SELECT item_key, name, price, stock FROM public.shop_items WHERE is_active = 1 ORDER BY price DESC LIMIT 20').catch(() => ({ rows: [] })),
+        db.execute("SELECT status, COUNT(*) AS n FROM web.web_redeem_claims WHERE claimed_at > $1 GROUP BY status", [Date.now() - 7 * 86400000]).catch(() => ({ rows: [] })),
+      ]);
+
       botData = {
         topPlayers: topPlayers.rows.map((r) => ({ username: r.username, points: Number(r.points), level: Number(r.level), xp: Number(r.xp), totalWon: Number(r.total_won), totalBet: Number(r.total_bet) })),
         topGames: topGames.rows.map((r) => ({ game: r.game_type, plays: Number(r.plays), points: Number(r.points) })),
@@ -299,6 +319,20 @@ export async function POST(request) {
         guilds: guildRows.rows.map((r) => ({ code: r.guild_code, name: r.name, points: Number(r.total_points) })),
         dailyMissionRows: Number(missionRows.rows[0]?.total || 0),
         transactionsByType: txRows.rows.map((r) => ({ type: r.type, jumlah: Number(r.jumlah), total: Number(r.total) })),
+        // Data baru (redeem, bank, title, item, retensi):
+        redeemCodes: redeemCodes.rows.map((r) => ({ code: r.code, rewardType: r.reward_type, rewardValue: r.reward_value, quota: Number(r.quota), claimed: Number(r.claimed_count) })),
+        redeemClaims: redeemClaims.rows.map((r) => ({ code: r.code, dipakai: Number(r.dipakai) })),
+        redeemWeb7d: redeemWebStat.rows.map((r) => ({ status: r.status, n: Number(r.n) })),
+        bankLoans: { aktif: Number(bankLoans.rows[0]?.aktif || 0), totalDue: Number(bankLoans.rows[0]?.total_due || 0) },
+        titles: titleRows.rows.map((r) => ({ key: r.title_key, owners: Number(r.owners) })),
+        topItems: itemRows.rows.map((r) => ({ itemKey: r.item_key, dibeli: Number(r.dibeli), poin: Number(r.poin) })),
+        shopStock: shopStock.rows.map((r) => ({ itemKey: r.item_key, name: r.name, price: Number(r.price), stock: Number(r.stock) })),
+        retention: {
+          baru30d: Number(retention.rows[0]?.baru_30d || 0),
+          game30d: Number(retention.rows[0]?.game_30d || 0),
+          aktif7d: Number(retention.rows[0]?.aktif_7d || 0),
+          aktif30d: Number(retention.rows[0]?.aktif_30d || 0),
+        },
         liveStats: liveStats || null,
         botOnline: heartbeat ? (Date.now() - heartbeat < 3 * 60000) : false,
         botLastSeen: heartbeat,
@@ -390,7 +424,76 @@ export async function POST(request) {
     }
   }
 
-  const konteks = (await susunKonteks(snap, panel)) + konteksPemain;
+  // ==========================================
+  // KONTEKS DATA DB LANGSUNG (panel.bot) - permintaan pemilik 2026-10-03:
+  // "AI cerdas beneran, baca database, jangan halu". Semua angka di bawah
+  // dibaca LANGSUNG dari Supabase saat pertanyaan masuk (bukan cache push),
+  // disusun jadi teks ringkas supaya AI menjawab dari DATA, bukan tebakan.
+  // ==========================================
+  function ringkasBotData(b) {
+    if (!b || typeof b !== 'object') return '';
+    const L = [];
+    const rp = (x) => Number(x || 0).toLocaleString('id-ID');
+    L.push('');
+    L.push('### DATA DATABASE LANGSUNG (real-time dari PostgreSQL)');
+    if (b.botOnline != null) L.push('Status bot: ' + (b.botOnline ? 'ONLINE' : 'OFFLINE') + (b.botLastSeen ? ' (terlihat ' + new Date(Number(b.botLastSeen)).toISOString().slice(0, 16).replace('T', ' ') + ' UTC)' : ''));
+    // Ekonomi
+    if (b.economy && Object.keys(b.economy).length) {
+      L.push('Total pemain (semua): ' + rp(b.economy.total_users) + ' | Poin beredar: ' + rp(b.economy.total_points) + ' | Transaksi: ' + rp(b.economy.total_tx) + ' | Baris skor game: ' + rp(b.economy.total_scores));
+    }
+    // Retensi
+    if (b.retention) {
+      L.push('Retensi: pemain baru 30 hari=' + rp(b.retention.baru30d) + ' | aktif 7 hari=' + rp(b.retention.aktif7d) + ' | aktif 30 hari=' + rp(b.retention.aktif30d) + ' | total game 30 hari=' + rp(b.retention.game30d));
+    }
+    // Top game & pemain
+    if (Array.isArray(b.topGames) && b.topGames.length) {
+      L.push('Top game (sepanjang masa): ' + b.topGames.slice(0, 10).map((g) => g.game + '(' + g.plays + 'x)').join(', '));
+    }
+    if (Array.isArray(b.topPlayers) && b.topPlayers.length) {
+      L.push('Pemain terkaya top 5: ' + b.topPlayers.slice(0, 5).map((p) => p.username + '(' + rp(p.points) + ')').join(', '));
+    }
+    // Premium
+    if (Array.isArray(b.premiumMembers) && b.premiumMembers.length) {
+      L.push('NEXO Pass aktif: ' + b.premiumMembers.length + ' member');
+    }
+    // REDEEM CODE - data yang sebelumnya tidak pernah dilihat AI
+    if (Array.isArray(b.redeemCodes) && b.redeemCodes.length) {
+      L.push('Kode redeem (kode | hadiah | klaim/kuota):');
+      for (const r of b.redeemCodes.slice(0, 10)) {
+        L.push('- ' + r.code + ' | ' + r.rewardType + ' ' + r.rewardValue + ' | ' + r.claimed + '/' + r.quota);
+      }
+    }
+    if (Array.isArray(b.redeemClaims) && b.redeemClaims.length) {
+      L.push('Klaim terbanyak: ' + b.redeemClaims.slice(0, 8).map((r) => r.code + '(' + r.dipakai + ')').join(', '));
+    }
+    if (Array.isArray(b.redeemWeb7d) && b.redeemWeb7d.length) {
+      L.push('Redeem dari WEB 7 hari: ' + b.redeemWeb7d.map((r) => r.status + '=' + r.n).join(', '));
+    }
+    // Bank, title, item
+    if (b.bankLoans) L.push('Pinjaman bank aktif: ' + rp(b.bankLoans.aktif) + ' | total tagihan: ' + rp(b.bankLoans.totalDue));
+    if (Array.isArray(b.titles) && b.titles.length) {
+      L.push('Title terpopuler: ' + b.titles.slice(0, 8).map((t) => t.key + '(' + t.owners + ')').join(', '));
+    }
+    if (Array.isArray(b.topItems) && b.topItems.length) {
+      L.push('Item paling dibeli: ' + b.topItems.slice(0, 8).map((t) => t.itemKey + '(' + t.dibeli + 'x)').join(', '));
+    }
+    if (Array.isArray(b.shopStock) && b.shopStock.length) {
+      const habis = b.shopStock.filter((s) => s.stock === 0);
+      if (habis.length) L.push('ITEM STOK HABIS: ' + habis.map((s) => s.itemKey).join(', '));
+    }
+    // Guild
+    if (Array.isArray(b.guilds) && b.guilds.length) {
+      L.push('Guild teratas: ' + b.guilds.slice(0, 8).map((g) => g.name + '(' + rp(g.points) + ')').join(', '));
+    }
+    // Transaksi per tipe
+    if (Array.isArray(b.transactionsByType) && b.transactionsByType.length) {
+      L.push('Transaksi per tipe (top): ' + b.transactionsByType.slice(0, 8).map((t) => t.type + '=' + t.jumlah + 'x').join(', '));
+    }
+    return L.join('\n');
+  }
+  const konteksBot = ringkasBotData(panel?.bot);
+
+  const konteks = (await susunKonteks(snap, panel)) + konteksPemain + konteksBot;
 
   // KODE BASE: kalau bot mengirim ringkasan kode, tambahkan ke konteks. Ini
   // yang membuat peran bug/security/exploit/analyst bisa menganalisis kode.

@@ -4,6 +4,7 @@ import { getDb, schemaReady } from '../../../lib/db';
 import { getLatestSnapshot, userHasPremium } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
 import { rateLimitGlobal } from '../../../lib/rate-limit';
+import { notifyQueue } from '../../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 const PRICE = 20000;
@@ -82,6 +83,8 @@ export async function POST(request) {
     sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('dm_admin', ?, 'web', 'pending', ?)",
     args: [JSON.stringify({ adminId: '836383639439671366', message: dmMsg, fileName: safeReceiptName, fileBase64: receiptBase64 }), created],
   });
+  // Ping instan ke bot (LISTEN/NOTIFY) - DM admin terkirim segera.
+  notifyQueue(['dm_admin']).catch(() => {});
 
   await touchActivity();
   return NextResponse.json({ ok: true });

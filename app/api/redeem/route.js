@@ -6,6 +6,7 @@ import { touchActivity } from '../../lib/activity';
 import { verifyTurnstile } from '../../lib/turnstile';
 import { getLatestSnapshot } from '../../lib/snapshot';
 import { rateLimitPersistent } from '../../lib/rate-limit';
+import { notifyQueue } from '../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,6 +145,8 @@ export async function POST(request) {
       sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
       args: ['redeem_promo_web', JSON.stringify({ userId: session.discordId, code }), session.discordId, 'pending', Date.now()],
     });
+    // Ping instan ke bot (LISTEN/NOTIFY) - klaim redeem aktif dalam <1 dtk.
+    notifyQueue(['redeem_promo_web']).catch(() => {});
     const lastCmd = await db.execute('SELECT MAX(id) as m FROM bot_commands');
     const commandId = Number(lastCmd.rows[0]?.m || 0) || null;
     await db.execute({
