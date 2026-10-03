@@ -70,10 +70,10 @@ export async function PATCH(request) {
     const waktuIngat = wibKeEpoch(th, bl - 1, tg, jj || 9, mm || 0);
     if (!Number.isFinite(waktuIngat)) return json({ ok: false, error: 'Tanggal pengingat tidak valid.' }, 400);
     const insR = await db.execute({
-      sql: 'INSERT INTO ai_reminders (teks, waktu_ingat, selesai, dibuat_at) VALUES (?, ?, 0, ?)',
+      sql: 'INSERT INTO ai_reminders (teks, waktu_ingat, selesai, dibuat_at) VALUES (?, ?, 0, ?) RETURNING id',
       args: [String(payload.teks).slice(0, 300), waktuIngat, Date.now()],
     });
-    const rid = Number(insR.lastInsertRowid ?? 0);
+    const rid = Number(insR.rows?.[0]?.id ?? insR.lastInsertRowid ?? 0);
     await db.execute({
       sql: "UPDATE ai_agen_usulan SET status = 'disetujui', hasil = ?, diputus_at = ? WHERE id = ?",
       args: [`Pengingat #${rid} dibuat untuk ${formatWib(waktuIngat)}.`, Date.now(), id],
@@ -84,12 +84,12 @@ export async function PATCH(request) {
   // Antrekan ke bot (bot mengeksekusi lewat whitelist-nya sendiri).
   await ready();
   const ins = await db.execute({
-    sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id',
     args: [row.aksi, JSON.stringify(payload), actorId, 'pending', Date.now()],
   });
   // Ping instan ke bot (LISTEN/NOTIFY).
   notifyQueue([row.aksi]).catch(() => {});
-  const cmdId = Number(ins.lastInsertRowid ?? 0);
+  const cmdId = Number(ins.rows?.[0]?.id ?? ins.lastInsertRowid ?? 0);
   await db.execute({ sql: "UPDATE ai_agen_usulan SET status = 'disetujui', hasil = ?, diputus_at = ? WHERE id = ?", args: [`Perintah #${cmdId} dikirim ke bot.`, Date.now(), id] });
 
   return json({ ok: true, status: 'disetujui', commandId: cmdId });

@@ -129,10 +129,10 @@ export async function POST(request) {
     const mt = angkaOpsional(body?.max_tokens, 200, 32000);
     const kc = angkaOpsional(body?.kecerdasan, 1, 10);
     const res = await db.execute({
-      sql: 'INSERT INTO ai_models (label, model, provider, max_tokens, kecerdasan, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO ai_models (label, model, provider, max_tokens, kecerdasan, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
       args: [label, model, provider, mt, kc, Date.now()],
     });
-    return json({ ok: true, id: Number(res.lastInsertRowid ?? 0) });
+    return json({ ok: true, id: Number(res.rows?.[0]?.id ?? res.lastInsertRowid ?? 0) });
   }
 
   // Provider baru. API key OPSIONAL (bisa ditambah belakangan via Edit).
@@ -152,10 +152,10 @@ export async function POST(request) {
   }
 
   const res = await db.execute({
-    sql: 'INSERT INTO ai_providers (nama, slug, base_url, api_key_enc, env_key, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO ai_providers (nama, slug, base_url, api_key_enc, env_key, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
     args: [nama, slug, baseUrl, apiKey ? enkripsiKunci(apiKey) : null, null, Date.now()],
   });
-  return json({ ok: true, id: Number(res.lastInsertRowid ?? 0), slug });
+  return json({ ok: true, id: Number(res.rows?.[0]?.id ?? res.lastInsertRowid ?? 0), slug });
 }
 
 export async function PATCH(request) {

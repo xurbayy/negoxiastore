@@ -98,12 +98,12 @@ export async function POST(request) {
   await schemaReady();
   const db = getDb();
   const res = await db.execute({
-    sql: 'INSERT INTO ai_reminders (teks, waktu_ingat, selesai, dibuat_at) VALUES (?, ?, 0, ?)',
+    sql: 'INSERT INTO ai_reminders (teks, waktu_ingat, selesai, dibuat_at) VALUES (?, ?, 0, ?) RETURNING id',
     args: [teks, waktuIngat, Date.now()],
   });
   return json({
     ok: true,
-    id: Number(res.lastInsertRowid ?? 0),
+    id: Number(res.rows?.[0]?.id ?? res.lastInsertRowid ?? 0),
     waktuIngat,
     waktuTeks: formatWib(waktuIngat),
   });

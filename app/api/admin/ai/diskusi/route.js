@@ -84,10 +84,10 @@ export async function POST(request) {
   await schemaReady();
   const db = getDb();
   const res = await db.execute({
-    sql: 'INSERT INTO ai_diskusi (judul, pesan, model, provider, created_at) VALUES (?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO ai_diskusi (judul, pesan, model, provider, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id',
     args: [judul, JSON.stringify(pesan), model, provider, Date.now()],
   });
-  return json({ ok: true, id: Number(res.lastInsertRowid ?? 0) });
+  return json({ ok: true, id: Number(res.rows?.[0]?.id ?? res.lastInsertRowid ?? 0) });
 }
 
 export async function PATCH(request) {

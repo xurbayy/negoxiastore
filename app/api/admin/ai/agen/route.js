@@ -141,10 +141,10 @@ export async function POST(request) {
   const tglObj = hariIniWib();
   const tgl = `${tglObj.tahun}-${String(tglObj.bulan + 1).padStart(2, '0')}-${String(tglObj.tanggal).padStart(2, '0')}`;
   const ins = await db.execute({
-    sql: 'INSERT INTO ai_agen (tanggal, ringkasan, temuan, model, provider, dibuat_at) VALUES (?, ?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO ai_agen (tanggal, ringkasan, temuan, model, provider, dibuat_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
     args: [tgl, ringkasan || '(kosong)', temuan, hasil.model || null, hasil.provider || null, Date.now()],
   });
-  const agenId = Number(ins.lastInsertRowid ?? 0);
+  const agenId = Number(ins.rows?.[0]?.id ?? ins.lastInsertRowid ?? 0);
 
   // CATATAN (permintaan pemilik 2026-10-02): agen TIDAK lagi menyimpan saran
   // per peran. Saran cepat sekarang dari "Cari topik AI" (Analisis/Diskusi).
@@ -157,7 +157,7 @@ export async function POST(request) {
     const v = validasiUsulan(u);
     if (!v.ok) continue; // usulan tidak aman -> dibuang (jangan tampil ke pemilik)
     await db.execute({
-      sql: 'INSERT INTO ai_agen_usulan (agen_id, judul, aksi, payload, alasan, risiko, dibuat_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO ai_agen_usulan (agen_id, judul, aksi, payload, alasan, risiko, dibuat_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id',
       args: [agenId, u.judul, u.aksi, JSON.stringify(u.payload || {}), u.alasan || '', u.risiko || '', Date.now()],
     });
     tersimpan++;

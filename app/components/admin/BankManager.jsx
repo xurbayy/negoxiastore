@@ -6,7 +6,19 @@ import ConfirmModal from './ConfirmModal';
 import { fmtRingkas, fmtPenuh } from '../../lib/formatClient';
 
 export default function BankManager({ send, data }) {
-  const loans = data.snapshot?.loans || [];
+  // DATA LANGSUNG DARI DB (2026-10-03): dulu dari snapshot push (umur bisa
+  // 60+ dtk) -> setelah pemutihan, daftar masih menampilkan hutang lama dan
+  // admin mengira harus clear 2x. Sekarang baca live dari /api/admin/data
+  // (data.bankLoans), fallback snapshot lama.
+  const loans = data.bankLoans
+    ? data.bankLoans.map((l) => ({
+        userId: l.userId,
+        username: l.username || l.userId,
+        totalDue: l.totalDue,
+        dueDate: l.dueDate,
+        status: l.dueDate && l.dueDate < Date.now() ? 'TELAT' : 'Aman',
+      }))
+    : (data.snapshot?.loans || []);
   const [confirm, setConfirm] = useState(null); // { userId, username }
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -15,7 +27,13 @@ export default function BankManager({ send, data }) {
     setBusy(true);
     try {
       const out = await send('clear_loan', { userId: confirm.userId });
-      setFeedback(out.ok ? { ok: true, text: `clear_loan untuk ${confirm.username} masuk antrean (#${out.id}).` } : { ok: false, text: out.error || 'Gagal.' });
+      if (out.ok) {
+        setFeedback({ ok: true, text: `Pemutihan hutang ${confirm.username} masuk antrean (#${out.id}) - daftar diperbarui otomatis.` });
+        // refresh data server: daftar pinjaman langsung hilang dari tabel
+        if (typeof window !== 'undefined') setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setFeedback({ ok: false, text: out.error || 'Gagal.' });
+      }
       setConfirm(null);
     } finally {
       setBusy(false);
@@ -49,7 +67,7 @@ export default function BankManager({ send, data }) {
                 <td className="px-4 py-3 text-right text-ink" title={fmtPenuh(l.totalDue)}>{fmtRingkas(l.totalDue)}</td>
                 <td className="px-4 py-3 text-ink-muted">{new Date(l.dueDate).toLocaleDateString('id-ID')}</td>
                 <td className="px-4 py-3">
-                  {l.overdue
+                  {l.dueDate && l.dueDate < Date.now()
                     ? <span className="inline-flex items-center rounded-full bg-danger px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-wider text-white">Telat</span>
                     : <span className="inline-flex items-center rounded-full bg-success px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-wider text-white">Aman</span>}
                 </td>

@@ -66,10 +66,10 @@ export async function POST(request) {
   await schemaReady();
   const db = getDb();
   const res = await db.execute({
-    sql: 'INSERT INTO ai_notes (judul, pertanyaan, jawaban, sumber, model, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    sql: 'INSERT INTO ai_notes (judul, pertanyaan, jawaban, sumber, model, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
     args: [judul, pertanyaan || null, jawaban, sumber, model || null, Date.now()],
   });
-  return json({ ok: true, id: Number(res.lastInsertRowid ?? 0) });
+  return json({ ok: true, id: Number(res.rows?.[0]?.id ?? res.lastInsertRowid ?? 0) });
 }
 
 export async function DELETE(request) {

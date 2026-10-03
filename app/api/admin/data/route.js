@@ -35,6 +35,16 @@ export async function GET() {
 
   const promoCache = await getPromoCache().catch(() => []);
 
+  // BANK LOANS LANGSUNG DARI DB BOT (2026-10-03): BankManager dulu membaca
+  // dari snapshot push (umur bisa 60+ dtk) sehingga setelah pemutihan daftar
+  // masih menampilkan hutang lama -> admin mengira harus clear 2x.
+  const bankLoans = await db.execute(`
+    SELECT b.user_id, b.total_due, b.due_date,
+           (SELECT u.username FROM public.users u WHERE u.user_id = b.user_id) AS username
+    FROM public.bank_loans b
+    ORDER BY b.due_date ASC
+  `).catch(() => ({ rows: [] }));
+
     const feedback = await db.execute(
       'SELECT id, discord_id, username, kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 30'
     );
@@ -44,6 +54,12 @@ export async function GET() {
       promoCache,
       actorId: admin ? `admin:${admin.adminUsername}` : session?.discordId,
       snapshot: snap,
+      bankLoans: bankLoans.rows.map((r) => ({
+        userId: String(r.user_id),
+        username: r.username || null,
+        totalDue: Number(r.total_due || 0),
+        dueDate: r.due_date ? Number(r.due_date) : null,
+      })),
       series,
       botHeartbeat: heartbeat,
       liveStats,

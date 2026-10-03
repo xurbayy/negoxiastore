@@ -15,7 +15,7 @@ const ACTIONS = new Set([
   'grant_premium', 'revoke_premium', 'redeem_promo_web',
   'reset_daily', 'reset_missions', 'clear_lock', 'add_title',
   'set_admin_title', 'clear_admin_title', 'set_announcement',
-  'timeout', 'ban', 'unban', 'wipe',
+  'timeout', 'ban', 'unban', 'wipe', 'set_rpg_level',
 ]);
 
 // POST /api/admin/command - antrekan 1 aksi bot (INSERT bot_commands).
@@ -63,14 +63,17 @@ export async function POST(request) {
   const clamped = clampDays(action, payload);
 
   const res = await db.execute({
-    sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?)',
+    // RETURNING id: Postgres tidak mengisi lastInsertRowid otomatis (beda
+    // dengan SQLite/libsql). Tanpa ini UI menampilkan "antrean (#undefined)".
+    sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id',
     args: [action, JSON.stringify(clamped), actorId, 'pending', Date.now()],
   });
   // Ping instan ke bot (LISTEN/NOTIFY) - gagal tidak fatal.
   notifyQueue([action]).catch(() => {});
 
   await touchActivity();
-  return json({ ok: true, id: Number(res.lastInsertRowid) });
+  const newId = res.rows?.[0]?.id ?? res.lastInsertRowid;
+  return json({ ok: true, id: Number(newId) });
 }
 
 // Cermin validasi webBridge.executeCommand (utils/webBridge.js bot).
