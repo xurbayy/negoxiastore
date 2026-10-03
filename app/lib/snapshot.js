@@ -187,10 +187,10 @@ export async function getLiveGuildBoard(limit = 10) {
     await schemaReady();
     const db = getDb();
     const res = await db.execute(
-      `SELECT g.guild_code, g.name, g.points,
+      `SELECT g.guild_code, g.name, g.total_points,
               (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
          FROM public.guilds g
-        ORDER BY g.points DESC
+        ORDER BY g.total_points DESC
         LIMIT ?`,
       [limit]
     );
@@ -198,7 +198,7 @@ export async function getLiveGuildBoard(limit = 10) {
       rank: i + 1,
       code: row.guild_code,
       name: row.name || 'Guild',
-      points: Number(row.points || 0),
+      points: Number(row.total_points || 0),
       members: Number(row.members || 0),
     }));
   });
