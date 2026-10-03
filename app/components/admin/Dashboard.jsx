@@ -221,10 +221,17 @@ export default function Dashboard({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Bridge status: pita solid - status sistem jangan samar */}
+      {/* Bridge status: pita solid - status sistem jangan samar.
+          Status dihitung dari HEARTBEAT DB (public.bridge_meta.last_seen),
+          bukan snapshot push - jadi akurat walau push gagal.
+          Pernyataan "aksi admin menunggu bot" sengaja ditampilkan (2026-10-03)
+          supaya admin & pembeli NEXO Pass tidak salah paham: datanya sudah
+          tersimpan di antrean, hanya eksekusinya menunggu bot online. */}
       <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-white ${stale ? 'bg-danger' : 'bg-success'}`}>
         <p className="text-sm font-bold">
-          {stale ? '⚠ BOT OFFLINE · Snapshot terakhir lebih dari 3 menit lalu' : '● Bridge aktif, data mengalir'}
+          {stale
+            ? '⚠ BOT OFFLINE · bot terakhir terlihat ' + timeAgo(heartbeat) + ' — semua aksi admin TERSIMPAN dan dieksekusi otomatis saat bot kembali online'
+            : '● BOT ONLINE · terlihat ' + timeAgo(heartbeat) + ' · data langsung dari database'}
         </p>
         <p className="text-xs text-white/80">
           {snap.bot?.guildCount ?? 0} server · snapshot {timeAgo(snap.ts)}

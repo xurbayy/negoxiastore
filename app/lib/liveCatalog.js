@@ -208,39 +208,49 @@ export async function getLiveDiscounts() {
 //   games   = jumlah permainan
 //   points  = total poin dari server itu
 //   invite  = link dari guild_discord_invites (kalau ada)
-// Nama + ikon server diambil dari tabel web (server_icons) kalau tersedia,
-// fallback ke "Server <id>" supaya tetap tampil.
+//   name    = nama asli server dari tabel public.guild_infos (diisi bot tiap push)
+//   iconUrl = ikon server dari tabel yang sama
+// Fallback ke "Server <id>" kalau bot belum sempat mengisi guild_infos.
 export async function getLiveServers() {
   try {
     await schemaReady();
     const db = getDb();
-    const [stats, invites] = await Promise.all([
+    const [stats, invites, infos] = await Promise.all([
       db.execute(`
         SELECT guild_id,
                COUNT(DISTINCT user_id) AS players,
                COUNT(*)                AS games,
                COALESCE(SUM(points),0) AS points
           FROM public.game_scores
+         WHERE guild_id <> 'GLOBAL'            -- GLOBAL = pseudo-guild (bukan server asli)
+           AND guild_id ~ '^[0-9]{17,20}$'     -- hanya snowflake Discord valid (buang data tes korup: g/tg/testguild)
          GROUP BY guild_id
         HAVING COUNT(DISTINCT user_id) > 0
          ORDER BY COUNT(DISTINCT user_id) DESC, COALESCE(SUM(points),0) DESC
          LIMIT 100
       `),
       db.execute('SELECT guild_id, invite_url FROM public.guild_discord_invites').catch(() => ({ rows: [] })),
+      db.execute('SELECT guild_id, name, icon_url, member_count FROM public.guild_infos').catch(() => ({ rows: [] })),
     ]);
     const inv = {};
     for (const r of invites.rows) inv[r.guild_id] = r.invite_url;
+    const inf = {};
+    for (const r of infos.rows) inf[r.guild_id] = r;
 
-    return stats.rows.map((s) => ({
-      guildId: String(s.guild_id),
-      name: `Server ${String(s.guild_id).slice(-4)}`,
-      iconUrl: null,
-      players: Number(s.players || 0),
-      games: Number(s.games || 0),
-      points: Number(s.points || 0),
-      members: 0,
-      invite: inv[s.guild_id] || null,
-    }));
+    return stats.rows.map((s) => {
+      const meta = inf[s.guild_id];
+      return {
+        guildId: String(s.guild_id),
+        // Nama ASLI dari guild_infos; fallback dummy kalau bot belum mengisi.
+        name: (meta && meta.name) || `Server ${String(s.guild_id).slice(-4)}`,
+        iconUrl: (meta && meta.icon_url) || null,
+        players: Number(s.players || 0),
+        games: Number(s.games || 0),
+        points: Number(s.points || 0),
+        members: Number((meta && meta.member_count) || 0),
+        invite: inv[s.guild_id] || null,
+      };
+    });
   } catch {
     return null;
   }
