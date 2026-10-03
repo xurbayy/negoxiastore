@@ -113,12 +113,20 @@ export default function AdminShell({ username, avatar = null }) {
 
   useEffect(() => {
     const t = setTimeout(load, 0);
-    // HEMAT BANDWIDTH: jangan poll saat tab admin tidak terlihat. Tab yang
-    // ditinggal terbuka tidak perlu memanggil /api/admin/data terus-menerus.
-    const iv = setInterval(() => { if (!document.hidden) load(); }, 20000);
+    // REALTIME (permintaan pemilik 2026-10-03): poll tiap 5 detik supaya
+    // seluruh panel selalu terbaru tanpa admin menekan refresh. Tetap hemat:
+    // berhenti saat tab tidak terlihat (document.hidden), dan hanya
+    // setState kalau data BENAR-BENAR berubah (dibanding lewat lastSig).
+    const iv = setInterval(() => { if (!document.hidden) load(); }, 5000);
     function onFocus() { if (!document.hidden) load(); }
+    function onVisible() { if (!document.hidden) load(); }
     window.addEventListener('focus', onFocus);
-    return () => { clearTimeout(t); clearInterval(iv); window.removeEventListener('focus', onFocus); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(t); clearInterval(iv);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   // Pantau posisi gulir untuk efek navbar (solid + rapat setelah 24px).
@@ -598,7 +606,12 @@ export default function AdminShell({ username, avatar = null }) {
             tanpa ini lompatan antar-tab akan berhenti dengan judul tertutup
             bar. pb-10 tetap untuk jarak ke footer. */}
         <div ref={kontenRef} id="konten-admin" className="scroll-mt-20 pb-10">
-        {!data ? (
+        {tab === 'shop' ? (
+          // Shop Manager MANDIRI (2026-10-03): mengambil datanya sendiri dari
+          // /api/admin/shop, jadi TIDAK perlu menunggu `data` panel. Dirender
+          // LANGSUNG tanpa skeleton "Memuat panel" (permintaan pemilik).
+          <ShopManager />
+        ) : !data ? (
           // Kerangka menyesuaikan TAB yang sedang dimuat.
           //
           // Sebelumnya SELALU AdminSkeletonBody - itu bentuk Dashboard (8 kartu
@@ -615,7 +628,6 @@ export default function AdminShell({ username, avatar = null }) {
             {tab === 'ai' && <AnalisisAI />}
             {tab === 'dashboard' && <Dashboard data={data} />}
             {tab === 'ekonomi' && <Ekonomi send={send} data={data} />}
-            {tab === 'shop' && <ShopManager />}
             {tab === 'bank' && <BankManager send={send} data={data} />}
             {tab === 'nexopass' && <Nexopass send={send} data={data} />}
             {tab === 'players' && <PlayerLookup />}

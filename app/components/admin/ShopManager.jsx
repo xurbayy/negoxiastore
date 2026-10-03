@@ -35,15 +35,13 @@ function jamBerakhir(expiresAt) {
 // begitu diubah, web langsung ikut berubah.
 export default function ShopManager() {
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [, setTick] = useState(0);
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+  const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/shop', { cache: 'no-store' });
       const d = await res.json();
@@ -52,17 +50,16 @@ export default function ShopManager() {
       setItems(d.items || []);
     } catch (e) {
       setError(e?.message || 'Gagal memuat.');
-    } finally {
-      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  // Perbarui tiap 20 detik (sinkron dengan poll panel) + tiap detik untuk
-  // memutar hitungan mundur diskon tanpa memanggil server.
+  // REALTIME: perbarui tiap 5 detik (sinkron dengan poll panel) supaya data
+  // shop selalu terbaru tanpa tombol refresh. Plus tick 1 detik untuk memutar
+  // hitungan mundur diskon tanpa memanggil server.
   useEffect(() => {
-    const ivData = setInterval(() => { if (!document.hidden) load(true); }, 20000);
+    const ivData = setInterval(() => { if (!document.hidden) load(); }, 5000);
     const ivTick = setInterval(() => setTick((t) => t + 1), 1000);
     return () => { clearInterval(ivData); clearInterval(ivTick); };
   }, [load]);
@@ -78,7 +75,7 @@ export default function ShopManager() {
       const d = await res.json();
       if (d.ok) {
         setFeedback({ ok: true, text: pesanSukses(payload, d) });
-        await load(true);
+        await load();
       } else {
         setFeedback({ ok: false, text: d.error || 'Gagal.' });
       }
@@ -92,17 +89,7 @@ export default function ShopManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-display text-xl text-ink">Shop Manager</h2>
-          <p className="text-xs text-ink-muted">
-            {loading ? 'Memuat…' : `${items.length} item · data langsung dari database`}
-          </p>
-        </div>
-        <button type="button" onClick={() => load()} className="btn-ghost px-4! py-2! text-sm cursor-pointer">
-          Perbarui
-        </button>
-      </div>
+      <h2 className="font-display text-xl text-ink">Shop Manager</h2>
 
       {feedback && (
         <p className={`rounded-xl border px-4 py-3 text-sm ${feedback.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{feedback.text}</p>
@@ -123,7 +110,7 @@ export default function ShopManager() {
             </tr>
           </thead>
           <tbody>
-            {!loading && items.length === 0 && (
+            {items.length === 0 && (
               <tr><td colSpan="5" className="px-4 py-8 text-center text-ink-muted">Belum ada item di database.</td></tr>
             )}
             {items.map((it) => (
