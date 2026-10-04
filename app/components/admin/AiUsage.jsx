@@ -27,16 +27,22 @@ function fmtCost(usd) {
   return '$' + v.toFixed(2);
 }
 
-// Bar chart sederhana (24 jam) - batang setinggi nilainya, muat di layar kecil.
-function GrafikJam({ hourly, label }) {
-  const maks = Math.max(1, ...hourly.map((h) => h[label] || 0));
+// Bar chart token per jam (24 jam) - batang setinggi total token (input+output)
+// per jam, muat di layar kecil. Sesuai contoh pemilik: grafik pemakaian
+// TOKEN (bukan cuma jumlah permintaan) - angkanya besar & jelas kelihatan.
+function GrafikJam({ hourly }) {
+  // Total token per jam = input + output (cached sudah termasuk di input).
+  const nilai = (h) => (Number(h.inputTokens) || 0) + (Number(h.outputTokens) || 0);
+  const maks = Math.max(1, ...hourly.map(nilai));
   return (
-    <div className="flex h-24 items-end gap-[3px]" role="img" aria-label={`Grafik ${label} per jam (24 jam terakhir)`}>
+    <div className="flex h-28 items-end gap-[3px]" role="img" aria-label="Grafik token AI per jam (24 jam terakhir)">
       {hourly.map((h) => {
-        const v = Number(h[label]) || 0;
+        const v = nilai(h);
         const tinggi = v ? Math.max(6, Math.round((v / maks) * 100)) : 2;
+        const jam = String(h.jam).padStart(2, '0');
+        const tip = `${jam}:00 - ${fmt(v)} token (in ${fmt(h.inputTokens)} / out ${fmt(h.outputTokens)} / ${h.requests} req)`;
         return (
-          <div key={h.jam} className="group relative flex-1" title={`${String(h.jam).padStart(2, '0')}:00 - ${fmt(v)}`}>
+          <div key={h.jam} className="group relative flex-1" title={tip}>
             <div
               className={`w-full rounded-t-sm transition-all ${v ? 'bg-accent' : 'bg-border-soft/60'}`}
               style={{ height: `${tinggi}%` }}
@@ -168,8 +174,8 @@ export default function AiUsage() {
               </div>
               {tampilGrafik && (
                 <>
-                  <GrafikJam hourly={data.hourly} label="requests" />
-                  <p className="mt-1.5 text-center text-[0.6rem] text-ink-faint">00:00 - 23:00 (WIB) - batang = jumlah permintaan</p>
+                  <GrafikJam hourly={data.hourly} />
+                  <p className="mt-1.5 text-center text-[0.6rem] text-ink-faint">00:00 - 23:00 (WIB) - batang = total token (input+output) per jam</p>
                 </>
               )}
             </div>
