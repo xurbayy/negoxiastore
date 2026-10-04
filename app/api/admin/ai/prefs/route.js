@@ -33,12 +33,18 @@ export async function GET() {
   await schemaReady();
   const db = getDb();
   const res = await db.execute({
-    sql: 'SELECT prefs FROM admin_ai_prefs WHERE discord_id = ?',
+    // updatedAt ikut dikirim (fix 2026-10-04): client perlu tahu KAPAN prefs
+    // terakhir berubah untuk sinkronisasi lintas device yang benar. Dulu client
+    // membandingkan PANJANG array chat - itu salah: kalau device ini punya chat
+    // lebih banyak (dari localStorage lama), update dari device lain TIDAK
+    // pernah diterapkan (keluhan: "buka di mobile, di PC ga ada").
+    sql: 'SELECT prefs, updated_at FROM admin_ai_prefs WHERE discord_id = ?',
     args: [adminId],
   });
   let prefs = {};
   try { prefs = JSON.parse(res.rows?.[0]?.prefs || '{}'); } catch { prefs = {}; }
-  return json({ ok: true, prefs });
+  const updatedAt = Number(res.rows?.[0]?.updated_at || 0);
+  return json({ ok: true, prefs, updatedAt });
 }
 
 export async function POST(request) {
@@ -81,9 +87,12 @@ export async function POST(request) {
       : {}),
   };
 
+  const now = Date.now();
   await db.execute({
     sql: 'INSERT INTO admin_ai_prefs (discord_id, prefs, updated_at) VALUES (?, ?, ?) ON CONFLICT(discord_id) DO UPDATE SET prefs = ?, updated_at = ?',
-    args: [adminId, JSON.stringify(prefsBaru), Date.now(), JSON.stringify(prefsBaru), Date.now()],
+    args: [adminId, JSON.stringify(prefsBaru), now, JSON.stringify(prefsBaru), now],
   });
-  return json({ ok: true });
+  // updatedAt dibalas supaya client bisa memakai waktu ini sebagai patokan
+  // sinkronisasi (fix 2026-10-04) - mencegah echo menimpa balik.
+  return json({ ok: true, updatedAt: now });
 }

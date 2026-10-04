@@ -530,6 +530,30 @@ export async function POST(request) {
   // Inilah pembeda dua mode yang diminta pemilik:
   //   analisis -> tersusun Temuan / Saran / Risiko (laporan siap baca)
   //   diskusi  -> jawaban langsung & singkat, boleh ditanya lanjut
+  //
+  // PENTING (fix 2026-10-04) - LARANGAN HALUSINASI AKSI:
+  // Pemilik melaporkan AI mode DISKUSI mengaku BISA melakukan aksi (mis.
+  // "sudah saya buatkan notif") padahal mode ini MURNI percakapan - tidak
+  // punya kemampuan mengeksekusi apa pun. Yang bisa melakukan aksi HANYA
+  // AGEN (lewat usulan yang harus DISETUJUI pemilik dulu).
+  const laranganAksi = [
+    '',
+    'LARANGAN KERAS - KAMU TIDAK BISA MELAKUKAN AKSI APA PUN:',
+    '- Kamu hanya MENGANALISIS dan MENJAWAB. Kamu TIDAK punya tombol, TIDAK bisa',
+    '  membuat pengingat/notif, TIDAK bisa mengubah data, TIDAK bisa mengirim pesan',
+    '  ke Discord, TIDAK bisa memberi poin/item/premium.',
+    '- DILARANG menulis "sudah saya buatkan", "sudah saya kirim", "sudah diproses",',
+    '  "notif sudah dibuat", atau klaim apa pun bahwa sesuatu SUDAH terjadi.',
+    '- Kalau pemilik meminta aksi (mis. "bikin notif", "kasih poin ke X", "restock"),',
+    '  jawab dengan pola: (1) ini butuh aksi, (2) cara melakukannya ADA di panel',
+    '  admin bagian mana ATAU usulkan lewat AGEN, (3) JANGAN bilang sudah dikerjakan.',
+    '- Contoh jawaban BENAR untuk "bikin notif besok jam 9":',
+    '  "Aku cuma bisa menganalisis, ga bisa bikin notif. Buat pengingat, pakai tab',
+    '   Agen (agen bisa usulkan pengingat yang kamu setujui), atau tombol Pengingat',
+    '   di panel."',
+    '- Contoh jawaban SALAH: "Siap, notif sudah saya buatkan untuk besok jam 9."',
+  ].join('\n');
+
   const penandaTugas = mode === 'analisis'
     ? [
       'PERMINTAAN ANALISIS. Jawaban WAJIB memuat TIGA bagian ini, berurutan, TANPA kecuali:',
@@ -540,8 +564,14 @@ export async function POST(request) {
       'WAJIB ada ketiganya - jangan pernah melewatkan "Risiko:". Kalau tidak ada risiko nyata, tulis "Tidak ada risiko yang signifikan hari ini."',
       'Jangan memakai huruf asing (Mandarin, Jepang, Korea, Cyrillic) - pakai huruf Latin saja.',
       'Bahasa santai.',
+      laranganAksi,
     ].join('\n')
-    : 'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian. Bahasa santai. Jangan memakai huruf asing (Mandarin/Jepang/Korea/Cyrillic) - pakai huruf Latin saja. Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.';
+    : [
+      'MODE DISKUSI. Jawab persis yang ditanyakan, singkat, tanpa judul bagian.',
+      'Bahasa santai. Jangan memakai huruf asing (Mandarin/Jepang/Korea/Cyrillic) - pakai huruf Latin saja.',
+      'Kalau pemilik bertanya lanjutan, rujuk jawaban sebelumnya.',
+      laranganAksi,
+    ].join('\n');
 
   // SUSUNAN PESAN (chat 2 arah):
   //   system  -> aturan main

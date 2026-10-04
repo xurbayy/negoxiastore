@@ -398,10 +398,19 @@ export default function AnalisisAI() {
   const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
   // Muat percakapan & laporan dari SERVER (lintas device) via prefs.
-  // Polling tiap 10 detik supaya device lain ikut update (permintaan pemilik
-  // 2026-10-02: "buka di hp dan laptop ga singkron").
+  // Polling tiap 10 detik supaya device lain ikut update.
+  //
+  // FIX SINKRONISASI (2026-10-04) - keluhan: "gw buka di mobile, di PC ga ada".
+  // Versi lama membandingkan PANJANG array chat:
+  //     if (serverChat.length > lastChatLen.current) { ... }
+  // Itu SALAH: kalau device ini kebetulan punya chat LEBIH BANYAK (sisa
+  // localStorage lama), chat dari device lain TIDAK PERNAH diterapkan.
+  //
+  // Sekarang pakai WAKTU: server mengirim `updatedAt`. Kita simpan waktu versi
+  // lokal; kalau server LEBIH BARU -> pakai versi server (device lain menulis).
   const chatLoaded = useRef(false);
-  const lastChatLen = useRef(0);
+  const lastServerAt = useRef(0);   // updatedAt server terakhir yang kita terapkan
+  const lastLocalSave = useRef(0);  // waktu kita terakhir menyimpan (untuk abaikan echo)
   useEffect(() => {
     let batal = false;
     const muat = async () => {
@@ -409,25 +418,28 @@ export default function AnalisisAI() {
         const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
         const d = await res.json();
         if (batal || !d.ok || !d.prefs) return;
-        // Chat: update HANYA kalau ada pesan baru dari device lain
-        // (mencegah overwrite saat user sedang mengetik di device ini).
-        if (Array.isArray(d.prefs.chat)) {
-          const serverChat = d.prefs.chat;
-          if (serverChat.length > lastChatLen.current || (lastChatLen.current === 0 && serverChat.length > 0)) {
-            lastChatLen.current = serverChat.length;
-            setPesan(serverChat);
-            chatLoaded.current = true;
-          } else if (!chatLoaded.current && serverChat.length) {
-            lastChatLen.current = serverChat.length;
-            setPesan(serverChat);
+        const serverAt = Number(d.updatedAt || 0);
+        // Lewati kalau ini ECHO dari simpanan kita sendiri (dalam 5 detik).
+        const echo = serverAt && Date.now() - lastLocalSave.current < 5000;
+        if (!echo && serverAt > lastServerAt.current) {
+          lastServerAt.current = serverAt;
+          if (Array.isArray(d.prefs.chat)) {
+            // Hanya timpa kalau server memang lebih baru (device lain menulis).
+            setPesan((lokal) => {
+              // Jangan kalahkan chat lokal yang lebih panjang HANYA kalau
+              // server lebih tua - di sini server sudah dipastikan lebih baru.
+              return d.prefs.chat;
+            });
             chatLoaded.current = true;
           }
-        }
-        if (Array.isArray(d.prefs.laporan) && d.prefs.laporan.length) {
-          setLaporan((prev) => {
-            if (prev.length === 0 && d.prefs.laporan.length > 0) return d.prefs.laporan;
-            return prev;
-          });
+          if (Array.isArray(d.prefs.laporan) && d.prefs.laporan.length) {
+            setLaporan(d.prefs.laporan);
+          }
+        } else if (!chatLoaded.current && Array.isArray(d.prefs.chat)) {
+          // Muat pertama kali (belum pernah tersinkron di sesi ini).
+          setPesan(d.prefs.chat);
+          chatLoaded.current = true;
+          if (serverAt) lastServerAt.current = serverAt;
         }
       } catch { /* offline */ }
     };
@@ -446,12 +458,17 @@ export default function AnalisisAI() {
       try { window.localStorage.setItem('nexo_ai_laporan', JSON.stringify(laporan.slice(0, 30))); } catch { /* penuh */ }
       try {
         const chatTersimpan = pesan.slice(-40);
-        lastChatLen.current = chatTersimpan.length; // cegah polling overwrite
-        await fetch('/api/admin/ai/prefs', {
+        // Tandai waktu simpan supaya polling tidak menganggap ini update
+        // dari device lain (echo) dan menimpa balik.
+        lastLocalSave.current = Date.now();
+        const r = await fetch('/api/admin/ai/prefs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chat: chatTersimpan, laporan: laporan.slice(0, 30) }),
         });
+        // Server balas updatedAt baru -> pakai sebagai patokan terbaru.
+        const j = await r.json().catch(() => null);
+        if (j?.updatedAt) lastServerAt.current = Number(j.updatedAt);
       } catch { /* offline */ }
     }, 2000);
     return () => clearTimeout(chatSaveRef.current);
