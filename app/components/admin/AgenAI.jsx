@@ -31,6 +31,11 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   // Provider TERPISAH untuk agen (bukan milik Analisis/Diskusi).
   const [agentProvider, setAgentProvider] = useState('');
   const [agentModel, setAgentModel] = useState('');
+  // Sorot dropdown model saat agen diaktifkan TANPA model dipilih
+  // (permintaan pemilik 2026-10-04: "kalo agen aktif tapi belum ada model
+  // kepilih kasih validasi atau hilight").
+  const [sorotModel, setSorotModel] = useState(false);
+  const modelKosong = !agentProvider?.trim() || !agentModel?.trim();
   const [daftarProv, setDaftarProv] = useState([]);
   // Kombinasi provider+model tersimpan (bisa dipilih cepat / dihapus).
   const [daftarKombinasi, setDaftarKombinasi] = useState(() => {
@@ -238,7 +243,15 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
             type="button"
             onClick={() => {
               const baru = !autoJalan;
+              // Validasi: mengaktifkan agen TANPA model dipilih -> tolak +
+              // sorot dropdown model (permintaan pemilik 2026-10-04).
+              if (baru && modelKosong) {
+                setSorotModel(true);
+                flash('Pilih provider & model agen dulu di bawah - agen butuh model untuk jalan.');
+                return;
+              }
               setAutoJalan(baru);
+              setSorotModel(false);
               flash(baru ? 'Agen AKTIF - jalan otomatis tiap 6 jam.' : 'Agen MATI - hanya manual.');
               if (baru) jalankanAgenRef.current?.();
             }}
@@ -285,14 +298,23 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
             Dedicated
           </span>
         </div>
+        {/* Peringatan persisten: agen aktif TAPI model belum dipilih. */}
+        {sorotModel && modelKosong && (
+          <p className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-[0.75rem] font-semibold text-danger">
+            Agen butuh provider &amp; model untuk jalan. Pilih dulu di bawah - auto-run tidak akan jalan sampai model dipilih.
+          </p>
+        )}
         <div className="mt-2 space-y-2 sm:grid sm:grid-cols-2 sm:gap-2 sm:space-y-0">
           <select
             value={agentProvider}
             onChange={(e) => {
               setAgentProvider(e.target.value);
               setAgentModel('');
+              setSorotModel(false);
             }}
-            className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink focus:border-accent/50 focus:outline-none"
+            className={`w-full rounded-lg border bg-card-cream px-3 py-2 text-sm text-ink focus:outline-none ${
+              sorotModel && modelKosong ? 'border-danger ring-2 ring-danger/30 focus:border-danger' : 'border-border-soft focus:border-accent/50'
+            }`}
           >
             <option value="">Pilih provider...</option>
             {daftarProv.map((p) => (
@@ -301,9 +323,11 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
           </select>
           <input
             value={agentModel}
-            onChange={(e) => setAgentModel(e.target.value)}
+            onChange={(e) => { setAgentModel(e.target.value); setSorotModel(false); }}
             placeholder="Nama model (mis. llama-3.3-70b-versatile)"
-            className="w-full rounded-lg border border-border-soft bg-card-cream px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent/50 focus:outline-none"
+            className={`w-full rounded-lg border bg-card-cream px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none ${
+              sorotModel && modelKosong ? 'border-danger ring-2 ring-danger/30 focus:border-danger' : 'border-border-soft focus:border-accent/50'
+            }`}
           />
         </div>
         {/* Kombinasi tersimpan - pilih cepat, bisa dihapus. */}

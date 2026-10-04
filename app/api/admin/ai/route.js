@@ -280,7 +280,7 @@ export async function POST(request) {
     // Ini melengkapi snapshot push supaya AI punya gambaran penuh.
     let botData = {};
     try {
-      const [topPlayers, topGames, economy, premiumRows, guildRows, missionRows, txRows] = await Promise.all([
+      const [topPlayers, topGames, economy, premiumRows, guildRows, missionRows, txRows, hourlyRows] = await Promise.all([
         db.execute('SELECT username, points, level, xp, total_won, total_bet FROM public.users ORDER BY points DESC LIMIT 20'),
         db.execute('SELECT game_type, COUNT(*) AS plays, COALESCE(SUM(points),0) AS points FROM public.game_scores GROUP BY game_type ORDER BY plays DESC LIMIT 20'),
         db.execute(`SELECT
@@ -297,6 +297,15 @@ export async function POST(request) {
         db.execute('SELECT guild_code, name, total_points FROM public.guilds ORDER BY total_points DESC LIMIT 20').catch(() => ({ rows: [] })),
         db.execute("SELECT COUNT(*) AS total FROM public.daily_missions").catch(() => ({ rows: [{ total: 0 }] })),
         db.execute('SELECT type, COUNT(*) AS jumlah, COALESCE(SUM(amount),0) AS total FROM public.transactions GROUP BY type ORDER BY jumlah DESC LIMIT 15').catch(() => ({ rows: [] })),
+        // DATA PER JAM (WIB) 24 JAM TERAKHIR (permintaan pemilik 2026-10-04:
+        // "AI ga bisa baca waktu game dimainkan jam berapa paling banyak, poin
+        // beredar juga dari jam WIB Jakarta"). Grup game_scores per jam WIB
+        // (AT TIME ZONE 'Asia/Jakarta') -> games + poin dimenangkan per jam.
+        // played_at = epoch ms -> konversi ke timestamp lalu ambil jam WIB.
+        db.execute(`SELECT (EXTRACT(HOUR FROM to_timestamp(played_at/1000.0) AT TIME ZONE 'Asia/Jakarta'))::int AS jam,
+                           COUNT(*)::int AS games, COALESCE(SUM(points),0)::int AS points
+                      FROM public.game_scores WHERE played_at >= ?
+                     GROUP BY 1 ORDER BY 1`, [Date.now() - 24 * 3600000]).catch(() => ({ rows: [] })),
       ]);
       // DATA REDEEM & EKONOMI TAMBAHAN (2026-10-03, permintaan pemilik:
       // "AI cerdas beneran, baca database, bukan halu") - AI sekarang
@@ -321,6 +330,9 @@ export async function POST(request) {
       botData = {
         topPlayers: topPlayers.rows.map((r) => ({ username: r.username, points: Number(r.points), level: Number(r.level), xp: Number(r.xp), totalWon: Number(r.total_won), totalBet: Number(r.total_bet) })),
         topGames: topGames.rows.map((r) => ({ game: r.game_type, plays: Number(r.plays), points: Number(r.points) })),
+        // Game + poin per jam (WIB, 24 jam terakhir) - supaya AI bisa menjawab
+        // "jam berapa paling ramai" dan "poin beredar per jam".
+        hourlyGames: hourlyRows.rows.map((r) => ({ jam: Number(r.jam), games: Number(r.games), points: Number(r.points) })),
         economy: economy.rows[0] ? Object.fromEntries(Object.entries(economy.rows[0]).map(([k, v]) => [k, Number(v)])) : {},
         premiumMembers: premiumRows.rows.map((r) => ({ userId: String(r.user_id), tier: r.tier, expiresAt: Number(r.expires_at) })),
         guilds: guildRows.rows.map((r) => ({ code: r.guild_code, name: r.name, points: Number(r.total_points) })),

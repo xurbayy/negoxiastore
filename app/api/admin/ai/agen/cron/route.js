@@ -47,11 +47,38 @@ export async function GET(request) {
   const konteks = await susunKonteks(snap, panel, { ringkas: true });
   // Kode base juga (agen bisa deteksi celah eksploit di kode).
   const konteksKode = susunKonteksKode(snap?.kodeBase);
+
+  // ==========================================
+  // MODEL AGEN DARI PREFS (fix 2026-10-04)
+  // ==========================================
+  // MASALAH: cron ini memakai model DEFAULT provider. Kalau default itu rusak
+  // / salah (mis. key tidak valid), agen GAGAL terus dan tidak pernah ada
+  // laporan - padahal jadwal cron jalan tiap hari. Pemilik melaporkan "agen
+  // ga keluar hasil laporan walau udah ada jadwalnya".
+  //
+  // Sekarang cron MEMBACA model agen yang dipilih pemilik di panel
+  // (admin_ai_prefs: agentProvider + agentModel) dan memakainya. Kalau belum
+  // ada, fallback ke default provider (perilaku lama).
+  let providerAgen, modelAgen;
+  try {
+    await schemaReady();
+    const dbP = getDb();
+    const prefsRows = await dbP.execute(
+      'SELECT prefs FROM admin_ai_prefs ORDER BY updated_at DESC'
+    );
+    for (const row of (prefsRows.rows || [])) {
+      try {
+        const p = JSON.parse(row.prefs || '{}');
+        if (p.agentProvider && p.agentModel) { providerAgen = String(p.agentProvider); modelAgen = String(p.agentModel); break; }
+      } catch { /* prefs rusak - coba baris berikutnya */ }
+    }
+  } catch { /* gagal baca prefs -> pakai default */ }
+
   const hasil = await tanyaGroq([
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab bahasa Indonesia santai.' },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     { role: 'user', content: PROMPT_AGEN + '\n\nBuat laporan harian + usulan aksi.' },
-  ], { maxTokens: 2000, thinking: 'auto' });
+  ], { provider: providerAgen, model: modelAgen, maxTokens: 3000, thinking: 'auto' });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error }, 502);
 

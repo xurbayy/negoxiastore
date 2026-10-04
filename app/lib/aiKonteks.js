@@ -194,6 +194,30 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
   L.push(`Top game HARI INI: ${(m.topGamesToday || []).map((g) => g.game_type + "(" + g.plays + "x)").join(", ") || "-"}`);
   L.push(`Game beta aktif: ${(snap.betaGames || []).map((b) => `${b.name} (${b.mode})`).join(', ') || '-'}`);
 
+  // ---------- GAME & POIN PER JAM (WIB) ----------
+  // Permintaan pemilik 2026-10-04: "AI ga bisa baca waktu game dimainkan jam
+  // berapa paling banyak, poin beredar juga dari jam WIB Jakarta".
+  //
+  // Data dari panel.bot.hourlyGames (query game_scores per jam WIB, 24 jam
+  // terakhir). Format ringkas: daftar jam aktif (yang ada main) + jam puncak.
+  // Supaya hemat token, hanya jam yang ADA main yang ditampilkan.
+  try {
+    const hourly = Array.isArray(panel?.bot?.hourlyGames) ? panel.bot.hourlyGames : [];
+    if (hourly.length) {
+      // Jam puncak = game terbanyak.
+      const puncak = [...hourly].sort((a, b) => (b.games || 0) - (a.games || 0))[0];
+      L.push(`Game per jam (WIB, 24 jam terakhir): ` +
+        hourly.map((h) => `${String(h.jam).padStart(2, '0')}:00=${h.games}game/${h.points}pt`).join(', '));
+      if (puncak) {
+        L.push(`Jam RAMAI (paling banyak main): ${String(puncak.jam).padStart(2, '0')}:00 WIB (${puncak.games} game, ${rupiah(puncak.points)} poin dimenangkan)`);
+      }
+      const totalPoinJam = hourly.reduce((s, h) => s + (h.points || 0), 0);
+      L.push(`Total poin dimenangkan 24 jam (per jam): ${rupiah(totalPoinJam)}`);
+    } else {
+      L.push('Game per jam (WIB): belum ada data 24 jam terakhir.');
+    }
+  } catch { /* bagian per jam tidak boleh menggagalkan konteks */ }
+
   // DAFTAR LENGKAP GAME YANG SUDAH ADA (fix 2026-10-01).
   //
   // KENAPA PENTING: pemilik meminta AI memberi ide game BARU yang inovatif.
