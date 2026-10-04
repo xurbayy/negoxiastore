@@ -31,7 +31,7 @@ export default function Notifications() {
     try {
       const res = await fetch('/api/me/notifications', { cache: 'no-store' });
       if (res.status === 401) { setEnabled(false); return; }
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       setEnabled(true);
       // Kalau muat gagal, pertahankan daftar sebelumnya (jangan kosongkan).
       setItems((prev) => (Array.isArray(d.notifications) ? d.notifications : prev));

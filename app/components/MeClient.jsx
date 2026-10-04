@@ -79,7 +79,7 @@ export default function MeClient({ betaGames = null }) {
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/me', { cache: 'no-store' });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setState({ loading: false, authenticated: Boolean(data.authenticated), user: data.user || null, profile: data.profile || null });
       return data;
     } catch {

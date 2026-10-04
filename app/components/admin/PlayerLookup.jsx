@@ -23,7 +23,7 @@ export default function PlayerLookup() {
     setBusy(true);
     try {
       const res = await fetch(`/api/admin/player?id=${target}`, { cache: 'no-store' });
-      const j = await res.json();
+      const j = await res.json().catch(() => ({}));
       if (!j.ok) { setErr(j.error || 'Gagal.'); setData(null); }
       else { setErr(null); setData(j); }
       // kalau masih menyegarkan dari bot -> poll lagi 3 dtk (maks 8x)

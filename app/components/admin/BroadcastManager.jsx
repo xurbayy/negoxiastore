@@ -21,7 +21,7 @@ export default function BroadcastManager({ send, data } = {}) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target, type: form.type, title: form.title, body: form.body }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setMsg({ ok: true, text: `Terkirim ke ${d.target}.` });
         setForm((f) => ({ ...f, title: '', body: '' }));

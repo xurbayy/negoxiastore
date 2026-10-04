@@ -29,7 +29,7 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
   const checkReg = useCallback(async () => {
     try {
       const res = await fetch('/api/me', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       const ok = d.authenticated && d.profile?.exists === true && d.profile?.needsOnboarding !== true;
       setReg(ok ? 'ok' : 'onboarding');
       return ok;
@@ -67,7 +67,7 @@ export default function RedeemClient({ loggedIn, prefillCode = '' }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: code.trim(), cfToken }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setResult({ ok: Boolean(data.ok), message: data.message || data.reason || 'Terjadi kesalahan.' });
       if (data.ok) setCode('');
       // token Turnstile sekali-pakai: reset widget utk percobaan berikutnya

@@ -237,7 +237,7 @@ export async function tesKoneksi({ baseUrl, apiKey }) {
     });
     let pesanApi = '';
     if (!res.ok) {
-      try { const j = await res.json(); pesanApi = j?.error?.message || j?.message || ''; } catch { /* bukan JSON */ }
+      try { const j = await res.json().catch(() => ({})); pesanApi = j?.error?.message || j?.message || ''; } catch { /* bukan JSON */ }
     }
     if (res.status === 404) {
       return { ok: false, urlDicek: urlModels, pesan: `URL base sepertinya salah - endpoint ${urlModels} tidak ditemukan (404). Untuk OpenAI-compatible biasanya berakhir dengan /v1.` };
@@ -494,7 +494,7 @@ export async function cekUsageProvider(namaProvider) {
       if (res.ok) return { ok: true, jenis: 'hidup', label, catatan: 'Provider merespons, tapi tidak menyediakan info kuota.' };
       // Gagal: baca pesan provider supaya jelas.
       let pesanApi = '';
-      try { const j = await res.json(); pesanApi = j?.error?.message || j?.message || ''; } catch { /* bukan JSON */ }
+      try { const j = await res.json().catch(() => ({})); pesanApi = j?.error?.message || j?.message || ''; } catch { /* bukan JSON */ }
       const teksErr = pesanApi || `HTTP ${res.status}`;
       const catatan = res.status === 429
         ? 'Kuota habis / rate limit tercapai.'
@@ -731,7 +731,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
         }
 
         let data;
-        try { data = await res.json(); } catch (_) { data = null; }
+        try { data = await res.json().catch(() => ({})); } catch (_) { data = null; }
 
         // Ambil info PEMAKAIAN TOKEN dari provider (permintaan pemilik
         // 2026-10-02: "gw mau tampilin total token yang digunakan").
@@ -778,7 +778,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
       }
 
       let pesanErr = '';
-      try { const j = await res.json(); pesanErr = j?.error?.message || JSON.stringify(j); } catch { pesanErr = ''; }
+      try { const j = await res.json().catch(() => ({})); pesanErr = j?.error?.message || JSON.stringify(j); } catch { pesanErr = ''; }
 
       const kode = res.status;
       // Terjemahkan pesan provider (umumnya Inggris) ke Indonesia supaya
@@ -817,7 +817,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
           });
           if (res2.ok) {
             let d2;
-            try { d2 = await res2.json(); } catch (_) { d2 = null; }
+            try { d2 = await res2.json().catch(() => ({})); } catch (_) { d2 = null; }
             const t2 = d2?.choices?.[0]?.message?.content;
             if (t2) {
               const u2 = d2?.usage ? {

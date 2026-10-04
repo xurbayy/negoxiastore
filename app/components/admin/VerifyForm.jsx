@@ -31,7 +31,7 @@ export default function VerifyForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, remember }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (data.ok) {
         // Kembalikan ke tab yang dituju (sama seperti /admin/login) supaya
         // admin yang membuka nexogames.site/admin#ai tidak terlempar ke

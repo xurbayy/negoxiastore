@@ -60,10 +60,12 @@ export default function AiUsage() {
     setSibuk(true);
     try {
       const res = await fetch('/api/admin/ai/usage-log', { cache: 'no-store' });
-      const d = await res.json();
+      // .catch: kalau response kosong (koneksi DB penuh/putus) jangan crash
+      // "Unexpected end of JSON input" - anggap gagal dengan pesan.
+      const d = await res.json().catch(() => ({}));
       if (batal.current) return;
       if (d.ok) { setData(d); setErr(null); }
-      else setErr(d.error || 'Gagal memuat pemakaian AI.');
+      else setErr(d.error || 'Gagal memuat pemakaian AI (koneksi bermasalah - coba lagi).');
     } catch (e) {
       if (!batal.current) setErr(e?.message || 'Gagal menghubungi server.');
     } finally {

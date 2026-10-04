@@ -55,7 +55,7 @@ export default function Navbar({ session, premiumActive = false }) {
     async function check() {
       try {
         const res = await fetch('/api/me', { cache: 'no-store' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (stop || !d?.authenticated) return;
         const p = d?.profile?.profile?.premium;
         // Bot boleh mengirim premium sebagai boolean ATAU objek {expiresAt,

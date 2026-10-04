@@ -44,7 +44,7 @@ function StatusSistem() {
     const muat = async () => {
       try {
         const res = await fetch('/api/health', { cache: 'no-store' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (hidup) { setH(d); setGagal(false); }
       } catch {
         if (hidup) setGagal(true);

@@ -157,7 +157,7 @@ function NotifyForm({ codes, onSent }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target, type: 'token', code: form.code, title: `Kode ${form.code} tersedia untukmu`, body: 'Klaim langsung dari web sebelum kuota habis.' }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setMsg({ ok: true, text: `Notifikasi kode ${form.code} terkirim ke ${d.target}.` });
         onSent(`Notifikasi kode ${form.code} terkirim ke ${d.target}.`);

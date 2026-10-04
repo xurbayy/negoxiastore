@@ -35,12 +35,12 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
         fetch('/api/me', { cache: 'no-store' }),
       ]);
       if (payRes.ok) {
-        const d = await payRes.json();
+        const d = await payRes.json().catch(() => ({}));
         setOrder(d.order || null);
         setOnline(Boolean(d.botOnline));
       }
       if (meRes.ok) {
-        const m = await meRes.json();
+        const m = await meRes.json().catch(() => ({}));
         const p = m.profile?.profile?.premium;
         const active =
           p === true ||
@@ -110,7 +110,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       body: JSON.stringify({ senderName, receiptBase64, receiptName })
     })
       .then(async (res) => {
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (!res.ok) {
           if (d.error === 'premium_active') {
             setPremiumActive(true);

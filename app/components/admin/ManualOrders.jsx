@@ -50,7 +50,7 @@ function BuktiTransfer({ order }) {
     setErr(null);
     try {
       const res = await fetch(`/api/admin/manual-order?id=${order.id}`, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok && d.receiptBase64) setImg(d.receiptBase64);
       else setErr('Bukti gambar tidak tersedia.');
     } catch (e) {
@@ -113,7 +113,7 @@ export default function ManualOrders({ orders, reload }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, action }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!data.ok) showFlash(data.error || 'Gagal memproses.');
       await reload?.();
     } catch {
@@ -132,7 +132,7 @@ export default function ManualOrders({ orders, reload }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(isAll ? { all: true } : { orderId }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!data.ok) showFlash(data.error || 'Gagal menghapus.');
       await reload?.();
     } catch {

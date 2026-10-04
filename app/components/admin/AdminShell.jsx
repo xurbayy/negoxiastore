@@ -111,7 +111,7 @@ export default function AdminShell({ username, avatar = null }) {
     try {
       const res = await fetch('/api/admin/data', { cache: 'no-store' });
       if (!res.ok) return;
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       const sig = JSON.stringify(json);
       if (sig !== lastSig.current) {
         lastSig.current = sig;
@@ -152,7 +152,7 @@ export default function AdminShell({ username, avatar = null }) {
   const muatPengingat = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/ai/reminders', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setPengingat(d.reminders || []);
     } catch { /* gagal muat tidak menghalangi panel */ }
   }, []);
@@ -166,7 +166,7 @@ export default function AdminShell({ username, avatar = null }) {
   const tandaiPengingat = useCallback(async (id, selesai = true) => {
     try {
       const res = await fetch(`/api/admin/ai/reminders?id=${id}${selesai ? '' : '&selesai=0'}`, { method: 'PATCH' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) muatPengingat();
     } catch { /* abaikan */ }
   }, [muatPengingat]);
@@ -174,7 +174,7 @@ export default function AdminShell({ username, avatar = null }) {
   const hapusPengingat = useCallback(async (id) => {
     try {
       const res = await fetch(`/api/admin/ai/reminders?id=${id}`, { method: 'DELETE' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setPengingat((p) => p.filter((x) => x.id !== id));
     } catch { /* abaikan */ }
   }, []);
@@ -259,7 +259,7 @@ export default function AdminShell({ username, avatar = null }) {
         try {
           const pollRes = await fetch(`/api/admin/command/${pollId}`);
           if (pollRes.ok) {
-            const pData = await pollRes.json();
+            const pData = await pollRes.json().catch(() => ({}));
             if (pData.status === 'done') {
               finalOut = { ok: true, id: pollId, result: pData.result || 'Berhasil!' };
               break;

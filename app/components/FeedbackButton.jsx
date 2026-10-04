@@ -45,7 +45,7 @@ export default function FeedbackButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind, message: text.trim(), page: window.location.pathname }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setDone({ ok: true, text: d.message });
         setText('');

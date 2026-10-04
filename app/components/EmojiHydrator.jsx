@@ -13,7 +13,7 @@ export default function EmojiHydrator() {
       try {
         const res = await fetch('/api/emojis', { cache: 'no-store' });
         if (!res.ok) return;
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (!cancelled && d?.ok && Array.isArray(d.emojis)) {
           hydrateEmojiCatalog(d.emojis);
         }

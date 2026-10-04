@@ -44,7 +44,7 @@ export default function ShopManager() {
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/shop', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!d.ok) { setError(d.error || 'Gagal memuat.'); return; }
       setError(null);
       setItems(d.items || []);
@@ -72,7 +72,7 @@ export default function ShopManager() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setFeedback({ ok: true, text: pesanSukses(payload, d) });
         await load();
