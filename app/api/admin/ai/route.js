@@ -25,6 +25,12 @@ export const dynamic = 'force-dynamic';
 const BOT_TTL_MS = 60_000;
 let _botCacheStore = { data: null, at: 0 };
 
+// Invalidasi on-write (fix 2026-10-04): dipanggil route tulis SETELAH menulis
+// DB supaya AI membaca data segar di request berikutnya (bukan cache basi).
+export function invalidateBotCache() {
+  _botCacheStore = { data: null, at: 0 };
+}
+
 // ==========================================
 // PENGINGAT: BACA & SIMPAN DARI JAWABAN AI
 // ==========================================

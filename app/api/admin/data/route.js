@@ -17,6 +17,13 @@ export const dynamic = 'force-dynamic';
 const _cache = { data: null, at: 0 };
 const DATA_TTL_MS = 8_000;
 
+// Invalidasi on-write (fix 2026-10-04): dipanggil route tulis (command/shop)
+// SETELAH menulis DB supaya Activity Log & data panel langsung segar.
+export function invalidateDataCache() {
+  _cache.data = null;
+  _cache.at = 0;
+}
+
 // GET /api/admin/data - semua data untuk admin panel (dashboard + log).
 // Jalur akses: session admin (username+password) ATAU member di ADMIN_DISCORD_IDS.
 export async function GET() {

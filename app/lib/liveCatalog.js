@@ -124,9 +124,14 @@ async function swr(key, ttlMs, fetcher) {
   }
 }
 
-// Dipertahankan sebagai no-op supaya pemanggil lama (endpoint admin) tidak
-// perlu diubah; cache internal swr yang menangani invalidasi via TTL.
-export function invalidateCatalog() { /* no-op: TTL yang menangani */ }
+// Invalidasi cache on-write (fix 2026-10-04): dipanggil admin route (shop,
+// promo, dll) SETELAH menulis ke DB supaya perubahan langsung terlihat di web
+// tanpa menunggu TTL. Sebelumnya fungsi ini no-op -> edit shop tertunda TTL.
+// TTL tetap jadi jaring pengaman antar-perubahan (hemat egress), tapi begitu
+// ada tulis, cache dibersihkan -> baca berikutnya langsung segar.
+export function invalidateCatalog() {
+  _cache.clear();
+}
 
 // SHOP ITEMS langsung dari DB bot.
 export async function getLiveShop() {

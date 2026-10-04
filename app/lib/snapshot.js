@@ -26,6 +26,13 @@ async function live(key, fn) {
   return val;
 }
 
+// Invalidasi cache live ON-WRITE (fix 2026-10-04): dipanggil route tulis
+// (command admin, shop, dll) SETELAH menulis DB supaya perubahan langsung
+// terlihat tanpa tunggu TTL. TTL tetap jadi jaring pengaman antar-perubahan.
+export function invalidateLive() {
+  _live.clear();
+}
+
 // ==========================================
 // CACHE BACA SNAPSHOT 45 DETIK (optimasi egress 2026-10-04)
 // ==========================================

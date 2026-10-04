@@ -3,6 +3,21 @@ import { getDb } from '../../../lib/db';
 import { json, ready } from '../../../lib/api-helpers';
 import { touchActivity } from '../../../lib/activity';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';
+// Invalidasi cache ON-WRITE (fix 2026-10-04): setelah admin menulis, semua
+// cache (live, data panel, bot AI, katalog) dibersihkan supaya perubahan
+// langsung terlihat - tanpa menunggu TTL (keluhan: "ubah item kok ga masuk").
+import { invalidateLive } from '../../../lib/snapshot';
+import { invalidateCatalog } from '../../../lib/liveCatalog';
+import { invalidateDataCache } from '../data/route';
+import { invalidateBotCache } from '../ai/route';
+
+// Bersihkan semua cache setelah tulis berhasil - perubahan langsung terlihat.
+function invalidateSemua() {
+  try { invalidateLive(); } catch {}
+  try { invalidateCatalog(); } catch {}
+  try { invalidateDataCache(); } catch {}
+  try { invalidateBotCache(); } catch {}
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -83,6 +98,7 @@ export async function POST(request) {
         args: [action, JSON.stringify(clamped), actorId, 'done', String(hasil).slice(0, 400), Date.now(), Date.now()],
       });
       await touchActivity();
+      invalidateSemua(); // perubahan langsung terlihat di web (tanpa tunggu TTL)
       return json({ ok: true, langsung: true, hasil });
     } catch (e) {
       // Gagal -> catat 'failed' + pesan jelas. JANGAN jatuh ke antrean bot
@@ -105,6 +121,7 @@ export async function POST(request) {
   notifyQueue([action]).catch(() => {});
 
   await touchActivity();
+  invalidateSemua(); // antrean juga bersihkan cache - begitu bot eksekusi, web segar
   const newId = res.rows?.[0]?.id ?? res.lastInsertRowid;
   return json({ ok: true, id: Number(newId) });
 }
