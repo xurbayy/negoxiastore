@@ -202,57 +202,54 @@ export default function AiUsage() {
             </div>
           </div>
 
-          {/* Usage by Model + By Provider */}
+          {/* Usage by Model + By Provider - FORMAT KARTU (mobile-friendly) */}
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border border-border-soft bg-bg-soft/30 p-3">
               <p className="mb-2 text-xs font-bold text-ink">Usage by Model</p>
               {data.byModel.length === 0 ? (
-                <p className="text-[0.7rem] text-ink-muted">Belum ada data model.</p>
+                <p className="text-[0.75rem] text-ink-muted">Belum ada data model.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[320px] text-left text-[0.68rem]">
-                    <thead>
-                      <tr className="border-b border-border-soft text-[0.6rem] uppercase tracking-wider text-ink-faint">
-                        <th className="py-1.5 pr-2">Model</th>
-                        <th className="py-1.5 pr-2 text-right">Req</th>
-                        <th className="py-1.5 pr-2 text-right">In</th>
-                        <th className="py-1.5 pr-2 text-right">Cached</th>
-                        <th className="py-1.5 pr-2 text-right">Out</th>
-                        <th className="py-1.5 text-right">Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.byModel.map((m, i) => (
-                        <tr key={i} className="border-b border-border-soft/40 last:border-0">
-                          <td className="max-w-[140px] truncate py-1.5 pr-2 text-ink" title={`${m.provider} • ${m.model}`}>{m.model}</td>
-                          <td className="py-1.5 pr-2 text-right text-ink-muted">{fmt(m.requests)}</td>
-                          <td className="py-1.5 pr-2 text-right text-ink-muted">{fmtToken(m.inputTokens)}</td>
-                          <td className="py-1.5 pr-2 text-right text-ink-muted">{fmtToken(m.cachedTokens)}</td>
-                          <td className="py-1.5 pr-2 text-right text-ink-muted">{fmtToken(m.outputTokens)}</td>
-                          <td className="py-1.5 text-right font-semibold text-ink">{fmtCost(m.estCostUsd)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <ul className="space-y-2">
+                  {data.byModel.map((m, i) => (
+                    <li key={i} className="rounded-lg border border-border-soft bg-card-cream px-3 py-2">
+                      {/* Baris atas: nama model + biaya. */}
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="min-w-0 truncate text-[0.82rem] font-semibold text-ink" title={`${m.provider} • ${m.model}`}>{m.model}</p>
+                        <p className="shrink-0 text-[0.78rem] font-bold text-ink">{fmtCost(m.estCostUsd)}</p>
+                      </div>
+                      {/* Provider di bawah nama - membedakan model serupa di provider beda. */}
+                      <p className="text-[0.68rem] text-ink-faint">{m.provider}</p>
+                      {/* Grid statistik 4 kolom - muat di layar HP sempit. */}
+                      <div className="mt-1.5 grid grid-cols-4 gap-1">
+                        <StatMini label="Req" value={fmt(m.requests)} />
+                        <StatMini label="In" value={fmtToken(m.inputTokens)} />
+                        <StatMini label="Cached" value={fmtToken(m.cachedTokens)} />
+                        <StatMini label="Out" value={fmtToken(m.outputTokens)} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
             <div className="rounded-xl border border-border-soft bg-bg-soft/30 p-3">
               <p className="mb-2 text-xs font-bold text-ink">By Provider</p>
               {data.byProvider.length === 0 ? (
-                <p className="text-[0.7rem] text-ink-muted">Belum ada data provider.</p>
+                <p className="text-[0.75rem] text-ink-muted">Belum ada data provider.</p>
               ) : (
                 <ul className="space-y-2">
                   {data.byProvider.map((p, i) => (
                     <li key={i} className="rounded-lg border border-border-soft bg-card-cream px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-[0.75rem] font-semibold text-ink">{p.provider}</p>
-                        <p className="shrink-0 text-[0.7rem] font-bold text-ink">{fmtCost(p.estCostUsd)}</p>
+                        <p className="min-w-0 truncate text-[0.82rem] font-semibold text-ink">{p.provider}</p>
+                        <p className="shrink-0 text-[0.78rem] font-bold text-ink">{fmtCost(p.estCostUsd)}</p>
                       </div>
-                      <p className="mt-0.5 text-[0.65rem] text-ink-muted">
-                        {fmt(p.requests)} request • in {fmtToken(p.inputTokens)} • cached {fmtToken(p.cachedTokens)} • out {fmtToken(p.outputTokens)}
-                      </p>
+                      <div className="mt-1.5 grid grid-cols-4 gap-1">
+                        <StatMini label="Req" value={fmt(p.requests)} />
+                        <StatMini label="In" value={fmtToken(p.inputTokens)} />
+                        <StatMini label="Cached" value={fmtToken(p.cachedTokens)} />
+                        <StatMini label="Out" value={fmtToken(p.outputTokens)} />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -273,6 +270,17 @@ function Stat({ label, value, sub, aksen }) {
       <p className="text-[0.6rem] font-bold uppercase tracking-wider text-ink-muted">{label}</p>
       <p className={`mt-0.5 truncate font-semibold ${aksen ? 'text-accent' : 'text-ink!'}`} title={value}>{value}</p>
       {sub && <p className="mt-0.5 truncate text-[0.58rem] text-ink-faint">{sub}</p>}
+    </div>
+  );
+}
+
+// Statistik mini untuk kartu Usage by Model / By Provider - muat di HP sempit
+// (grid 4 kolom, label kecil + angka jelas).
+function StatMini({ label, value }) {
+  return (
+    <div className="rounded-md bg-bg-soft/50 px-1 py-1 text-center">
+      <p className="text-[0.55rem] leading-tight text-ink-faint">{label}</p>
+      <p className="text-[0.7rem] font-semibold leading-tight text-ink" title={value}>{value}</p>
     </div>
   );
 }
