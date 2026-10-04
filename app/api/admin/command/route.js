@@ -62,6 +62,39 @@ export async function POST(request) {
   // 3650 (~10 th, efektif lifetime). Hindari failed senyap di Activity Log.
   const clamped = clampDays(action, payload);
 
+  // ==========================================
+  // JALUR LANGSUNG DULU (permintaan pemilik 2026-10-04)
+  // ==========================================
+  // "kenapa di web gw ngatur streak dan lainnya ga keubah ya di usernya di
+  // botnya" - karena SEMUA aksi dulu masuk antrean bot (bot_commands) dan baru
+  // berubah kalau bot online + sempat poll. Kalau bot mati/lambat, admin ubah
+  // di web tapi data TIDAK berubah.
+  //
+  // Sekarang: aksi yang bisa dikerjakan dari DB dieksekusi LANGSUNG (instan,
+  // tidak bergantung bot). Tetap DICATAT ke bot_commands sebagai 'done' supaya
+  // Activity Log menampilkan riwayatnya (permintaan pemilik: "kegiatan admin
+  // bisa terdeteksi semua").
+  const { AKSI_LANGSUNG, jalankanAksiLangsung } = await import('../../../lib/aksiAdminLangsung');
+  if (AKSI_LANGSUNG.has(action)) {
+    try {
+      const hasil = await jalankanAksiLangsung(action, clamped, actorId);
+      await db.execute({
+        sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, result, created_at, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        args: [action, JSON.stringify(clamped), actorId, 'done', String(hasil).slice(0, 400), Date.now(), Date.now()],
+      });
+      await touchActivity();
+      return json({ ok: true, langsung: true, hasil });
+    } catch (e) {
+      // Gagal -> catat 'failed' + pesan jelas. JANGAN jatuh ke antrean bot
+      // (bisa dieksekusi dobel kalau bot online).
+      await db.execute({
+        sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, result, created_at, executed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        args: [action, JSON.stringify(clamped), actorId, 'failed', String(e?.message || e).slice(0, 400), Date.now(), Date.now()],
+      }).catch(() => {});
+      return json({ ok: false, error: e?.message || 'Gagal menjalankan aksi.' }, e?.status || 400);
+    }
+  }
+
   const res = await db.execute({
     // RETURNING id: Postgres tidak mengisi lastInsertRowid otomatis (beda
     // dengan SQLite/libsql). Tanpa ini UI menampilkan "antrean (#undefined)".

@@ -23,6 +23,18 @@ export const AKSI_LANGSUNG = new Set([
   'set_announcement', 'create_promo', 'delete_promo',
   'clear_loan', 'set_chemistry',
   'ban', 'unban', 'timeout',
+  // ==========================================
+  // TAMBAHAN 2026-10-04 (permintaan pemilik: "kenapa di web gw ngatur streak
+  // dan lainnya ga keubah ya di usernya di botnya").
+  // ==========================================
+  // SEBELUMNYA 12 aksi ini HANYA lewat antrean bot (bot_commands) - jadi
+  // PERUBAHAN BARU TERJADI kalau bot online DAN sempat poll. Kalau bot mati
+  // atau lambat, admin mengubah streak/level di web tapi data TIDAK berubah.
+  // Sekarang semuanya langsung ke DB.
+  'set_level', 'set_streak', 'set_winstreak', 'set_rpg_level',
+  'reset_daily', 'reset_missions', 'clear_lock',
+  'set_maintenance', 'giveaway', 'wipe',
+  'restock_all', 'redeem_promo_web',
 ]);
 
 // Jalankan satu aksi. Melempar HttpError bila gagal.
@@ -227,6 +239,187 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
         args: [userId, String(p.reason || 'Timeout'), Date.now(), until],
       });
       return `${userId} timeout ${mins} menit`;
+    }
+
+    // ==========================================
+    // TAMBAHAN 2026-10-04 - aksi yang dulu hanya lewat antrean bot
+    // ==========================================
+
+    // ---------- LEVEL & STREAK ----------
+    case 'set_level': {
+      const userId = req(p.userId, 'userId');
+      const level = int(p.level);
+      if (level === null || level < 1 || level > 1000) throw new HttpError(400, 'Level harus 1-1000.');
+      await ensureUser(db, userId);
+      // XP mengikuti rumus bot: floor(100 * (level-1)^1.5).
+      const xp = Math.floor(100 * Math.pow(level - 1, 1.5)) || 0;
+      await db.execute({ sql: 'UPDATE public.users SET level = ?, xp = ? WHERE user_id = ?', args: [level, xp, userId] });
+      return `Level ${userId} -> ${level} (xp ${xp})`;
+    }
+    case 'set_streak': {
+      const userId = req(p.userId, 'userId');
+      const val = int(p.value);
+      if (val === null || val < 0 || val > 3650) throw new HttpError(400, 'Streak harus 0-3650.');
+      await ensureUser(db, userId);
+      await db.execute({ sql: 'UPDATE public.users SET daily_streak = ? WHERE user_id = ?', args: [val, userId] });
+      return `Daily streak ${userId} -> ${val}`;
+    }
+    case 'set_winstreak': {
+      const userId = req(p.userId, 'userId');
+      const val = int(p.value);
+      if (val === null || val < 0 || val > 3650) throw new HttpError(400, 'Winstreak harus 0-3650.');
+      await ensureUser(db, userId);
+      await db.execute({ sql: 'UPDATE public.users SET winstreak = ? WHERE user_id = ?', args: [val, userId] });
+      return `Winstreak ${userId} -> ${val}`;
+    }
+    case 'set_rpg_level': {
+      const userId = req(p.userId, 'userId');
+      const lvl = int(p.level);
+      if (lvl === null || lvl < 1 || lvl > 100) throw new HttpError(400, 'Level RPG harus 1-100.');
+      await ensureUser(db, userId);
+      // Tabel rpg_progress: user_id, season, max_level, stars.
+      // PRIMARY KEY = (user_id, season) - BUKAN user_id saja. Jadi kita cari
+      // season terbaru milik user itu dulu, baru update (atau insert baru).
+      const ada = await db.execute({
+        sql: 'SELECT season FROM public.rpg_progress WHERE user_id = ? ORDER BY season DESC LIMIT 1',
+        args: [userId],
+      });
+      if (ada.rows.length) {
+        await db.execute({
+          sql: 'UPDATE public.rpg_progress SET max_level = ? WHERE user_id = ? AND season = ?',
+          args: [lvl, userId, ada.rows[0].season],
+        });
+        return `RPG max level ${userId} -> ${lvl} (season ${ada.rows[0].season})`;
+      }
+      await db.execute({
+        sql: 'INSERT INTO public.rpg_progress (user_id, season, max_level, stars) VALUES (?, 1, ?, 0)',
+        args: [userId, lvl],
+      });
+      return `RPG max level ${userId} -> ${lvl} (season 1, baru)`;
+    }
+
+    // ---------- RESET HARIAN ----------
+    case 'reset_daily': {
+      const userId = req(p.userId, 'userId');
+      await ensureUser(db, userId);
+      await db.execute({
+        sql: 'UPDATE public.users SET daily_points = 0, daily_reset = NULL, last_daily_at = NULL WHERE user_id = ?',
+        args: [userId],
+      });
+      return `Limit harian ${userId} di-reset`;
+    }
+    case 'reset_missions': {
+      // userId kosong = re-roll misi SEMUA pemain (perilaku bot).
+      const userId = p.userId ? String(p.userId).trim() : null;
+      if (userId) {
+        const r = await db.execute({ sql: 'DELETE FROM public.daily_missions WHERE user_id = ?', args: [userId] });
+        return `Misi harian ${userId} di-reset (${r.rowsAffected || 0} baris)`;
+      }
+      const r = await db.execute('DELETE FROM public.daily_missions');
+      return `Misi harian SEMUA pemain di-reset (${r.rowsAffected || 0} baris)`;
+    }
+
+    // ---------- LOCK SESI NYANGKUT ----------
+    case 'clear_lock': {
+      const userId = p.userId ? String(p.userId).trim() : null;
+      if (userId) {
+        const r = await db.execute({ sql: 'DELETE FROM public.playing_users WHERE user_id = ?', args: [userId] });
+        return `Lock sesi ${userId} dibersihkan (${r.rowsAffected || 0})`;
+      }
+      const r = await db.execute('DELETE FROM public.playing_users');
+      return `SEMUA lock sesi dibersihkan (${r.rowsAffected || 0})`;
+    }
+
+    // ---------- MAINTENANCE ----------
+    case 'set_maintenance': {
+      const on = String(p.status || '').toLowerCase() === 'on';
+      const reason = String(p.reason || '').slice(0, 200);
+      await db.execute({
+        sql: `INSERT INTO public.settings (key, value) VALUES ('maintenance', ?)
+              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+        args: [on ? '1' : '0'],
+      });
+      if (reason) {
+        await db.execute({
+          sql: `INSERT INTO public.settings (key, value) VALUES ('maintenance_reason', ?)
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+          args: [reason],
+        });
+      }
+      return `Maintenance ${on ? 'AKTIF' : 'nonaktif'}${reason ? ' - ' + reason : ''}`;
+    }
+
+    // ---------- GIVEAWAY (mass add) ----------
+    case 'giveaway': {
+      const amount = int(p.amount);
+      if (amount === null || amount <= 0) throw new HttpError(400, 'Jumlah giveaway harus > 0.');
+      const r = await db.execute(
+        'UPDATE public.users SET points = points + ? WHERE registered = 1',
+        [amount]
+      );
+      return `Giveaway +${amount} pts ke ${r.rowsAffected || 0} pemain terdaftar`;
+    }
+
+    // ---------- WIPE (hapus data pemain) ----------
+    case 'wipe': {
+      const userId = req(p.userId, 'userId');
+      await ensureUser(db, userId);
+      // Hapus data terkait (urutan aman: anak dulu).
+      for (const t of ['public.inventory', 'public.user_titles', 'public.transactions',
+                       'public.game_scores', 'public.bank_loans', 'public.daily_missions']) {
+        await db.execute({ sql: `DELETE FROM ${t} WHERE user_id = ?`, args: [userId] }).catch(() => {});
+      }
+      await db.execute({ sql: 'DELETE FROM public.premium WHERE user_id = ?', args: [userId] }).catch(() => {});
+      await db.execute({ sql: 'DELETE FROM public.playing_users WHERE user_id = ?', args: [userId] }).catch(() => {});
+      await db.execute({ sql: 'DELETE FROM public.users WHERE user_id = ?', args: [userId] });
+      return `Data ${userId} di-WIPE (semua progres dihapus)`;
+    }
+
+    // ---------- RESTOCK SEMUA ----------
+    case 'restock_all': {
+      // Bot punya katalog seed (stok default). Web tidak memilikinya, jadi
+      // pakai restock_rate sebagai acuan: set stok ke nilai awalnya.
+      const r = await db.execute(
+        `UPDATE public.shop_items SET stock = COALESCE(restock_rate, stock) WHERE is_active = 1`
+      ).catch(() => null);
+      if (!r) throw new HttpError(500, 'Gagal restock semua (cek kolom restock_rate).');
+      return `Restock semua item (${r.rowsAffected || 0} baris)`;
+    }
+
+    // ---------- REDEEM PROMO (dari web) ----------
+    case 'redeem_promo_web': {
+      const userId = req(p.userId, 'userId');
+      const code = String(p.code || '').toUpperCase().trim();
+      if (!code) throw new HttpError(400, 'Kode wajib diisi.');
+      await ensureUser(db, userId);
+      // Kunci + ambil kuota (atomik: cek claimed < quota).
+      const r = await db.execute({
+        sql: `UPDATE public.promo_codes SET claimed_count = claimed_count + 1
+              WHERE code = ? AND claimed_count < quota
+              RETURNING reward_type, reward_value`,
+        args: [code],
+      });
+      if (!r.rows.length) throw new HttpError(400, `Kode ${code} tidak valid / kuota habis.`);
+      const rc = r.rows[0];
+      // Berikan hadiah sesuai tipe.
+      if (rc.reward_type === 'points') {
+        const v = int(rc.reward_value) || 0;
+        await db.execute({ sql: 'UPDATE public.users SET points = points + ? WHERE user_id = ?', args: [v, userId] });
+        await tx(db, userId, 'promo', v, `Redeem ${code} (web)`);
+        return `Kode ${code} ditukar: +${v} poin untuk ${userId}`;
+      }
+      if (rc.reward_type === 'premium') {
+        const days = int(rc.reward_value) || 30;
+        const exp = Date.now() + days * 86400000;
+        await db.execute({
+          sql: `INSERT INTO public.premium (user_id, tier, expires_at, granted_by, created_at)
+                VALUES (?, 'pro', ?, ?, ?)
+                ON CONFLICT (user_id) DO UPDATE SET tier = 'pro', expires_at = EXCLUDED.expires_at, granted_by = EXCLUDED.granted_by`,
+          args: [userId, exp, `promo:${code}`, Date.now()],
+        });
+        return `Kode ${code} ditukar: NEXO Pass ${days} hari untuk ${userId}`;
+      }
+      return `Kode ${code} ditukar (${rc.reward_type}) - hadiah non-poin harus diproses bot`;
     }
 
     default:
