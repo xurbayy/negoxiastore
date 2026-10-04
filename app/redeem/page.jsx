@@ -26,17 +26,21 @@ export default async function RedeemPage({ searchParams }) {
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative text-center">
           {/* Iklan AdSense di atas judul (permintaan pemilik 2026-10-01).
-              Slot PER-HALAMAN dari env - lihat catatan di /komunitas. */}
-          <div className="mb-4">
-            <AdUnit
-              slot={
-                process.env.NEXT_PUBLIC_ADSENSE_SLOT_REDEEM ||
-                process.env.NEXT_PUBLIC_ADSENSE_SLOT
-              }
-              format="auto"
-            />
+              Slot PER-HALAMAN dari env - lihat catatan di /komunitas.
+              LEBAR DIBATASI (2026-10-04): bungkus max-w-xl supaya tidak
+              terlalu lebar. */}
+          <div className="mb-1 flex justify-center">
+            <div className="w-full max-w-xl">
+              <AdUnit
+                slot={
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT_REDEEM ||
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT
+                }
+                format="auto"
+              />
+            </div>
           </div>
-          <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
+          <h1 className="mt-4 font-display text-3xl text-ink md:text-4xl">
             Redeem <span className="font-display text-ink">Hadiah</span>
           </h1>
           <p className="mx-auto mt-4 max-w-md text-sm text-ink-muted">

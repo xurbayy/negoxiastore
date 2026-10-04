@@ -97,17 +97,22 @@ export default async function KomunitasPage() {
               Slot PER-HALAMAN dari env - beda halaman beda unit, supaya
               AdSense bisa mengukur performa tiap posisi secara terpisah.
               Fallback ke NEXT_PUBLIC_ADSENSE_SLOT (nama lama) agar tidak
-              langsung kosong kalau env baru belum diisi. */}
-          <div className="mb-4">
-            <AdUnit
-              slot={
-                process.env.NEXT_PUBLIC_ADSENSE_SLOT_KOMUNITAS ||
-                process.env.NEXT_PUBLIC_ADSENSE_SLOT
-              }
-              format="auto"
-            />
+              langsung kosong kalau env baru belum diisi.
+              LEBAR DIBATASI (permintaan pemilik 2026-10-04): halaman ini
+              max-w-4xl, jadi iklan full-width terlihat kegedean. Bungkus
+              max-w-xl supaya lebih rapi. */}
+          <div className="mb-1 flex justify-center">
+            <div className="w-full max-w-xl">
+              <AdUnit
+                slot={
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT_KOMUNITAS ||
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT
+                }
+                format="auto"
+              />
+            </div>
           </div>
-          <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
+          <h1 className="mt-4 font-display text-3xl text-ink md:text-4xl">
             Komunitas <span className="font-display text-ink">NEXO</span>
           </h1>
 
