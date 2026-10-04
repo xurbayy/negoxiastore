@@ -13,7 +13,12 @@ export default function Ekonomi({ send, data }) {
 
   async function submit(action, payload, destructive) {
     if (destructive) {
-      setConfirm({ action, payload, label: LABELS[action] });
+      // FALLBACK ANTI-CRASH (fix 2026-10-04): dulu `LABELS[action]` bisa
+      // undefined (mis. set_chemistry lupa didaftarkan) -> ConfirmModal
+      // memanggil label.toLowerCase() -> TypeError -> SELURUH halaman admin
+      // error. Sekarang fallback ke nama aksi mentah supaya modal tetap
+      // tampil walau label belum didaftarkan.
+      setConfirm({ action, payload, label: LABELS[action] || action });
       return;
     }
     await doSend(action, payload);
@@ -109,7 +114,7 @@ export default function Ekonomi({ send, data }) {
   );
 }
 
-const LABELS = { set_points: 'Set Poin', giveaway: 'Giveaway', clear_loan: 'Bebaskan Hutang', reset_missions: 'Reset Misi Global', clear_lock: 'Clear Lock Global' };
+const LABELS = { set_points: 'Set Poin', giveaway: 'Giveaway', clear_loan: 'Bebaskan Hutang', reset_missions: 'Reset Misi Global', clear_lock: 'Clear Lock Global', set_chemistry: 'Set Chemistry' };
 
 function QuickAction({ label, danger, disabled, onClick }) {
   return (

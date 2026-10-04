@@ -136,6 +136,40 @@ async function main() {
     const shellSrc = fs.readFileSync(path.join(WEB_DIR, 'app', 'components', 'admin', 'AdminShell.jsx'), 'utf8');
     ok(shellSrc.includes('<ShopManager send={send} />'), 'AdminShell: pass send ke ShopManager');
 
+    // [9] REGRESI CRASH LABELS (bug produksi 2026-10-04):
+    // "kenapa chemistry udah gw set eh malah error halaman webnya".
+    // Penyebab: set_chemistry tidak ada di LABELS -> confirm.label undefined
+    // -> confirm.label.toLowerCase() di ConfirmModal body -> TypeError ->
+    // seluruh halaman admin error. Dua lapis pertahanan yang WAJIB ada:
+    //   a) semua destructive action terdaftar di LABELS (atau fallback)
+    //   b) fallback `LABELS[action] || action` di submit()
+    console.log('\n[9] Regresi crash LABELS (set_chemistry)');
+    const ekNoCRLF = ekonomiSrc.replace(/\r\n/g, '\n');
+    // a) fallback ada
+    ok(/LABELS\[action\]\s*\|\|\s*action/.test(ekNoCRLF), 'Ekonomi.jsx: fallback LABELS[action] || action ada (anti-crash)');
+    // b) set_chemistry terdaftar eksplisit di LABELS
+    const labelsLine = ekNoCRLF.split('\n').find(l => l.trim().startsWith('const LABELS'));
+    ok(labelsLine && labelsLine.includes('set_chemistry'), 'Ekonomi.jsx: set_chemistry terdaftar di LABELS');
+    // c) SEMUA destructive submit di Ekonomi punya label di LABELS
+    const aksiDestruktif = [...ekNoCRLF.matchAll(/submit\('([a-z_]+)'[^)]*,\s*true\)/g)].map(m => m[1]);
+    const belumTerdaftar = [...new Set(aksiDestruktif)].filter(a => !labelsLine || !labelsLine.includes(a + ':'));
+    ok(belumTerdaftar.length === 0, `semua ${new Set(aksiDestruktif).size} aksi destruktif terdaftar di LABELS (belum: ${belumTerdaftar.join(',') || '-'})`);
+    // d) simulasi runtime: label untuk tiap aksi tidak undefined
+    const labelsMatch = labelsLine ? labelsLine.match(/\{([^}]+)\}/) : null;
+    const labelsObj = {};
+    if (labelsMatch) {
+        for (const kv of labelsMatch[1].split(',')) {
+            const [k, v] = kv.split(':').map(s => s.trim().replace(/^'|'$/g, ''));
+            if (k) labelsObj[k] = v;
+        }
+    }
+    let crashSim = null;
+    for (const a of new Set(aksiDestruktif)) {
+        const label = labelsObj[a] || a; // fallback yang sama dengan kode
+        try { label.toLowerCase(); } catch (e) { crashSim = a + ': ' + e.message; break; }
+    }
+    ok(crashSim === null, 'simulasi toLowerCase() untuk semua aksi destruktif: tidak crash' + (crashSim ? ' [' + crashSim + ']' : ''));
+
     console.log(`\n========== HASIL: ${pass} PASS / ${fail} FAIL ==========`);
     await c.end();
     process.exit(fail === 0 ? 0 : 1);
