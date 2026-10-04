@@ -75,11 +75,13 @@ export default function ShopManager({ send }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // REALTIME: perbarui tiap 5 detik (sinkron dengan poll panel) supaya data
-  // shop selalu terbaru tanpa tombol refresh. Plus tick 1 detik untuk memutar
-  // hitungan mundur diskon tanpa memanggil server.
+  // REALTIME: perbarui berkala supaya data shop selalu terbaru tanpa tombol
+  // refresh. Plus tick 1 detik untuk memutar hitungan mundur diskon (lokal,
+  // tanpa memanggil server).
+  // OPTIMASI EGRESS (2026-10-05): 5s -> 10s. Server punya cache GET 8s,
+  // jadi poll 5s membuang ~40% request; 10s = hampir semua berguna.
   useEffect(() => {
-    const ivData = setInterval(() => { if (!document.hidden) load(); }, 5000);
+    const ivData = setInterval(() => { if (!document.hidden) load(); }, 10000);
     const ivTick = setInterval(() => setTick((t) => t + 1), 1000);
     return () => { clearInterval(ivData); clearInterval(ivTick); };
   }, [load]);

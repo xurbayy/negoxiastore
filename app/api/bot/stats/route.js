@@ -3,6 +3,7 @@ import { getDb } from '../../../lib/db';
 import { syncPromoCache, sweepStaleClaims } from '../../../lib/promo-cache';
 import { reconcilePremium } from '../../../lib/premium-reconcile';
 import { pruneOldData } from '../../../lib/prune';
+import { invalidateSnapshot } from '../../../lib/snapshot';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,9 @@ export async function POST(request) {
         sql: 'INSERT INTO monitor_snapshots (ts, data) VALUES (?, ?)',
         args: [ts, JSON.stringify(body)],
       });
+      // Snapshot BARU tersimpan -> invalidasi cache baca 5 menit supaya
+      // grafik/angka snapshot langsung segar (tidak menunggu TTL).
+      try { invalidateSnapshot(); } catch {}
     }
     // else: lewati penyimpanan (push tetap diproses untuk data live di bawah).
   } catch {

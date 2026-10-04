@@ -12,6 +12,18 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// ==========================================
+// CACHE GET 8 DETIK (optimasi egress 2026-10-05)
+// ==========================================
+// ShopManager (panel admin) memanggil endpoint ini tiap 5 detik dan tiap
+// panggilan menjalankan 3 query DB (shop_items + shop_discounts + emoji map).
+// Padahal katalog jarang berubah (hanya saat admin edit / restock / diskon).
+// Cache 8 dtk: poll 5 dtk hanya kena DB tiap 8 dtk -> baca DB berkurang ~40%.
+// Invalidasi ON-WRITE (catatDanSegarkan) sudah ada - edit admin langsung
+// terlihat tanpa menunggu TTL.
+const _cacheGet = { data: null, at: 0 };
+const GET_TTL_MS = 8_000;
+
 // Catat aksi ke Activity Log (bot_commands) + bersihkan semua cache.
 // Permintaan pemilik 2026-10-04: "kalo gw melakukan apapun seperti ganti
 // harga restock dan lainnya itu ada di activity log admin semua kegiatan tak
@@ -29,6 +41,8 @@ async function catatDanSegarkan(actor, action, payload, hasil) {
   try { invalidateCatalog(); } catch {}
   try { invalidateLive(); } catch {}
   try { invalidateDataCache(); } catch {}
+  // Cache GET endpoint ini sendiri (lihat _cacheGet di bawah).
+  try { _cacheGet.data = null; _cacheGet.at = 0; } catch {}
 }
 
 // GET /api/admin/shop - daftar item + diskon LANGSUNG dari database (Supabase).
@@ -45,12 +59,22 @@ async function authorize() {
   return null;
 }
 
+// ==========================================
+// CACHE GET 8 DETIK (optimasi egress 2026-10-05)
+// ==========================================
+// (Deklarasi _cacheGet/GET_TTL_MS dipindah ke ATAS file supaya juga bisa
+//  di-reset dari catatDanSegarkan - lihat di atas.)
 export async function GET() {
   const actor = await authorize();
   if (!actor) return json({ ok: false, error: 'forbidden' }, 403);
   await ready();
   try {
+    if (_cacheGet.data && Date.now() - _cacheGet.at < GET_TTL_MS) {
+      return json({ ok: true, items: _cacheGet.data, actorId: actor, cached: true });
+    }
     const items = await listShopAdmin();
+    _cacheGet.data = items;
+    _cacheGet.at = Date.now();
     return json({ ok: true, items, actorId: actor });
   } catch (e) {
     return json({ ok: false, error: e?.message || 'Gagal membaca katalog.' }, 500);

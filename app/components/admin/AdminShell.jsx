@@ -123,11 +123,15 @@ export default function AdminShell({ username, avatar = null }) {
 
   useEffect(() => {
     const t = setTimeout(load, 0);
-    // REALTIME (permintaan pemilik 2026-10-03): poll tiap 5 detik supaya
-    // seluruh panel selalu terbaru tanpa admin menekan refresh. Tetap hemat:
-    // berhenti saat tab tidak terlihat (document.hidden), dan hanya
-    // setState kalau data BENAR-BENAR berubah (dibanding lewat lastSig).
-    const iv = setInterval(() => { if (!document.hidden) load(); }, 5000);
+    // REALTIME (permintaan pemilik 2026-10-03): poll supaya seluruh panel
+    // selalu terbaru tanpa admin menekan refresh.
+    // OPTIMASI EGRESS (2026-10-05): 5s -> 10s. Server sudah punya cache 8s
+    // untuk endpoint ini (poll 5s = 40% request terbuang ke cache), jadi
+    // 10s = hampir semua request berguna. Data tetap terasa live (<=10s),
+    // beban request Vercel + egress Supabase turun ~50%. Berhenti saat tab
+    // tidak terlihat (document.hidden), dan hanya setState kalau data
+    // BENAR-BENAR berubah (dibanding lewat lastSig).
+    const iv = setInterval(() => { if (!document.hidden) load(); }, 10000);
     function onFocus() { if (!document.hidden) load(); }
     function onVisible() { if (!document.hidden) load(); }
     window.addEventListener('focus', onFocus);

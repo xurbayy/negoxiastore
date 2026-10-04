@@ -4,6 +4,44 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+// ==========================================
+// OPTIMASI EGRESS 2026-10-05: THROTTLE WRITE PER USER
+// ==========================================
+// MASALAH: /api/me di-poll tiap 15-20 dtk oleh Navbar + MeClient + halaman
+// lain. Tiap request = 15 query, TERMASUK WRITE yang tidak berubah:
+//   - UPDATE users SET username/avatar (identitas jarang berubah)
+//   - sync emoji_registry (SELECT+INSERT/UPDATE per emoji - admin title)
+//   - cek transisi premium (was_premium) - hanya perlu saat status berubah
+//
+// Dalam sehari dengan 1 user membuka tab 8 jam: ~1.900 request x 15 query =
+// 28.500 query (mayoritas WRITE yang sama berulang). Egress + IOPS terbuang.
+//
+// SOLUSI: throttle per user (di memori proses Vercel - instance-level):
+//   - WRITE (identitas + emoji sync + transisi premium): maks 1x / 3 MENIT
+//     per user. Cukup segar untuk perubahan (avatar/username jarang berubah,
+//     premium transisi ditangkap <=3 menit) tanpa menulis tiap poll.
+//   - BACA (data_requests + auto-segar): tetap tiap request (murah, indexed).
+//
+// PENTING: instance Vercel bisa lebih dari satu, jadi throttle ini per
+// instance - worst case beberapa write ekstra antar instance, tapi tetap
+// memangkas mayoritas (1 instance = 1 user poll berurutan).
+const WRITE_THROTTLE_MS = 3 * 60_000;
+const _lastWrite = new Map(); // discordId -> ts
+
+function bolehMenulis(userId) {
+  const now = Date.now();
+  const last = _lastWrite.get(userId) || 0;
+  if (now - last < WRITE_THROTTLE_MS) return false;
+  _lastWrite.set(userId, now);
+  // Jaga map tidak tumbuh tanpa batas (user lama jarang kembali).
+  if (_lastWrite.size > 5000) {
+    for (const [k, v] of _lastWrite) {
+      if (now - v > WRITE_THROTTLE_MS) _lastWrite.delete(k);
+    }
+  }
+  return true;
+}
+
 // GET /api/me - session + data_requests terakhir yang filled.
 // Termasuk SIKLUS LANGGANAN: notif AKTIF sekali saat premium mulai, notif
 // "berakhir" saat expired (flag users.was_premium). Identitas users row juga
@@ -24,8 +62,9 @@ export async function GET() {
   if (res.rows.length) {
     try { profile = JSON.parse(res.rows[0].data); } catch { profile = null; }
 
-    // Identitas selalu terbaru: samakan row users dengan profil terbaru dari bot
-    if (profile?.exists && profile?.profile) {
+    // BLOK WRITE (identitas + emoji sync + transisi premium) - THROTTLED
+    // 1x/3 menit per user. Baca profil di atas tetap tiap request.
+    if (profile?.exists && profile?.profile && bolehMenulis(session.discordId)) {
       await db.execute({
         sql: 'UPDATE users SET username = ?, avatar = COALESCE(?, avatar) WHERE discord_id = ?',
         args: [profile.profile.username, profile.profile.avatarUrl, session.discordId],

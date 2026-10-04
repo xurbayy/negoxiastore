@@ -28,6 +28,10 @@ export default function Notifications() {
   const boxRef = useRef(null);
 
   const load = useCallback(async () => {
+    // Hemat egress (optimasi 2026-10-05): jangan poll saat tab tersembunyi -
+    // user tidak melihat loncengnya. Kembali ke tab -> visibilitychange ->
+    // load() instan (sudah ada di bawah).
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const res = await fetch('/api/me/notifications', { cache: 'no-store' });
       if (res.status === 401) { setEnabled(false); return; }
@@ -46,10 +50,18 @@ export default function Notifications() {
     const t = setTimeout(() => {
       load();
     }, 0);
-    const iv = setInterval(load, 15000);
+    // 60 dtk (dari 15): notifikasi personal jarang muncul; tetap terasa instan
+    // saat tab kembali aktif / dibuka panelnya.
+    const iv = setInterval(load, 60000);
     function onFocus() { load(); }
+    function onVisible() { if (!document.hidden) load(); }
     window.addEventListener('focus', onFocus);
-    return () => { clearTimeout(t); clearInterval(iv); window.removeEventListener('focus', onFocus); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(t); clearInterval(iv);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   useEffect(() => {

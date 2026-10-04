@@ -29,29 +29,44 @@ async function live(key, fn) {
 // Invalidasi cache live ON-WRITE (fix 2026-10-04): dipanggil route tulis
 // (command admin, shop, dll) SETELAH menulis DB supaya perubahan langsung
 // terlihat tanpa tunggu TTL. TTL tetap jadi jaring pengaman antar-perubahan.
+// Juga menghapus cache snapshot (definisinya di bawah - dipanggil runtime,
+// bukan saat modul dimuat, jadi tidak ada masalah TDZ).
 export function invalidateLive() {
   _live.clear();
+  try { _snapCache = null; } catch {}
+  try { _seriesCache = null; } catch {}
 }
 
 // ==========================================
-// CACHE BACA SNAPSHOT 45 DETIK (optimasi egress 2026-10-04)
+// CACHE BACA SNAPSHOT 5 MENIT (optimasi egress 2026-10-05)
 // ==========================================
-// Supabase Free punya batas EGRESS 5 GB/bulan dan terpakai 92% (4,62 GB) di
-// awal siklus. Penyebab terbesar: getLatestSnapshot() membaca payload penuh
-// (128 KB) dari tabel monitor_snapshots di SETIAP panggilan - dan panel admin
-// memanggilnya tiap 5 detik (polling /api/admin/data) -> ratusan MB/hari.
+// Supabase Free punya batas EGRESS 5 GB/bulan. Penyebab terbesar:
+// getLatestSnapshot() membaca payload penuh (~66-128 KB) dari tabel
+// monitor_snapshots di SETIAP panggilan - dan panel admin memanggilnya tiap
+// 5 detik (polling /api/admin/data).
 //
 // KUNCI: snapshot yang disimpan HANYA berubah tiap 10 menit (throttle di
-// /api/bot/stats). Jadi membaca ulang payload yang SAMA 12x per menit adalah
-// pemborosan murni. Cache 45 detik mengembalikan data IDENTIK (snapshot belum
-// sempat berubah), tapi memangkas baca DB ~9x -> egress jatuh drastis.
+// /api/bot/stats). Cache lama 45 detik masih membaca DB 1x/45s = 1.920x/hari
+// per instance x 66 KB = ~127 MB/hari HANYA dari satu endpoint, per instance
+// Vercel (bisa beberapa). Dengan 5 MENIT: 288x/hari = ~19 MB/hari/instance
+// (-85%), dan tetap "cukup segar" karena snapshot itu sendiri hanya update
+// tiap 10 menit - cache 5 menit selalu < setengah siklus snapshot.
 //
 // Angka REAL-TIME (getLiveStats, getBotHeartbeat, getLiveShop, dst) TIDAK
 // memakai cache ini - mereka query tabel public.* langsung tiap panggilan,
 // jadi dashboard/shop tetap live. Cache ini HANYA untuk snapshot push bot
-// yang memang statis antar-push.
-const SNAP_CACHE_MS = 45_000;
+// yang memang statis antar-push. Invalidasi ON-WRITE tetap ada (invalidateLive
+// juga menghapus _snapCache? -> lihat invalidateSnapshot di bawah).
+const SNAP_CACHE_MS = 5 * 60_000;
 let _snapCache = null; // { snap, at }
+let _seriesCache = null; // { val, at } - cache getSnapshotSeries (dideklarasi di sini agar invalidate* aman)
+
+// Invalidasi cache snapshot (dipanggil setelah bot push snapshot BARU lewat
+// /api/bot/stats supaya grafik/angka snapshot tidak basi 5 menit).
+export function invalidateSnapshot() {
+  _snapCache = null;
+  _seriesCache = null;
+}
 
 async function safeQuery(fn) {
   // Blip jaringan (ConnectTimeout/dns) sering cuma sekali lewat -> retry 1x
@@ -100,7 +115,21 @@ export async function getLatestSnapshot() {
 // FIX (migrasi Postgres 2026-10-03): json_extract() itu fungsi SQLite - TIDAK
 // ada di Postgres (error 42883 -> grafik admin kosong). Ganti dengan cast
 // jsonb: data::jsonb #>> '{monitor,gamesToday}' (hasil TEXT, sama persis).
+//
+// CACHE 5 MENIT (optimasi egress 2026-10-05): panel admin memanggil ini tiap
+// 5 detik (via /api/admin/data). Query ini menyentuh SELURUH baris 7 hari
+// (data::jsonb cast = mahal di tabel 26 MB). Tanpa cache: ~576 MB/hari per
+// instance. Dengan cache 5 menit: ~19 MB/hari (-97%). Grafik tren hanya
+// berubah tiap snapshot baru (10 menit) - 5 menit selalu cukup segar.
+const SERIES_CACHE_MS = 5 * 60_000;
+// (_seriesCache dideklarasi di atas, dekat _snapCache, agar invalidateSnapshot
+//  dan invalidateLive bisa menghapusnya tanpa masalah urutan.)
+
 export async function getSnapshotSeries(days = 7) {
+  // Cache hanya untuk default 7 hari (pemanggil utama). days lain tetap fresh.
+  if (days === 7 && _seriesCache && Date.now() - _seriesCache.at < SERIES_CACHE_MS) {
+    return _seriesCache.val;
+  }
   const since = Date.now() - days * 86400000;
   const rows = await safeQuery(async () => {
     await schemaReady();
@@ -137,6 +166,7 @@ export async function getSnapshotSeries(days = 7) {
       totalUsers: get(r, 'totalUsers') == null ? null : Number(get(r, 'totalUsers')),
     }));
     _lastGood = _lastGood ? { ..._lastGood, series, at: Date.now() } : { snap: null, series, at: Date.now() };
+    if (days === 7) _seriesCache = { val: series, at: Date.now() };
     return series;
   }
   if (_lastGood?.series && Date.now() - _lastGood.at < 5 * 60_000) return _lastGood.series;

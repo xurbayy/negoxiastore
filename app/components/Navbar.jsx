@@ -53,6 +53,11 @@ export default function Navbar({ session, premiumActive = false }) {
     if (!discordId) return undefined;
     let stop = false;
     async function check() {
+      // Hemat egress (optimasi 2026-10-05): /api/me itu ~15 query DB. Navbar
+      // hanya perlu tahu STATUS PREMIUM - jangan poll saat tab tersembunyi
+      // (user tidak melihat pill-nya). Sebelumnya poll 15 dtk terus-menerus
+      // walau tab di background = ratusan request/hari sia-sia per user.
+      if (document.hidden) return;
       try {
         const res = await fetch('/api/me', { cache: 'no-store' });
         const d = await res.json().catch(() => ({}));
@@ -67,14 +72,19 @@ export default function Navbar({ session, premiumActive = false }) {
       } catch {}
     }
     const t = setTimeout(check, 0);
-    const iv = setInterval(check, 15000);
+    // 60 dtk (dari 15): status premium jarang berubah; grant/revoke tetap
+    // terasa cepat (<=1 menit) dan tab kembali aktif -> check() instan.
+    const iv = setInterval(check, 60000);
     function onFocus() { check(); }
+    function onVisible() { if (!document.hidden) check(); }
     window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
     return () => {
       stop = true;
       clearTimeout(t);
       clearInterval(iv);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [discordId]);
 
