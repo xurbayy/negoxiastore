@@ -64,7 +64,7 @@ export async function GET(request) {
       const [prem, inv, tx, tit] = await Promise.all([
         db.execute({ sql: 'SELECT tier, expires_at FROM public.premium WHERE user_id = ? LIMIT 1', args: [id] }).catch(() => ({ rows: [] })),
         db.execute({ sql: 'SELECT item_key, quantity FROM public.inventory WHERE user_id = ? ORDER BY item_key', args: [id] }).catch(() => ({ rows: [] })),
-        db.execute({ sql: 'SELECT type, amount, description, created_at FROM public.transactions WHERE user_id = ? ORDER BY id DESC LIMIT 25', args: [id] }).catch(() => ({ rows: [] })),
+        db.execute({ sql: 'SELECT type, amount, description, created_at FROM public.transactions WHERE user_id = ? ORDER BY id DESC LIMIT 50', args: [id] }).catch(() => ({ rows: [] })),
         db.execute({ sql: 'SELECT title_key FROM public.user_titles WHERE user_id = ?', args: [id] }).catch(() => ({ rows: [] })),
       ]);
       const p0 = prem.rows[0];
@@ -145,9 +145,10 @@ export async function GET(request) {
   }
 
   // jejak perintah bot yang menyentuh user ini (add_points, gift/reward, premium, dsb)
+  // BATAS 50 (permintaan pemilik 2026-10-04): seragam dengan semua history lain.
   const like = `%"userId":"${id}"%`;
   const cmds = await db.execute({
-    sql: "SELECT id, action, status, result, actor_id, created_at, executed_at FROM bot_commands WHERE payload LIKE ? ORDER BY id DESC LIMIT 15",
+    sql: "SELECT id, action, status, result, actor_id, created_at, executed_at FROM bot_commands WHERE payload LIKE ? ORDER BY id DESC LIMIT 50",
     args: [like],
   });
   // log transfer/manual masuk DB bot tidak di-web - tapi ack RESULT string dari bot
@@ -155,11 +156,11 @@ export async function GET(request) {
 
   // riwayat transaksi lokal web (order & klaim redeem) utk user ini
   const orders = await db.execute({
-    sql: 'SELECT id, plan, amount, status, created_at, paid_at FROM orders WHERE discord_id = ? ORDER BY id DESC LIMIT 8',
+    sql: 'SELECT id, plan, amount, status, created_at, paid_at FROM orders WHERE discord_id = ? ORDER BY id DESC LIMIT 50',
     args: [id],
   });
   const claims = await db.execute({
-    sql: 'SELECT code, claimed_at, status, fail_reason FROM web_redeem_claims WHERE discord_id = ? ORDER BY claimed_at DESC LIMIT 8',
+    sql: 'SELECT code, claimed_at, status, fail_reason FROM web_redeem_claims WHERE discord_id = ? ORDER BY claimed_at DESC LIMIT 50',
     args: [id],
   });
 

@@ -600,7 +600,7 @@ export default function MeClient({ betaGames = null }) {
                   <div className="min-w-0">
                     <p className="font-display text-base leading-snug text-ink sm:text-lg">Buka semua fitur dengan NEXO Pass.</p>
                     <p className="mt-1 text-sm leading-relaxed text-ink-muted">
-                      Statistik lengkap, riwayat 25 game, inventori unlimited, kuota +5.000, dan akses game beta.
+                      Statistik lengkap, riwayat 50 game, inventori unlimited, kuota +5.000, dan akses game beta.
                     </p>
                   </div>
                 </div>
@@ -754,7 +754,7 @@ export default function MeClient({ betaGames = null }) {
               )}
               {!isPremium && (p.history || []).length > 10 && (
                 <p className="mt-3 text-center text-xs text-ink-faint">
-                  Riwayat lengkap 25 game terlihat dengan NEXO Pass.
+                  Riwayat lengkap 50 game terlihat dengan NEXO Pass.
                 </p>
               )}
             </div>

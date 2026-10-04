@@ -10,7 +10,7 @@ import KomunitasClient from './KomunitasClient';
 export const metadata = {
   title: 'Komunitas',
   description:
-    'Temukan 100 server Discord NEXO teratas - diurutkan dari pemain terbanyak, game paling sering dimainkan, dan total poin tertinggi. Langsung gabung lewat link invite.',
+    'Temukan 20 server Discord NEXO teratas - diurutkan dari pemain terbanyak, game paling sering dimainkan, dan total poin tertinggi. Langsung gabung lewat link invite.',
   alternates: { canonical: '/komunitas' },
 };
 
@@ -62,7 +62,7 @@ function siapkanServer(snap) {
   const adaPemain = semua.filter((s) => s.players >= 20 && s.invite);
 
   return {
-    daftar: adaPemain.slice(0, 100), // maksimal 100 server
+    daftar: adaPemain.slice(0, 20), // maksimal 20 server (permintaan pemilik 2026-10-04)
     total: adaPemain.length,          // jumlah yang BENAR-BENAR tampil
   };
 }

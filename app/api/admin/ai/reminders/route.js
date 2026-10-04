@@ -40,7 +40,7 @@ export async function GET() {
     `SELECT id, teks, waktu_ingat, selesai, dibuat_at, selesai_at
      FROM ai_reminders
      ORDER BY selesai ASC, waktu_ingat ASC
-     LIMIT 200`
+     LIMIT 50`
   );
   return json({
     ok: true,

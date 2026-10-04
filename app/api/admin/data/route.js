@@ -38,10 +38,12 @@ export async function GET() {
     getBotHeartbeat(),
     getLiveStats(),
     db.execute(
-      'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 30'
+      // BATAS 50 (permintaan pemilik 2026-10-04): seragam dengan semua history.
+      'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 50'
     ).catch(() => ({ rows: [] })),
     db.execute(
-      'SELECT id, action, payload, actor_id, status, result, created_at, executed_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'
+      // BATAS 50 (permintaan pemilik 2026-10-04): seragam dengan semua history.
+      'SELECT id, action, payload, actor_id, status, result, created_at, executed_at FROM bot_commands ORDER BY created_at DESC LIMIT 50'
     ).catch(() => ({ rows: [] })),
     getPromoCache().catch(() => []),
     // BANK LOANS LANGSUNG DARI DB BOT (2026-10-03): BankManager dulu membaca
@@ -54,7 +56,7 @@ export async function GET() {
       ORDER BY b.due_date ASC
     `).catch(() => ({ rows: [] })),
     db.execute(
-      'SELECT id, discord_id, username, kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 30'
+      'SELECT id, discord_id, username, kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 50'
     ).catch(() => ({ rows: [] })),
     // ==========================================
     // DATA LANGSUNG DARI DB (permintaan pemilik 2026-10-03)
@@ -69,11 +71,14 @@ export async function GET() {
          FROM public.promo_codes ORDER BY created_at DESC`
     ).catch(() => ({ rows: [] })),
     db.execute(
+      // Daftar member NEXO Pass aktif: cukup 50 teratas (yang paling dekat
+      // kedaluwarsa). Jumlah TOTAL dikirim terpisah (premiumTotal) supaya
+      // judul panel tetap jujur walau daftarnya dipotong.
       `SELECT p.user_id, p.tier, p.expires_at, p.granted_by,
               (SELECT u.username FROM public.users u WHERE u.user_id = p.user_id) AS username
          FROM public.premium p
         WHERE p.expires_at > ?
-        ORDER BY p.expires_at ASC`,
+        ORDER BY p.expires_at ASC LIMIT 50`,
       [Date.now()]
     ).catch(() => ({ rows: [] })),
     db.execute(
@@ -159,6 +164,8 @@ export async function GET() {
         expiresAt: r.expires_at ? Number(r.expires_at) : null,
         grantedBy: r.granted_by || null,
       })),
+      // Jumlah TOTAL member aktif (bukan hanya yang tampil di daftar 50).
+      premiumTotal: Number(liveStats?.premiumCount || premiumMembers.rows.length),
       bannedUsers: bannedUsers.rows.map((r) => ({
         userId: String(r.user_id),
         username: r.username || null,

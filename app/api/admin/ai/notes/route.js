@@ -30,7 +30,7 @@ export async function GET() {
   await schemaReady();
   const db = getDb();
   const res = await db.execute(
-    'SELECT id, judul, pertanyaan, jawaban, sumber, model, created_at FROM ai_notes ORDER BY created_at DESC LIMIT 200'
+    'SELECT id, judul, pertanyaan, jawaban, sumber, model, created_at FROM ai_notes ORDER BY created_at DESC LIMIT 50'
   );
   return json({
     ok: true,

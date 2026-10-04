@@ -10,7 +10,11 @@ import { sisaHari, isLifetime as isLifetimePremium } from '../../lib/premiumPlan
 export default function Nexopass({ send, data }) {
   // DATA LIVE DARI DB (2026-10-03): dulu dari snapshot push (bisa basi 60+ dtk)
   // -> admin mengira grant/revoke gagal. Sekarang dari data.premiumMembers.
+  // BATAS 50 (permintaan pemilik 2026-10-04): daftar cukup 50 baris (yang
+  // paling dekat kedaluwarsa); angka judul memakai premiumTotal (jumlah
+  // SELURUH member aktif) supaya tetap jujur.
   const members = data.premiumMembers || data.snapshot?.premiumMembers || [];
+  const total = Number(data.premiumTotal || members.length);
   const [confirm, setConfirm] = useState(null); // { action, payload, label }
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -39,7 +43,10 @@ export default function Nexopass({ send, data }) {
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-xl text-ink">NEXO Pass: {members.length} Member Aktif</h2>
+      <h2 className="font-display text-xl text-ink">NEXO Pass: {total} Member Aktif</h2>
+      {members.length < total && (
+        <p className="text-xs text-ink-muted">Menampilkan {members.length} teratas (paling dekat kedaluwarsa) dari {total} member aktif.</p>
+      )}
 
       {/* Form grant */}
       <form onSubmit={grant} className="nx-card flex flex-wrap items-end gap-3 px-4 py-4 sm:px-5 sm:py-5">

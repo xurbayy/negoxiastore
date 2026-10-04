@@ -125,6 +125,15 @@ async function pruneNow(db, now) {
 
   // Webhook events >30 hari (tabel ini tanpa kolom id -> rowid).
   await deleteLimitedByRowid(db, 'webhook_events', 'processed_at < ?', [now - 30 * DAY]);
+  // Cap 50 terbaru total: idempotensi webhook hanya butuh event beberapa jam
+  // terakhir; menyimpan ribuan event lama = beban tanpa manfaat.
+  await tryExec(db, `
+    DELETE FROM webhook_events WHERE event_id IN (
+      SELECT event_id FROM (
+        SELECT event_id, ROW_NUMBER() OVER (ORDER BY processed_at DESC) AS rn
+        FROM webhook_events
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
 
   // Order pending TELANTAR: user buka popup Snap lalu pergi tanpa melanjutkan.
   // Tanpa ini order menggantung 'pending' selamanya (dan bisa numpuk kalau user
@@ -134,6 +143,189 @@ async function pruneNow(db, now) {
 
   // Emoji registry: yang sudah removed >90 hari.
   await deleteLimited(db, 'emoji_registry', 'removed_at IS NOT NULL AND removed_at < ?', [now - 90 * DAY]);
+
+  // ==========================================
+  // BATAS MAKSIMAL HISTORY = 50 PER ENTITAS (permintaan pemilik 2026-10-04)
+  // ==========================================
+  // "gw mau ada batas maksimal penyimpanan history yaitu 50 history dari
+  //  semuanya... biar database aman walau bot udah bertahun-tahun".
+  //
+  // Aturan: setiap tabel history menyimpan MAKSIMAL 50 baris per pemain
+  // (atau per action untuk log error). Yang lebih lama dibuang, terbaru
+  // selalu dipertahankan. Batch dibatasi supaya prune tidak pernah lama.
+  //
+  // CATATAN PENTING - yang TIDAK ikut aturan ini karena sudah punya batas
+  // sendiri atau bukan history:
+  //  - orders: riwayat pembayaran = data keuangan, TIDAK PERNAH dihapus.
+  //  - bot_commands grant/revoke done: bahan rekonsiliasi premium (aturan
+  //    umur sendiri di atas).
+  //  - web_notifications broadcast (discord_id NULL): pengumuman, bukan
+  //    history personal.
+  //  - emoji_catalog: katalog (bukan history), di-upsert oleh bot.
+  await tryExec(db, `
+    DELETE FROM data_requests WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY discord_id ORDER BY id DESC) AS rn
+        FROM data_requests WHERE status != 'pending'
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // web_redeem_claims: cap 50/user TAPI hanya untuk kode yang SUDAH TIDAK
+  // AKTIF. Klaim kode aktif = penanda "sudah pernah klaim" (mencegah klaim
+  // dobel) dan klaim pending = sedang diproses bot - dua-duanya TIDAK BOLEH
+  // dihapus. Kode exhausted/tidak ada di cache toh sudah ditolak /api/redeem,
+  // jadi baris klaimnya aman dianggap riwayat.
+  await tryExec(db, `
+    DELETE FROM web_redeem_claims WHERE (discord_id, code) IN (
+      SELECT discord_id, code FROM (
+        SELECT discord_id, code, ROW_NUMBER() OVER (PARTITION BY discord_id ORDER BY claimed_at DESC) AS rn
+        FROM web_redeem_claims
+        WHERE status != 'pending'
+          AND code NOT IN (SELECT code FROM web_promo_cache WHERE exhausted = 0)
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  await tryExec(db, `
+    DELETE FROM web_notifications WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY discord_id ORDER BY id DESC) AS rn
+        FROM web_notifications WHERE discord_id IS NOT NULL
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Feedback user: simpan 50 terbaru per pengirim.
+  await tryExec(db, `
+    DELETE FROM web_feedback WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY discord_id ORDER BY id DESC) AS rn
+        FROM web_feedback
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Log error berulang (failed/rejected) - cukup 50 terbaru per action.
+  // Tanpa ini, satu bug yang terulang (mis. 151x grant_premium gagal) bisa
+  // membanjiri Activity Log selama 30 hari sebelum aturan umur di atas
+  // sempat membuangnya. Status done TIDAK disentuh di sini.
+  await tryExec(db, `
+    DELETE FROM bot_commands WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY action ORDER BY id DESC) AS rn
+        FROM bot_commands WHERE status IN ('failed','rejected')
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Log sukses (done) - cukup 50 terbaru per action, KECUALI grant/revoke
+  // premium yang jadi bahan rekonsiliasi (aturan umurnya sendiri di atas).
+  // Kalau grant done ikut dipotong, rekonsiliasi bisa mengira premium hilang
+  // lalu grant ULANG -> expiry user molor tanpa sebab.
+  await tryExec(db, `
+    DELETE FROM bot_commands WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY action ORDER BY id DESC) AS rn
+        FROM bot_commands WHERE status = 'done'
+          AND action NOT IN ('grant_premium','revoke_premium')
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // State OAuth PKCE yang telantar (proses login tidak pernah selesai).
+  await tryExec(db, 'DELETE FROM ai_oauth_state WHERE created_at < ?', [now - DAY]);
+
+  // Penutupan notifikasi per user: cukup 50 terbaru.
+  await tryExec(db, `
+    DELETE FROM web_notif_dismiss WHERE (discord_id, key) IN (
+      SELECT discord_id, key FROM (
+        SELECT discord_id, key, ROW_NUMBER() OVER (PARTITION BY discord_id ORDER BY dismissed_at DESC) AS rn
+        FROM web_notif_dismiss
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Broadcast (discord_id NULL) bukan milik siapa pun -> cukup 50 terbaru total.
+  await tryExec(db, `
+    DELETE FROM web_notifications WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY id DESC) AS rn
+        FROM web_notifications WHERE discord_id IS NULL
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Saran agen AI: cukup 50 terbaru per peran.
+  await tryExec(db, `
+    DELETE FROM ai_agen_saran WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY peran ORDER BY dibuat_at DESC, id DESC) AS rn
+        FROM ai_agen_saran
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Diskusi tersimpan / catatan AI / pengingat: cukup 50 terbaru.
+  await tryExec(db, `
+    DELETE FROM ai_diskusi WHERE id IN (
+      SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY COALESCE(updated_at, created_at) DESC) AS rn FROM ai_diskusi) t WHERE rn > 50 LIMIT 5000
+    )`);
+  await tryExec(db, `
+    DELETE FROM ai_notes WHERE id IN (
+      SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY created_at DESC) AS rn FROM ai_notes) t WHERE rn > 50 LIMIT 5000
+    )`);
+  await tryExec(db, `
+    DELETE FROM ai_reminders WHERE id IN (
+      SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY dibuat_at DESC) AS rn FROM ai_reminders) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // ==========================================
+  // TABEL BOT (public.*) - BATAS 50 PER PEMAIN (permintaan pemilik 2026-10-04)
+  // ==========================================
+  // Tabel-tabel ini tumbuh tiap game/transaksi tanpa batas. Semuanya = riwayat
+  // (bukan data keuangan yang dipertahankan), jadi cukup 50 terbaru per pemain.
+  // PENTING: yang TIDAK disentuh - users, premium, inventory, bank_loans,
+  // user_titles (state aktif, bukan riwayat) dan promo_claims (sudah dibatasi
+  // PK user+code dari jumlah kode yang ada).
+  //
+  // PENGECUALIAN PENTING (fix 2026-10-04): transactions yang punya item_key
+  // (pembelian item) TIDAK ikut dipotong - itu CATATAN PENJUALAN (metrik
+  // bisnis "Item Paling Sering Dibeli" di dashboard), bukan history pemain.
+  // Jumlahnya kecil (belasan-ratusan) dan tetap tumbuh lambat, jadi tidak
+  // membahayakan ukuran DB.
+  await tryExec(db, `
+    DELETE FROM public.game_scores WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY played_at DESC, id DESC) AS rn
+        FROM public.game_scores
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  await tryExec(db, `
+    DELETE FROM public.transactions WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY id DESC) AS rn
+        FROM public.transactions
+        WHERE item_key IS NULL
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  await tryExec(db, `
+    DELETE FROM public.daily_missions WHERE (user_id, day) IN (
+      SELECT user_id, day FROM (
+        SELECT user_id, day, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY day DESC) AS rn
+        FROM public.daily_missions
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  await tryExec(db, `
+    DELETE FROM public.shop_restock_log WHERE id IN (
+      SELECT id FROM (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY item_key ORDER BY restocked_at DESC, id DESC) AS rn
+        FROM public.shop_restock_log
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
+
+  // Progres RPG per musim: cukup 50 musim terbaru per pemain (4+ tahun).
+  await tryExec(db, `
+    DELETE FROM public.rpg_progress WHERE (user_id, season) IN (
+      SELECT user_id, season FROM (
+        SELECT user_id, season, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY season DESC) AS rn
+        FROM public.rpg_progress
+      ) t WHERE rn > 50 LIMIT 5000
+    )`);
 }
 
 export async function pruneOldData(db) {
