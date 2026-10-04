@@ -180,17 +180,28 @@ export default function PlayerLookup() {
             )}
           </div>
 
-          {/* Jejak perintah ke user ini */}
+          {/* Jejak perintah ke user ini.
+              KELOMPOKKAN DUPLIKAT (fix 2026-10-04): dulu satu baris per perintah,
+              jadi kegagalan berulang yang sama (mis. 151x "User tidak terdaftar
+              di bot" dari percobaan grant_premium beruntun) membanjiri daftar dan
+              menyembunyikan riwayat yang penting. Sekarang baris dengan
+              action+status+result SAMA digabung -> tampil "151x" + waktu terakhir. */}
           <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
             <h3 className="font-display text-ink">Riwayat Perintah Terakhir</h3>
             {data.commands.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Belum ada.</p> : (
               <ul className="mt-2 space-y-1.5 text-sm">
-                {data.commands.map((c) => (
+                {kelompokkanPerintah(data.commands).map((c) => (
                   <li key={c.id} className="flex flex-wrap items-baseline gap-2">
                     <span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase ${c.status === 'done' ? 'bg-success/15 text-success' : c.status === 'failed' || c.status === 'rejected' ? 'bg-danger/15 text-danger' : 'bg-accent/15 text-ink-muted'}`}>{c.status}</span>
+                    {c.jumlah > 1 && (
+                      <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted" title={`${c.jumlah} perintah identik`}>{c.jumlah}x</span>
+                    )}
                     <span className="font-mono text-xs text-ink!">{c.action}</span>
                     <span className="text-ink-muted">{c.result}</span>
-                    <span className="ml-auto text-xs text-ink-muted">#{c.id} • {new Date(c.createdAt).toLocaleString('id-ID')}</span>
+                    <span className="ml-auto text-xs text-ink-muted">
+                      {c.jumlah > 1 ? `${c.jumlah} kali, terakhir ` : ''}
+                      #{c.id} • {new Date(c.createdAt).toLocaleString('id-ID')}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -220,4 +231,28 @@ export default function PlayerLookup() {
 
 function Stat({ label, value }) {
   return <div className="rounded-xl border border-border-soft bg-card-cream/60 px-3 py-2"><p className="text-xs uppercase tracking-wider text-ink-muted">{label}</p><p className="mt-0.5 truncate font-semibold text-ink!">{value}</p></div>;
+}
+
+// Gabungkan perintah yang IDENTIK (action + status + result sama) menjadi satu
+// baris dengan hitungan. Urutan tetap: yang terbaru dulu.
+//
+// KENAPA: riwayat ini bisa berisi puluhan percobaan gagal yang sama (mis. grant
+// premium berulang ke user yang belum terdaftar). Tanpa pengelompokan, riwayat
+// penting (yang BERHASIL) tertimbun di bawah dan admin sulit membacanya.
+function kelompokkanPerintah(cmds) {
+  const peta = new Map();
+  for (const c of cmds) {
+    const kunci = `${c.action}|${c.status}|${String(c.result || '').slice(0, 120)}`;
+    const ada = peta.get(kunci);
+    if (ada) {
+      ada.jumlah += 1;
+      // Simpan yang PALING BARU (id terbesar) sebagai wakil baris.
+      if (Number(c.id) > Number(ada.id)) { ada.id = c.id; ada.createdAt = c.createdAt; }
+    } else {
+      peta.set(kunci, { ...c, jumlah: 1 });
+    }
+  }
+  // Urutkan ulang berdasarkan id terbaru (Map menjaga urutan insert, tapi
+  // id wakil bisa berubah setelah penggabungan).
+  return [...peta.values()].sort((a, b) => Number(b.id) - Number(a.id));
 }

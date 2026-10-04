@@ -248,6 +248,22 @@ export async function reconcilePremium(db, snapshot) {
         args: [`%"userId":"${id}"%`],
       });
       if (inFlight.rows.length) continue;
+
+      // ==========================================
+      // SMART GUARD (fix 2026-10-04): user belum terdaftar di bot -> JANGAN
+      // antrekan grant. Bot PASTI menolaknya ("User tidak terdaftar di bot")
+      // dan loop ini akan mencoba ulang tiap 5 menit SELAMANYA.
+      // Bukti nyata: 151 baris gagal identik 'grant_premium | User tidak
+      // terdaftar di bot' (id 181-390, ~20 hari) membanjiri Activity Log -
+      // semuanya dari user yang bayar di web tapi belum pernah main bot.
+      // Grant tetap disimpan sebagai "expected" di events; begitu user
+      // mendaftar (nxd), push berikutnya otomatis revive premiumnya.
+      const adaUser = await db.execute({
+        sql: 'SELECT 1 as x FROM public.users WHERE user_id = ? LIMIT 1',
+        args: [id],
+      }).catch(() => ({ rows: [{ x: 1 }] })); // query gagal -> jangan skip (aman)
+      if (!adaUser.rows.length) continue;
+
       const last = await meta.getNum(db, 'recon_premium:' + id);
       if (now - last < RE_ENQUEUE_COOLDOWN_MS) continue;
 

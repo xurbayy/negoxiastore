@@ -231,6 +231,10 @@ export default function AdminShell({ username, avatar = null }) {
       
       if (!data.ok) {
         finalOut = data;
+      } else if (data.ok && data.langsung) {
+        // JALUR LANGSUNG (fix 2026-10-04): aksi dieksekusi instan dari DB,
+        // tidak ada id antrean -> dulu UI menampilkan "masuk antrean (#undefined)".
+        finalOut = { ok: true, langsung: true, result: data.hasil || 'Berhasil dijalankan langsung.' };
       } else if (data.ok && data.id) {
         pollId = data.id;
         // sertakan id antrean: komponen memakai `#${out.id}` utk konfirmasi

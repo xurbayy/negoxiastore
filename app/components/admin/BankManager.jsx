@@ -28,7 +28,11 @@ export default function BankManager({ send, data }) {
     try {
       const out = await send('clear_loan', { userId: confirm.userId });
       if (out.ok) {
-        setFeedback({ ok: true, text: `Pemutihan hutang ${confirm.username} masuk antrean (#${out.id}) - daftar diperbarui otomatis.` });
+        // Jalur langsung (DB) vs antrean bot - pesannya beda supaya admin tidak
+        // melihat "#undefined" untuk aksi yang dieksekusi instan.
+        setFeedback({ ok: true, text: out.langsung
+          ? `Pemutihan hutang ${confirm.username} berhasil dijalankan langsung - daftar diperbarui otomatis.`
+          : `Pemutihan hutang ${confirm.username} masuk antrean (#${out.id}) - daftar diperbarui otomatis.` });
         // refresh data server: daftar pinjaman langsung hilang dari tabel
         if (typeof window !== 'undefined') setTimeout(() => window.location.reload(), 1500);
       } else {

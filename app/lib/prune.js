@@ -10,7 +10,9 @@
 import { schemaReady } from './db';
 
 const DAY = 86_400_000;
-const PRUNE_KEY = 'prune:last…d_at';
+// CATATAN (fix 2026-10-04): nama key ini sempat TERKORUPSI (ada karakter
+// ellipsis U+2026 di tengah). Sekarang nama bersih; key rusak lama dibersihkan.
+const PRUNE_KEY = 'prune:last_done_at';
 const PRUNE_EVERY_MS = 10 * 60_000;
 
 async function tryExec(db, sql, args = []) {
@@ -58,6 +60,46 @@ async function pruneNow(db, now) {
   // (~130 MB payload). Sebelumnya 30 hari x 1.188 baris = 2,3 GB - itulah
   // sebab DB membengkak ke 109 MB (79% tabel ini) & query melambat.
   await tryExec(db, 'DELETE FROM monitor_snapshots WHERE ts < ?', [now - 14 * DAY]);
+
+  // ==========================================
+  // TRIM PAYLOAD SNAPSHOT TUA (fix 2026-10-04 lanjutan)
+  // ==========================================
+  // Payload penuh ±131 KB per baris (berisi daftar pemain, kode, dll).
+  // Baris >12 jam TIDAK PERNAH dibaca sebagai "snapshot terkini" - satu-satunya
+  // pembaca baris lama adalah getSnapshotSeries() yang hanya butuh 3 angka
+  // (gamesToday, totalMoney, totalUsers). Jadi payload tua dipangkas ke bentuk
+  // minimal itu: 131 KB -> ~120 byte per baris.
+  // PENTING: baris TERBARU selalu dikecualikan - kalau bot mati >12 jam,
+  // getLatestSnapshot() masih butuh payload penuhnya untuk fallback halaman.
+  // Efek: 14 hari retensi turun dari ~264 MB menjadi ~10 MB (payload penuh
+  // hanya disimpan 12 jam terakhir).
+  await tryExec(db, `
+    UPDATE monitor_snapshots
+       SET data = jsonb_build_object(
+             'ts', ts,
+             'monitor', jsonb_build_object(
+               'gamesToday', (data::jsonb #>> '{monitor,gamesToday}'),
+               'totalMoney', (data::jsonb #>> '{monitor,totalMoney}'),
+               'totalUsers', (data::jsonb #>> '{monitor,totalUsers}')
+             )
+           )::text
+     WHERE id IN (
+       SELECT id FROM monitor_snapshots
+        WHERE ts < ? AND length(data) > 500
+          AND id <> (SELECT id FROM monitor_snapshots ORDER BY ts DESC LIMIT 1)
+        ORDER BY id ASC LIMIT 500
+     )
+  `, [now - 12 * 60 * 60_000]);
+
+  // Rate limit: window sudah lewat >1 jam tidak dipakai lagi.
+  await tryExec(db, 'DELETE FROM rate_limit WHERE window_start < ?', [now - 60 * 60_000]);
+
+  // Saran agen AI (tabel legacy, tak ada penulis baru): simpan 30 hari.
+  await tryExec(db, 'DELETE FROM ai_agen_saran WHERE dibuat_at < ?', [now - 30 * DAY]);
+
+  // Meta rusak dari masa lalu (nama key terkorupsi karakter ellipsis U+2026).
+  // Kode sekarang memakai nama bersih; baris rusak dibersihkan sekali di sini.
+  await tryExec(db, "DELETE FROM web_meta WHERE key LIKE '%\u2026%'");
 
   // Permintaan profil: done >7 hari tidak dipakai lagi; pending >3 hari = mati.
   await deleteLimited(db, 'data_requests', "status = 'done' AND created_at < ?", [now - 7 * DAY]);

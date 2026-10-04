@@ -25,7 +25,9 @@ export default function Ekonomi({ send }) {
     try {
       const out = await send(action, payload);
       setFeedback(out.ok
-        ? { ok: true, text: `Perintah ${action} masuk antrean nomor ${out.id}. Bot eksekusi dalam ±15 detik.` }
+        ? out.langsung
+          ? { ok: true, text: `Perintah ${action} berhasil dijalankan langsung - data sudah berubah.` }
+          : { ok: true, text: `Perintah ${action} masuk antrean nomor ${out.id}. Bot eksekusi dalam ±15 detik.` }
         : { ok: false, text: out.error || 'Gagal mengirim perintah.' });
       setConfirm(null);
     } finally {
@@ -82,7 +84,7 @@ export default function Ekonomi({ send }) {
       {confirm && (
         <ConfirmModal
           title={`${confirm.label}?`}
-          body={`Perintah destruktif akan masuk antrean bot dan dieksekusi ±15 detik. Lanjutkan ${confirm.label.toLowerCase()}?`}
+          body={`Perintah destruktif dieksekusi langsung ke database (bot ikut melihat perubahan). Lanjutkan ${confirm.label.toLowerCase()}?`}
           onCancel={() => setConfirm(null)}
           onConfirm={() => doSend(confirm.action, confirm.payload)}
           busy={busy}

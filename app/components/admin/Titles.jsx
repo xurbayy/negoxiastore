@@ -21,7 +21,9 @@ export default function Titles({ send, data }) {
     setBusy(true);
     try {
       const out = await send(action, payload);
-      setFeedback(out.ok ? { ok: true, text: `${label} masuk antrean (#${out.id}). Bot eksekusi ≤10 detik.` } : { ok: false, text: out.error || 'Gagal.' });
+      setFeedback(out.ok ? { ok: true, text: out.langsung
+        ? `${label} berhasil dijalankan langsung - data diperbarui otomatis.`
+        : `${label} masuk antrean (#${out.id}). Bot eksekusi ≤10 detik.` } : { ok: false, text: out.error || 'Gagal.' });
       setConfirm(null);
     } finally { setBusy(false); }
   }

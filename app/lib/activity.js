@@ -4,7 +4,11 @@
 // Disimpan di tabel web_meta -> tahan lintas instance serverless.
 import { getDb, schemaReady } from './db';
 
-export const ACTIVITY_KEY = 'last_act…y_ms';
+// CATATAN (fix 2026-10-04): nama key ini sebelumnya sempat TERKORUPSI
+// ('last_act...y_ms' - ada karakter ellipsis U+2026 di tengah string) sehingga
+// nilainya terpecah dari key lama 'last_activity_ms' yang sudah ada di DB.
+// Sekarang kembali ke nama bersih satu kata; key rusak lama dibersihkan.
+export const ACTIVITY_KEY = 'last_activity_ms';
 
 async function ensureMeta(db) {
   try {

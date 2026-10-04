@@ -20,11 +20,36 @@ export default function ActivityLog({ data }) {
   const log = data.log || [];
   const filtered = filter === 'all' ? log : log.filter((r) => r.status === filter);
 
+  // ==========================================
+  // KELOMPOKKAN PERINTAH IDENTIK (fix 2026-10-04)
+  // ==========================================
+  // Ditemukan data anomali: 151 dari 402 baris Activity Log adalah kegagalan
+  // yang SAMA ('grant_premium | User tidak terdaftar di bot') - sisa percobaan
+  // berulang. Tanpa pengelompokan, 151 baris itu menutupi seluruh halaman
+  // (15 halaman!) dan riwayat penting tenggelam.
+  //
+  // Sekarang baris dengan action + status + result SAMA digabung jadi satu,
+  // dengan penanda "Nx" dan waktu TERAKHIR. Data mentahnya tetap utuh di DB.
+  const dikelompokkan = (() => {
+    const peta = new Map();
+    for (const r of filtered) {
+      const kunci = `${r.action}|${r.status}|${String(r.result || '').slice(0, 120)}|${r.actorId || ''}`;
+      const ada = peta.get(kunci);
+      if (ada) {
+        ada.jumlah += 1;
+        if (Number(r.id) > Number(ada.id)) { ada.id = r.id; ada.createdAt = r.createdAt; ada.executedAt = r.executedAt; }
+      } else {
+        peta.set(kunci, { ...r, jumlah: 1 });
+      }
+    }
+    return [...peta.values()].sort((a, b) => Number(b.id) - Number(a.id));
+  })();
+
   // Clamp aman: kalau data mengecil / filter berubah sampai halaman di luar
   // jangkauan, otomatis geser ke halaman terakhir yang valid (tanpa effect).
-  const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const pages = Math.max(1, Math.ceil(dikelompokkan.length / PER_PAGE));
   const safePage = Math.min(page, pages - 1);
-  const rows = filtered.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE);
+  const rows = dikelompokkan.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE);
 
   function changeFilter(f) {
     setFilter(f);
@@ -69,8 +94,18 @@ export default function ActivityLog({ data }) {
             )}
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-border-soft/60 align-top last:border-0">
-                <td className="px-4 py-3 text-xs text-ink-muted">{timeAgo(r.createdAt)}</td>
-                <td className="px-4 py-3 font-mono text-ink">{r.action}</td>
+                <td className="px-4 py-3 text-xs text-ink-muted">
+                  {timeAgo(r.createdAt)}
+                  {r.jumlah > 1 && (
+                    <span className="mt-1 block text-[0.65rem] font-semibold text-ink-faint" title={`${r.jumlah} perintah identik digabung, waktu = yang terakhir`}>terakhir dari {r.jumlah}x</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 font-mono text-ink">
+                  {r.action}
+                  {r.jumlah > 1 && (
+                    <span className="ml-2 inline-block rounded-full bg-bg-soft px-2 py-0.5 align-middle font-sans text-[0.65rem] font-bold text-ink-muted" title={`${r.jumlah} perintah identik digabung`}>{r.jumlah}x</span>
+                  )}
+                </td>
                 <td className="max-w-[220px] px-4 py-3">
                   <code className="break-all text-xs text-ink-muted">{JSON.stringify(r.payload)}</code>
                 </td>
@@ -89,7 +124,8 @@ export default function ActivityLog({ data }) {
       {pages > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-ink-muted">
-            Menampilkan {safePage * PER_PAGE + 1}-{Math.min((safePage + 1) * PER_PAGE, filtered.length)} dari {filtered.length} perintah
+            Menampilkan {safePage * PER_PAGE + 1}-{Math.min((safePage + 1) * PER_PAGE, dikelompokkan.length)} dari {dikelompokkan.length} kelompok perintah
+            {dikelompokkan.length !== filtered.length && ` (${filtered.length} baris mentah)`}
           </p>
           <div className="flex items-center gap-1.5">
             <button

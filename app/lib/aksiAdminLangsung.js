@@ -121,14 +121,25 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
       const userId = req(p.userId, 'userId');
       const days = int(p.days ?? 30) ?? 30;
       const tier = String(p.tier || 'pro');
-      const expiresAt = Date.now() + days * 86400000;
+      // TAMBAH DURASI, BUKAN TIMPA (samakan dengan bot, fix 2026-10-04):
+      // bot menambahkan durasi baru ke sisa yang masih aktif (sisa 20 hari +
+      // grant 30 = 50 hari). Dulu jalur langsung menimpa expires_at = now+days
+      // sehingga sisa hari user HANGUS - hasil berbeda tergantung lewat jalur
+      // mana perintahnya masuk.
+      const sisa = await db.execute({
+        sql: 'SELECT expires_at FROM public.premium WHERE user_id = ? AND expires_at > ?',
+        args: [userId, Date.now()],
+      });
+      const basis = sisa.rows.length ? Number(sisa.rows[0].expires_at) : Date.now();
+      const expiresAt = basis + days * 86400000;
       await db.execute({
         sql: `INSERT INTO public.premium (user_id, tier, expires_at, granted_by, created_at)
               VALUES (?, ?, ?, ?, ?)
               ON CONFLICT (user_id) DO UPDATE SET tier = EXCLUDED.tier, expires_at = EXCLUDED.expires_at, granted_by = EXCLUDED.granted_by`,
         args: [userId, tier, expiresAt, actorId, Date.now()],
       });
-      return `NEXO Pass ${tier} ${userId} sampai ${new Date(expiresAt).toISOString().slice(0, 10)}`;
+      const totalSisa = Math.max(0, Math.ceil((expiresAt - Date.now()) / 86400000));
+      return `NEXO Pass ${tier} ${userId} sampai ${new Date(expiresAt).toISOString().slice(0, 10)} (total sisa ${totalSisa} hari)`;
     }
     case 'revoke_premium': {
       const userId = req(p.userId, 'userId');

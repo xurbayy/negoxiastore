@@ -172,7 +172,9 @@ function DiscordAnnouncement({ send, data }) {
     setBusy(true);
     try {
       const out = await send('set_announcement', { channel: ch, text: t });
-      setMsg(out.ok ? { ok: true, text: `${label} masuk antrean (#${out.id}) - tampil di Discord ≤10 detik.` } : { ok: false, text: out.error || 'Gagal.' });
+      setMsg(out.ok ? { ok: true, text: out.langsung
+        ? `${label} berhasil dijalankan langsung - tampil di Discord ≤10 detik.`
+        : `${label} masuk antrean (#${out.id}) - tampil di Discord ≤10 detik.` } : { ok: false, text: out.error || 'Gagal.' });
       if (out.ok) setText('');
     } finally { setBusy(false); }
   }

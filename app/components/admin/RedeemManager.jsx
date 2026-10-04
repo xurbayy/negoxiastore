@@ -26,7 +26,9 @@ export default function RedeemManager({ send, data }) {
     setBusy(true);
     try {
       const out = await send(action, payload);
-      setFeedback(out.ok ? { ok: true, text: `${action} masuk antrean (#${out.id}).` } : { ok: false, text: out.error || 'Gagal.' });
+      setFeedback(out.ok ? { ok: true, text: out.langsung
+        ? `${action} berhasil dijalankan langsung - data diperbarui otomatis.`
+        : `${action} masuk antrean (#${out.id}).` } : { ok: false, text: out.error || 'Gagal.' });
       setConfirm(null);
     } finally {
       setBusy(false);
