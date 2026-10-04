@@ -4,8 +4,27 @@ import { getDb, schemaReady } from '../../../lib/db';
 import { touchActivity } from '../../../lib/activity';
 import { PLAN_DAYS } from '../../../lib/premiumPlan';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';
+// Invalidasi ON-WRITE + catat ke Activity Log (permintaan pemilik 2026-10-04:
+// "semua kegiatan tak terkecuali" masuk activity log).
+import { invalidateLive } from '../../../lib/snapshot';
+import { invalidateDataCache } from '../data/route';
 
 export const dynamic = 'force-dynamic';
+
+// Catat hapus riwayat order ke Activity Log + bersihkan cache (perubahan
+// langsung terlihat di panel).
+async function catatHapusOrder(actor, detail) {
+  try {
+    const db = getDb();
+    await db.execute({
+      sql: `INSERT INTO bot_commands (action, payload, actor_id, status, result, created_at, executed_at)
+            VALUES ('hapus_order_qris', ?, ?, 'done', ?, ?, ?)`,
+      args: [JSON.stringify({ detail }), actor, `Hapus riwayat order QRIS: ${detail}`, Date.now(), Date.now()],
+    });
+  } catch { /* pencatatan tidak boleh menjatuhkan aksi */ }
+  try { invalidateLive(); } catch {}
+  try { invalidateDataCache(); } catch {}
+}
 
 // GET /api/admin/manual-order?id=N
 // Ambil DETAIL satu order manual - termasuk GAMBAR BUKTI TRANSFER (base64).
@@ -147,11 +166,13 @@ export async function DELETE(request) {
 
   await schemaReady();
   const db = getDb();
+  const actor = admin ? `admin:${admin.adminUsername}` : (session?.discordId || 'unknown');
 
   if (all) {
     // Hanya riwayat selesai. Pesanan pending TIDAK ikut kehapus.
     const res = await db.execute({ sql: "DELETE FROM orders WHERE gateway = 'manual' AND status != 'pending'" });
     await touchActivity().catch(() => {});
+    await catatHapusOrder(actor, `SEMUA riwayat (${res.rowsAffected || 0} order)`);
     return NextResponse.json({ ok: true, deleted: Number(res.rowsAffected || 0) });
   }
 
@@ -165,5 +186,6 @@ export async function DELETE(request) {
   if (res.rowsAffected === 0) {
     return NextResponse.json({ ok: false, error: 'Order tidak ditemukan.' }, { status: 404 });
   }
+  await catatHapusOrder(actor, `order #${orderId}`);
   return NextResponse.json({ ok: true, deleted: 1 });
 }

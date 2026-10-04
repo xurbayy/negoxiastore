@@ -15,15 +15,6 @@ export const dynamic = 'force-dynamic';
 //   tolak  -> tandai 'ditolak' (tidak ada aksi)
 //
 // KEPUTUSAN SEPENUHNYA DI TANGAN PEMILIK. Agen hanya mengusulkan.
-async function izinkan() {
-  const admin = await getAdminSession();
-  if (admin) return true;
-  const session = await getSession();
-  if (!session) return false;
-  const adminIds = (process.env.ADMIN_DISCORD_IDS || '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
-  return adminIds.includes(session.discordId);
-}
 
 export async function PATCH(request) {
   const admin = await getAdminSession();

@@ -1,13 +1,35 @@
 import { getSession, getAdminSession } from '../../../lib/session';
 import { json, ready } from '../../../lib/api-helpers';
+import { getDb } from '../../../lib/db';
 import { touchActivity } from '../../../lib/activity';
 import { invalidateCatalog } from '../../../lib/liveCatalog';
+import { invalidateLive } from '../../../lib/snapshot';
+import { invalidateDataCache } from '../data/route';
 import {
   listShopAdmin, restockItem, restockAll, setItemPrice,
   setDiscount, removeDiscount, HttpError,
 } from '../../../lib/shopAdmin';
 
 export const dynamic = 'force-dynamic';
+
+// Catat aksi ke Activity Log (bot_commands) + bersihkan semua cache.
+// Permintaan pemilik 2026-10-04: "kalo gw melakukan apapun seperti ganti
+// harga restock dan lainnya itu ada di activity log admin semua kegiatan tak
+// terkecuali". Dulu edit shop TIDAK dicatat -> tidak muncul di Activity Log.
+async function catatDanSegarkan(actor, action, payload, hasil) {
+  try {
+    const db = getDb();
+    await db.execute({
+      sql: `INSERT INTO bot_commands (action, payload, actor_id, status, result, created_at, executed_at)
+            VALUES (?, ?, ?, 'done', ?, ?, ?)`,
+      args: [action, JSON.stringify(payload || {}), actor, String(hasil || '').slice(0, 400), Date.now(), Date.now()],
+    });
+  } catch { /* pencatatan tidak boleh menjatuhkan aksi */ }
+  // Invalidasi ON-WRITE: semua cache dibersihkan -> perubahan langsung terlihat.
+  try { invalidateCatalog(); } catch {}
+  try { invalidateLive(); } catch {}
+  try { invalidateDataCache(); } catch {}
+}
 
 // GET /api/admin/shop - daftar item + diskon LANGSUNG dari database (Supabase).
 // Jalur akses sama dengan endpoint admin lain: session admin (username+password)
@@ -70,8 +92,9 @@ export async function POST(request) {
     }
     // Beri tahu bot (queue) supaya mengebut; tidak wajib berhasil.
     touchActivity().catch(() => {});
-    // Buang cache katalog supaya /shop publik langsung menampilkan data baru.
-    invalidateCatalog();
+    // CATAT ke Activity Log + invalidasi semua cache (perubahan langsung
+    // terlihat di web & masuk riwayat admin - lihat catatDanSegarkan).
+    await catatDanSegarkan(actor, action, { itemKey, amount: body?.amount, price: body?.price, discountPrice: body?.discountPrice, durationHours: body?.durationHours }, hasil);
     return json({ ok: true, act: action, ...hasil });
   } catch (e) {
     const status = e instanceof HttpError ? e.status : 500;

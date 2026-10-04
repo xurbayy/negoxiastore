@@ -4,7 +4,6 @@ import { reserveSlot, releaseSlot, GONE_MSG, STOLEN_MSG } from '../../lib/promo-
 import { json, ready } from '../../lib/api-helpers';
 import { touchActivity } from '../../lib/activity';
 import { verifyTurnstile } from '../../lib/turnstile';
-import { getLatestSnapshot } from '../../lib/snapshot';
 import { rateLimitPersistent } from '../../lib/rate-limit';
 import { notifyQueue } from '../../lib/pgNotifyWeb';
 

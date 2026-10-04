@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
-import { getLatestSnapshot, getBotHeartbeat, userHasPremium } from '../../../lib/snapshot';
+import { getBotHeartbeat, userHasPremium } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
 import { rateLimitGlobal } from '../../../lib/rate-limit';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';

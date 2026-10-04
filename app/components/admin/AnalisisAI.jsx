@@ -5,7 +5,7 @@ import ConfirmModal from './ConfirmModal';
 import PilihPeran from './PilihPeran';
 import AgenAI from './AgenAI';
 import AiUsage from './AiUsage';
-import { pintasanPeranKlien, daftarPeranKlien } from '../../lib/aiPeranKlien';
+import { pintasanPeranKlien } from '../../lib/aiPeranKlien';
 import { THINKING_LABEL } from '../../lib/formatClient';
 
 // ==========================================
@@ -398,7 +398,6 @@ export default function AnalisisAI() {
   // Angka untuk tombol Notif: berapa pengingat aktif & berapa yang sudah
   // jatuh tempo. Dipakai untuk menentukan warna tombol (merah kalau ada).
   const pengingatAktif = pengingat.filter((p) => !p.selesai);
-  const jumlahPengingat = pengingatAktif.length;
   const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
   // Muat percakapan & laporan dari SERVER (lintas device) via prefs.

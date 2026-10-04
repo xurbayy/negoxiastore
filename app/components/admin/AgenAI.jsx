@@ -20,7 +20,7 @@ const WARNA_TINGKAT = {
   kritis: 'bg-danger/25 text-danger',
 };
 
-export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai }) {
+export default function AgenAI({ onSelesai }) {
   const [laporan, setLaporan] = useState([]);
   const [usulan, setUsulan] = useState([]);
   const [pengingat, setPengingat] = useState([]);
@@ -51,7 +51,6 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   const [autoJalan, setAutoJalan] = useState(() => {
     try { return window.localStorage.getItem('nexo_agen_auto') === '1'; } catch { return false; }
   });
-  const [terakhirJalan, setTerakhirJalan] = useState(null);
 
   const flash = (t) => { setPesan(t); setTimeout(() => setPesan(null), 5000); };
 
@@ -225,8 +224,6 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   }, [muat]);
 
   const menunggu = usulan.filter((u) => u.status === 'menunggu');
-  const laporanTerbaru = laporan[0];
-  const riwayatLain = laporan.slice(1);
   const usulanLama = usulan.filter((u) => u.status !== 'menunggu');
 
   return (
