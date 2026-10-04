@@ -294,18 +294,25 @@ export default function AdminShell({ username, avatar = null }) {
       </div>
     )}
 
-    {/* GLOBAL TOAST */}
+    {/* GLOBAL TOAST
+        MOBILE (permintaan pemilik 2026-10-04: "notif admin panel mobile terlalu
+        besar"): dulu tanpa batas lebar + px-5 py-3 + tracking-wide -> pesan
+        panjang melebar melebihi layar HP. Sekarang dibatasi lebar layar, padding
+        & teks lebih kecil di mobile, dan boleh turun baris (bukan satu baris
+        panjang yang terpotong). */}
     {toast && (
-      <div className="fixed bottom-10 left-1/2 z-[100] -translate-x-1/2 transform transition-all duration-300">
-        <div className={`flex items-center gap-3 rounded-full px-5 py-3 shadow-2xl backdrop-blur-md border ${
+      <div className="fixed bottom-6 left-1/2 z-[100] w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 transition-all duration-300 sm:bottom-10 sm:w-auto">
+        <div className={`flex items-start gap-2 rounded-2xl px-3 py-2.5 shadow-2xl backdrop-blur-md border sm:items-center sm:gap-3 sm:rounded-full sm:px-5 sm:py-3 ${
           toast.isError ? 'bg-danger/90 border-danger/50 text-white' : 'bg-success/90 border-success/50 text-white'
         }`}>
+          <span className="mt-0.5 shrink-0 sm:mt-0">
           {toast.isError ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sm:h-[18px] sm:w-[18px]"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
           ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sm:h-[18px] sm:w-[18px]"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
           )}
-          <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
+          </span>
+          <span className="min-w-0 text-xs font-semibold leading-snug sm:text-sm sm:tracking-wide">{toast.message}</span>
         </div>
       </div>
     )}
@@ -407,41 +414,43 @@ export default function AdminShell({ username, avatar = null }) {
             </summary>
 
             {/* Dropdown daftar pengingat.
-                Di mobile: right-0 + max-w-full -> menyesuaikan layar kecil,
-                tidak melebar keluar layar. Di desktop: right-0 + w-80 normal. */}
-            <div className="invisible absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100 sm:max-w-none">
+                MOBILE (permintaan pemilik 2026-10-04: "notif admin panel mobile
+                terlalu besar"): lebar dikunci ke lebar layar minus margin, bukan
+                w-80 (320px) yang terasa kegedean di HP. Teks & tombol ikut
+                diperkecil. Desktop tetap w-80 normal. */}
+            <div className="invisible absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100 sm:w-80">
               <p className="px-2 py-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">
                 Pengingat {jumlahPengingat > 0 ? `(${jumlahPengingat})` : ''}
               </p>
               {jumlahPengingat === 0 ? (
-                <p className="px-2 pb-2 text-xs leading-relaxed text-ink-muted">
+                <p className="px-2 pb-2 text-[0.7rem] leading-relaxed text-ink-muted sm:text-xs">
                   Belum ada. Tulis di tab Analisis AI mode Diskusi, mis. "ingetin gw pas Idul Fitri mau promo".
                 </p>
               ) : (
-                <ul className="max-h-80 space-y-1.5 overflow-y-auto">
+                <ul className="max-h-72 space-y-1.5 overflow-y-auto sm:max-h-80">
                   {pengingatAktif.map((p) => (
                     <li
                       key={p.id}
-                      className={`rounded-xl border px-3 py-2 ${
+                      className={`rounded-xl border px-2.5 py-1.5 sm:px-3 sm:py-2 ${
                         p.jatuhTempo ? 'border-danger/40 bg-danger/8' : 'border-border-soft bg-bg-soft/40'
                       }`}
                     >
-                      <p className="text-xs font-semibold text-ink">{p.teks}</p>
-                      <p className={`mt-0.5 text-[0.65rem] ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
+                      <p className="text-[0.7rem] font-semibold leading-snug text-ink sm:text-xs">{p.teks}</p>
+                      <p className={`mt-0.5 text-[0.6rem] sm:text-[0.65rem] ${p.jatuhTempo ? 'font-bold text-danger' : 'text-ink-muted'}`}>
                         {p.jatuhTempo ? 'SEKARANG - ' : ''}{p.waktuTeks}
                       </p>
                       <div className="mt-1.5 flex gap-1.5">
                         <button
                           type="button"
                           onClick={() => tandaiPengingat(p.id, true)}
-                          className="rounded-md border border-success/40 px-2 py-0.5 text-[0.65rem] font-bold text-success transition hover:bg-success/10 cursor-pointer"
+                          className="rounded-md border border-success/40 px-2 py-0.5 text-[0.6rem] font-bold text-success transition hover:bg-success/10 cursor-pointer sm:text-[0.65rem]"
                         >
                           Selesai
                         </button>
                         <button
                           type="button"
                           onClick={() => hapusPengingat(p.id)}
-                          className="rounded-md border border-border-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer"
+                          className="rounded-md border border-border-soft px-2 py-0.5 text-[0.6rem] font-bold text-ink-muted transition hover:border-danger/50 hover:text-danger cursor-pointer sm:text-[0.65rem]"
                         >
                           Hapus
                         </button>
