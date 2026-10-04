@@ -6,6 +6,17 @@ import { json, ready } from '../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
+// ==========================================
+// CACHE DATA ADMIN 8 DETIK (optimasi egress 2026-10-04)
+// ==========================================
+// Panel admin poll endpoint ini tiap 5 detik, dan tiap poll menjalankan 14
+// query langsung ke Supabase (orders, log, feedback, promo, bank, premium,
+// banned, title, topGames, dll). Tiap query = round-trip (~174ms) + EGRESS.
+// Cache 8 detik: poll 5 dtk hanya kena DB tiap 8 dtk (bukan tiap poll) ->
+// baca DB berkurang ~40% tanpa mengurangi kesegaran data secara nyata.
+const _cache = { data: null, at: 0 };
+const DATA_TTL_MS = 8_000;
+
 // GET /api/admin/data - semua data untuk admin panel (dashboard + log).
 // Jalur akses: session admin (username+password) ATAU member di ADMIN_DISCORD_IDS.
 export async function GET() {
@@ -27,10 +38,12 @@ export async function GET() {
   // Dulu 14 query dijalankan BERURUTAN (await satu-satu) -> ~2,5-4 detik per
   // request. Padahal semuanya INDEPENDEN. Sekarang satu Promise.all: latensi
   // ditentukan query TERLAMBAT (~200-400ms), bukan jumlahnya.
-  const [
-    snap, series, heartbeat, liveStats, orders, log, promoCache, bankLoans,
-    feedback, promoCodes, premiumMembers, bannedUsers, adminTitleHolders, topGamesAll,
-  ] = await Promise.all([
+  // CACHE 8 DTK (lihat DATA_TTL_MS): poll 5 dtk tidak query ulang tiap kali.
+  let _hasil;
+  if (_cache.data && Date.now() - _cache.at < DATA_TTL_MS) {
+    _hasil = _cache.data;
+  } else {
+  _hasil = await Promise.all([
     getLatestSnapshot(),
     getSnapshotSeries(7),
     // Heartbeat + statistik LANGSUNG dari DB bot (Supabase) - tidak bergantung
@@ -97,6 +110,14 @@ export async function GET() {
                   FROM public.game_scores GROUP BY game_type ORDER BY plays DESC LIMIT 10`)
       .catch(() => ({ rows: [] })),
   ]);
+  // Simpan ke cache 8 dtk - poll berikutnya tidak query 14 tabel lagi.
+  _cache.data = _hasil;
+  _cache.at = Date.now();
+  }
+  const [
+    snap, series, heartbeat, liveStats, orders, log, promoCache, bankLoans,
+    feedback, promoCodes, premiumMembers, bannedUsers, adminTitleHolders, topGamesAll,
+  ] = _hasil;
 
     return json({
       ok: true,
