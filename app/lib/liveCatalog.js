@@ -97,21 +97,36 @@ function emojiUrl(emoji, map) {
 // TANPA CACHE (permintaan pemilik 2026-10-03)
 // ==========================================
 // Dulu ada cache SWR (sajikan data lama, refresh di latar). Pemilik meminta
-// cache DIHAPUS TOTAL untuk semua pembaca (admin & user biasa) supaya yang
-// tampil selalu data terkini - tidak ada lagi "kok masih lama berubahnya".
-// Setiap pemanggilan sekarang query DB langsung. Query-nya ringan (indexed,
-// puluhan baris) dan halaman sudah punya AutoRefresh, jadi aman.
-async function swr(_key, _ttlMs, fetcher) {
+// CACHE SINGKAT 12 DETIK (optimasi latensi region 2026-10-04).
+//
+// MASALAH: Vercel (Singapura) <-> Supabase (Jerman) = ~174ms PER QUERY.
+// Dulu cache dihapus total demi "data selalu terkini" -> tiap load halaman
+// (dan polling admin tiap 5 dtk) kena 174ms x banyak query = web lemot.
+//
+// SOLUSI: cache 12 detik. Data cukup segar (halaman punya AutoRefresh;
+// 12 dtk staleness tidak terasa untuk toko/leaderboard), tapi query DB
+// berkurang drastis - polling 5 dtk hanya kena DB tiap 12 dtk. Hasil null
+// (error) TIDAK di-cache supaya retry berikutnya langsung query ulang.
+const _cache = new Map(); // key -> { val, at }
+const SWR_TTL_MS = 12_000;
+async function swr(key, ttlMs, fetcher) {
+  const now = Date.now();
+  const ttl = ttlMs > 0 ? ttlMs : SWR_TTL_MS;
+  const hit = _cache.get(key);
+  if (hit && now - hit.at < ttl) return hit.val;
   try {
-    return await fetcher();
+    const val = await fetcher();
+    // Cache hanya hasil valid (bukan null/error) supaya gagal tidak "lengket".
+    if (val !== null && val !== undefined) _cache.set(key, { val, at: now });
+    return val;
   } catch {
     return null;
   }
 }
 
 // Dipertahankan sebagai no-op supaya pemanggil lama (endpoint admin) tidak
-// perlu diubah; tanpa cache, tidak ada yang perlu di-invalidasi.
-export function invalidateCatalog() { /* no-op: cache sudah dihapus */ }
+// perlu diubah; cache internal swr yang menangani invalidasi via TTL.
+export function invalidateCatalog() { /* no-op: TTL yang menangani */ }
 
 // SHOP ITEMS langsung dari DB bot.
 export async function getLiveShop() {

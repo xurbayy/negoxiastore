@@ -8,6 +8,25 @@ let _lastGood = null; // { snap, series, at }
 export let _lastSafeError = null;
 
 // ==========================================
+// CACHE LIVE SINGKAT (optimasi latensi region 2026-10-04)
+// ==========================================
+// Vercel (Singapura) <-> Supabase (Jerman) = ~174ms PER QUERY. Query live
+// (stats/leaderboard/bank) dipanggil tiap load halaman + polling admin ->
+// tanpa cache, tiap load kena 174ms x banyak query. Cache 12 dtk: data cukup
+// segar (halaman AutoRefresh), tapi round-trip DB berkurang drastis. Hasil
+// null (error) tidak di-cache supaya retry langsung query ulang.
+const _live = new Map(); // key -> { val, at }
+const LIVE_TTL_MS = 12_000;
+async function live(key, fn) {
+  const now = Date.now();
+  const hit = _live.get(key);
+  if (hit && now - hit.at < LIVE_TTL_MS) return hit.val;
+  const val = await fn();
+  if (val !== null && val !== undefined) _live.set(key, { val, at: now });
+  return val;
+}
+
+// ==========================================
 // CACHE BACA SNAPSHOT 45 DETIK (optimasi egress 2026-10-04)
 // ==========================================
 // Supabase Free punya batas EGRESS 5 GB/bulan dan terpakai 92% (4,62 GB) di
@@ -127,63 +146,72 @@ export async function getSnapshotSeries(days = 7) {
 //   - web tetap hidup walau bot sedang mati/restart (tidak ada "bot offline")
 // Tabel bot ada di schema 'public' (web ada di schema 'web').
 export async function getLiveStats() {
-  // TANPA CACHE: angka dihitung langsung dari DB tiap panggilan.
-  const kini = Date.now();
-  const r = await safeQuery(async () => {
-    await schemaReady();
-    const db = getDb();
-    // Query ke schema public (tabel bot) - beri prefix public. eksplisit
-    // supaya tidak terpengaruh search_path web.
-    const res = await db.execute(`
-      SELECT
-        (SELECT COUNT(*) FROM public.users)                        AS totalUsers,
-        (SELECT COALESCE(SUM(points), 0) FROM public.users)        AS totalMoney,
-        (SELECT COUNT(*) FROM public.premium WHERE expires_at > ?) AS premiumCount,
-        (SELECT COUNT(*) FROM public.game_scores
-           WHERE played_at >= ?)                                   AS gamesToday,
-        (SELECT COUNT(*) FROM public.playing_users)                AS inGameNow
-    `, [kini, kini - 86400000]);
-    const row = res.rows[0] || {};
-    return {
-      totalUsers: Number(row.totalusers ?? row.totalUsers ?? 0),
-      totalMoney: Number(row.totalmoney ?? row.totalMoney ?? 0),
-      premiumCount: Number(row.premiumcount ?? row.premiumCount ?? 0),
-      gamesToday: Number(row.gamestoday ?? row.gamesToday ?? 0),
-      // PEMAIN SEDANG IN-GAME (real-time): jumlah baris playing_users.
-      // Pengganti kartu "Game 7 Hari" (permintaan pemilik 2026-10-03).
-      inGameNow: Number(row.ingamenow ?? row.inGameNow ?? 0),
-    };
+  // Cache 12 dtk (lihat LIVE_TTL_MS): query ini dipanggil dashboard + health
+  // + AI tiap load - tanpa cache kena 174ms round-trip Jerman tiap kali.
+  return live('stats', async () => {
+    const kini = Date.now();
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      // Query ke schema public (tabel bot) - beri prefix public. eksplisit
+      // supaya tidak terpengaruh search_path web.
+      const res = await db.execute(`
+        SELECT
+          (SELECT COUNT(*) FROM public.users)                        AS totalUsers,
+          (SELECT COALESCE(SUM(points), 0) FROM public.users)        AS totalMoney,
+          (SELECT COUNT(*) FROM public.premium WHERE expires_at > ?) AS premiumCount,
+          (SELECT COUNT(*) FROM public.game_scores
+             WHERE played_at >= ?)                                   AS gamesToday,
+          (SELECT COUNT(*) FROM public.playing_users)                AS inGameNow
+      `, [kini, kini - 86400000]);
+      const row = res.rows[0] || {};
+      return {
+        totalUsers: Number(row.totalusers ?? row.totalUsers ?? 0),
+        totalMoney: Number(row.totalmoney ?? row.totalMoney ?? 0),
+        premiumCount: Number(row.premiumcount ?? row.premiumCount ?? 0),
+        gamesToday: Number(row.gamestoday ?? row.gamesToday ?? 0),
+        // PEMAIN SEDANG IN-GAME (real-time): jumlah baris playing_users.
+        // Pengganti kartu "Game 7 Hari" (permintaan pemilik 2026-10-03).
+        inGameNow: Number(row.ingamenow ?? row.inGameNow ?? 0),
+      };
+    });
+    if (r) {
+      _lastGood = { ...(_lastGood || {}), live: r, liveAt: Date.now() };
+      return r;
+    }
+    // DB error: pakai cache proses (maks 5 menit) supaya halaman tetap hidup.
+    if (_lastGood?.live && Date.now() - _lastGood.liveAt < 5 * 60_000) return _lastGood.live;
+    return null;
   });
-  if (r) {
-    _lastGood = { ...(_lastGood || {}), live: r, liveAt: kini };
-    return r;
-  }
-  // DB error: pakai cache proses (maks 5 menit) supaya halaman tetap hidup.
-  if (_lastGood?.live && Date.now() - _lastGood.liveAt < 5 * 60_000) return _lastGood.live;
-  return null;
 }
 
 // Daftar userId premium AKTIF langsung dari tabel bot (untuk badge).
 export async function getLivePremiumIds() {
-  const r = await safeQuery(async () => {
-    await schemaReady();
-    const db = getDb();
-    const res = await db.execute('SELECT user_id FROM public.premium WHERE expires_at > ?', [Date.now()]);
-    return res.rows.map((x) => String(x.user_id));
+  // Cache 12 dtk: dipanggil leaderboard tiap load - hemat round-trip.
+  return live('premIds', async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute('SELECT user_id FROM public.premium WHERE expires_at > ?', [Date.now()]);
+      return res.rows.map((x) => String(x.user_id));
+    });
+    return r || [];
   });
-  return r || [];
 }
 
 // Heartbeat bot LANGSUNG dari tabel bot (public.bridge_meta.last_seen).
 // Dipakai untuk status "bot online/offline" tanpa bergantung snapshot push.
 export async function getBotHeartbeat() {
-  const r = await safeQuery(async () => {
-    await schemaReady();
-    const db = getDb();
-    const res = await db.execute("SELECT value FROM public.bridge_meta WHERE key = 'last_seen'");
-    return res.rows.length ? Number(res.rows[0].value) : null;
+  // Cache 12 dtk: dipanggil health + dashboard tiap load - hemat round-trip.
+  return live('hb', async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute("SELECT value FROM public.bridge_meta WHERE key = 'last_seen'");
+      return res.rows.length ? Number(res.rows[0].value) : null;
+    });
+    return r;
   });
-  return r;
 }
 
 // ==========================================
@@ -193,85 +221,94 @@ export async function getBotHeartbeat() {
 // tabel bot (public.users) - selalu ada data walau bot sedang restart.
 // Bentuk hasil SAMA dengan snapshot.leaderboard supaya UI tidak perlu diubah.
 export async function getLiveLeaderboard(limit = 10) {
-  const r = await safeQuery(async () => {
-    await schemaReady();
-    const db = getDb();
-    const res = await db.execute(
-      `SELECT user_id, username, points, level, xp, avatar_url
-         FROM public.users
-        ORDER BY points DESC
-        LIMIT ?`,
-      [limit]
-    );
-    return res.rows.map((row, i) => ({
-      rank: i + 1,
-      userId: String(row.user_id),
-      username: row.username || 'Pemain',
-      points: Number(row.points || 0),
-      level: Number(row.level || 1),
-      xp: Number(row.xp || 0),
-      avatarUrl: row.avatar_url || null,
-    }));
+  // Cache 12 dtk per limit: halaman leaderboard dipanggil tiap load.
+  return live('lb:' + limit, async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute(
+        `SELECT user_id, username, points, level, xp, avatar_url
+           FROM public.users
+          ORDER BY points DESC
+          LIMIT ?`,
+        [limit]
+      );
+      return res.rows.map((row, i) => ({
+        rank: i + 1,
+        userId: String(row.user_id),
+        username: row.username || 'Pemain',
+        points: Number(row.points || 0),
+        level: Number(row.level || 1),
+        xp: Number(row.xp || 0),
+        avatarUrl: row.avatar_url || null,
+      }));
+    });
+    return r || [];
   });
-  return r || [];
 }
 
 // Leaderboard GUILD langsung dari DB bot (public.guilds + jumlah member).
 export async function getLiveGuildBoard(limit = 10) {
-  const r = await safeQuery(async () => {
-    await schemaReady();
-    const db = getDb();
-    const res = await db.execute(
-      `SELECT g.guild_code, g.name, g.total_points,
-              (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
-         FROM public.guilds g
-        ORDER BY g.total_points DESC
-        LIMIT ?`,
-      [limit]
-    );
-    return res.rows.map((row, i) => ({
-      rank: i + 1,
-      code: row.guild_code,
-      name: row.name || 'Guild',
-      points: Number(row.total_points || 0),
-      members: Number(row.members || 0),
-    }));
+  // Cache 12 dtk per limit: halaman komunitas/leaderboard panggil ini.
+  return live('gb:' + limit, async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute(
+        `SELECT g.guild_code, g.name, g.total_points,
+                (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
+           FROM public.guilds g
+          ORDER BY g.total_points DESC
+          LIMIT ?`,
+        [limit]
+      );
+      return res.rows.map((row, i) => ({
+        rank: i + 1,
+        code: row.guild_code,
+        name: row.name || 'Guild',
+        points: Number(row.total_points || 0),
+        members: Number(row.members || 0),
+      }));
+    });
+    return r || [];
   });
-  return r || [];
 }
 
 // BANK langsung dari DB bot (public.bank_loans) - 2026-10-03.
 // Bentuk hasil SAMA dengan snapshot.loans / snapshot.monitor.loans.
 export async function getLiveBank() {
-  const r = await safeQuery(async () => {
-    await schemaReady();
-    const db = getDb();
-    const now = Date.now();
-    const [rows, ringkas] = await Promise.all([
-      db.execute(
-        `SELECT b.user_id, u.username, b.amount, b.total_due, b.due_date
-           FROM public.bank_loans b LEFT JOIN public.users u ON u.user_id = b.user_id
-          ORDER BY b.total_due DESC LIMIT 50`
-      ),
-      db.execute(
-        `SELECT COUNT(*) AS count,
-                COUNT(*) FILTER (WHERE due_date < ?) AS overdue,
-                COALESCE(SUM(total_due),0) AS owed
-           FROM public.bank_loans`,
-        [now]
-      ),
-    ]);
-    const s = ringkas.rows[0] || {};
-    return {
-      loans: rows.rows.map((l) => ({
-        userId: String(l.user_id), username: l.username || 'Unknown',
-        amount: Number(l.amount || 0), totalDue: Number(l.total_due || 0),
-        dueDate: Number(l.due_date || 0), overdue: Number(l.due_date) < now,
-      })),
-      monitor: { count: Number(s.count || 0), overdue: Number(s.overdue || 0), owed: Number(s.owed || 0) },
-    };
+  // Cache 12 dtk: halaman bank panggil ini tiap load - hemat round-trip.
+  return live('bank', async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const now = Date.now();
+      const [rows, ringkas] = await Promise.all([
+        db.execute(
+          `SELECT b.user_id, u.username, b.amount, b.total_due, b.due_date
+             FROM public.bank_loans b LEFT JOIN public.users u ON u.user_id = b.user_id
+            ORDER BY b.total_due DESC LIMIT 50`
+        ),
+        db.execute(
+          `SELECT COUNT(*) AS count,
+                  COUNT(*) FILTER (WHERE due_date < ?) AS overdue,
+                  COALESCE(SUM(total_due),0) AS owed
+             FROM public.bank_loans`,
+          [now]
+        ),
+      ]);
+      const s = ringkas.rows[0] || {};
+      return {
+        loans: rows.rows.map((l) => ({
+          userId: String(l.user_id), username: l.username || 'Unknown',
+          amount: Number(l.amount || 0), totalDue: Number(l.total_due || 0),
+          dueDate: Number(l.due_date || 0), overdue: Number(l.due_date) < now,
+        })),
+        monitor: { count: Number(s.count || 0), overdue: Number(s.overdue || 0), owed: Number(s.owed || 0) },
+      };
+    });
+    return r;
   });
-  return r;
 }
 
 // Format angka gaya id-ID (1.234.567) dan uptime - lihat lib/formatClient.js
@@ -303,7 +340,9 @@ export { stripEmojiToken } from './textUtil';
 // query murah yang langsung menjawab mayoritas kasus.
 export async function userHasPremium(discordId) {
   if (!discordId) return false;
-
+  // Cache 12 dtk per user: fungsi ini dipanggil SETIAP halaman (badge navbar)
+  // + leaderboard. Tanpa cache kena 2-3 query round-trip Jerman tiap load.
+  return live('prem:' + discordId, async () => {
   // 0) SUMBER PALING MURAH & PALING AKURAT: tabel public.premium (satu query
   //    indexed). Ini yang dipakai bot sebagai kebenaran - jadi web harus sama.
   try {
@@ -360,6 +399,7 @@ export async function userHasPremium(discordId) {
   if ((snap?.premiumMembers || []).some((m) => String(m.userId) === String(discordId))) return true;
 
   return false;
+  }); // tutup live()
 }
 
 export async function isUserBanned(discordId) {
