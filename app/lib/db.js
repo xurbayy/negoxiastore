@@ -8,9 +8,20 @@ import { createPgClient } from './pgAdapter.js';
 // bot + web memakai SATU database (tanpa sinkronisasi bridge).
 let _db = null;
 
-// Blip jaringan sering sekali lewat. Retry 1x dengan jeda 300ms di SEMUA
-// execute() supaya satu timeout tidak langsung jadi 500 / crash.
-const TRANSIENT = /ConnectTimeout|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|Connection terminated|timeout/i;
+// Blip jaringan sering sekali lewat. Retry dengan jeda di SEMUA execute()
+// supaya satu gangguan tidak langsung jadi 500 / "Gangguan" (kedip-kedip).
+//
+// FIX 2026-10-04 (kedip-kedip Status Sistem Database Operational<->Gangguan):
+// pooler Supabase session mode kadang menolak koneksi baru dengan
+// "(EMAXCONNSESSION) max clients reached in session mode". Dulu error ini
+// TIDAK tertangkap retry -> sekali penuh langsung error -> health check gagal
+// -> tampil "Gangguan", lalu slot lepas -> "Operational" (kedip-kedip).
+// Sekarang error pooler-full DITANGKAP + retry dengan jeda LEBIH PANJANG
+// (700ms) - slot pooler cepat lepas begitu query lain selesai, jadi retry
+// hampir selalu berhasil dan status stabil "Operational".
+const TRANSIENT = /ConnectTimeout|fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|Connection terminated|timeout|EMAXCONNSESSION|max clients reached|too many connections/i;
+// Error pooler-full butuh jeda lebih panjang (tunggu slot lepas).
+const isPoolFull = (msg) => /EMAXCONNSESSION|max clients reached|too many connections/i.test(msg);
 function withTransientRetry(client) {
   const wrap = (name) => {
     const orig = client[name].bind(client);
@@ -18,12 +29,16 @@ function withTransientRetry(client) {
     // diteruskan -> args terbuang -> PG error 'there is no parameter $1'
     // (semua query ber-parameter gagal senyap).
     client[name] = async (...args) => {
-      for (let i = 0; i < 2; i++) {
+      // 3 percobaan (2 retry) supaya blip pooler-full tertangani.
+      for (let i = 0; i < 3; i++) {
         try {
           return await orig(...args);
         } catch (e) {
-          if (i === 1 || !TRANSIENT.test(String(e?.message) + ' ' + String(e?.cause?.message))) throw e;
-          await new Promise((res) => setTimeout(res, 300));
+          const msg = String(e?.message) + ' ' + String(e?.cause?.message);
+          if (i === 2 || !TRANSIENT.test(msg)) throw e;
+          // Tunggu lebih lama kalau pooler penuh (slot lepas saat query lain
+          // selesai), lebih cepat untuk blip jaringan biasa.
+          await new Promise((res) => setTimeout(res, isPoolFull(msg) ? 700 : 300));
         }
       }
     };
