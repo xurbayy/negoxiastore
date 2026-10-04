@@ -102,12 +102,49 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
   L.push(`Sesi sedang berjalan: ${Object.entries(m.live || {}).map(([k, v]) => k + "=" + v).join(", ") || "-"}`);
   L.push(`Pinjaman bank: ${Object.entries(m.loans || {}).map(([k, v]) => k + "=" + v).join(", ") || "-"}`);
   L.push(`Pemain terbanned: ${(m.bannedUsers || []).length}`);
+
+  // ---------- STATUS SISTEM / HEALTH (permintaan pemilik 2026-10-04) ----------
+  // "health juga bisa baca jadi menyeluruh". Diletakkan di DEPAN (setelah
+  // RINGKASAN) supaya tidak ikut terpotong saat konteks terlalu panjang -
+  // health adalah informasi paling dasar untuk menjawab "web sehat gak?".
+  // Dibaca LANGSUNG dari DB (query murah), tidak bergantung snapshot push.
+  try {
+    const { getDb } = await import('./db');
+    const { getBotHeartbeat } = await import('./snapshot');
+    const db = getDb();
+    const hb = await getBotHeartbeat().catch(() => null);
+    const h = await db.execute(`SELECT
+        (SELECT COUNT(*) FROM public.shop_items) AS item,
+        (SELECT COUNT(*) FROM web.orders WHERE status = 'pending') AS pending_order,
+        (SELECT COUNT(*) FROM web.ai_providers) AS ai_prov`).catch(() => null);
+    L.push('');
+    L.push('### STATUS SISTEM (health)');
+    if (hb) {
+      const hbMenit = Math.floor((Date.now() - Number(hb)) / 60000);
+      L.push(`- Bot Discord: ${hbMenit < 5 ? 'ONLINE' : 'TERLAMBAT ' + hbMenit + ' menit'} (heartbeat ${hbMenit} menit lalu)`);
+    } else {
+      L.push('- Bot Discord: heartbeat tidak tersedia (belum pernah push?)');
+    }
+    if (h?.rows?.length) {
+      const r = h.rows[0];
+      L.push(`- Database: TERHUBUNG (${Number(r.item || 0)} item toko)`);
+      L.push(`- AI: ${Number(r.ai_prov || 0)} provider terdaftar`);
+      L.push(`- Pembayaran: ${Number(r.pending_order || 0)} order pending`);
+    } else {
+      L.push('- Database: query health GAGAL (cek koneksi)');
+    }
+    L.push(`- Maintenance: ${snap.maintenance?.active ? 'AKTIF - ' + (snap.maintenance.reason || 'tanpa alasan') : 'nonaktif'}`);
+  } catch (e) {
+    L.push('### STATUS SISTEM (health)');
+    L.push('- (gagal menyusun: ' + String(e?.message || e).slice(0, 60) + ')');
+  }
+
   // INDEKS BAGIAN: beri tahu AI bagian apa saja yang ADA di konteks ini, supaya
   // tidak menjawab "tidak ada data" padahal ada (kejadian nyata 2026-10-02:
   // ditanya pembayaran QRIS, AI bilang tidak ada - padahal bagian PENDAPATAN ada).
   {
     const adaPanel = panel && (panel.orders || panel.log || panel.feedback);
-    const daftarBagian = ['SERVER', 'GAME', 'TOKO', 'PENJUALAN TOKO', 'PROMO', 'MISI & TITLE', 'EKONOMI', 'TRANSAKSI', 'BANK & GUILD', 'PROFIL PEMAIN', 'REFERRAL', 'LOG ERROR'];
+    const daftarBagian = ['SERVER', 'GAME', 'TOKO', 'PENJUALAN TOKO', 'PROMO', 'MISI & TITLE', 'EKONOMI', 'TRANSAKSI', 'BANK & GUILD', 'PROFIL PEMAIN', 'REFERRAL', 'LOG ERROR', 'STATUS SISTEM (health)'];
     if (Array.isArray(panel?.orders) && panel.orders.length) daftarBagian.push('PENDAPATAN (order QRIS/gateway)');
     if (adaPanel) { if (Array.isArray(panel?.log) && panel.log.length) daftarBagian.push('LOG PERINTAH ADMIN'); if (Array.isArray(panel?.feedback) && panel.feedback.length) daftarBagian.push('FEEDBACK PEMAIN'); }
     L.push('Bagian yang TERSEDIA di konteks ini: ' + daftarBagian.join(', ') + '.');
@@ -627,6 +664,9 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
       }
     }
   }
+
+  // (STATUS SISTEM/health sudah ditulis di DEPAN, setelah RINGKASAN - lihat
+  // catatan di sana. Tidak diulang di sini supaya tidak dobel & hemat token.)
 
 
   // ==========================================
