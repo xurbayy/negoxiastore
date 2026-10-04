@@ -335,10 +335,10 @@ export async function getLiveServers() {
     // Server kecil tidak ikut tampil, tapi URUTAN kejar-kejarannya (peringkat)
     // TETAP SAMA: pemain -> game -> poin.
     //
-    // BATAS 20 SERVER (permintaan pemilik 2026-10-04): daftar cukup 20
-    // teratas - halaman tidak perlu menampung ratusan server.
+    // BATAS 100 SERVER (permintaan pemilik 2026-10-04, direvisi dari 20):
+    // daftar cukup 100 teratas.
     .filter((s) => Boolean(s.invite) && Number(s.players) >= 20)
-    .slice(0, 20);
+    .slice(0, 100);
   } catch {
     return null;
   }

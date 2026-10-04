@@ -293,9 +293,29 @@ export default function Dashboard({ data }) {
   const totalPoinBelanja = m.totalPoinBelanja ?? 0;
   const itemHariIni = (m.itemTerjualToday || []).reduce((a, b) => a + (b.kali || 0), 0);
 
+  // ==========================================
+  // TOP GAME SEPANJANG MASA (permintaan pemilik 2026-10-04)
+  // ==========================================
+  // Kartu "Total Users (all)" (angka 235 - ganda dengan Player Terdaftar)
+  // DIGANTI jadi highlight game paling sering dimainkan SEJAK AWAL: nama +
+  // emoji + poin yang dihasilkan game itu. Data dari data.topGamesAll (grup
+  // SELURUH public.game_scores, bukan cuma hari ini).
+  const topGamesAll = Array.isArray(data.topGamesAll) ? data.topGamesAll : [];
+  const topAll = topGamesAll[0] || null;
+  const gdTopAll = topAll ? gameDisplay(String(topAll.game || '').toLowerCase(), betaMap) : null;
+
   const cards = [
     { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
-    { label: 'Total Users (all)', value: fmt(m.totalUsersAll), pick: null },
+    // Kartu Top Game Sepanjang Masa - pakai icon (emoji) + sub (main + poin).
+    {
+      label: 'Top Game Sepanjang Masa',
+      value: gdTopAll ? gdTopAll.name : '-',
+      icon: gdTopAll?.icon || null,
+      sub: topAll
+        ? `${fmt(topAll.plays)} main · ${fmtRingkas(topAll.points)} poin`
+        : 'belum ada data game',
+      pick: null,
+    },
     { label: 'Poin Beredar', value: fmt(m.totalMoney), pick: (s) => s.totalMoney, color: '#C74B3C' },
     { label: 'Member NEXO Pass', value: fmt(m.premiumCount), pick: null },
     { label: 'Game Hari Ini', value: fmt(m.gamesToday), pick: (s) => s.gamesToday },
@@ -358,7 +378,13 @@ export default function Dashboard({ data }) {
           const d = c.pick ? delta24(fullSeries, c.pick) : null;
           return (
             <div key={c.label} className="nx-card flex h-full min-w-0 flex-col px-3 py-3 sm:px-4 sm:py-4">
-              <div className="truncate font-display text-lg leading-tight text-ink sm:text-xl">{c.value}</div>
+              <div className="flex min-w-0 items-center gap-1.5">
+                {c.icon && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] shrink-0" />
+                )}
+                <div className="truncate font-display text-lg leading-tight text-ink sm:text-xl">{c.value}</div>
+              </div>
               <div className="mt-0.5 truncate text-xs text-ink-muted">{c.label}</div>
               {c.sub && (
                 <div className="mt-0.5 truncate text-[0.62rem] text-ink-faint" title={c.sub}>{c.sub}</div>

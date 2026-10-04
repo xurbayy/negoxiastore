@@ -39,7 +39,7 @@ export default function sitemap() {
       changeFrequency: 'daily',
       priority: 0.7,
     },
-    // Halaman Komunitas: daftar 20 server NEXO teratas + link invite.
+    // Halaman Komunitas: daftar 100 server NEXO teratas + link invite.
     // Isinya berubah terus (peringkat server), jadi changeFrequency daily.
     {
       url: absoluteUrl('/komunitas'),

@@ -29,7 +29,7 @@ export async function GET() {
   // ditentukan query TERLAMBAT (~200-400ms), bukan jumlahnya.
   const [
     snap, series, heartbeat, liveStats, orders, log, promoCache, bankLoans,
-    feedback, promoCodes, premiumMembers, bannedUsers, adminTitleHolders,
+    feedback, promoCodes, premiumMembers, bannedUsers, adminTitleHolders, topGamesAll,
   ] = await Promise.all([
     getLatestSnapshot(),
     getSnapshotSeries(7),
@@ -90,6 +90,12 @@ export async function GET() {
       `SELECT user_id, username, admin_title FROM public.users
         WHERE admin_title IS NOT NULL ORDER BY username ASC`
     ).catch(() => ({ rows: [] })),
+    // TOP GAME SEPANJANG MASA (permintaan pemilik 2026-10-04: kartu admin
+    // "Total Users (all)" diganti jadi top game sepanjang masa - nama + emoji +
+    // poin yang dihasilkan). Grup SELURUH game_scores (bukan cuma hari ini).
+    db.execute(`SELECT game_type, COUNT(*) AS plays, COALESCE(SUM(points),0) AS points
+                  FROM public.game_scores GROUP BY game_type ORDER BY plays DESC LIMIT 10`)
+      .catch(() => ({ rows: [] })),
   ]);
 
     return json({
@@ -177,6 +183,13 @@ export async function GET() {
         userId: String(r.user_id),
         username: r.username || null,
         adminTitle: r.admin_title,
+      })),
+      // Top game sepanjang masa (untuk kartu admin) - nama+emoji diresolve
+      // di komponen Dashboard via gameDisplay().
+      topGamesAll: topGamesAll.rows.map((r) => ({
+        game: r.game_type,
+        plays: Number(r.plays || 0),
+        points: Number(r.points || 0),
       })),
       log: log.rows.map((r) => {
         const p = safeParse(r.payload);
