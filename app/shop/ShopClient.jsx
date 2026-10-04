@@ -138,13 +138,42 @@ export default function ShopClient({ items, cats, titles, discountMap }) {
   const [search, setSearch] = useState('');
   const q = search.toLowerCase().trim();
 
+  // ==========================================
+  // TOMBOL FLASH SALE (permintaan pemilik 2026-10-04)
+  // ==========================================
+  // "tombol flash sale ... klik tombol itu otomatis nampilin item yang lagi
+  //  flash sale ... muncul ketika beneran ada flash sale aja ... mencolok
+  //  paling pertama di sebelah global booster".
+  //
+  // Tombol hanya muncul kalau ADA flash sale aktif. Klik -> hanya item flash
+  // sale yang tampil (dengan badge hitungan mundur + harga coret dari
+  // ItemCard, yang sudah ada). Klik lagi -> kembali normal.
+  const [filterFlash, setFilterFlash] = useState(false);
+
   const catLabelMap = {};
   for (const c of cats) {
     catLabelMap[c.value] = (c.label || '').toLowerCase();
   }
 
+  // Apakah satu item sedang flash sale AKTIF? Logika SAMA dengan ItemCard
+  // (saleAktif): ada diskon + harga asli > harga terpasang + belum kedaluwarsa.
+  const flashAktif = (it) => {
+    const disc = discountMap?.[it.itemKey];
+    if (!disc) return false;
+    const hargaAsli = disc.hargaAsli ?? null;
+    const hargaTerpasang = Number(it.price);
+    const adaDiskon = hargaAsli !== null && hargaAsli > hargaTerpasang;
+    const berakhir = disc.berakhirPada || null;
+    const sisa = berakhir ? sisaWaktu(berakhir) : null;
+    return adaDiskon && (berakhir === null || sisa !== null);
+  };
+  const itemsFlash = items.filter(flashAktif);
+  const adaFlashSale = itemsFlash.length > 0;
+
   // Filter items
   const filteredItems = items.filter(it => {
+    // Filter FLASH SALE aktif -> hanya item yang sedang flash sale.
+    if (filterFlash && !flashAktif(it)) return false;
     if (!q) return true;
     const matchName = it.name.toLowerCase().includes(q);
     const catLabel = catLabelMap[it.category || 'other'] || '';
@@ -201,8 +230,31 @@ export default function ShopClient({ items, cats, titles, discountMap }) {
         )}
       </div>
 
-      {shownCats.length > 0 && !q && (
+      {/* Nav kategori + tombol FLASH SALE.
+          Tombol Flash Sale: MENONJOL (merah, ikon petir) di posisi PALING
+          PERTAMA - sebelum tombol kategori (termasuk Global Boosters).
+          HANYA muncul kalau ada flash sale aktif (permintaan pemilik 2026-10-04).
+          Klik -> hanya item flash sale yang tampil; klik lagi -> normal. */}
+      {(adaFlashSale || (shownCats.length > 0 && !q)) && (
         <nav aria-label="Kategori toko" className="mt-6 flex gap-2 overflow-x-auto pb-2">
+          {adaFlashSale && (
+            <button
+              type="button"
+              onClick={() => setFilterFlash((v) => !v)}
+              aria-pressed={filterFlash}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wide shadow-sm transition cursor-pointer ${
+                filterFlash
+                  ? 'bg-danger text-white ring-2 ring-danger/40'
+                  : 'bg-danger text-white hover:bg-danger/90 hover:shadow'
+              }`}
+              title={`${itemsFlash.length} item sedang flash sale - klik untuk menampilkan only item sale`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" />
+              </svg>
+              Flash Sale ({itemsFlash.length})
+            </button>
+          )}
           {shownCats.map((c) => (
             <a
               key={c.value}
