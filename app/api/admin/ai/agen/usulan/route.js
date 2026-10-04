@@ -82,6 +82,23 @@ export async function PATCH(request) {
   }
 
   // Antrekan ke bot (bot mengeksekusi lewat whitelist-nya sendiri).
+  // JALUR LANGSUNG DULU (permintaan pemilik 2026-10-04): aksi yang bisa
+  // dieksekusi langsung ke DB dijalankan DI SINI - tidak bergantung bot
+  // (dulu gagal "shopItems is not defined" karena bug di sisi bot).
+  // Aksi yang butuh Discord (mis. dm_admin) tetap lewat antrean bot.
+  const { AKSI_LANGSUNG, jalankanAksiLangsung } = await import('../../../../../lib/aksiAdminLangsung');
+  if (AKSI_LANGSUNG.has(row.aksi)) {
+    try {
+      const hasil = await jalankanAksiLangsung(row.aksi, payload, actorId);
+      await db.execute({ sql: "UPDATE ai_agen_usulan SET status = 'disetujui', hasil = ?, diputus_at = ? WHERE id = ?", args: [String(hasil).slice(0, 400), Date.now(), id] });
+      return json({ ok: true, status: 'disetujui', langsung: true, hasil });
+    } catch (e) {
+      const pesan = e?.message || 'Gagal eksekusi langsung.';
+      await db.execute({ sql: "UPDATE ai_agen_usulan SET status = 'gagal', hasil = ?, diputus_at = ? WHERE id = ?", args: [pesan.slice(0, 400), Date.now(), id] });
+      return json({ ok: false, error: pesan }, e?.status || 400);
+    }
+  }
+
   await ready();
   const ins = await db.execute({
     sql: 'INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES (?, ?, ?, ?, ?) RETURNING id',

@@ -5,6 +5,7 @@ import ConfirmModal from './ConfirmModal';
 import PilihPeran from './PilihPeran';
 import AgenAI from './AgenAI';
 import { pintasanPeranKlien, daftarPeranKlien } from '../../lib/aiPeranKlien';
+import { THINKING_LABEL } from '../../lib/formatClient';
 
 // ==========================================
 // AnalisisAI - tab asisten data di panel admin
@@ -64,12 +65,17 @@ function rapikan(teks) {
     if (/^-{3,}$/.test(t)) { keluaran.push(''); continue; }
 
     // Buang penanda tebal/miring; simpan teksnya.
+    // URUTAN PENTING (fix 2026-10-04): `***tebal miring***` diproses DULU,
+    // kalau tidak `**` menangkap sebagian dan menyisakan bintang nyasar
+    // (pemilik: "format embed *** harus muncul dengan benar").
     keluaran.push(
       b
+        .replace(/\*\*\*(.+?)\*\*\*/g, '$1') // ***tebal miring*** -> teks
         .replace(/\*\*(.+?)\*\*/g, '$1')   // **tebal** -> tebal
         .replace(/\*(.+?)\*/g, '$1')       // *miring* -> miring
         .replace(/`/g, '')                    // `kode` -> kode
         .replace(/^\s*[-*]\s+/, '- ')        // penanda butir -> tanda hubung biasa
+        .replace(/^\s*#{1,6}\s+/, '')        // ## judul -> judul
         // En dash / em dash dari model -> tanda hubung biasa (aturan #24).
         .replace(/[–—]/g, '-')
     );
@@ -215,8 +221,8 @@ export default function AnalisisAI() {
           if (p.model) setModelInput(p.model);
           if (p.mode) setMode(p.mode);
           if (p.peran) setPeran(p.peran);
-          if (p.maxTokens || p.kecerdasan) {
-            setModelSetting((s) => ({ ...s, ...(p.maxTokens ? { maxTokens: p.maxTokens } : {}), ...(p.kecerdasan ? { kecerdasan: p.kecerdasan } : {}) }));
+          if (p.maxTokens || p.thinking) {
+            setModelSetting((s) => ({ ...s, ...(p.maxTokens ? { maxTokens: p.maxTokens } : {}), ...(p.thinking ? { thinking: p.thinking } : {}) }));
           }
         }
       } catch { /* offline / gagal - pakai localStorage */ }
@@ -284,7 +290,7 @@ export default function AnalisisAI() {
   // Menu aksi model (dropdown) - supaya bar kontrol tidak penuh.
   const [menuModel, setMenuModel] = useState(false);
   // Form model baru.
-  const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
+  const [formModel, setFormModel] = useState({ label: '', model: '', provider: '', max_tokens: '', thinking: '' });
   // API key yang sedang DILIHAT (per provider id -> teks asli). Kosong = tersamar.
   // Permintaan pemilik 2026-10-02: "api key bisa diliat - ada toggle lihat".
   const [kunciTerlihat, setKunciTerlihat] = useState({});
@@ -300,20 +306,20 @@ export default function AnalisisAI() {
   // Hasil uji model: { [modelId]: {ok, alasan} }. Kosong = belum diuji.
   const [ujiHasil, setUjiHasil] = useState({});
   const [ujiJalan, setUjiJalan] = useState(false);
-  // PENGATURAN GLOBAL model: max token + kecerdasan (1-10). Berlaku untuk
+  // PENGATURAN GLOBAL model: max token + Thinking level. Berlaku untuk
   // SEMUA model (permintaan pemilik 2026-10-02: "setting sekali saja").
   // Disimpan di localStorage supaya bertahan.
   const [modelSetting, setModelSetting] = useState(() => {
     try {
       const s = JSON.parse(window.localStorage.getItem('nexo_ai_setting') || '{}');
-      return { maxTokens: s.maxTokens ?? null, kecerdasan: s.kecerdasan ?? null, vision: null };
-    } catch { return { maxTokens: null, kecerdasan: null, vision: null }; }
+      return { maxTokens: s.maxTokens ?? null, thinking: s.thinking ?? 'auto', vision: null };
+    } catch { return { maxTokens: null, thinking: 'auto', vision: null }; }
   });
   useEffect(() => {
     try {
-      window.localStorage.setItem('nexo_ai_setting', JSON.stringify({ maxTokens: modelSetting.maxTokens, kecerdasan: modelSetting.kecerdasan }));
+      window.localStorage.setItem('nexo_ai_setting', JSON.stringify({ maxTokens: modelSetting.maxTokens, thinking: modelSetting.thinking }));
     } catch { /* abaikan */ }
-  }, [modelSetting.maxTokens, modelSetting.kecerdasan]);
+  }, [modelSetting.maxTokens, modelSetting.thinking]);
   // Info pemakaian / kuota provider (permintaan pemilik: "tau ini udah limit apa engga").
   const [usage, setUsage] = useState({ status: 'idle' });
   // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
@@ -601,7 +607,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, mode: modeKirim, peran, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, kecerdasan: modelSetting.kecerdasan || undefined, gambar: gambarKirim.length ? gambarKirim : undefined }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, peran, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, thinking: modelSetting.thinking || 'auto', gambar: gambarKirim.length ? gambarKirim : undefined }),
         signal: ac.signal,
       });
       clearTimeout(timer);
@@ -1077,7 +1083,7 @@ export default function AnalisisAI() {
       });
       const d = await res.json();
       if (d.ok) {
-        setFormModel({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
+        setFormModel({ label: '', model: '', provider: '', max_tokens: '', thinking: '' });
         setEditModelId(null);
         setPesanSimpan(modeEdit ? '✓ Model diperbarui.' : '✓ Model disimpan.');
         setTimeout(() => setPesanSimpan(null), 4000);
@@ -1092,13 +1098,13 @@ export default function AnalisisAI() {
     setFormModel({
       label: m.label, model: m.model, provider: m.provider,
       max_tokens: m.maxTokens == null ? '' : String(m.maxTokens),
-      kecerdasan: m.kecerdasan == null ? '' : String(m.kecerdasan),
+      thinking: m.kecerdasan == null ? '' : String(m.kecerdasan),
     });
   }, []);
 
   const batalEditModel = useCallback(() => {
     setEditModelId(null);
-    setFormModel({ label: '', model: '', provider: '', max_tokens: '', kecerdasan: '' });
+    setFormModel({ label: '', model: '', provider: '', max_tokens: '', thinking: '' });
   }, []);
 
   const hapusModel = useCallback(async (id) => {
@@ -1125,11 +1131,11 @@ export default function AnalisisAI() {
   }, [konfirmasi]);
 
   // Pakai model tersimpan: isi provider + model + pengaturan (max token,
-  // kecerdasan) di bar kontrol atas.
+  // Thinking) di bar kontrol atas.
   const pakaiModel = useCallback((m) => {
     setProvider(m.provider);
     setModelInput(m.model);
-    // JANGAN timpa setting global (max token/kecerdasan) - pemilik mengatur
+    // JANGAN timpa setting global (max token/Thinking) - pemilik mengatur
     // sekali di bar kontrol dan berlaku untuk semua model (permintaan 2026-10-02).
     flashKelola(`Dipakai: ${m.label}`);
   }, []);
@@ -1641,7 +1647,8 @@ export default function AnalisisAI() {
                       <p className="text-[0.65rem] text-ink-faint">
                         {m.maxTokens ? `maks ${m.maxTokens} token` : ''}
                         {m.maxTokens && m.kecerdasan ? ' • ' : ''}
-                        {m.kecerdasan ? `kecerdasan ${m.kecerdasan}/10` : ''}
+                        {/* Kolom DB 'kecerdasan' kini menyimpan LEVEL THINKING (teks). */}
+                        {m.kecerdasan ? `Thinking: ${THINKING_LABEL[m.kecerdasan] || m.kecerdasan}` : ''}
                       </p>
                     )}
                   </div>
@@ -1699,7 +1706,7 @@ export default function AnalisisAI() {
               </select>
             </div>
             <p className="mt-1 text-[0.65rem] text-ink-faint">
-              Maks token &amp; kecerdasan diatur sekali di bar kontrol atas (berlaku semua model). Di sini cukup label + nama model + provider.
+              Maks token &amp; Thinking diatur sekali di bar kontrol atas (berlaku semua model). Di sini cukup label + nama model + provider.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
@@ -2194,7 +2201,7 @@ export default function AnalisisAI() {
                           if (m.providerId) setProvider(m.providerId);
                           setModelInput(m.id);
                           // Hanya perbarui info vision (untuk peringatan gambar).
-                          // Max token/kecerdasan tetap dari setting global.
+                          // Max token/Thinking tetap dari setting global.
                           setModelSetting((s) => ({ ...s, vision: m.vision ?? null }));
                           setModelProv((s) => ({ ...s, status: 'idle', dipilih: null }));
                         }}
@@ -2204,11 +2211,11 @@ export default function AnalisisAI() {
                         Pakai
                       </button>
                     </div>
-                    {/* Pengaturan model terpilih: max token + kecerdasan. */}
+                    {/* Pengaturan model terpilih: max token + Thinking. */}
                     {modelProv.dipilih === (m.providerId || '') + '::' + m.id && (
                       <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2">
                         <p className="text-[0.65rem] text-ink-muted">
-                          Maks token &amp; kecerdasan pakai pengaturan global di atas (berlaku semua model).
+                          Maks token &amp; Thinking pakai pengaturan global di atas (berlaku semua model).
                         </p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <button
@@ -2333,19 +2340,19 @@ export default function AnalisisAI() {
         )}
 
         {/* Baris 3: ringkasan + pengaturan (dilipat) + kelola. Ringkas.
-            MODE AGEN: pengaturan token/IQ DISEMBUNYIKAN - agen sudah dioptimalkan
-            server (2000 token, IQ 6) supaya efisien karena jalan 24/7.
-            Permintaan pemilik 2026-10-02: "token & kecerdasan ga bisa custom
-            karena sudah lu sesuaikan, tapi model bisa gw pilih". */}
+            MODE AGEN: pengaturan token/Thinking DISEMBUNYIKAN - agen sudah
+            dioptimalkan server (3000 token, Thinking Auto) supaya efisien
+            karena jalan 24/7 dan TIDAK bisa diubah (permintaan pemilik
+            2026-10-04: "agent default thinking dan ga bisa diubah lagi"). */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {mode === 'agen' ? (
             <span className="text-[0.7rem] text-ink-muted">
-              Token &amp; kecerdasan dioptimalkan otomatis untuk agen.
+              Token &amp; Thinking dioptimalkan otomatis untuk agen (Thinking: Auto).
             </span>
           ) : (
             <span className="rounded-full bg-bg-soft px-2.5 py-1 text-[0.7rem] font-semibold text-ink-muted">
               {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
-              {modelSetting.kecerdasan ? ` · IQ ${modelSetting.kecerdasan}/10` : ''}
+              {` · Thinking: ${THINKING_LABEL[modelSetting.thinking || 'auto'] || 'Auto'}`}
             </span>
           )}
           <div className="ml-auto flex items-center gap-1.5">
@@ -2387,8 +2394,8 @@ export default function AnalisisAI() {
           />
         )}
 
-        {/* PANEL PENGATURAN (max token + kecerdasan) - dilipat, hemat ruang.
-            Tidak tampil di mode agen (dioptimalkan server). */}
+        {/* PANEL PENGATURAN (max token + THINKING) - dilipat, hemat ruang.
+            Tidak tampil di mode agen (dioptimalkan server: selalu Thinking Auto). */}
         {bukaSetting && mode !== 'agen' && (
           <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -2403,17 +2410,24 @@ export default function AnalisisAI() {
                 />
               </label>
               <label className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
-                <span className="shrink-0">Kecerdasan (1-10)</span>
-                <input
-                  type="number" min="1" max="10"
-                  value={modelSetting.kecerdasan ?? ''}
-                  onChange={(e) => setModelSetting((s) => ({ ...s, kecerdasan: e.target.value === '' ? null : Number(e.target.value) }))}
-                  placeholder="6"
-                  className="w-16 rounded-lg border border-border-soft bg-card-cream px-2 py-1 text-[0.75rem] text-ink outline-none focus:border-accent"
-                />
+                <span className="shrink-0">Thinking</span>
+                <select
+                  value={modelSetting.thinking || 'auto'}
+                  onChange={(e) => setModelSetting((s) => ({ ...s, thinking: e.target.value }))}
+                  className="rounded-lg border border-border-soft bg-card-cream px-2 py-1 text-[0.75rem] text-ink outline-none focus:border-accent cursor-pointer"
+                >
+                  <option value="auto">Auto</option>
+                  <option value="minimal">Minimal</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="xhigh">Xhigh</option>
+                  <option value="max">Max</option>
+                  <option value="thinking">Thinking</option>
+                </select>
               </label>
             </div>
-            <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. 1 = presisi, 10 = kreatif.</p>
+            <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. Auto = biarkan provider memutuskan; level lain mengirim reasoning_effort / thinking budget.</p>
           </div>
         )}
 

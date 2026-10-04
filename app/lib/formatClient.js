@@ -142,3 +142,44 @@ export function planName(plan) {
   if (/^nexo[ _]?pass/i.test(p)) return 'NEXO Pass';
   return p;
 }
+
+/**
+ * Rapikan teks jawaban AI untuk ditampilkan sebagai teks biasa (tanpa renderer
+ * markdown). MASALAH YANG DIPERBAIKI (2026-10-04): jawaban agen AI di panel
+ * ditampilkan MENTAH sehingga penanda markdown muncul apa adanya - pemilik
+ * mengeluh "format embed *** tidak muncul dengan benar, gw pusing bacanya".
+ *
+ * Urutan penggantian PENTING: `***tebal miring***` harus diproses SEBELUM
+ * `**tebal**` dan `*miring*`, kalau tidak akan tersisa bintang nyasar.
+ */
+export function rapikanTeks(teks) {
+  if (!teks) return '';
+  return String(teks)
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1') // ***tebal miring*** -> teks
+    .replace(/\*\*(.+?)\*\*/g, '$1')     // **tebal** -> teks
+    .replace(/\*(.+?)\*/g, '$1')         // *miring* -> teks
+    .replace(/`/g, '')                    // `kode` -> kode
+    .replace(/^\s*[-*]\s+/gm, '- ')       // butir * / - -> tanda hubung
+    .replace(/^\s*#{1,6}\s+/gm, '')       // ## judul -> judul
+    .replace(/[–—]/g, '-')                // en/em dash -> tanda hubung
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// ==========================================
+// THINKING LEVELS (2026-10-04) - client-safe
+// ==========================================
+// Menggantikan takaran "kecerdasan 1-10". Daftar level + label ramah untuk UI.
+// Logika pemetaan ke parameter provider ada di lib/groq.js (server).
+export const THINKING_LEVELS = ['auto', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'thinking'];
+
+export const THINKING_LABEL = {
+  auto: 'Auto',
+  minimal: 'Minimal',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  xhigh: 'Xhigh',
+  max: 'Max',
+  thinking: 'Thinking',
+};

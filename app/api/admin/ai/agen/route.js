@@ -112,12 +112,13 @@ export async function POST(request) {
   ], {
     provider: String(body?.provider || '').trim() || undefined,
     model: String(body?.model || '').trim() || undefined,
-    // TOKEN & KECERDASAN AGEN DIPATOK SERVER (permintaan pemilik 2026-10-02):
-    // agen jalan 24/7, jadi efisiensi diatur di sini - bukan dari UI.
+    // TOKEN & THINKING AGEN DIPATOK SERVER (permintaan pemilik 2026-10-02, revisi
+    // 2026-10-04): agen jalan 24/7, jadi efisiensi diatur di sini - bukan dari UI.
     // 3000 token cukup untuk laporan MENYELURUH (semua bidang).
-    // IQ 7 = tajam untuk analisis menyeluruh.
+    // Thinking SELALU 'auto' (permintaan pemilik: "agent default thinking dan
+    // ga bisa diubah lagi") - web biarkan provider memutuskan sendiri.
     maxTokens: 3000,
-    kecerdasan: 7,
+    thinking: 'auto',
   });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error, providerLabel: hasil.providerLabel }, 502);

@@ -546,16 +546,17 @@ export async function POST(request) {
   // Provider & model dari UI (toggle di panel admin AI).
   const providerPilihan = String(body?.provider || '').trim();
   const modelPilihan = String(body?.model || '').trim();
-  // Pengaturan per-model: UI mengirim max_tokens + kecerdasan (1-10) dari
+  // Pengaturan per-model: UI mengirim max_tokens + thinking (level) dari
   // model tersimpan, kalau ada. Bisa juga dikirim manual.
+  // (2026-10-04: 'kecerdasan 1-10' diganti 'thinking' level.)
   const maxTokens = Number(body?.max_tokens) || undefined;
-  const kecerdasan = Number(body?.kecerdasan) || undefined;
+  const thinking = body?.thinking ? String(body.thinking) : undefined;
 
   const hasil = await tanyaGroq(pesan, {
     provider: providerPilihan || undefined,
     model: modelPilihan || undefined,
     maxTokens,
-    kecerdasan,
+    thinking,
   });
   if (!hasil.ok) {
     // Nama provider & env key untuk petunjuk - JANGAN hardcode "Groq",

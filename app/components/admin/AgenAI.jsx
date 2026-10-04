@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { rapikanTeks } from '../../lib/formatClient';
 
 // ==========================================
 // AgenAI - agen pemantau otomatis (komponen modular)
@@ -383,8 +384,8 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
                   </div>
                 ) : (
                   <>
-                    {u.alasan && <p className="mt-1.5 text-xs text-ink-muted"><strong className="text-ink">Alasan:</strong> {u.alasan}</p>}
-                    {u.risiko && <p className="mt-1 text-xs text-danger"><strong>Risiko:</strong> {u.risiko}</p>}
+                    {u.alasan && <p className="mt-1.5 text-xs text-ink-muted"><strong className="text-ink">Alasan:</strong> {rapikanTeks(u.alasan)}</p>}
+                    {u.risiko && <p className="mt-1 text-xs text-danger"><strong>Risiko:</strong> {rapikanTeks(u.risiko)}</p>}
                     {u.payload && (
                       <p className="mt-1 break-all font-mono text-[0.65rem] text-ink-faint">{JSON.stringify(u.payload)}</p>
                     )}
@@ -468,9 +469,9 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
               <div className="mt-1 text-[0.6rem] text-ink-faint">
                 {typeof l.tanggal === 'string' ? l.tanggal : '(tanggal lama)'} • {l.provider || '-'} • {l.model || '-'}
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{l.ringkasan}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{rapikanTeks(l.ringkasan)}</p>
               {l.temuan && (
-                <div className="mt-2 whitespace-pre-wrap text-sm text-ink-muted">{l.temuan}</div>
+                <div className="mt-2 whitespace-pre-wrap text-sm text-ink-muted">{rapikanTeks(l.temuan)}</div>
               )}
             </div>
           ))}

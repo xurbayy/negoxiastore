@@ -64,7 +64,11 @@ export async function POST(request) {
     ...(body?.mode !== undefined ? { mode: String(body.mode).slice(0, 20) } : {}),
     ...(body?.peran !== undefined ? { peran: String(body.peran).slice(0, 30) } : {}),
     ...(body?.maxTokens !== undefined ? { maxTokens: Number(body.maxTokens) || null } : {}),
-    ...(body?.kecerdasan !== undefined ? { kecerdasan: Number(body.kecerdasan) || null } : {}),
+    // THINKING LEVEL (2026-10-04): 'kecerdasan 1-10' diganti level teks.
+    ...(body?.thinking !== undefined ? { thinking: body.thinking ? String(body.thinking).slice(0, 20) : null } : {}),
+    // Kompatibilitas: prefs lama yang masih menyimpan angka 'kecerdasan'
+    // diabaikan (tidak lagi dipakai).
+    ...(body?.kecerdasan !== undefined ? {} : {}),
     ...(body?.agentProvider !== undefined ? { agentProvider: String(body.agentProvider).slice(0, 80) } : {}),
     ...(body?.agentModel !== undefined ? { agentModel: String(body.agentModel).slice(0, 160) } : {}),
     // Chat diskusi aktif (lintas device).

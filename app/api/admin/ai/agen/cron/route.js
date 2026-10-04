@@ -51,7 +51,7 @@ export async function GET(request) {
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab bahasa Indonesia santai.' },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     { role: 'user', content: PROMPT_AGEN + '\n\nBuat laporan harian + usulan aksi.' },
-  ], { maxTokens: 2000, kecerdasan: 6 });
+  ], { maxTokens: 2000, thinking: 'auto' });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error }, 502);
 

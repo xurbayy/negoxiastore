@@ -60,7 +60,7 @@ export async function GET(request) {
             '',
             'Aturan: maksimal 70 karakter per pertanyaan. Langsung ke inti. Jangan umum/basi.',
           ].join('\n') },
-        ], { provider, model, maxTokens: 700, kecerdasan: 7 });
+        ], { provider, model, maxTokens: 700, thinking: 'low' });
         if (hasil.ok && hasil.teks) {
           const baris = String(hasil.teks)
             .split('\n')

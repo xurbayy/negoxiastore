@@ -610,6 +610,51 @@ function terjemahPesan(teks) {
   return (t.length > 200 ? t.slice(0, 200) + '...' : t);
 }
 
+// ==========================================
+// THINKING LEVELS (permintaan pemilik 2026-10-04)
+// ==========================================
+// Menggantikan takaran "kecerdasan 1-10". Level Thinking dipetakan ke parameter
+// yang DIKENAL provider:
+//   - reasoning_effort      : 'minimal'|'low'|'medium'|'high' (OpenAI/OpenRouter/Groq)
+//   - thinking.budget_tokens: anggaran token berpikir (Anthropic/Claude)
+// Kalau provider tidak mendukung, tetap dipetakan ke temperature + instruksi
+// kedalaman supaya perilaku tidak "hilang" (gagal aman).
+//
+// 'auto' = biarkan provider memutuskan (tidak mengirim parameter reasoning).
+export const THINKING_LEVELS = ['auto', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'thinking'];
+
+// (THINKING_LABEL dipindah ke formatClient.js supaya komponen klien bisa
+// memakainya tanpa mengimpor file server ini.)
+
+// Pemetaan level -> parameter provider + temperature cadangan.
+export function petaThinking(level) {
+  const l = String(level || 'auto').toLowerCase();
+  switch (l) {
+    case 'minimal':  return { effort: 'minimal', budget: 512,   suhu: 0.15, instruksi: 'Jawab SANGAT singkat dan langsung ke inti. Hindari penjelasan panjang.' };
+    case 'low':      return { effort: 'low',     budget: 1024,  suhu: 0.25, instruksi: 'Jawab singkat dan padat. Fokus ke inti saja.' };
+    case 'medium':   return { effort: 'medium',  budget: 4096,  suhu: 0.40, instruksi: 'Jawab dengan cukup detail namun tetap efisien.' };
+    case 'high':     return { effort: 'high',    budget: 16384, suhu: 0.60, instruksi: 'Berpikir mendalam sebelum menjawab. Pertimbangkan beberapa sudut pandang.' };
+    case 'xhigh':    return { effort: 'high',    budget: 32768, suhu: 0.70, instruksi: 'Berpikir SANGAT mendalam. Periksa ulang logika & angka sebelum menyimpulkan.' };
+    case 'max':      return { effort: 'high',    budget: 65536, suhu: 0.80, instruksi: 'Gunakan kapasitas berpikir maksimal. Telusuri semua kemungkinan & verifikasi tiap klaim.' };
+    case 'thinking': return { effort: 'medium',  budget: 8192,  suhu: 0.50, instruksi: 'Tampilkan proses berpikirmu secara runtut sebelum kesimpulan.' };
+    default:         return { effort: null,      budget: null,  suhu: 0.60, instruksi: '' }; // auto
+  }
+}
+
+// Bangun field tambahan untuk body request sesuai level + kemampuan provider.
+// Tidak pernah melempar - provider yang menolak parameter asing tetap aman
+// karena kita hanya menambah bila level bukan 'auto'.
+export function fieldThinking(level, baseUrl = '') {
+  const p = petaThinking(level);
+  const tambahan = {};
+  if (p.effort) tambahan.reasoning_effort = p.effort;
+  // Anthropic/Claude: pakai thinking budget bila endpoint-nya anthropic.
+  if (p.budget && /anthropic|claude/i.test(String(baseUrl))) {
+    tambahan.thinking = { type: 'enabled', budget_tokens: p.budget };
+  }
+  return tambahan;
+}
+
 export async function tanyaGroq(pesan, opsi = {}) {
   const namaProvider = resolveProvider(opsi.provider);
   const info = await providerInfo(namaProvider);
@@ -628,11 +673,15 @@ export async function tanyaGroq(pesan, opsi = {}) {
   const batasToken = Number.isFinite(Number(opsi.maxTokens)) && Number(opsi.maxTokens) > 0
     ? Math.min(32000, Math.max(200, Number(opsi.maxTokens)))
     : maksToken();
-  const level = Number.isFinite(Number(opsi.kecerdasan)) && Number(opsi.kecerdasan) > 0
-    ? Math.min(10, Math.max(1, Number(opsi.kecerdasan)))
-    : 6;
-  // Level 1 -> 0.1 (sangat presisi), level 10 -> 1.0 (sangat kreatif).
-  const suhu = Math.round((0.1 + (level - 1) * 0.1) * 100) / 100;
+  // THINKING LEVEL (2026-10-04): menggantikan 'kecerdasan 1-10'.
+  // 'auto' = serahkan ke provider (tidak mengirim parameter reasoning).
+  const thinking = String(opsi.thinking || 'auto').toLowerCase();
+  const peta = petaThinking(thinking);
+  const suhu = peta.suhu;
+  // Instruksi kedalaman disisipkan sebagai pesan sistem tambahan (hanya bila ada).
+  const pesanFinal = peta.instruksi
+    ? [{ role: 'system', content: peta.instruksi }, ...pesan]
+    : pesan;
 
   if (!kunci.length) {
     return { ok: false, error: `Kunci ${label} belum diisi. Cek environment variable ${info.envKey} atau isi API key di panel provider.`, provider: namaProvider, providerLabel: label, envKey: info.envKey };
@@ -653,9 +702,12 @@ export async function tanyaGroq(pesan, opsi = {}) {
         },
         body: JSON.stringify({
           model,
-          messages: pesan,
+          messages: pesanFinal,
           max_tokens: batasToken,
           temperature: suhu,
+          // Parameter Thinking (reasoning_effort / thinking budget) - hanya
+          // ditambahkan bila level bukan 'auto'.
+          ...fieldThinking(thinking, url),
         }),
         signal: AbortSignal.timeout(60000),
       });

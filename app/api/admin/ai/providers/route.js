@@ -127,10 +127,12 @@ export async function POST(request) {
       return json({ ok: false, error: 'Label, model, dan provider wajib diisi.' }, 400);
     }
     const mt = angkaOpsional(body?.max_tokens, 200, 32000);
-    const kc = angkaOpsional(body?.kecerdasan, 1, 10);
+    // THINKING LEVEL (2026-10-04): menggantikan 'kecerdasan 1-10'. Disimpan di
+    // kolom `kecerdasan` lama sebagai TEKS level (aman di PG).
+    const th = body?.thinking ? String(body.thinking).slice(0, 20) : null;
     const res = await db.execute({
       sql: 'INSERT INTO ai_models (label, model, provider, max_tokens, kecerdasan, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
-      args: [label, model, provider, mt, kc, Date.now()],
+      args: [label, model, provider, mt, th, Date.now()],
     });
     return json({ ok: true, id: Number(res.rows?.[0]?.id ?? res.lastInsertRowid ?? 0) });
   }
@@ -178,7 +180,7 @@ export async function PATCH(request) {
     }
     await db.execute({
       sql: 'UPDATE ai_models SET label = ?, model = ?, provider = ?, max_tokens = ?, kecerdasan = ?, updated_at = ? WHERE id = ?',
-      args: [label, model, provider, angkaOpsional(body?.max_tokens, 200, 32000), angkaOpsional(body?.kecerdasan, 1, 10), Date.now(), id],
+      args: [label, model, provider, angkaOpsional(body?.max_tokens, 200, 32000), body?.thinking ? String(body.thinking).slice(0, 20) : null, Date.now(), id],
     });
     return json({ ok: true });
   }
