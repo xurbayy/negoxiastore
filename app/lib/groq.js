@@ -21,6 +21,7 @@
 // File ini hanya diimpor route server, jadi aman.
 import { getDb, schemaReady } from './db';
 import { dekripsiKunci } from './aiCrypto';
+import { catatUsage } from './aiUsage';
 
 const PROVIDERS = {
   groq: {
@@ -692,6 +693,14 @@ export async function tanyaGroq(pesan, opsi = {}) {
 
   let terakhir = null;
 
+  // PENCATAT USAGE (permintaan pemilik 2026-10-04): satu helper supaya SEMUA
+  // jalur return tercatat - sukses (dengan token dari provider) maupun gagal
+  // (untuk hitungan request). Fire-and-forget: tidak pernah memblokir jawaban.
+  const mulaiMs = Date.now();
+  const catat = (ok, usage) => {
+    catatUsage({ provider: namaProvider, model, usage, ok, durasiMs: Date.now() - mulaiMs }).catch(() => {});
+  };
+
   for (let i = 0; i < kunci.length; i++) {
     try {
       const res = await fetch(url, {
@@ -716,7 +725,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
         const ct = res.headers.get('content-type') || '';
         if (ct.includes('text/event-stream') || ct.includes('stream')) {
           const sse = await bacaSSE(res);
-          if (sse?.teks) return { ok: true, teks: bersihkanJawaban(sse.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse.usage };
+          if (sse?.teks) { catat(true, sse.usage); return { ok: true, teks: bersihkanJawaban(sse.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse.usage }; }
           terakhir = { kode: res.status, error: 'AI mengembalikan stream kosong.' };
           continue;
         }
@@ -733,26 +742,36 @@ export async function tanyaGroq(pesan, opsi = {}) {
         } : null;
 
         const teks = data?.choices?.[0]?.message?.content;
-        if (teks) return { ok: true, teks: bersihkanJawaban(teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage };
+        if (teks) { catat(true, data?.usage); return { ok: true, teks: bersihkanJawaban(teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage }; }
 
         if (!data?.choices) {
           const sse2 = await bacaSSE(res);
-          if (sse2?.teks) return { ok: true, teks: bersihkanJawaban(sse2.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse2.usage };
+          if (sse2?.teks) { catat(true, sse2.usage); return { ok: true, teks: bersihkanJawaban(sse2.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse2.usage }; }
         }
 
         terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
         // RETRY: model free kadang kosong saat pertama. Coba ulang sekali.
+        // FIX 2026-10-04: dulu blok ini mereferensikan `h` dan `payload` yang
+        // TIDAK ADA (selalu ReferenceError -> ditelan catch -> retry tidak
+        // pernah benar-benar jalan). Sekarang header & body dibangun eksplisit.
         try {
           await new Promise((r) => setTimeout(r, 800));
           const res2 = await fetch(url, {
             method: 'POST',
-            headers: { ...h, 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kunci[i]}` },
+            body: JSON.stringify({
+              model,
+              messages: pesanFinal,
+              max_tokens: batasToken,
+              temperature: suhu,
+              ...fieldThinking(thinking, url),
+            }),
+            signal: AbortSignal.timeout(60000),
           });
           if (res2.ok) {
             const data2 = await res2.json().catch(() => null);
             const teks2 = data2?.choices?.[0]?.message?.content;
-            if (teks2) return { ok: true, teks: bersihkanJawaban(teks2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model };
+            if (teks2) { catat(true, data2?.usage); return { ok: true, teks: bersihkanJawaban(teks2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: data2?.usage || null }; }
           }
         } catch { /* retry gagal - lanjut */ }
         continue;
@@ -778,20 +797,37 @@ export async function tanyaGroq(pesan, opsi = {}) {
       // RETRY: error 5xx (server provider bermasalah) sering SEMENTARA. Kalau
       // hanya ada 1 kunci, tanpa retry pemilik langsung gagal. Coba ulang
       // sekali (jeda 800ms) untuk error server sebelum menyerah.
+      // FIX 2026-10-04: dulu `messages: pesan` (variabel tidak ada di scope ->
+      // ReferenceError -> retry 5xx selalu gagal senyap). Ganti pesanFinal +
+      // fieldThinking yang sudah dibangun di atas.
       if (kode >= 500) {
         try {
           await new Promise((r) => setTimeout(r, 800));
           const res2 = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${kunci[i]}` },
-            body: JSON.stringify({ model, messages: pesan, max_tokens: batasToken, temperature: suhu }),
+            body: JSON.stringify({
+              model,
+              messages: pesanFinal,
+              max_tokens: batasToken,
+              temperature: suhu,
+              ...fieldThinking(thinking, url),
+            }),
             signal: AbortSignal.timeout(60000),
           });
           if (res2.ok) {
             let d2;
             try { d2 = await res2.json(); } catch (_) { d2 = null; }
             const t2 = d2?.choices?.[0]?.message?.content;
-            if (t2) return { ok: true, teks: bersihkanJawaban(t2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: d2?.usage ? { promptTokens: d2.usage.prompt_tokens ?? null, completionTokens: d2.usage.completion_tokens ?? null, totalTokens: d2.usage.total_tokens ?? null } : null };
+            if (t2) {
+              const u2 = d2?.usage ? {
+                promptTokens: d2.usage.prompt_tokens ?? null,
+                completionTokens: d2.usage.completion_tokens ?? null,
+                totalTokens: d2.usage.total_tokens ?? null,
+              } : null;
+              catat(true, d2?.usage);
+              return { ok: true, teks: bersihkanJawaban(t2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: u2 };
+            }
           }
         } catch { /* retry gagal - lanjut ke kunci berikutnya / menyerah */ }
       }
@@ -807,6 +843,9 @@ export async function tanyaGroq(pesan, opsi = {}) {
   }
 
   const semuaDicoba = kunci.length > 1 ? ` (${kunci.length} kunci dicoba)` : '';
+  // Catat permintaan GAGAL juga (hitungan request tetap akurat). Token 0
+  // karena provider tidak mengirim usage saat error.
+  catat(false, null);
   return {
     ok: false,
     kode: terakhir?.kode || 0,

@@ -313,6 +313,49 @@ export async function ensureSchema() {
         updated_at  INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider);
+
+    -- ==========================================
+    -- PEMAKAIAN AI (permintaan pemilik 2026-10-04)
+    -- ==========================================
+    -- "gw mau juga ada usage seperti [total requests, input/cached/output
+    -- tokens, est cost, recent requests] ... real ga halu berdasarkan data".
+    --
+    -- Data DIAMBIL DARI RESPONSE PROVIDER (field usage yang dikirim API),
+    -- bukan tebakan. Kalau provider tidak menyertakan usage, baris tetap
+    -- dicatat (untuk hitungan request) dengan token 0.
+    --
+    --   ai_usage        : log MENTAH per permintaan (untuk grafik per jam
+    --                     24 jam terakhir + daftar "Recent Requests").
+    --                     Di-prune setelah 7 hari (rawat jalan).
+    --   ai_usage_harian : ROLLUP per hari+provider+model - akumulasi TOTAL
+    --                     seumur hidup (untuk Total Requests/Tokens/Cost).
+    --                     Kecil dan tidak pernah dihapus, jadi angka total
+    --                     tetap utuh walau log mentah dibersihkan.
+    CREATE TABLE IF NOT EXISTS ai_usage (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts                INTEGER NOT NULL,
+        provider          TEXT,
+        model             TEXT,
+        prompt_tokens     INTEGER DEFAULT 0,
+        cached_tokens     INTEGER DEFAULT 0,
+        completion_tokens INTEGER DEFAULT 0,
+        total_tokens      INTEGER DEFAULT 0,
+        ok                INTEGER DEFAULT 1,
+        durasi_ms         INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_usage_ts ON ai_usage(ts);
+
+    CREATE TABLE IF NOT EXISTS ai_usage_harian (
+        day               TEXT NOT NULL,
+        provider          TEXT NOT NULL DEFAULT '',
+        model             TEXT NOT NULL DEFAULT '',
+        requests          INTEGER DEFAULT 0,
+        ok_requests       INTEGER DEFAULT 0,
+        input_tokens      INTEGER DEFAULT 0,
+        cached_tokens     INTEGER DEFAULT 0,
+        output_tokens     INTEGER DEFAULT 0,
+        PRIMARY KEY (day, provider, model)
+    );
   `);
 
   // Migrasi kolom pengaturan per-model (permintaan pemilik 2026-10-02):

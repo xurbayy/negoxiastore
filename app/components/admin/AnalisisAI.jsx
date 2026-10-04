@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import PilihPeran from './PilihPeran';
 import AgenAI from './AgenAI';
+import AiUsage from './AiUsage';
 import { pintasanPeranKlien, daftarPeranKlien } from '../../lib/aiPeranKlien';
 import { THINKING_LABEL } from '../../lib/formatClient';
 
@@ -221,8 +222,10 @@ export default function AnalisisAI() {
           if (p.model) setModelInput(p.model);
           if (p.mode) setMode(p.mode);
           if (p.peran) setPeran(p.peran);
-          if (p.maxTokens || p.thinking) {
-            setModelSetting((s) => ({ ...s, ...(p.maxTokens ? { maxTokens: p.maxTokens } : {}), ...(p.thinking ? { thinking: p.thinking } : {}) }));
+          // MAX TOKEN tidak lagi dipakai di web (dihapus 2026-10-04) - prefs lama
+          // yang masih menyimpan maxTokens diabaikan.
+          if (p.thinking) {
+            setModelSetting((s) => ({ ...s, thinking: p.thinking }));
           }
         }
       } catch { /* offline / gagal - pakai localStorage */ }
@@ -306,20 +309,21 @@ export default function AnalisisAI() {
   // Hasil uji model: { [modelId]: {ok, alasan} }. Kosong = belum diuji.
   const [ujiHasil, setUjiHasil] = useState({});
   const [ujiJalan, setUjiJalan] = useState(false);
-  // PENGATURAN GLOBAL model: max token + Thinking level. Berlaku untuk
-  // SEMUA model (permintaan pemilik 2026-10-02: "setting sekali saja").
+  // PENGATURAN GLOBAL model: Thinking level. Berlaku untuk SEMUA model.
   // Disimpan di localStorage supaya bertahan.
+  // MAX TOKEN DIHAPUS dari web (permintaan pemilik 2026-10-04): diatur server
+  // lewat env AI_MAX_TOKENS, tidak ada kontrol manual di UI.
   const [modelSetting, setModelSetting] = useState(() => {
     try {
       const s = JSON.parse(window.localStorage.getItem('nexo_ai_setting') || '{}');
-      return { maxTokens: s.maxTokens ?? null, thinking: s.thinking ?? 'auto', vision: null };
-    } catch { return { maxTokens: null, thinking: 'auto', vision: null }; }
+      return { thinking: s.thinking ?? 'auto', vision: null };
+    } catch { return { thinking: 'auto', vision: null }; }
   });
   useEffect(() => {
     try {
-      window.localStorage.setItem('nexo_ai_setting', JSON.stringify({ maxTokens: modelSetting.maxTokens, thinking: modelSetting.thinking }));
+      window.localStorage.setItem('nexo_ai_setting', JSON.stringify({ thinking: modelSetting.thinking }));
     } catch { /* abaikan */ }
-  }, [modelSetting.maxTokens, modelSetting.thinking]);
+  }, [modelSetting.thinking]);
   // Info pemakaian / kuota provider (permintaan pemilik: "tau ini udah limit apa engga").
   const [usage, setUsage] = useState({ status: 'idle' });
   // Mode EDIT: id yang sedang diedit (null = mode tambah). Permintaan pemilik
@@ -624,7 +628,7 @@ export default function AnalisisAI() {
       const res = await fetch('/api/admin/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...muatan, mode: modeKirim, peran, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, max_tokens: modelSetting.maxTokens || undefined, thinking: modelSetting.thinking || 'auto', gambar: gambarKirim.length ? gambarKirim : undefined }),
+        body: JSON.stringify({ ...muatan, mode: modeKirim, peran, riwayat: riwayatKirim, provider: provider || undefined, model: modelInput.trim() || undefined, thinking: modelSetting.thinking || 'auto', gambar: gambarKirim.length ? gambarKirim : undefined }),
         signal: ac.signal,
       });
       clearTimeout(timer);
@@ -677,7 +681,7 @@ export default function AnalisisAI() {
       }
     } catch (e) {
       const pesanError = e?.name === 'AbortError'
-        ? 'Timeout 58 detik - AI terlalu lama merespons. Coba lagi, kurangi maks token, atau ganti provider.'
+        ? 'Timeout 58 detik - AI terlalu lama merespons. Coba lagi atau ganti provider.'
         : 'Gagal menghubungi server: ' + (e?.message || e);
       if (modeKirim === 'diskusi') {
         setPesan((p) => [...p, { peran: 'ai', error: true, isi: pesanError, waktu: Date.now() }]);
@@ -1660,12 +1664,11 @@ export default function AnalisisAI() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-ink">{m.label}</p>
                     <p className="truncate text-[0.7rem] text-ink-muted">{m.provider} • {m.model}</p>
-                    {(m.maxTokens || m.kecerdasan) && (
+                    {/* Kolom DB 'kecerdasan' menyimpan LEVEL THINKING (teks).
+                        Maks token tidak ditampilkan lagi (dihapus dari web 2026-10-04). */}
+                    {m.kecerdasan && (
                       <p className="text-[0.65rem] text-ink-faint">
-                        {m.maxTokens ? `maks ${m.maxTokens} token` : ''}
-                        {m.maxTokens && m.kecerdasan ? ' • ' : ''}
-                        {/* Kolom DB 'kecerdasan' kini menyimpan LEVEL THINKING (teks). */}
-                        {m.kecerdasan ? `Thinking: ${THINKING_LABEL[m.kecerdasan] || m.kecerdasan}` : ''}
+                        Thinking: {THINKING_LABEL[m.kecerdasan] || m.kecerdasan}
                       </p>
                     )}
                   </div>
@@ -1723,7 +1726,7 @@ export default function AnalisisAI() {
               </select>
             </div>
             <p className="mt-1 text-[0.65rem] text-ink-faint">
-              Maks token &amp; Thinking diatur sekali di bar kontrol atas (berlaku semua model). Di sini cukup label + nama model + provider.
+              Thinking diatur di bar kontrol atas (berlaku semua model). Di sini cukup label + nama model + provider. Maks token diatur server (AI_MAX_TOKENS).
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
@@ -2228,11 +2231,11 @@ export default function AnalisisAI() {
                         Pakai
                       </button>
                     </div>
-                    {/* Pengaturan model terpilih: max token + Thinking. */}
+                    {/* Pengaturan model terpilih: Thinking. */}
                     {modelProv.dipilih === (m.providerId || '') + '::' + m.id && (
                       <div className="mt-1 rounded-lg border border-border-soft bg-card-cream p-2">
                         <p className="text-[0.65rem] text-ink-muted">
-                          Maks token &amp; Thinking pakai pengaturan global di atas (berlaku semua model).
+                          Thinking pakai pengaturan global di atas (berlaku semua model).
                         </p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <button
@@ -2357,19 +2360,19 @@ export default function AnalisisAI() {
         )}
 
         {/* Baris 3: ringkasan + pengaturan (dilipat) + kelola. Ringkas.
-            MODE AGEN: pengaturan token/Thinking DISEMBUNYIKAN - agen sudah
-            dioptimalkan server (3000 token, Thinking Auto) supaya efisien
-            karena jalan 24/7 dan TIDAK bisa diubah (permintaan pemilik
-            2026-10-04: "agent default thinking dan ga bisa diubah lagi"). */}
+            MODE AGEN: pengaturan Thinking DISEMBUNYIKAN - agen sudah
+            dioptimalkan server (Thinking Auto) supaya efisien karena jalan
+            24/7 dan TIDAK bisa diubah (permintaan pemilik 2026-10-04).
+            MAX TOKEN TIDAK ditampilkan lagi di web (dihapus permintaan
+            pemilik 2026-10-04) - diatur server lewat env AI_MAX_TOKENS. */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {mode === 'agen' ? (
             <span className="text-[0.7rem] text-ink-muted">
-              Token &amp; Thinking dioptimalkan otomatis untuk agen (Thinking: Auto).
+              Thinking dioptimalkan otomatis untuk agen (Auto).
             </span>
           ) : (
             <span className="rounded-full bg-bg-soft px-2.5 py-1 text-[0.7rem] font-semibold text-ink-muted">
-              {modelSetting.maxTokens ? `${modelSetting.maxTokens} token` : 'token default'}
-              {` · Thinking: ${THINKING_LABEL[modelSetting.thinking || 'auto'] || 'Auto'}`}
+              {`Thinking: ${THINKING_LABEL[modelSetting.thinking || 'auto'] || 'Auto'}`}
             </span>
           )}
           <div className="ml-auto flex items-center gap-1.5">
@@ -2411,21 +2414,15 @@ export default function AnalisisAI() {
           />
         )}
 
-        {/* PANEL PENGATURAN (max token + THINKING) - dilipat, hemat ruang.
+        {/* PANEL PENGATURAN (THINKING) - dilipat, hemat ruang.
+            KONTROL MAX TOKEN DIHAPUS dari web (permintaan pemilik 2026-10-04):
+            pemilik tidak ingin mengatur token di web karena tidak tahu
+            berapa biaya pengeluarannya. Token kini diatur SERVER lewat env
+            AI_MAX_TOKENS (default 2000) - tidak ada input manual di UI.
             Tidak tampil di mode agen (dioptimalkan server: selalu Thinking Auto). */}
         {bukaSetting && mode !== 'agen' && (
           <div className="mt-2 rounded-xl border border-border-soft bg-bg-soft/30 p-3">
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
-                <span className="shrink-0">Maks token</span>
-                <input
-                  type="number" min="200" max="32000"
-                  value={modelSetting.maxTokens ?? ''}
-                  onChange={(e) => setModelSetting((s) => ({ ...s, maxTokens: e.target.value === '' ? null : Number(e.target.value) }))}
-                  placeholder="2000"
-                  className="w-24 rounded-lg border border-border-soft bg-card-cream px-2 py-1 text-[0.75rem] text-ink outline-none focus:border-accent"
-                />
-              </label>
               <label className="flex items-center gap-1.5 text-[0.75rem] text-ink-muted">
                 <span className="shrink-0">Thinking</span>
                 <select
@@ -2444,7 +2441,7 @@ export default function AnalisisAI() {
                 </select>
               </label>
             </div>
-            <p className="mt-1 text-[0.7rem] text-ink-faint">Berlaku semua model. Auto = biarkan provider memutuskan; level lain mengirim reasoning_effort / thinking budget.</p>
+            <p className="mt-1 text-[0.7rem] text-ink-faint">Auto = biarkan provider memutuskan; level lain mengirim reasoning_effort / thinking budget. Maks token diatur server (AI_MAX_TOKENS).</p>
           </div>
         )}
 
@@ -3102,6 +3099,19 @@ export default function AnalisisAI() {
         </form>
       </div>
       </div>
+
+      {/* ==========================================
+          KARTU PEMAKAIAN AI (permintaan pemilik 2026-10-04)
+          ==========================================
+          "ada usage seperti [Total Requests, tokens, Est. Cost, Recent
+          Requests] ... ada graphicnya di bawah chat AI ... real ga halu
+          berdasarkan data ... bisa di hide ... buat card baru dibawah biar
+          ga numpuk di atas".
+
+          Dipasang DI LUAR blok mode (selalu tampil, tidak tersembunyi saat
+          ganti mode analisis/diskusi/agen) supaya riwayat pemakaian tetap
+          terlihat. Kartu ini sendiri bisa disembunyikan lewat tombolnya. */}
+      <AiUsage />
 
       {/* ==========================================
           ARSIP JAWABAN TERSIMPAN

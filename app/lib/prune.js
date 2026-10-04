@@ -271,6 +271,11 @@ async function pruneNow(db, now) {
       SELECT id FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY dibuat_at DESC) AS rn FROM ai_reminders) t WHERE rn > 50 LIMIT 5000
     )`);
 
+  // Log mentah pemakaian AI >7 hari (permintaan pemilik 2026-10-04). Rollup
+  // ai_usage_harian TIDAK disentuh (akumulasi total seumur hidup). Baris
+  // >7 hari hanya dipakai grafik 24 jam yang sudah lewat, jadi aman dibuang.
+  await tryExec(db, 'DELETE FROM ai_usage WHERE ts < ?', [now - 7 * DAY]);
+
   // ==========================================
   // TABEL BOT (public.*) - BATAS 50 PER PEMAIN (permintaan pemilik 2026-10-04)
   // ==========================================
