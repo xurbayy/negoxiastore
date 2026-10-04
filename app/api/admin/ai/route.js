@@ -11,6 +11,21 @@ import { susunKonteksKode } from '../../../lib/kodeBase';
 export const dynamic = 'force-dynamic';
 
 // ==========================================
+// CACHE DATA BOT 60 DETIK (optimasi egress 2026-10-04)
+// ==========================================
+// "ai langsung baca dari database jangan gitu ... boncos". AI route query
+// 15+ tabel bot (public.*) langsung di SETIAP request untuk merakit botData
+// (ekonomi, retensi, top game/pemain, premium, redeem, bank, title, item,
+// shop). Tiap query = round-trip Supabase (~174ms) + EGRESS. Padahal data
+// ini JARANG berubah per detik.
+//
+// Solusi: cache 60 detik. Chat/analisis/agen yang beruntun memakai data yang
+// SAMA -> query DB hanya 1x per menit, bukan tiap request. Hemat egress +
+// percepat AI drastis. Data >60 dtk dianggap basi -> query ulang.
+const BOT_TTL_MS = 60_000;
+let _botCacheStore = { data: null, at: 0 };
+
+// ==========================================
 // PENGINGAT: BACA & SIMPAN DARI JAWABAN AI
 // ==========================================
 // AI menulis baris [[INGATKAN]] tanggal=YYYY-MM-DD | teks=... di akhir
@@ -278,7 +293,12 @@ export async function POST(request) {
     // Sejak SATU database (Supabase), AI bisa membaca SELURUH tabel bot
     // langsung: pemain terkaya, top game, ekonomi, premium, misi, guild, dll.
     // Ini melengkapi snapshot push supaya AI punya gambaran penuh.
+    // CACHE 60 DTK: query 15+ tabel hanya 1x per menit, bukan tiap request
+    // (hemat egress + percepat AI - lihat BOT_TTL_MS di atas).
     let botData = {};
+    if (_botCacheStore.data && Date.now() - _botCacheStore.at < BOT_TTL_MS) {
+      botData = _botCacheStore.data;
+    } else {
     try {
       const [topPlayers, topGames, economy, premiumRows, guildRows, missionRows, txRows, hourlyRows] = await Promise.all([
         db.execute('SELECT username, points, level, xp, total_won, total_bet FROM public.users ORDER BY points DESC LIMIT 20'),
@@ -356,7 +376,10 @@ export async function POST(request) {
         botOnline: heartbeat ? (Date.now() - heartbeat < 3 * 60000) : false,
         botLastSeen: heartbeat,
       };
+      // Simpan ke cache 60 dtk - request berikutnya tidak query ulang 15+ tabel.
+      _botCacheStore = { data: botData, at: Date.now() };
     } catch (e) { /* sebagian tabel gagal -> AI tetap jalan dengan data yang ada */ }
+    } // tutup blok else (cache miss)
 
     panel = {
       orders: orders.rows.map((r) => ({
