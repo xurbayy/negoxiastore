@@ -26,11 +26,20 @@ function getPool() {
   // nama tabel yang sama (mis. `users`) tidak bentrok. search_path mengarahkan
   // query tanpa prefix ke schema web.
   const schemaOpt = process.env.PG_SCHEMA ? `-c search_path=${process.env.PG_SCHEMA},public` : '-c search_path=web,public';
+  // max: 2 (optimasi koneksi 2026-10-04). Supabase Free pooler SESSION mode
+  // batas 15 koneksi SHARED. Bot memegang 2 permanen (pgSync query + pgNotify
+  // LISTEN) yang KRITIS - kalau kehabisan, grant/redeem instan mati. Web jalan
+  // di Vercel serverless (banyak instance, auto-scale). Dengan max 2 per
+  // instance: 6 instance Vercel (2x6=12) + bot (2) = 14 < 15 -> tidak pernah
+  // EMAXCONNSESSION. 2 cukup untuk traffic web (admin + publik, query ~174ms).
+  // Kenapa bukan 5: dengan 5, 3 instance Vercel (15) + bot sudah menembus 15
+  // (pernah terjadi - pooler penuh, web & bot gagal connect).
+  const POOL_MAX = 2;
   if (url) {
     _pool = new Pool({
       connectionString: url,
       ssl: /supabase|neon|sslmode=require/i.test(url) ? { rejectUnauthorized: false } : undefined,
-      max: 5,
+      max: POOL_MAX,
       options: schemaOpt,
     });
   } else {
@@ -40,7 +49,7 @@ function getPool() {
       user: process.env.PGUSER || 'postgres',
       password: process.env.PGPASSWORD || undefined,
       database: process.env.PGDATABASE || 'nexo',
-      max: 5,
+      max: POOL_MAX,
       options: schemaOpt,
     });
   }
