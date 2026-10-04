@@ -649,7 +649,9 @@ export default function AdminShell({ username, avatar = null }) {
           // Shop Manager MANDIRI (2026-10-03): mengambil datanya sendiri dari
           // /api/admin/shop, jadi TIDAK perlu menunggu `data` panel. Dirender
           // LANGSUNG tanpa skeleton "Memuat panel" (permintaan pemilik).
-          <ShopManager />
+          // `send` dioper untuk tombol Restock Semua (restock_all harus lewat
+          // antrean bot - stok default hanya ada di katalog seed bot).
+          <ShopManager send={send} />
         ) : !data ? (
           // Kerangka menyesuaikan TAB yang sedang dimuat.
           //

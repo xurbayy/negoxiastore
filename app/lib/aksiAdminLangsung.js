@@ -34,7 +34,15 @@ export const AKSI_LANGSUNG = new Set([
   'set_level', 'set_streak', 'set_winstreak', 'set_rpg_level',
   'reset_daily', 'reset_missions', 'clear_lock',
   'set_maintenance', 'giveaway', 'wipe',
-  'restock_all', 'redeem_promo_web',
+  'redeem_promo_web',
+  // CATATAN (fix 2026-10-04): 'restock_all' DIHAPUS dari jalur langsung.
+  // Implementasi lama memakai `UPDATE ... SET stock = COALESCE(restock_rate, stock)`
+  // - SALAH SEMANTIK: restock_rate = interval jam (24), bukan stok default.
+  // Akibatnya semua item jadi stok 24 (padahal default beda-beda: 20/10/5/2).
+  // Stok default asli hanya ada di katalog seed BOT (utils/database.js shopItems),
+  // jadi restock_all WAJIB lewat antrean bot (webBridge case 'restock_all' ->
+  // db.adminRestockAll()). Kalau bot mati, aksi tetap pending sampai bot hidup -
+  // itu perilaku yang benar untuk aksi yang butuh katalog bot.
 ]);
 
 // Jalankan satu aksi. Melempar HttpError bila gagal.
@@ -102,6 +110,12 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
               ON CONFLICT (user_id, item_key) DO UPDATE SET quantity = public.inventory.quantity + EXCLUDED.quantity`,
         args: [userId, itemKey, qty],
       });
+      // Notifikasi ke user (paritas dengan jalur bot webBridge add_item).
+      // Tabel web_notifications ada di schema web (sama seperti /api/bot/notify).
+      await db.execute({
+        sql: `INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)`,
+        args: [userId, 'info', 'Item Diterima', `Admin telah menambahkan ${qty}x ${itemKey} ke inventory-mu melalui Web.`, Date.now()],
+      }).catch(() => {});
       return `+${qty}x ${itemKey} ke ${userId}`;
     }
     case 'remove_item': {
@@ -113,6 +127,10 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
         args: [qty, userId, itemKey],
       });
       if (!r.rowsAffected) throw new HttpError(404, `${userId} tidak punya ${itemKey}.`);
+      await db.execute({
+        sql: `INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)`,
+        args: [userId, 'info', 'Item Diambil', `Admin telah menghapus ${qty}x ${itemKey} dari inventory-mu melalui Web.`, Date.now()],
+      }).catch(() => {});
       return `-${qty}x ${itemKey} dari ${userId}`;
     }
 
@@ -387,15 +405,11 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
     }
 
     // ---------- RESTOCK SEMUA ----------
-    case 'restock_all': {
-      // Bot punya katalog seed (stok default). Web tidak memilikinya, jadi
-      // pakai restock_rate sebagai acuan: set stok ke nilai awalnya.
-      const r = await db.execute(
-        `UPDATE public.shop_items SET stock = COALESCE(restock_rate, stock) WHERE is_active = 1`
-      ).catch(() => null);
-      if (!r) throw new HttpError(500, 'Gagal restock semua (cek kolom restock_rate).');
-      return `Restock semua item (${r.rowsAffected || 0} baris)`;
-    }
+    // CATATAN (fix 2026-10-04): case ini TIDAK REACHABLE karena 'restock_all'
+    // sudah dikeluarkan dari AKSI_LANGSUNG (lihat komentar di atas). Stok
+    // default asli hanya ada di katalog seed bot -> aksi ini selalu lewat
+    // antrean bot (webBridge case 'restock_all' -> db.adminRestockAll()).
+    // Dibiarkan sebagai jejak historis; jangan masukkan kembali ke AKSI_LANGSUNG.
 
     // ---------- REDEEM PROMO (dari web) ----------
     case 'redeem_promo_web': {

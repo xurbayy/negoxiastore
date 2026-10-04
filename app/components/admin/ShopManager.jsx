@@ -33,13 +33,33 @@ function jamBerakhir(expiresAt) {
 // gagal: "shopItems is not defined"). Sekarang SEMUA baca/tulis LANGSUNG ke
 // database Supabase lewat /api/admin/shop, sama seperti /shop publik - jadi
 // begitu diubah, web langsung ikut berubah.
-export default function ShopManager() {
+export default function ShopManager({ send }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [, setTick] = useState(0);
+  const [busyRestockAll, setBusyRestockAll] = useState(false);
+
+  // Restock SEMUA lewat antrean bot (fix 2026-10-04): stok default asli hanya
+  // ada di katalog seed bot (utils/database.js shopItems). Jalur langsung web
+  // memakai restock_rate (interval jam) = SALAH. Kalau bot mati, aksi tetap
+  // pending dan dieksekusi saat bot hidup.
+  const restockSemua = useCallback(async () => {
+    if (typeof send !== 'function') return;
+    setBusyRestockAll(true);
+    setFeedback(null);
+    try {
+      const out = await send('restock_all', {});
+      setFeedback(out.ok
+        ? { ok: true, text: out.langsung ? 'Restock semua berhasil.' : `Restock semua masuk antrean nomor ${out.id}. Bot eksekusi dalam ±15 detik.` }
+        : { ok: false, text: out.error || 'Gagal mengirim perintah.' });
+    } finally {
+      setBusyRestockAll(false);
+      setConfirm(null);
+    }
+  }, [send]);
 
   const load = useCallback(async () => {
     try {
@@ -89,7 +109,25 @@ export default function ShopManager() {
 
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-xl text-ink">Shop Manager</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-xl text-ink">Shop Manager</h2>
+        {/* RESTOCK SEMUA (permintaan pemilik 2026-10-04): aksi 'restock_all'
+            sudah didukung bot sejak awal tapi TIDAK ADA tombolnya di UI -
+            sekarang ada. Lewat antrean bot karena stok default hanya ada
+            di katalog seed bot (restock_rate BUKAN stok default). */}
+        <button
+          type="button"
+          disabled={busy || busyRestockAll}
+          onClick={() => setConfirm({
+            title: 'Restock Semua Item?',
+            body: 'Stok SEMUA item aktif di-reset ke stok default katalog bot. Perintah dikirim ke antrean bot (eksekusi ±15 detik bila bot online). Lanjutkan?',
+            restockAll: true,
+          })}
+          className="rounded-lg border border-border-soft bg-card-cream px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-bg-soft active:translate-y-px disabled:opacity-40 cursor-pointer"
+        >
+          {busyRestockAll ? 'Mengirim...' : 'Restock Semua Item'}
+        </button>
+      </div>
 
       {feedback && (
         <p className={`rounded-xl border px-4 py-3 text-sm ${feedback.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{feedback.text}</p>
@@ -142,8 +180,8 @@ export default function ShopManager() {
           title={confirm.title}
           body={confirm.body}
           onCancel={() => setConfirm(null)}
-          onConfirm={() => act(confirm.payload)}
-          busy={busy}
+          onConfirm={() => (confirm.restockAll ? restockSemua() : act(confirm.payload))}
+          busy={busy || busyRestockAll}
         />
       )}
     </div>
@@ -288,6 +326,7 @@ function DiscountRow({ onSubmit, busy, hargaNormal }) {
 function pesanSukses(payload, d) {
   switch (payload.action) {
     case 'restock_item': return `Stok ${d.itemKey} → ${d.stock}.`;
+    case 'restock_all': return `Semua item di-restock ke stok default${d.jumlah != null ? ` (${d.jumlah} item)` : ''}.`;
     case 'set_price': return `Harga ${d.itemKey} → ${fmtRingkas(d.price)}.${d.diskonDihapus ? ' Diskon lama dihapus.' : ''}`;
     case 'set_discount': return `Diskon ${d.itemKey}: ${fmtRingkas(d.originalPrice)} → ${fmtRingkas(d.discountPrice)}, berakhir ${jamBerakhir(d.expiresAt)}.`;
     case 'remove_discount': return `Diskon ${d.itemKey} dihapus, harga kembali ${fmtRingkas(d.price)}.`;
