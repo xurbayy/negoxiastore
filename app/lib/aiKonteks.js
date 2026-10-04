@@ -315,6 +315,55 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
     ((snap.premiumMembers || []).length + ' orang'));
   L.push(`Judul admin dipegang: ${(m.adminTitleHolders || []).length}`);
 
+  // ---------- MODE GAME & BETA TEST (permintaan pemilik 2026-10-04) ----------
+  // Memisahkan game per MODE (solo / multiplayer / coop) + status BETA, supaya
+  // AI bisa menjawab "game solo apa saja", "beta apa saja", dan mengusulkan
+  // ide per mode - bukan menebak.
+  try {
+    const beta = Array.isArray(snap.betaGames) ? snap.betaGames : [];
+    if (beta.length) {
+      L.push('GAME BETA (masih uji coba): ' + beta.map((b) => `${b.name || b.key}${b.mode ? ` [${b.mode}]` : ''}`).join(', '));
+    }
+    // Kelompokkan kategori toko -> mode game. Sumber: missionCatalog punya
+    // field `game`; kategori toko mencerminkan game yang punya item.
+    const semuaGameMode = [...new Set((snap.missionCatalog || []).map((x) => x.game).filter(Boolean))];
+    if (semuaGameMode.length) {
+      L.push(`Game yang dipakai di misi harian (${semuaGameMode.length}): ${semuaGameMode.join(', ')}`);
+    }
+    // Game paling sering dimainkan (7 hari) - dari series kalau ada.
+    const g7 = (snap.topGames7Hari || snap.topGamesWeek || []);
+    if (Array.isArray(g7) && g7.length) {
+      L.push('Game paling sering dimainkan (7 hari): ' + g7.slice(0, 12).map((g) => `${g.game_type || g.game}(${g.plays || 0}x)`).join(', '));
+    }
+  } catch { /* bagian mode game tidak boleh menggagalkan konteks */ }
+
+  // ---------- BANTUAN ADMIN & PEMBELI NEXO PASS (permintaan pemilik 2026-10-04) ----------
+  // "orang yang sering di beri bantuan sama admin" + "orang yang sering beli
+  // nexo pass" - supaya AI bisa mengenali pemain yang sering dibantu / pelanggan
+  // setia, dan menyesuaikan saran (mis. jangan beri promo ke yang sudah VIP).
+  try {
+    const pembeli = (snap.orders || []).filter((o) => o.status === 'paid');
+    if (pembeli.length) {
+      const perPembeli = {};
+      for (const o of pembeli) {
+        const k = String(o.discordId || o.discord_id || '?');
+        perPembeli[k] = (perPembeli[k] || 0) + 1;
+      }
+      const urut = Object.entries(perPembeli).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      L.push(`PEMBELI NEXO PASS (${pembeli.length} order lunas) - paling sering: ` +
+        urut.map(([id, n]) => `${id}(${n}x)`).join(', '));
+    }
+    // Penerima bantuan admin - dari transaksi bertipe 'admin'.
+    const trxAdmin = (snap.transaksiAdmin || []);
+    if (Array.isArray(trxAdmin) && trxAdmin.length) {
+      L.push('PENERIMA BANTUAN ADMIN (paling sering): ' + trxAdmin.slice(0, 10).map((t) => `${t.username || t.userId}(${t.kali}x, ${rupiah(t.total || 0)})`).join(', '));
+    } else {
+      // Fallback: dari daftar transaksi 24 jam kalau detail admin tak tersedia.
+      const tx24 = m.transaksi24jam;
+      if (tx24) L.push(`Transaksi 24 jam: ${tx24.jumlah || 0} transaksi oleh ${tx24.pemain || 0} pemain`);
+    }
+  } catch { /* bagian bantuan tidak boleh menggagalkan konteks */ }
+
   // ---------- DAFTAR PEMAIN ----------
   // Dikirim bot sebagai daftar RINGAN (id + nama + level) sampai 2000 pemain.
   // Tanpa ini, AI tidak bisa menjawab "pemain bernama X itu level berapa" -
