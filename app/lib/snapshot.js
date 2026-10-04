@@ -271,15 +271,38 @@ export { gameName } from './formatClient';
 // Client Component tak ikut menarik DB. Re-export di sini agar import lama tetap jalan.
 export { stripEmojiToken } from './textUtil';
 
-// Apakah user ini sedang premium? DUA sumber, yang terbaru menang:
-//  1. premiumMembers di snapshot bot (segar tiap 60 detik dari push)
-//  2. data_requests profil terakhir (ACK LIVE ~5-10 detik setelah grant)
-// Ini bikin badge NEXO Pass muncul cepat setelah pembayaran, tanpa menunggu
-// push snapshot berikutnya. Aman kalau DB error -> false.
+// Apakah user ini sedang premium? TIGA sumber, yang paling akurat menang:
+//  0. tabel public.premium LANGSUNG (paling murah: 1 query indexed) - BARU
+//  1. data_requests profil terakhir (ACK LIVE ~5-10 detik setelah grant)
+//  2. premiumMembers di snapshot bot (fallback terakhir)
+// Urutan ini penting untuk PERFORMA (permintaan pemilik 2026-10-04): dulu
+// selalu mulai dari data_requests, dan kalau kosong jatuh ke getLatestSnapshot()
+// yang mem-PARSE payload JSON besar. Sekarang tabel premium dicek dulu - satu
+// query murah yang langsung menjawab mayoritas kasus.
 export async function userHasPremium(discordId) {
   if (!discordId) return false;
 
-  // Cek profil terakhir dari bot (diisi oleh ACK LIVE webhook/ack atau /api/me).
+  // 0) SUMBER PALING MURAH & PALING AKURAT: tabel public.premium (satu query
+  //    indexed). Ini yang dipakai bot sebagai kebenaran - jadi web harus sama.
+  try {
+    const langsung = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute({
+        sql: 'SELECT expires_at FROM public.premium WHERE user_id = ? LIMIT 1',
+        args: [String(discordId)],
+      });
+      if (!res.rows.length) return false;
+      const exp = Number(res.rows[0].expires_at || 0);
+      return exp > Date.now();
+    });
+    if (langsung === true) return true;
+    // Catatan: hasil `false` TIDAK langsung dikembalikan - bisa jadi barisnya
+    // sudah dihapus bot tapi profil ACK masih segar (kasus grant yang sangat
+    // baru). Kita lanjut cek sumber berikutnya supaya badge tetap muncul cepat.
+  } catch { /* lanjut ke sumber berikutnya */ }
+
+  // 1) Cek profil terakhir dari bot (diisi oleh ACK LIVE webhook/ack atau /api/me).
   // Dipakai HANYA kalau datanya masih segar (< 5 menit). Jika segar, ini adalah
   // SUMBER KEBENARAN PALING AKURAT (karena ini request spesifik untuk user ini).
   // Memperbaiki bug di mana admin mencabut premium manual, tapi snapshot global
@@ -319,6 +342,34 @@ export async function userHasPremium(discordId) {
 
 export async function isUserBanned(discordId) {
   if (!discordId) return null;
+
+  // JALUR CEPAT (permintaan pemilik 2026-10-04): baca tabel public.banned_users
+  // LANGSUNG - satu query murah. Dulu fungsi ini (dipanggil di layout root,
+  // artinya SETIAP halaman) membaca getLatestSnapshot() yang mem-parse payload
+  // JSON besar - pemborosan terbesar untuk sekadar cek status banned 1 user.
+  //
+  // PENTING: safeQuery() mengembalikan null BAIK saat error MAUPUN saat hasilnya
+  // kosong - jadi kita bungkus hasilnya dalam objek supaya bisa membedakan
+  // "pasti tidak dibanned" dari "query gagal, coba snapshot".
+  try {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute({
+        sql: 'SELECT user_id, reason, banned_at, timeout_until FROM public.banned_users WHERE user_id = ? LIMIT 1',
+        args: [String(discordId)],
+      });
+      return { baris: res.rows.length ? res.rows[0] : null };
+    });
+    if (r && typeof r === 'object' && 'baris' in r) {
+      if (r.baris === null) return null; // pasti tidak dibanned
+      const until = Number(r.baris.timeout_until) || 0;
+      if (until > 0 && Date.now() > until) return null; // timeout lewat = bebas
+      return { userId: String(r.baris.user_id), reason: r.baris.reason, bannedAt: r.baris.banned_at, timeoutUntil: until };
+    }
+  } catch { /* jatuh ke snapshot sebagai cadangan */ }
+
+  // FALLBACK: snapshot bot (kalau query DB gagal / tabel tak ada).
   const snap = await getLatestSnapshot();
   // Payload bot mengirim user_id / timeout_until (snake_case, hasil SELECT mentah).
   // userId ikut dicek untuk jaga-jaga kalau format payload berubah.
