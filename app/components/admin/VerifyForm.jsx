@@ -42,6 +42,8 @@ export default function VerifyForm() {
           const TAB_SAH = ['ai', 'dashboard', 'players', 'log', 'ekonomi', 'shop', 'bank',
             'redeem', 'manualorders', 'nexopass', 'titles', 'broadcast', 'moderasi', 'feedback'];
           if (tabTujuan && TAB_SAH.includes(tabTujuan)) tujuan = '/admin#' + tabTujuan;
+          // consume-once: hapus supaya tidak membeku ke login berikutnya.
+          window.localStorage.removeItem('nexo_admin_tab_tujuan');
         } catch { /* abaikan */ }
         window.location.href = tujuan;
       } else {

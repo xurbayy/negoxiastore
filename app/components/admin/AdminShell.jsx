@@ -36,31 +36,38 @@ const TAB_GROUPS = [
 const TAB_VALID = new Set(TAB_GROUPS.flatMap((g) => g.tabs.map(([id]) => id)));
 
 export default function AdminShell({ username, avatar = null }) {
-  // TAB BERTAHAN SAAT REFRESH (permintaan pemilik 2026-10-01).
+  // TAB: mulai dari Dashboard saat BARU MASUK; refresh tetap di tab terakhir.
   //
-  // Sebelumnya selalu mulai dari 'dashboard', sehingga admin yang sedang di
-  // tab lain (mis. Analisis AI atau Ekonomi) terlempar kembali ke Dashboard
-  // setiap kali me-refresh halaman - menyebalkan dan menghilangkan konteks.
+  // FIX (permintaan pemilik 2026-10-04): "ketika gw baru masuk admin panel ga
+  // ke dashboard dulu, harusnya mulai dari dashboard".
   //
-  // Sumber urutan prioritas:
-  //   1. Hash URL (#ai) - bisa di-bookmark, dibagikan, dan tahan refresh.
-  //   2. localStorage - pengingat terakhir kalau URL tanpa hash.
-  //   3. 'dashboard' - default.
+  // Penyebabnya DUA penyimpanan lintas-sesi di localStorage:
+  //   - nexo_admin_tab           : tab terakhir, tidak pernah dihapus -> setiap
+  //                                  kali buka /admin (tanpa hash) panel terbuka
+  //                                  di tab lama, bukan Dashboard.
+  //   - nexo_admin_tab_tujuan    : hash tujuan login, tidak pernah dihapus ->
+  //                                  nyangkut dan memaksa tab itu terus.
   //
-  // Dipakai useState dengan initializer (bukan useEffect) supaya tab yang
-  // benar dipakai sejak render PERTAMA - tidak ada kedipan ke Dashboard dulu.
+  // Sekarang sumber kebenaran = HASH di URL (survive refresh via pushState).
+  //   - Ada hash valid (#ekonomi) -> buka tab itu (refresh/bookmark).
+  //   - Tanpa hash (baru masuk / ketik /admin) -> DEFAULT 'dashboard'.
+  //   - nexo_admin_tab_tujuan dibaca SEKALI lalu DIHAPUS (consume-once) -
+  //     dipakai hanya untuk mendarat di tab bookmark saat login, tidak
+  //     pernah membeku untuk login berikutnya.
+  //   - Restore nexo_admin_tab (localStorage) DIHAPUS - refresh sudah dijaga
+  //     oleh hash URL, jadi localStorage tidak diperlukan dan justru bikin
+  //     panel membuka tab lama saat masuk baru.
   const [tab, setTab] = useState(() => {
     if (typeof window === 'undefined') return 'dashboard';
     const dariHash = window.location.hash.replace(/^#/, '');
     if (dariHash && TAB_VALID.has(dariHash)) return dariHash;
     try {
-      // 'nexo_admin_tab_tujuan' diisi halaman login/verify saat admin membuka
-      // nexogames.site/admin#ai sebelum login - supaya setelah login mendarat
-      // di tab yang dituju, bukan Dashboard.
       const tujuan = window.localStorage.getItem('nexo_admin_tab_tujuan');
-      if (tujuan && TAB_VALID.has(tujuan)) return tujuan;
-      const simpan = window.localStorage.getItem('nexo_admin_tab');
-      if (simpan && TAB_VALID.has(simpan)) return simpan;
+      if (tujuan && TAB_VALID.has(tujuan)) {
+        // consume-once: langsung hapus supaya tidak membeku ke login berikutnya.
+        window.localStorage.removeItem('nexo_admin_tab_tujuan');
+        return tujuan;
+      }
     } catch (_) { /* localStorage bisa diblokir - abaikan */ }
     return 'dashboard';
   });
@@ -172,8 +179,10 @@ export default function AdminShell({ username, avatar = null }) {
     } catch { /* abaikan */ }
   }, []);
 
-  // GANTI TAB: simpan pilihan ke URL hash + localStorage supaya bertahan
-  // saat refresh, dan tombol Back/Forward browser ikut berfungsi.
+  // GANTI TAB: simpan pilihan ke URL hash supaya bertahan saat refresh, dan
+  // tombol Back/Forward browser ikut berfungsi.
+  // CATATAN: tidak lagi menulis localStorage (refresh sudah dijaga hash URL);
+  // localStorage justru bikin panel membuka tab lama saat baru masuk.
   const gantiTab = useCallback((id) => {
     setTab(id);
     setMenuOpen(false);
@@ -182,17 +191,13 @@ export default function AdminShell({ username, avatar = null }) {
       // history.pushState -> tombol Back kembali ke tab sebelumnya, enak dipakai.
       window.history.pushState(null, '', '#' + id);
     } catch (_) { /* pushState bisa diblokir - abaikan */ }
-    try { window.localStorage.setItem('nexo_admin_tab', id); } catch (_) {}
   }, []);
 
   // Ikuti tombol Back/Forward browser: kalau hash berubah, pindah tab.
   useEffect(() => {
     const onHash = () => {
       const id = window.location.hash.replace(/^#/, '');
-      if (id && TAB_VALID.has(id)) {
-        setTab(id);
-        try { window.localStorage.setItem('nexo_admin_tab', id); } catch (_) {}
-      }
+      if (id && TAB_VALID.has(id)) setTab(id);
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
@@ -574,15 +579,27 @@ export default function AdminShell({ username, avatar = null }) {
                     <button
                       type="button"
                       onClick={() => gantiTab(id)}
-                      className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors cursor-pointer ${
-                        tab === id ? 'bg-accent/20 text-ink' : 'text-ink-muted hover:bg-bg-soft hover:text-ink'
+                      className={`flex w-full items-center justify-between gap-2 rounded-lg border-l-[3px] py-2 pl-2.5 pr-2.5 text-left text-sm transition-colors cursor-pointer ${
+                        // Indikator aktif SINGKAR dan tegas: batang kiri accent +
+                        // latar accent pekat + teks tebal. Hanya SATU tab yang
+                        // memenuhi kondisi ini (tab === id), jadi tidak mungkin
+                        // ada dua yang tersorot (permintaan pemilik 2026-10-04:
+                        // "hilight di side bar jangan sampe ada double").
+                        tab === id
+                          ? 'border-accent bg-accent/90 font-bold text-white shadow-sm'
+                          : 'border-transparent font-medium text-ink-muted hover:border-border-soft hover:bg-bg-soft hover:text-ink'
                       }`}
                       aria-current={tab === id ? 'page' : undefined}
                     >
                       <span className="truncate">{label}</span>
                       {Number(badges[id]) > 0 && (
+                        // Badge harus kontras di tab aktif (latar accent pekat +
+                        // teks putih) maupun non-aktif. Di tab aktif pakai
+                        // translucent putih supaya tetap terbaca.
                         <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.6rem] font-bold leading-none ${
-                          id === 'log' ? 'bg-accent text-ink' : id === 'feedback' ? 'bg-danger/15 text-danger' : 'bg-bg text-ink-muted'
+                          tab === id
+                            ? 'bg-white/90 text-accent'
+                            : id === 'log' ? 'bg-accent text-ink' : id === 'feedback' ? 'bg-danger/15 text-danger' : 'bg-bg text-ink-muted'
                         }`}>{badges[id] > 99 ? '99+' : badges[id]}</span>
                       )}
                     </button>

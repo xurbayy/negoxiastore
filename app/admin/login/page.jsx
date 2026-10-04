@@ -72,10 +72,15 @@ export default function AdminLoginPage() {
       if (data.ok) {
         // Kembalikan ke tab yang dituju (kalau ada) supaya admin yang membuka
         // nexogames.site/admin#ai mendarat di tab AI, bukan Dashboard.
+        //
+        // CONSUME-ONCE (fix 2026-10-04): tabTujuan dihapus SETELAH dipakai.
+        // Dulu tidak pernah dihapus -> nyangkut di localStorage dan memaksa
+        // tab itu terus tiap login berikutnya (padahal admin mau ke Dashboard).
         let tujuan = '/admin';
         try {
           const tabTujuan = window.localStorage.getItem('nexo_admin_tab_tujuan');
           if (tabTujuan && TAB_SAH.includes(tabTujuan)) tujuan = '/admin#' + tabTujuan;
+          window.localStorage.removeItem('nexo_admin_tab_tujuan');
         } catch { /* abaikan */ }
         window.location.href = data.needs2fa ? '/admin/verify' : tujuan;
       } else {
