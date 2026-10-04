@@ -215,7 +215,7 @@ export default function AnalisisAI() {
     (async () => {
       try {
         const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok && d.prefs) {
           const p = d.prefs;
           if (p.provider) setProvider(p.provider);
@@ -420,7 +420,7 @@ export default function AnalisisAI() {
     const muat = async () => {
       try {
         const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (batal || !d.ok || !d.prefs) return;
         const serverAt = Number(d.updatedAt || 0);
         // Lewati kalau ini ECHO dari simpanan kita sendiri (dalam 5 detik).
@@ -482,7 +482,7 @@ export default function AnalisisAI() {
   const muatArsip = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/ai/notes', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setArsip(d.notes || []);
     } catch { /* gagal muat arsip tidak boleh menghalangi pemakaian AI */ }
   }, []);
@@ -494,7 +494,7 @@ export default function AnalisisAI() {
   const muatPengingat = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/ai/reminders', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setPengingat(d.reminders || []);
     } catch { /* gagal muat pengingat tidak menghalangi pemakaian AI */ }
   }, []);
@@ -519,7 +519,7 @@ export default function AnalisisAI() {
     (async () => {
       try {
         const res = await fetch('/api/admin/ai', { cache: 'no-store', signal: ac.signal });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (!batal) {
           setStatus(d);
           // Hanya inisialisasi provider/model dari server kalau pemilik belum
@@ -632,7 +632,7 @@ export default function AnalisisAI() {
         signal: ac.signal,
       });
       clearTimeout(timer);
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
 
       // Request BERHASIL -> baru kosongkan gambar dari kotak ketik (kalau gagal,
       // gambar tetap ada supaya bisa dikirim ulang ke model yang benar).
@@ -737,7 +737,7 @@ export default function AnalisisAI() {
     setMemuatDiskusi(true);
     try {
       const res = await fetch('/api/admin/ai/diskusi', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setDaftarDiskusi(d.diskusi || []);
     } catch { /* abaikan */ }
     finally { setMemuatDiskusi(false); }
@@ -756,7 +756,7 @@ export default function AnalisisAI() {
         '/api/admin/ai/diskusi' + (diskusiAktifId ? '?id=' + diskusiAktifId : ''),
         { method: diskusiAktifId ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(muatan) }
       );
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         if (!diskusiAktifId && d.id) setDiskusiAktifId(d.id);
         setPesanSimpan(diskusiAktifId ? 'Diskusi diperbarui.' : 'Diskusi disimpan.');
@@ -773,7 +773,7 @@ export default function AnalisisAI() {
     if (!isi) {
       try {
         const res = await fetch('/api/admin/ai/diskusi?id=' + d.id, { cache: 'no-store' });
-        const r = await res.json();
+        const r = await res.json().catch(() => ({}));
         if (r.ok && Array.isArray(r.diskusi?.pesan)) isi = r.diskusi.pesan;
       } catch { /* gagal - tetap buka kosong */ }
     }
@@ -794,7 +794,7 @@ export default function AnalisisAI() {
       body: `Diskusi "${d.judul}" akan dihapus permanen.`,
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/diskusi?id=' + d.id, { method: 'DELETE' });
-        const r = await res.json();
+        const r = await res.json().catch(() => ({}));
         if (r.ok) {
           if (diskusiAktifId === d.id) setDiskusiAktifId(null);
           await muatDiskusi();
@@ -830,7 +830,7 @@ export default function AnalisisAI() {
   const tandaiSelesai = useCallback(async (id, selesai = true) => {
     try {
       const res = await fetch(`/api/admin/ai/reminders?id=${id}${selesai ? '' : '&selesai=0'}`, { method: 'PATCH' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) muatPengingat();
     } catch { /* abaikan */ }
   }, [muatPengingat]);
@@ -842,7 +842,7 @@ export default function AnalisisAI() {
       body: `Pengingat "${p?.teks || ''}" akan dihapus.`,
       jalankan: async () => {
         const res = await fetch(`/api/admin/ai/reminders?id=${id}`, { method: 'DELETE' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok) setPengingat((x) => x.filter((y) => y.id !== id));
       },
     });
@@ -863,7 +863,7 @@ export default function AnalisisAI() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ judul: r.judul, pertanyaan: r.pertanyaan || r.judul, jawaban: r.jawaban, sumber: r.sumber || 'chat' }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setDisimpan((s) => new Set(s).add(kunciJawaban(r)));
         setPesanSimpan('Jawaban disimpan ke arsip.');
@@ -884,7 +884,7 @@ export default function AnalisisAI() {
       body: `Catatan "${a?.judul || ''}" akan dihapus dari arsip jawaban.`,
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/notes?id=' + encodeURIComponent(id), { method: 'DELETE' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok) {
           setArsip((x) => x.filter((y) => y.id !== id));
           setPesanSimpan('Catatan dihapus.');
@@ -908,7 +908,7 @@ export default function AnalisisAI() {
     setMemuatKelola(true);
     try {
       const res = await fetch('/api/admin/ai/providers', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setDaftarProvider(d.providers || []);
         setDaftarModel(d.models || []);
@@ -932,7 +932,7 @@ export default function AnalisisAI() {
   const muatSaran = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum'), { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
     } catch { /* gagal - pakai fallback lokal */ }
   }, [peran]);
@@ -970,7 +970,7 @@ export default function AnalisisAI() {
       const url = '/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&ai=1'
         + '&provider=' + encodeURIComponent(provider) + '&model=' + encodeURIComponent(modelInput.trim());
       const res = await fetch(url, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
       if (!d.ok || !d.saran?.length) {
         setPesanSimpan('AI tidak menghasilkan topik - coba lagi atau ganti model.');
@@ -989,7 +989,7 @@ export default function AnalisisAI() {
   const muatStatusUlang = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/ai', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setStatus(d);
     } catch { /* abaikan */ }
     muatKelola();
@@ -1019,7 +1019,7 @@ export default function AnalisisAI() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipe: 'provider', nama: formProv.nama, base_url: formProv.base_url, api_key: kunciGabung }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setFormProv({ nama: '', base_url: '', api_key: '' });
         setApiKeys([]);
@@ -1062,7 +1062,7 @@ export default function AnalisisAI() {
       body: `Provider "${p?.nama || ''}" akan dihapus permanen.${jumlahModel > 0 ? ` ${jumlahModel} model tersimpan yang memakainya JUGA ikut terhapus.` : ''}`,
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/providers?id=' + id, { method: 'DELETE' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok) {
           setPesanSimpan(`✓ Provider dihapus${d.modelTerhapus ? ` + ${d.modelTerhapus} model ikut terhapus` : ''}.`);
           setTimeout(() => setPesanSimpan(null), 4000);
@@ -1102,7 +1102,7 @@ export default function AnalisisAI() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipe: 'model', ...formModel }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setFormModel({ label: '', model: '', provider: '', max_tokens: '', thinking: '' });
         setEditModelId(null);
@@ -1135,7 +1135,7 @@ export default function AnalisisAI() {
       body: `Model "${m?.label || ''}" (${m?.model || ''}) akan dihapus dari daftar tersimpan.`,
       jalankan: async () => {
         const res = await fetch('/api/admin/ai/providers?id=' + id + '&tipe=model', { method: 'DELETE' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok) { setPesanSimpan('✓ Model dihapus.'); setTimeout(() => setPesanSimpan(null), 4000); await Promise.all([muatKelola(), muatStatusUlang()]); }
         else { setPesanSimpan('Gagal: ' + (d.error || 'tidak diketahui')); setTimeout(() => setPesanSimpan(null), 4000); }
       },
@@ -1175,7 +1175,7 @@ export default function AnalisisAI() {
     }
     try {
       const res = await fetch('/api/admin/ai/providers?reveal=' + id, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setKunciTerlihat((s) => ({ ...s, [id]: d.apiKey || '(kosong)' }));
       } else {
@@ -1196,7 +1196,7 @@ export default function AnalisisAI() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ base_url: formProv.base_url, api_key: keysFinal.join(',') }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setTesHasil({ status: 'ok', pesan: d.pesan, url: d.urlDicek, contoh: d.contoh || [] });
       else setTesHasil({ status: 'gagal', pesan: d.pesan || d.error || 'Gagal.', url: d.urlDicek });
     } catch (e) {
@@ -1210,7 +1210,7 @@ export default function AnalisisAI() {
     setCekHasil({ status: 'cek' });
     try {
       const res = await fetch(`/api/admin/ai/cek-model?provider=${encodeURIComponent(provider || '')}&model=${encodeURIComponent(m)}`, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (!d.ok && d.tidakDidukung) {
         setCekHasil({ status: 'gagal', pesan: d.error || 'Provider tidak mendukung cek model.', url: d.urlDicek });
       } else if (!d.ok) {
@@ -1231,7 +1231,7 @@ export default function AnalisisAI() {
     setModelProv((s) => ({ ...s, status: 'cek', hanyaGratis: g }));
     try {
       const res = await fetch(`/api/admin/ai/daftar-model?provider=${encodeURIComponent(provider || '')}&gratis=${g ? '1' : '0'}`, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setModelProv({ status: 'ok', models: d.models || [], jumlah: d.jumlah || 0, jumlahGratis: d.jumlahGratis || 0, hanyaGratis: g, label: d.label, url: d.urlDicek });
       } else {
@@ -1249,7 +1249,7 @@ export default function AnalisisAI() {
     setModelProv((s) => ({ ...s, status: 'cek', hanyaGratis: g, semuaProvider: true }));
     try {
       const res = await fetch(`/api/admin/ai/daftar-model?semua=1&gratis=${g ? '1' : '0'}`, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         setModelProv({
           status: 'ok', models: d.models || [], jumlah: d.jumlah || 0,
@@ -1285,7 +1285,7 @@ export default function AnalisisAI() {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ provider: provId, models: models.slice(0, 40) }),
             });
-            const d = await res.json();
+            const d = await res.json().catch(() => ({}));
             if (d.ok) {
               setUjiHasil((s) => {
                 const next = { ...s };
@@ -1300,7 +1300,7 @@ export default function AnalisisAI() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ provider: provider || '', models: daftar }),
         });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok) {
           setUjiHasil((s) => {
             const next = { ...s };
@@ -1316,7 +1316,7 @@ export default function AnalisisAI() {
     setUsage({ status: 'cek' });
     try {
       const res = await fetch(`/api/admin/ai/usage?provider=${encodeURIComponent(provider || '')}`, { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) setUsage({ status: 'ok', data: d });
       else setUsage({ status: 'gagal', pesan: d.error || 'Gagal cek kuota.' });
     } catch (e) {
@@ -1334,7 +1334,7 @@ export default function AnalisisAI() {
       // Baca dari SERVER prefs dulu (lintas device), fallback localStorage.
       try {
         const res = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok && d.prefs?.agentProvider) { setAgentProviderId(d.prefs.agentProvider); return; }
       } catch { /* fallback */ }
       try { setAgentProviderId(window.localStorage.getItem('nexo_agen_provider') || ''); } catch { /* abaikan */ }
@@ -2276,7 +2276,7 @@ export default function AnalisisAI() {
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ tipe: 'model', label, model: m.id, provider: providerId }),
                                 });
-                                const d = await res.json();
+                                const d = await res.json().catch(() => ({}));
                                 if (d.ok) {
                                   setPesanSimpan(`✓ Model "${label}" tersimpan permanen.`);
                                   setTimeout(() => setPesanSimpan(null), 4000);

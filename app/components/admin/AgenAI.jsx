@@ -65,7 +65,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     (async () => {
       try {
         const res = await fetch('/api/admin/ai', { cache: 'no-store' });
-        const d = await res.json();
+        const d = await res.json().catch(() => ({}));
         if (d.ok && Array.isArray(d.providers)) {
           const daftar = d.providers
             .filter((p) => p.kunci > 0)
@@ -77,7 +77,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
       let dapat = false;
       try {
         const res2 = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
-        const d2 = await res2.json();
+        const d2 = await res2.json().catch(() => ({}));
         if (d2.ok && d2.prefs) {
           if (d2.prefs.agentProvider) { setAgentProvider(d2.prefs.agentProvider); dapat = true; }
           if (d2.prefs.agentModel) { setAgentModel(d2.prefs.agentModel); dapat = true; }
@@ -96,7 +96,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
       if (!dapat) {
         try {
           const res3 = await fetch('/api/admin/ai/prefs', { cache: 'no-store' });
-          const d3 = await res3.json();
+          const d3 = await res3.json().catch(() => ({}));
           if (d3.ok && d3.prefs) {
             if (d3.prefs.provider) setAgentProvider(d3.prefs.provider);
             if (d3.prefs.model) setAgentModel(d3.prefs.model);
@@ -139,7 +139,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
     setMemuat(true);
     try {
       const res = await fetch('/api/admin/ai/agen', { cache: 'no-store' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) { setLaporan(d.laporan || []); setUsulan(d.usulan || []); setPengingat(d.pengingat || []); }
       else flash('Gagal memuat: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal memuat: ' + e.message); }
@@ -155,7 +155,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ judul: `Agen: ${(l.ringkasan || '').slice(0, 60)}`, pertanyaan: `Laporan agen ${l.tanggal || ''}`, jawaban: l.ringkasan + (l.temuan ? '\n\nTemuan:\n' + l.temuan : ''), sumber: 'agen', model: l.model || '' }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       flash(d.ok ? 'Tersimpan di Arsip Jawaban.' : 'Gagal simpan: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal simpan: ' + e.message); }
   }, []);
@@ -164,7 +164,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
   const hapusLaporan = useCallback(async (id) => {
     try {
       const res = await fetch('/api/admin/ai/agen/laporan?id=' + id, { method: 'DELETE' });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) { flash('Laporan dihapus.'); await muat(); }
       else flash('Gagal hapus: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal hapus: ' + e.message); }
@@ -196,7 +196,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
         signal: ac.signal,
       });
       clearTimeout(timer);
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) {
         flash(`✓ Agen selesai. ${d.usulanTersimpan || 0} usulan dibuat.`);
         await muat();
@@ -218,7 +218,7 @@ export default function AgenAI({ jalan, detikSisa, provider, model, onSelesai })
       const res = await fetch('/api/admin/ai/agen/usulan?id=' + id, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ putusan }),
       });
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
       if (d.ok) { flash(putusan === 'setuju' ? 'Disetujui - aksi dikirim ke bot.' : 'Ditolak.'); await muat(); }
       else flash('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal: ' + e.message); }
