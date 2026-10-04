@@ -35,7 +35,7 @@ function GrafikJam({ hourly }) {
   const nilai = (h) => (Number(h.inputTokens) || 0) + (Number(h.outputTokens) || 0);
   const maks = Math.max(1, ...hourly.map(nilai));
   return (
-    <div className="flex h-28 items-end gap-[3px]" role="img" aria-label="Grafik token AI per jam (24 jam terakhir)">
+    <div className="flex h-32 items-end gap-[3px] sm:h-36" role="img" aria-label="Grafik token AI per jam (24 jam terakhir)">
       {hourly.map((h) => {
         const v = nilai(h);
         const tinggi = v ? Math.max(6, Math.round((v / maks) * 100)) : 2;

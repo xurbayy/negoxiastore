@@ -307,10 +307,13 @@ export default function Dashboard({ data }) {
   const cards = [
     { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
     // Kartu Top Game Sepanjang Masa - pakai icon (emoji) + sub (main + poin).
+    // wide=true: full-width di mobile (2 kolom jadi sempit, kartu ini perlu
+    // ruang supaya nama game + statistik terbaca - permintaan pemilik).
     {
       label: 'Top Game Sepanjang Masa',
       value: gdTopAll ? gdTopAll.name : '-',
       icon: gdTopAll?.icon || null,
+      wide: true,
       sub: topAll
         ? `${fmt(topAll.plays)} main · ${fmtRingkas(topAll.points)} poin`
         : 'belum ada data game',
@@ -377,17 +380,17 @@ export default function Dashboard({ data }) {
         {cards.map((c) => {
           const d = c.pick ? delta24(fullSeries, c.pick) : null;
           return (
-            <div key={c.label} className="nx-card flex h-full min-w-0 flex-col px-3 py-3 sm:px-4 sm:py-4">
+            <div key={c.label} className={`nx-card flex h-full min-w-0 flex-col px-3 py-3 sm:px-4 sm:py-4 ${c.wide ? 'col-span-2 sm:col-span-1' : ''}`}>
               <div className="flex min-w-0 items-center gap-1.5">
                 {c.icon && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.icon} alt="" width={22} height={22} className="h-[22px] w-[22px] shrink-0" />
+                  <img src={c.icon} alt="" width={c.wide ? 28 : 22} height={c.wide ? 28 : 22} className={`${c.wide ? 'h-7 w-7' : 'h-[22px] w-[22px]'} shrink-0`} />
                 )}
-                <div className="truncate font-display text-lg leading-tight text-ink sm:text-xl">{c.value}</div>
+                <div className={`truncate font-display leading-tight text-ink ${c.wide ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl'}`}>{c.value}</div>
               </div>
-              <div className="mt-0.5 truncate text-xs text-ink-muted">{c.label}</div>
+              <div className={`mt-0.5 truncate text-ink-muted ${c.wide ? 'text-sm' : 'text-xs'}`}>{c.label}</div>
               {c.sub && (
-                <div className="mt-0.5 truncate text-[0.62rem] text-ink-faint" title={c.sub}>{c.sub}</div>
+                <div className={`mt-0.5 truncate text-ink-faint ${c.wide ? 'text-[0.72rem]' : 'text-[0.62rem]'}`} title={c.sub}>{c.sub}</div>
               )}
               {d != null && (
                 <div className={`mt-0.5 text-[0.62rem] font-bold ${d > 0 ? 'text-success' : 'text-danger'}`} title="Perubahan 24 jam">
