@@ -7,6 +7,26 @@ let _lastGood = null; // { snap, series, at }
 // Error terakhir dari safeQuery (untuk diagnostik /api/diag-leaderboard).
 export let _lastSafeError = null;
 
+// ==========================================
+// CACHE BACA SNAPSHOT 45 DETIK (optimasi egress 2026-10-04)
+// ==========================================
+// Supabase Free punya batas EGRESS 5 GB/bulan dan terpakai 92% (4,62 GB) di
+// awal siklus. Penyebab terbesar: getLatestSnapshot() membaca payload penuh
+// (128 KB) dari tabel monitor_snapshots di SETIAP panggilan - dan panel admin
+// memanggilnya tiap 5 detik (polling /api/admin/data) -> ratusan MB/hari.
+//
+// KUNCI: snapshot yang disimpan HANYA berubah tiap 10 menit (throttle di
+// /api/bot/stats). Jadi membaca ulang payload yang SAMA 12x per menit adalah
+// pemborosan murni. Cache 45 detik mengembalikan data IDENTIK (snapshot belum
+// sempat berubah), tapi memangkas baca DB ~9x -> egress jatuh drastis.
+//
+// Angka REAL-TIME (getLiveStats, getBotHeartbeat, getLiveShop, dst) TIDAK
+// memakai cache ini - mereka query tabel public.* langsung tiap panggilan,
+// jadi dashboard/shop tetap live. Cache ini HANYA untuk snapshot push bot
+// yang memang statis antar-push.
+const SNAP_CACHE_MS = 45_000;
+let _snapCache = null; // { snap, at }
+
 async function safeQuery(fn) {
   // Blip jaringan (ConnectTimeout/dns) sering cuma sekali lewat -> retry 1x
   // dengan jeda pendek sebelum nyerah. Error TERAKHIR dicatat supaya bisa
@@ -24,11 +44,12 @@ async function safeQuery(fn) {
 
 // Snapshot monitor terbaru dari bot (null kalau belum pernah push / DB mati).
 export async function getLatestSnapshot() {
-  // TANPA CACHE (permintaan pemilik 2026-10-03): setiap panggilan query DB
-  // langsung supaya yang tampil selalu terbaru. `_lastGood` tetap disimpan
-  // HANYA sebagai cadangan kalau DB sedang error (supaya halaman tidak blank),
-  // bukan untuk menyajikan data lama saat DB sehat.
   const kini = Date.now();
+  // Cache baca 45 dtk: snapshot yang disimpan hanya berubah tiap 10 menit
+  // (throttle), jadi hasil cache = data yang sama dengan query segar. Memangkas
+  // egress Supabase drastis (lihat SNAP_CACHE_MS di atas). Data real-time tidak
+  // lewat sini - mereka query tabel public.* langsung.
+  if (_snapCache && kini - _snapCache.at < SNAP_CACHE_MS) return _snapCache.snap;
   const r = await safeQuery(async () => {
     await schemaReady();
     const db = getDb();
@@ -38,6 +59,7 @@ export async function getLatestSnapshot() {
   });
   if (r) {
     _lastGood = { ...(_lastGood || {}), snap: r, at: kini, snapAt: kini };
+    _snapCache = { snap: r, at: kini };
     return r;
   }
   // DB error: pakai cadangan proses (maks 5 menit) supaya halaman tetap hidup.
