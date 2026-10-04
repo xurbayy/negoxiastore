@@ -47,8 +47,17 @@ async function deleteLimitedByRowid(db, table, whereSql, args, limit = 5000) {
 }
 
 async function pruneNow(db, now) {
-  // Snapshot: 30 hari (sudah ada juga di stats route; biarkan sebagai cadangan).
-  await tryExec(db, 'DELETE FROM monitor_snapshots WHERE ts < ?', [now - 30 * DAY]);
+  // INDEX TAMBAHAN (fix 2026-10-04): tabel yang sering di-query tapi belum
+  // punya index selain primary key -> query jadi lambat seiring data bertambah.
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_emoji_catalog_name ON web.emoji_catalog (name)');
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_snapshots_ts_desc ON web.monitor_snapshots (ts DESC)');
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_missions_user ON public.daily_missions (user_id)');
+
+  // Snapshot: 14 hari (DITURUNKAN dari 30, fix 2026-10-04).
+  // Dengan simpan 1x/10 menit = 144 baris/hari, 14 hari = ~2.016 baris
+  // (~130 MB payload). Sebelumnya 30 hari x 1.188 baris = 2,3 GB - itulah
+  // sebab DB membengkak ke 109 MB (79% tabel ini) & query melambat.
+  await tryExec(db, 'DELETE FROM monitor_snapshots WHERE ts < ?', [now - 14 * DAY]);
 
   // Permintaan profil: done >7 hari tidak dipakai lagi; pending >3 hari = mati.
   await deleteLimited(db, 'data_requests', "status = 'done' AND created_at < ?", [now - 7 * DAY]);
