@@ -7,6 +7,46 @@ import { notifyQueue } from '../../../lib/pgNotifyWeb';
 
 export const dynamic = 'force-dynamic';
 
+// GET /api/admin/manual-order?id=N
+// Ambil DETAIL satu order manual - termasuk GAMBAR BUKTI TRANSFER (base64).
+//
+// KENAPA TERPISAH (permintaan pemilik 2026-10-04: "optimalkan jangan ada yang
+// bocor"): daftar order di /api/admin/data dulu mengirim receiptBase64 apa
+// adanya -> 519 KB per poll (tiap 5 detik!) padahal 99% waktu admin tidak
+// membuka gambarnya. Sekarang daftar hanya membawa metadata kecil, dan gambar
+// diambil lewat endpoint INI saat admin benar-benar klik "Lihat Bukti".
+export async function GET(request) {
+  const admin = await getAdminSession();
+  const session = await getSession();
+  let authorized = Boolean(admin);
+  if (!authorized && session) {
+    const adminIds = (process.env.ADMIN_DISCORD_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
+    authorized = adminIds.includes(session.discordId);
+  }
+  if (!authorized) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+
+  const url = new URL(request.url);
+  const id = Number(url.searchParams.get('id'));
+  if (!id) return NextResponse.json({ ok: false, error: 'id wajib.' }, { status: 400 });
+
+  await schemaReady();
+  const db = getDb();
+  const r = await db.execute({
+    sql: 'SELECT gateway_ref FROM orders WHERE id = ? LIMIT 1',
+    args: [id],
+  }).catch(() => ({ rows: [] }));
+  if (!r.rows.length) return NextResponse.json({ ok: false, error: 'Order tidak ditemukan.' }, { status: 404 });
+
+  let ref = null;
+  try { ref = JSON.parse(r.rows[0].gateway_ref || 'null'); } catch { ref = null; }
+  return NextResponse.json({
+    ok: true,
+    id,
+    senderName: ref?.senderName || null,
+    receiptBase64: ref?.receiptBase64 || null,
+  });
+}
+
 export async function POST(request) {
   const admin = await getAdminSession();
   const session = await getSession();

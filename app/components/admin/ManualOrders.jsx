@@ -12,6 +12,54 @@ function parseRef(ref) {
   }
 }
 
+// ==========================================
+// BUKTI TRANSFER - ambil gambar ON-DEMAND (permintaan pemilik 2026-10-04)
+// ==========================================
+// Dulu gambar base64 ikut di SETIAP poll /api/admin/data: 519 KB tiap 5 detik
+// padahal hampir tidak pernah dilihat. Sekarang daftar hanya membawa metadata
+// (`adaBukti`), dan gambar diambil lewat /api/admin/manual-order?id=N hanya
+// saat kartu order ini benar-benar tampil.
+function BuktiTransfer({ order }) {
+  const [img, setImg] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
+  const meta = parseRef(order.gatewayRef);
+
+  const muat = async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/manual-order?id=${order.id}`, { cache: 'no-store' });
+      const d = await res.json();
+      if (d.ok && d.receiptBase64) setImg(d.receiptBase64);
+      else setErr('Bukti gambar tidak tersedia.');
+    } catch (e) {
+      setErr(e?.message || 'Gagal memuat bukti.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (img) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={img} alt="Bukti Transfer" className="max-h-64 object-contain mx-auto rounded" />;
+  }
+  if (!meta.adaBukti) return <span className="text-xs text-ink-muted">Tidak ada bukti gambar</span>;
+  return (
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={muat}
+        disabled={loading}
+        className="rounded-lg border border-border-soft bg-card-cream px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-accent hover:bg-accent/10 disabled:opacity-50 cursor-pointer"
+      >
+        {loading ? 'Memuat bukti...' : '🖼️ Lihat Bukti Transfer'}
+      </button>
+      {err && <p className="text-[0.7rem] text-danger">{err}</p>}
+    </div>
+  );
+}
+
 const STATUS_BADGE = {
   pending: 'bg-warning text-white',
   paid: 'bg-success text-white',
@@ -122,11 +170,7 @@ export default function ManualOrders({ orders, reload }) {
                 </div>
 
                 <div className="border border-surface-raised rounded bg-surface-sunken p-2 text-center overflow-hidden">
-                  {data.receiptBase64 ? (
-                    <img src={data.receiptBase64} alt="Bukti Transfer" className="max-h-64 object-contain mx-auto rounded" />
-                  ) : (
-                    <span className="text-xs text-ink-muted">Tidak ada bukti gambar</span>
-                  )}
+                  <BuktiTransfer order={order} />
                 </div>
 
                 <div className="flex gap-2 mt-auto">

@@ -19,45 +19,51 @@ export async function GET() {
   if (!authorized) return json({ ok: false, error: 'forbidden' }, 403);
 
   await ready();
-  const [snap, series] = await Promise.all([getLatestSnapshot(), getSnapshotSeries(7)]);
-  // Heartbeat + statistik LANGSUNG dari DB bot (Supabase) - tidak bergantung
-  // snapshot push, jadi status bot akurat walau bridge push belum jalan.
-  const [heartbeat, liveStats] = await Promise.all([getBotHeartbeat(), getLiveStats()]);
   const db = getDb();
 
-  const orders = await db.execute(
-    'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 30'
-  );
-
-  const log = await db.execute(
-    'SELECT id, action, payload, actor_id, status, result, created_at, executed_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'
-  );
-
-  const promoCache = await getPromoCache().catch(() => []);
-
-  // BANK LOANS LANGSUNG DARI DB BOT (2026-10-03): BankManager dulu membaca
-  // dari snapshot push (umur bisa 60+ dtk) sehingga setelah pemutihan daftar
-  // masih menampilkan hutang lama -> admin mengira harus clear 2x.
-  const bankLoans = await db.execute(`
-    SELECT b.user_id, b.total_due, b.due_date,
-           (SELECT u.username FROM public.users u WHERE u.user_id = b.user_id) AS username
-    FROM public.bank_loans b
-    ORDER BY b.due_date ASC
-  `).catch(() => ({ rows: [] }));
-
-    const feedback = await db.execute(
+  // ==========================================
+  // PARALEL (permintaan pemilik 2026-10-04: "optimalkan")
+  // ==========================================
+  // Dulu 14 query dijalankan BERURUTAN (await satu-satu) -> ~2,5-4 detik per
+  // request. Padahal semuanya INDEPENDEN. Sekarang satu Promise.all: latensi
+  // ditentukan query TERLAMBAT (~200-400ms), bukan jumlahnya.
+  const [
+    snap, series, heartbeat, liveStats, orders, log, promoCache, bankLoans,
+    feedback, promoCodes, premiumMembers, bannedUsers, adminTitleHolders,
+  ] = await Promise.all([
+    getLatestSnapshot(),
+    getSnapshotSeries(7),
+    // Heartbeat + statistik LANGSUNG dari DB bot (Supabase) - tidak bergantung
+    // snapshot push, jadi status bot akurat walau bridge push belum jalan.
+    getBotHeartbeat(),
+    getLiveStats(),
+    db.execute(
+      'SELECT id, discord_id, plan, amount, gateway, gateway_ref, status, created_at, paid_at FROM orders ORDER BY created_at DESC LIMIT 30'
+    ).catch(() => ({ rows: [] })),
+    db.execute(
+      'SELECT id, action, payload, actor_id, status, result, created_at, executed_at FROM bot_commands ORDER BY created_at DESC LIMIT 100'
+    ).catch(() => ({ rows: [] })),
+    getPromoCache().catch(() => []),
+    // BANK LOANS LANGSUNG DARI DB BOT (2026-10-03): BankManager dulu membaca
+    // dari snapshot push (umur bisa 60+ dtk) sehingga setelah pemutihan daftar
+    // masih menampilkan hutang lama -> admin mengira harus clear 2x.
+    db.execute(`
+      SELECT b.user_id, b.total_due, b.due_date,
+             (SELECT u.username FROM public.users u WHERE u.user_id = b.user_id) AS username
+      FROM public.bank_loans b
+      ORDER BY b.due_date ASC
+    `).catch(() => ({ rows: [] })),
+    db.execute(
       'SELECT id, discord_id, username, kind, message, page, created_at FROM web_feedback ORDER BY created_at DESC LIMIT 30'
-    );
-
-  // ==========================================
-  // DATA LANGSUNG DARI DB (permintaan pemilik 2026-10-03)
-  // ==========================================
-  // Dulu Promo/Redeem, NEXO Pass, Moderasi, dan Admin Title membaca dari
-  // SNAPSHOT PUSH BOT (bisa basi 60+ dtk) -> admin mengira perintah/tombol
-  // gagal padahal cuma telat. Sekarang diambil LANGSUNG dari tabel bot,
-  // sama seperti BankManager & ManualOrders. Snapshot tetap dikirim sebagai
-  // cadangan kalau query DB gagal.
-  const [promoCodes, premiumMembers, bannedUsers, adminTitleHolders] = await Promise.all([
+    ).catch(() => ({ rows: [] })),
+    // ==========================================
+    // DATA LANGSUNG DARI DB (permintaan pemilik 2026-10-03)
+    // ==========================================
+    // Dulu Promo/Redeem, NEXO Pass, Moderasi, dan Admin Title membaca dari
+    // SNAPSHOT PUSH BOT (bisa basi 60+ dtk) -> admin mengira perintah/tombol
+    // gagal padahal cuma telat. Sekarang diambil LANGSUNG dari tabel bot,
+    // sama seperti BankManager & ManualOrders. Snapshot tetap dikirim sebagai
+    // cadangan kalau query DB gagal.
     db.execute(
       `SELECT code, reward_type, reward_value, quota, claimed_count, created_at
          FROM public.promo_codes ORDER BY created_at DESC`
@@ -104,17 +110,39 @@ export async function GET() {
         page: r.page,
         createdAt: Number(r.created_at),
       })),
-      orders: orders.rows.map((r) => ({
-        id: Number(r.id),
-        discordId: r.discord_id,
-        plan: r.plan,
-        amount: Number(r.amount),
-        gateway: r.gateway,
-        gatewayRef: r.gateway_ref,
-        status: r.status,
-        createdAt: Number(r.created_at),
-        paidAt: r.paid_at ? Number(r.paid_at) : null,
-      })),
+      // PENTING - JANGAN kirim gambar bukti transfer di sini (permintaan pemilik
+      // 2026-10-04: "optimalkan jangan ada yang bocor").
+      // Dulu `gatewayRef` dikirim APA ADANYA - dan untuk order manual isinya
+      // { senderName, receiptBase64 } dengan gambar base64 ~18 KB per order.
+      // 29 order = 519 KB (62% dari seluruh payload 815 KB!) yang didownload
+      // panel TIAP 5 DETIK. Sekarang hanya metadata kecil (pengirim + flag ada
+      // gambar); gambarnya diambil lewat /api/admin/manual-order/[id] saat
+      // admin benar-benar membuka detail.
+      orders: orders.rows.map((r) => {
+        let ref = null;
+        try {
+          const p = JSON.parse(r.gateway_ref || 'null');
+          if (p && typeof p === 'object') {
+            ref = {
+              senderName: p.senderName || null,
+              adaBukti: Boolean(p.receiptBase64),
+              // Penanda versi agar UI tahu ini metadata, bukan data lama.
+              ringkas: true,
+            };
+          }
+        } catch { ref = null; }
+        return {
+          id: Number(r.id),
+          discordId: r.discord_id,
+          plan: r.plan,
+          amount: Number(r.amount),
+          gateway: r.gateway,
+          gatewayRef: ref,
+          status: r.status,
+          createdAt: Number(r.created_at),
+          paidAt: r.paid_at ? Number(r.paid_at) : null,
+        };
+      }),
       // Data LIVE dari DB (menggantikan snapshot yang bisa basi).
       promoCodes: promoCodes.rows.map((r) => ({
         code: r.code,
@@ -143,16 +171,33 @@ export async function GET() {
         username: r.username || null,
         adminTitle: r.admin_title,
       })),
-      log: log.rows.map((r) => ({
-        id: Number(r.id),
-        action: r.action,
-        payload: safeParse(r.payload),
-        actorId: r.actor_id,
-        status: r.status,
-        result: r.result,
-        createdAt: Number(r.created_at),
-        executedAt: r.executed_at ? Number(r.executed_at) : null,
-      })),
+      log: log.rows.map((r) => {
+        const p = safeParse(r.payload);
+        // BUANG base64 dari log (permintaan pemilik 2026-10-04: "optimalkan
+        // jangan ada yang bocor"). Aksi dm_admin membawa fileBase64 gambar
+        // bukti (~67 KB per baris!) - dan Activity Log TIDAK menampilkan
+        // gambar itu, jadi ikut terkirim tiap poll 5 dtk tanpa manfaat.
+        if (p && typeof p === 'object') {
+          if ('fileBase64' in p) {
+            p.fileBase64 = null;
+            p.adaLampiran = true;
+          }
+          // payload panjang lain juga dipotong (mis. pesan sangat panjang).
+          if (typeof p.message === 'string' && p.message.length > 500) {
+            p.message = p.message.slice(0, 500) + '...';
+          }
+        }
+        return {
+          id: Number(r.id),
+          action: r.action,
+          payload: p,
+          actorId: r.actor_id,
+          status: r.status,
+          result: r.result,
+          createdAt: Number(r.created_at),
+          executedAt: r.executed_at ? Number(r.executed_at) : null,
+        };
+      }),
     });
 }
 
