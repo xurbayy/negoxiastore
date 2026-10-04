@@ -4,11 +4,31 @@ import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import { PLAN_DAYS } from '../../lib/premiumPlan';
 
+// Terima DUA bentuk (fix 2026-10-04):
+//  - OBJEK  : { senderName, adaBukti, ringkas } - bentuk BARU dari /api/admin/data
+//             (metadata ringkas; gambar diambil on-demand)
+//  - STRING : JSON lama { senderName, receiptBase64 } - masih mungkin dari
+//             endpoint lain / cache lama
+// Dulu hanya menangani string -> saat API mengirim objek, JSON.parse gagal dan
+// SEMUA pengirim tampil "Unknown" (bug yang dilaporkan pemilik).
 function parseRef(ref) {
+  if (!ref) return { senderName: 'Unknown', receiptBase64: null, adaBukti: false };
+  if (typeof ref === 'object') {
+    return {
+      senderName: ref.senderName || 'Unknown',
+      receiptBase64: ref.receiptBase64 || null,
+      adaBukti: Boolean(ref.adaBukti || ref.receiptBase64),
+    };
+  }
   try {
-    return JSON.parse(ref);
+    const p = JSON.parse(ref);
+    return {
+      senderName: p?.senderName || 'Unknown',
+      receiptBase64: p?.receiptBase64 || null,
+      adaBukti: Boolean(p?.receiptBase64),
+    };
   } catch {
-    return { senderName: 'Unknown', receiptBase64: null };
+    return { senderName: 'Unknown', receiptBase64: null, adaBukti: false };
   }
 }
 
