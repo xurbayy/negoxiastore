@@ -377,8 +377,14 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
     // Sampel 30 nama teratas supaya AI bisa mengaitkan nama yang disebut
     // pemilik dengan level/keberadaannya. Profil LENGKAP ada di bagian
     // PROFIL MENDALAM (5 teratas) - di sini cukup daftar ringan.
+    // CATATAN: ID pemain di luar 30 teratas TIDAK bisa dilihat dari sini -
+    // kalau pemilik menyebut ID/nama lain, web akan menyisipkan DATA LENGKAP
+    // PEMAIN lewat pencarian (lihat /api/admin/ai: cocokNama + cocokId).
     L.push('Sampel pemain teratas (nama | level): ' +
       daftar.slice(0, 30).map((p) => `${p.username}(${p.level})`).join(', '));
+    L.push('CATATAN PENTING: daftar di atas hanya SAMPEL 30 teratas dari ' + daftar.length +
+      ' pemain. Kalau pemilik menyebut nama/ID yang tidak ada di sampel, JANGAN bilang "tidak ada" - ' +
+      'data lengkap pemain itu otomatis disisipkan di bagian "DATA LENGKAP PEMAIN" kalau namanya/ID-nya dikenali.');
   }
 
   // ==========================================

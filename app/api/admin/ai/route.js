@@ -394,11 +394,31 @@ export async function POST(request) {
         .split(/[^a-z0-9_]+/)   // pisah di spasi, tanda baca, dan simbol
         .filter(Boolean)
     );
-    const cocok = daftar.filter((u) => u.username && kataTanya.has(String(u.username).toLowerCase()));
-    // Dibatasi 2 supaya konteks tidak meledak kalau banyak nama disebut.
+    // Ambil userId yang BENAR. PENTING (fix 2026-10-04): PostgreSQL me-lowercase
+    // alias kolom, jadi daftarPemain bisa berisi `userid` (bukan `userId`).
+    // Dulu kode memakai u.userId apa adanya -> undefined -> pencarian gagal
+    // dan AI menjawab "Data tidak tersedia" padahal pemainnya ADA.
+    // Terbukti: ID 1535676425305325689 (zerongawi) ada di DB tapi AI bilang
+    // tidak ada.
+    const idDari = (u) => u.userId ?? u.userid ?? u.user_id ?? null;
+
+    // Pencocokan nama (kata utuh) + DETEKSI ID LANGSUNG (fix 2026-10-04):
+    // pemilik sering menempelkan Discord ID mentah (17-20 digit). Sebelumnya
+    // ID mentah tidak pernah dicocokkan, jadi AI buta terhadapnya.
+    const cocokNama = daftar.filter((u) => u.username && kataTanya.has(String(u.username).toLowerCase()));
+    const idDiPertanyaan = new Set(
+      (instruksi + ' ' + tanyaBebas + ' ' + idPintasan).match(/\b\d{17,20}\b/g) || []
+    );
+    const cocokId = idDiPertanyaan.size
+      ? daftar.filter((u) => idDiPertanyaan.has(String(idDari(u) || '')))
+      : [];
+    // Gabung: ID dulu (paling spesifik), lalu nama. Maks 2 supaya konteks tidak meledak.
+    const cocok = [...cocokId, ...cocokNama.filter((n) => !cocokId.includes(n))];
     for (const u of cocok.slice(0, 2)) {
       try {
-        const res = await fetch(new URL('/api/admin/player?id=' + encodeURIComponent(u.userId), request.url), {
+        const uid = idDari(u);
+        if (!uid) continue;
+        const res = await fetch(new URL('/api/admin/player?id=' + encodeURIComponent(uid), request.url), {
           headers: { cookie: request.headers.get('cookie') || '' },
         });
         if (!res.ok) continue;
@@ -407,7 +427,7 @@ export async function POST(request) {
         if (!p) continue;
         // Ringkas supaya tidak mengirim objek mentah yang panjang.
         konteksPemain += '\n\n### DATA LENGKAP PEMAIN: ' + (p.username || u.username) + '\n';
-        konteksPemain += 'ID: ' + (p.userId || u.userId) + '\n';
+        konteksPemain += 'ID: ' + (p.userId || uid) + '\n';
         konteksPemain += 'Poin: ' + rupiahNum(p.points) + ' | Level ' + p.level +
           ' | XP ' + p.xp + '/' + (p.xpNext ?? '-') + ' | Rank global: ' + (p.globalRank ?? '-') + '\n';
         konteksPemain += 'Registered: ' + (p.registered ? 'ya' : 'belum') +
