@@ -20,7 +20,9 @@ import { schemaReady as rawSchemaReady } from './db.js';
 
 const URL_BASE = (process.env.BOT_API_URL || '').replace(/\/+$/, '');
 const KEY = process.env.BOT_API_KEY || '';
-const TIMEOUT_MS = parseInt(process.env.BOT_API_TIMEOUT_MS || '20000', 10);
+// Timeout per request ke bot. 20 dtk terlalu lama kalau bot bermasalah ->
+// halaman menggantung. 8 dtk cukup (proxy bot lokal ~300ms dari Vercel).
+const TIMEOUT_MS = parseInt(process.env.BOT_API_TIMEOUT_MS || '8000', 10);
 
 function _aktif() {
   return Boolean(URL_BASE && KEY);
@@ -46,14 +48,21 @@ async function _panggil(path, method, body) {
   }
 }
 
-// Retry utk blip jaringan (sama semangat dengan db.js).
-async function _panggilRetry(path, method, body, coba = 3) {
+// Retry utk blip jaringan (sama semangat dengan db.js). PENTING: error yang
+// BUKAN jaringan (mis. 403 DDL-dilarang, error SQL) TIDAK diulang - kalau
+// diulang, setiap request gagal jadi lambat (retry x timeout = puluhan detik).
+async function _panggilRetry(path, method, body, coba = 2) {
   let last = null;
   for (let i = 0; i < coba; i++) {
     const r = await _panggil(path, method, body);
     if (r && r.ok) return r;
     last = r;
-    if (i < coba - 1) await new Promise((res) => setTimeout(res, 250 * (i + 1)));
+    // Hanya ulangi kalau JARINGAN (network/timeout). Error dari bot
+    // (mis. 'query dilarang', 'column tidak ada') -> langsung kembalikan.
+    const errStr = String((r && r.error) || '');
+    const jaringan = /timeout|network error|ECONNRESET|ETIMEDOUT|fetch failed|socket hang up|EAI_AGAIN/i.test(errStr);
+    if (!jaringan) return r;
+    if (i < coba - 1) await new Promise((res) => setTimeout(res, 200 * (i + 1)));
   }
   return last || { ok: false, error: 'gagal' };
 }

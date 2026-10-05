@@ -2,7 +2,7 @@
 // user redeem, order premium dibayar). Selama <=5 detik setelah aksi,
 // /api/bot/queue menjawab nextPollMs:1000 supaya bot yang lagi idle ngebut.
 // Disimpan di tabel web_meta -> tahan lintas instance serverless.
-import { getDb, schemaReady } from './db';
+import { getDb, schemaReady, PROXY_AKTIF } from './db';
 
 // CATATAN (fix 2026-10-04): nama key ini sebelumnya sempat TERKORUPSI
 // ('last_act...y_ms' - ada karakter ellipsis U+2026 di tengah string) sehingga
@@ -11,7 +11,10 @@ import { getDb, schemaReady } from './db';
 export const ACTIVITY_KEY = 'last_activity_ms';
 
 async function ensureMeta(db) {
+  // PROXY MODE (2026-10-05): tabel web_meta SUDAH ADA di DB VPS. CREATE TABLE
+  // lewat proxy = 403 (DDL dilarang) -> touchActivity selalu gagal senyap.
   try {
+    if (typeof PROXY_AKTIF !== 'undefined' && PROXY_AKTIF) return;
     await db.execute('CREATE TABLE IF NOT EXISTS web_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
   } catch {}
 }

@@ -63,6 +63,11 @@ export function getDb() {
 }
 
 export async function ensureSchema() {
+  // PROXY MODE (2026-10-05): saat web lewat bot (BOT_API_URL), SKEMA SUDAH ADA
+  // di PostgreSQL VPS. Menjalankan CREATE TABLE lewat proxy = DIBLOKIR 403
+  // (proxy melarang DDL) -> SEMUA endpoint gagal (web lemot + data kosong).
+  // Jadi di mode proxy, ensureSchema = no-op (skema sudah pasti ada).
+  if (PROXY_AKTIF) return;
   const db = getDb();
   await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
@@ -468,3 +473,7 @@ export function schemaReady() {
   if (!_schemaReady) _schemaReady = ensureSchema().catch((e) => { _schemaReady = null; throw e; });
   return _schemaReady;
 }
+
+// Re-export supaya modul lain (activity.js, emojisServer.js, dll) tahu apakah
+// web sedang lewat proxy bot -> skip DDL (CREATE TABLE) yang diblokir proxy.
+export { PROXY_AKTIF };

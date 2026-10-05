@@ -16,7 +16,7 @@
 //   - `aliases`: nama lain yang menunjuk emoji sama
 //   - `url`    : URL CDN Discord (png/gif)
 //   - `usage`  : deskripsi singkat (dokumentasi, tidak dipakai rendering)
-import { getDb, schemaReady } from './db';
+import { getDb, schemaReady, PROXY_AKTIF } from './db';
 import emojiData from './web-emojis.json';
 
 // Katalog statis = fallback / bawaan. Disalin ke memori sekali saat module load.
@@ -30,6 +30,9 @@ const STATIC_EMOJIS = Array.isArray(emojiData?.emojis) ? emojiData.emojis : [];
 // Supabase ~180 ms, dan itu berulang di setiap baca/tulis.
 let _tableReady = null;
 function ensureTable(db) {
+  // PROXY MODE (2026-10-05): tabel web.emoji_catalog SUDAH ADA di DB VPS;
+  // CREATE TABLE lewat proxy = 403. Skip saat proxy.
+  if (PROXY_AKTIF) { _tableReady = Promise.resolve(); return _tableReady; }
   if (!_tableReady) {
     _tableReady = db.execute(`
       CREATE TABLE IF NOT EXISTS web.emoji_catalog (
