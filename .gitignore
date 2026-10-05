@@ -12,3 +12,6 @@ vercel-env-*.txt
 
 # Build artifact TypeScript (jangan pernah di-commit)
 *.tsbuildinfo
+
+.vercel
+.env*

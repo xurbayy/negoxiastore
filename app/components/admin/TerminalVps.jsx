@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ConfirmModal from './ConfirmModal';
 import StatusSistem from './StatusSistem';
-import PushInfo from './PushInfo';
 
 // ==========================================
 // TerminalVps — panel kontrol VPS gaya Pterodactyl Panel
@@ -221,7 +220,6 @@ export default function TerminalVps({ send }) {
 
       {/* Status Sistem (dipindah dari Dashboard) */}
       <StatusSistem />
-      <PushInfo />
 
       {/* Diagram metrik (gaya Pterodactyl): CPU, Memori, Jaringan In/Out */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

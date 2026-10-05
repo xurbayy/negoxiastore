@@ -83,6 +83,8 @@ export default function AdminShell({ username, avatar = null }) {
   // PENGINGAT AI di navbar (permintaan pemilik 2026-10-01): dipindah dari
   // halaman AI ke sebelah profil supaya terlihat dari halaman admin mana pun.
   const [pengingat, setPengingat] = useState([]);
+  // Info perangkat notifikasi (push) - ditampilkan di dropdown Pengingat.
+  const [pushPerangkat, setPushPerangkat] = useState(null);
   const lastSig = useRef('');
   // Area konten (dipakai untuk melompat ke atas saat tab berganti).
   const kontenRef = useRef(null);
@@ -162,6 +164,17 @@ export default function AdminShell({ username, avatar = null }) {
       const d = await res.json().catch(() => ({}));
       if (d.ok) setPengingat(d.reminders || []);
     } catch { /* gagal muat tidak menghalangi panel */ }
+  }, []);
+
+  // Info perangkat notifikasi - muat sekali saat mount (cukup, jarang berubah).
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/push/info', { cache: 'no-store' });
+        const d = await res.json().catch(() => ({}));
+        if (d.ok) setPushPerangkat(d.perangkat);
+      } catch { /* diamkan */ }
+    })();
   }, []);
 
   useEffect(() => {
@@ -438,6 +451,14 @@ export default function AdminShell({ username, avatar = null }) {
               <p className="px-2 py-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">
                 Pengingat {jumlahPengingat > 0 ? `(${jumlahPengingat})` : ''}
               </p>
+              {/* Info perangkat notifikasi - permintaan pemilik 2026-10-05:
+                  tampil di dropdown Pengingat (bukan Terminal VPS). */}
+              {pushPerangkat !== null && (
+                <p className="px-2 pb-2 text-[0.65rem] font-semibold text-ink-muted sm:text-xs">
+                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-success align-middle" aria-hidden="true" />
+                  {pushPerangkat} perangkat menyalakan notifikasi
+                </p>
+              )}
               {jumlahPengingat === 0 ? (
                 <p className="px-2 pb-2 text-[0.7rem] leading-relaxed text-ink-muted sm:text-xs">
                   Belum ada. Tulis di tab Analisis AI mode Diskusi, mis. "ingetin gw pas Idul Fitri mau promo".
