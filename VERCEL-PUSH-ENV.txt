@@ -1,0 +1,16 @@
+# ══════════════════════════════════════════════════════════
+# TAMBAHKAN 3 ENV INI DI VERCEL (Settings -> Environment Variables)
+# Environment: Production (dan Preview kalau mau). Centang SECRET untuk private key.
+# ══════════════════════════════════════════════════════════
+
+# [CONFIG] kunci publik VAPID (dikirim ke browser, aman)
+VAPID_PUBLIC_KEY=BHKnHBPksoff-4tvHvM_E7vMb5Eoue4uQ7tXM6aLE_jo6MWzYiG0YSzB8LFsOCNo52pq7TbxM1EdtOOkoCzeSjw
+
+# [SECRET] kunci privat VAPID (RAHASIA - jangan sampai bocor)
+VAPID_PRIVATE_KEY=bAd-YUJ75ZtrtcgO4NcafymcTUkYTvuGjrMJIE4E0Xs
+
+# [CONFIG] kontak admin (wajib format mailto: untuk web-push)
+VAPID_SUBJECT=mailto:admin@nexogames.site
+
+# SETELAH ditambahkan -> Redeploy (WAJIB, env baru kepakai saat build ulang).
+# Lalu buka https://nexogames.site/me -> harus muncul kartu "Notifikasi Perangkat".

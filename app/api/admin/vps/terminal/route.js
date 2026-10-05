@@ -60,6 +60,6 @@ export async function POST(request) {
   try { body = await request.json(); } catch { body = null; }
   const id = String(body?.perintah || '');
   if (!id) return json({ ok: false, error: 'perintah kosong' }, 400);
-  const d = await panggilBot('/vps/terminal', 'POST', { perintah: id });
+  const d = await panggilBot('/vps/terminal', 'POST', { perintah: id, aktor: actor });
   return json(d);
 }

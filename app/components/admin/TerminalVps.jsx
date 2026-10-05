@@ -99,19 +99,26 @@ export default function TerminalVps({ send }) {
     }
   }, []);
 
+  // Riwayat PERSISTEN dari DB (lintas device) + log bot live dari journalctl.
+  // Konsol = [riwayat_db (membekas)] + [log_bot_live] digabung, dibaca dari
+  // server - jadi device mana pun menampilkan isi yang SAMA.
   const muatLog = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/vps/log?n=80', { cache: 'no-store' });
-      const d = await res.json().catch(() => ({}));
+      const [resR, resL] = await Promise.all([
+        fetch('/api/admin/vps/riwayat?n=80', { cache: 'no-store' }),
+        fetch('/api/admin/vps/log?n=80', { cache: 'no-store' }),
+      ]);
+      const dR = await resR.json().catch(() => ({}));
+      const dL = await resL.json().catch(() => ({}));
       if (!hidup.current) return;
-      if (d.ok && Array.isArray(d.baris)) {
-        setRiwayat((r) => {
-          // Gabung: baris lama (pesan console user) + log bot terbaru.
-          const userLog = r.filter((x) => x.jenis === 'user' || x.jenis === 'out');
-          const botLog = d.baris.map((b) => ({ jenis: 'bot', t: b.t, teks: b.pesan }));
-          return [...botLog, ...userLog].slice(-250);
-        });
-      }
+      const barisHist = (dR.ok && Array.isArray(dR.riwayat)) ? dR.riwayat.map((h) => ({
+        jenis: h.ok ? 'out' : 'err',
+        t: h.created_at ? new Date(Number(h.created_at)).toLocaleTimeString('id-ID') : '',
+        teks: `$ ${h.perintah || ''}  [${h.jenis}${h.aktor ? ' · ' + h.aktor : ''}]\n${h.keluaran || ''}`,
+      })) : [];
+      const barisBot = (dL.ok && Array.isArray(dL.baris)) ? dL.baris.map((b) => ({ jenis: 'bot', t: b.t, teks: b.pesan })) : [];
+      // Log bot live di depan, riwayat perintah di belakang (kronologis).
+      setRiwayat([...barisBot, ...barisHist].slice(-400));
     } catch { /* diamkan */ }
   }, []);
 
@@ -139,15 +146,12 @@ export default function TerminalVps({ send }) {
   const jalankanKontrol = useCallback(async (aksi) => {
     setKonfirm(null);
     setBusy(true);
-    setRiwayat((r) => [...r, { jenis: 'user', teks: `$ bot ${aksi}` }].slice(-250));
     try {
-      const res = await fetch('/api/admin/vps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aksi }) });
-      const d = await res.json().catch(() => ({}));
-      setRiwayat((r) => [...r, { jenis: d.ok ? 'out' : 'err', teks: d.ok ? `✓ ${d.hasil || aksi + ' ok'}` : `✗ ${d.error || 'gagal'}` }].slice(-250));
-      setTimeout(() => { muat(); muatLog(); }, 4000);
-    } catch (e) {
-      setRiwayat((r) => [...r, { jenis: 'err', teks: `✗ ${e?.message || 'error'}` }].slice(-250));
-    } finally {
+      await fetch('/api/admin/vps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aksi }) });
+      // Perintah tercatat di DB (terminal_log) -> muat ulang konsol dari server.
+      setTimeout(muatLog, 1200);
+      setTimeout(() => { muat(); muatLog(); }, 5000);
+    } catch { /* diamkan */ } finally {
       setBusy(false);
     }
   }, [muat, muatLog]);
@@ -222,7 +226,7 @@ export default function TerminalVps({ send }) {
       </div>
 
       {/* CONSOLE besar (gaya Pterodactyl) */}
-      <ConsoleLog riwayat={riwayat} setRiwayat={setRiwayat} online={online} />
+      <ConsoleLog riwayat={riwayat} refresh={muatLog} online={online} />
 
       {/* Modal konfirmasi kontrol bot (Mulai/Restart/Hentikan). WAJIB dirender
           - dulu pernah hilang saat rewrite -> tombol terasa "tidak berfungsi"
@@ -251,7 +255,7 @@ function MiniKartu({ label, nilai, sub, warna }) {
 }
 
 // ── Console: area besar + input command (whitelist) ──
-function ConsoleLog({ riwayat, setRiwayat, online }) {
+function ConsoleLog({ riwayat, refresh, online }) {
   const [baris, setBaris] = useState('');
   const [jalan, setJalan] = useState(false);
   const autoRef = useRef(true);
@@ -275,24 +279,18 @@ function ConsoleLog({ riwayat, setRiwayat, online }) {
     if (!cmd || jalan) return;
     setBaris('');
     setJalan(true);
-    setRiwayat((r) => [...r, { jenis: 'user', teks: `$ ${cmd}` }].slice(-250));
     try {
-      const res = await fetch('/api/admin/vps/terminal', {
+      await fetch('/api/admin/vps/terminal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ perintah: cmd }),
       });
-      const d = await res.json().catch(() => ({}));
-      setRiwayat((r) => [...r, {
-        jenis: d.ok ? 'out' : 'err',
-        teks: d.ok ? `» ${d.label}  (${d.ms}ms)\n${d.keluaran}` : `✗ ${d.error || 'gagal'}`,
-      }].slice(-250));
-    } catch (err) {
-      setRiwayat((r) => [...r, { jenis: 'err', teks: `✗ ${err?.message || 'error'}` }].slice(-250));
-    } finally {
+      // Muat ulang konsol dari server (riwayat persisten + log bot).
+      if (refresh) await refresh();
+    } catch { /* diamkan */ } finally {
       setJalan(false);
     }
-  }, [baris, jalan, setRiwayat]);
+  }, [baris, jalan, refresh]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-border-soft bg-[#0b1020]">
