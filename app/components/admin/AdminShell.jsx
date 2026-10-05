@@ -20,6 +20,7 @@ import ActivityLog from './ActivityLog';
 import PlayerLookup from './PlayerLookup';
 import Titles from './Titles';
 import ManualOrders from './ManualOrders';
+import TerminalVps from './TerminalVps';
 
 // Sidebar dikelompokkan per area kerja + badge angka live (dari data yang
 // sudah di-poll - tanpa API baru). Visual saja, alur data tidak berubah.
@@ -28,6 +29,7 @@ const TAB_GROUPS = [
   { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
   { label: 'Member', tabs: [['nexopass', 'NEXO Pass'], ['titles', 'Titles']] },
   { label: 'Komunitas', tabs: [['broadcast', 'Broadcast'], ['moderasi', 'Sanksi & Moderasi'], ['feedback', 'Feedback']] },
+  { label: 'Sistem', tabs: [['terminal', 'Terminal VPS']] },
 ];
 
 // Kerangka admin: sidebar + konten. Data snapshot/log di-poll tiap 5 detik.
@@ -659,6 +661,10 @@ export default function AdminShell({ username, avatar = null }) {
           // `send` dioper untuk tombol Restock Semua (restock_all harus lewat
           // antrean bot - stok default hanya ada di katalog seed bot).
           <ShopManager send={send} />
+        ) : tab === 'terminal' ? (
+          // Terminal VPS mandiri: ambil statusnya sendiri dari /api/admin/vps,
+          // jadi tidak perlu menunggu `data` panel.
+          <TerminalVps send={send} />
         ) : !data ? (
           // Kerangka menyesuaikan TAB yang sedang dimuat.
           //
