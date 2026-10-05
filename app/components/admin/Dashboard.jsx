@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fmt, fmtRingkas, fmtUptime, timeAgo } from '../../lib/formatClient';
+import { fmt, fmtRingkas, timeAgo } from '../../lib/formatClient';
 import { emojiSrc } from '../../lib/emojisClient';
 import { GAME_META } from '../../lib/game-meta';
 
@@ -343,9 +343,9 @@ export default function Dashboard({ data }) {
     },
     { label: 'Hutang Aktif', value: fmt(m.loans?.count), pick: null },
     { label: 'Hutang Telat', value: fmt(m.loans?.overdue), pick: null },
-    { label: 'RAM Bot', value: `${fmt(snap.bot?.memMb)} MB`, pick: null },
-    { label: 'Ping WS', value: `${fmt(snap.bot?.wsPing ?? '-')} ms`, pick: null },
-    { label: 'Uptime', value: fmtUptime(snap.bot?.uptimeSec), pick: null },
+    // RAM Bot / Ping WS / Uptime bot DIHAPUS dari Dashboard (permintaan pemilik
+    // 2026-10-05): info itu sudah lengkap & realtime di tab "Terminal VPS",
+    // jadi di sini hanya duplikat yang bikin panel penuh.
   ];
 
   const maxPlays = Math.max(...(m.topGamesToday || []).map((g) => g.plays), 1);

@@ -86,6 +86,7 @@ export default function TerminalVps({ send }) {
 
   const v = st?.vps;
   const b = st?.bot;
+  const r = st?.render;
 
   return (
     <div className="space-y-4">
@@ -123,6 +124,43 @@ export default function TerminalVps({ send }) {
         <Kartu label="RAM Bot" nilai={b?.memMb != null ? `${b.memMb} MB` : '-'} sub="memori proses bot" />
         <Kartu label="Uptime Bot" nilai={b?.uptime?.teks || '-'} sub={b?.sejakMs ? `sejak ${new Date(b.sejakMs).toLocaleString('id-ID')}` : ''} />
         <Kartu label="Ping WS" nilai={b?.ping != null ? `${b.ping} ms` : '-'} sub="latensi Discord gateway" />
+      </div>
+
+      {/* RENDER CANVAS (permintaan pemilik 2026-10-05): berapa gambar yang
+          sedang dibuat worker sekarang + berapa yang menunggu. Info ini penting
+          untuk tahu apakah server sedang sibuk render (bikin game terasa lambat).
+          Sumber: renderPool.stats() + renderQueue.queueStats() di bot. */}
+      <div className="rounded-xl border border-border-soft bg-card-cream/60 px-4 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Render Canvas</p>
+          <span className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold ${
+            (r?.aktif || 0) > 0 ? 'bg-accent text-white' : 'bg-bg-soft text-ink-muted'
+          }`}>
+            {(r?.aktif || 0) > 0 ? 'SEDANG MERENDER' : 'IDLE'}
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-border-soft bg-white px-3 py-2">
+            <p className="text-[0.65rem] uppercase tracking-wider text-ink-muted">Sedang Render</p>
+            <p className="mt-0.5 text-2xl font-bold text-ink">{r ? r.aktif : '-'}</p>
+            <p className="text-[0.65rem] text-ink-muted">{r ? `dari ${r.workers} worker` : 'bot baru start'}</p>
+          </div>
+          <div className="rounded-lg border border-border-soft bg-white px-3 py-2">
+            <p className="text-[0.65rem] uppercase tracking-wider text-ink-muted">Menunggu</p>
+            <p className="mt-0.5 text-2xl font-bold text-ink">{r ? r.antrean : '-'}</p>
+            <p className="text-[0.65rem] text-ink-muted">{r ? `maks ${r.maxAntrean}` : ''}</p>
+          </div>
+          <div className="rounded-lg border border-border-soft bg-white px-3 py-2">
+            <p className="text-[0.65rem] uppercase tracking-wider text-ink-muted">Total Aktif</p>
+            <p className="mt-0.5 text-2xl font-bold text-ink">{r ? (r.dibatasi ?? '-') : '-'}</p>
+            <p className="text-[0.65rem] text-ink-muted">lewat limiter</p>
+          </div>
+          <div className="rounded-lg border border-border-soft bg-white px-3 py-2">
+            <p className="text-[0.65rem] uppercase tracking-wider text-ink-muted">Worker</p>
+            <p className="mt-0.5 text-2xl font-bold text-ink">{r ? r.workers : '-'}</p>
+            <p className="text-[0.65rem] text-ink-muted">thread render</p>
+          </div>
+        </div>
       </div>
 
       {/* Log aksi */}
