@@ -76,7 +76,7 @@ export async function POST(request) {
   //  - target satu user -> push ke perangkat dia.
   //  - broadcast (discord_id NULL) -> push ke SEMUA user yang menyalakan.
   try {
-    const { kirimPush } = await import('../../../../lib/pushNotif');
+    const { kirimPush } = await import('../../../lib/pushNotif');
     if (discordId) {
       await kirimPush(discordId, { title, body: text, url: '/me', tag: 'nexo-broadcast' });
     } else {
