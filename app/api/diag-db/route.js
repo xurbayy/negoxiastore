@@ -10,8 +10,15 @@ export const dynamic = 'force-dynamic';
 // TIDAK menampilkan nilai rahasia (hanya "ada/tidak" + bentuk host).
 export async function GET() {
   const url = process.env.DATABASE_URL || process.env.PG_URL || '';
+  const botApi = process.env.BOT_API_URL || '';
+  const proxyAktif = Boolean(botApi && process.env.BOT_API_KEY);
   const out = {
     env: {
+      // MODE KONEKSI: kalau proxy aktif, web TIDAK memakai DATABASE_URL sama
+      // sekali (semua query lewat bot VPS). Ini penting untuk verifikasi
+      // "all in VPS" - kalau proxy_aktif=true, Supabase boleh dihapus.
+      proxy_bot_aktif: proxyAktif,
+      bot_api_url: botApi || null,
       ada_database_url: Boolean(url),
       pg_schema: process.env.PG_SCHEMA || '(default: web)',
       // tampilkan hanya BENTUKNYA, jangan nilainya
@@ -20,12 +27,18 @@ export async function GET() {
         : null,
       // deteksi masalah umum: password mentah mengandung @ atau #
       password_mentah: /:\/\/[^:]+:[^@/%]*[@#][^@]*@/.test(url),
+      // peringatan: DATABASE_URL masih menunjuk Supabase padahal proxy aktif
+      // -> artinya env lama masih terpasang (tidak dipakai, tapi sebaiknya
+      // dihapus supaya benar-benar all-in VPS).
+      masih_supabase: /supabase|pooler\.supabase/i.test(url),
     },
     langkah: [],
   };
 
-  if (!url) {
-    out.error = 'DATABASE_URL belum diset di environment Vercel.';
+  // Kalau proxy bot aktif, DATABASE_URL tidak diperlukan - jangan gagal hanya
+  // karena env lama sudah dihapus. Verifikasi tetap jalan lewat proxy.
+  if (!url && !proxyAktif) {
+    out.error = 'Tidak ada jalur DB: DATABASE_URL kosong DAN proxy bot tidak aktif.';
     return json(out, 500);
   }
 
