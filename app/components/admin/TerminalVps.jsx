@@ -213,8 +213,12 @@ export default function TerminalVps({ send }) {
           <span className="text-ink-muted">Sedang render: <b className="text-ink">{r ? r.aktif : '-'}</b></span>
           <span className="text-ink-muted">Menunggu: <b className="text-ink">{r ? r.antrean : '-'}</b></span>
           <span className="text-ink-muted">Worker: <b className="text-ink">{r ? r.workers : '-'}</b></span>
-          {r && <span className="text-ink-muted">(worker thread: {r.aktifPool}, limiter: {r.aktifLimiter})</span>}
+          {r && r.puncak != null && <span className="text-ink-muted">Puncak: <b className="text-ink">{r.puncak}</b></span>}
+          {r && r.total != null && <span className="text-ink-muted">Total sejak start: <b className="text-ink">{r.total}</b></span>}
         </div>
+        <p className="mt-1.5 text-[0.65rem] text-ink-faint">
+          Semua jalur render terhitung (worker thread + in-process). Rincian saat ini: worker {r ? r.aktifPool : '-'}, limiter {r ? r.aktifLimiter : '-'}.
+        </p>
       </div>
 
       {/* CONSOLE besar (gaya Pterodactyl) */}
