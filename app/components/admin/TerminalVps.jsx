@@ -223,6 +223,19 @@ export default function TerminalVps({ send }) {
 
       {/* CONSOLE besar (gaya Pterodactyl) */}
       <ConsoleLog riwayat={riwayat} setRiwayat={setRiwayat} online={online} />
+
+      {/* Modal konfirmasi kontrol bot (Mulai/Restart/Hentikan). WAJIB dirender
+          - dulu pernah hilang saat rewrite -> tombol terasa "tidak berfungsi"
+          karena setKonfirm jalan tapi modalnya tak muncul. */}
+      {konfirm && (
+        <ConfirmModal
+          title={konfirm.judul}
+          body={konfirm.body}
+          busy={busy}
+          onCancel={() => setKonfirm(null)}
+          onConfirm={() => jalankanKontrol(konfirm.aksi)}
+        />
+      )}
     </div>
   );
 }
