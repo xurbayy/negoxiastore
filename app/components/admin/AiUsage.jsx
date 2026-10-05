@@ -34,15 +34,19 @@ function GrafikJam({ hourly }) {
   // Total token per jam = input + output (cached sudah termasuk di input).
   const nilai = (h) => (Number(h.inputTokens) || 0) + (Number(h.outputTokens) || 0);
   const maks = Math.max(1, ...hourly.map(nilai));
+  // FIX 2026-10-05: batang sebelumnya `height: X%` di dalam pembungkus yang
+  // tingginya auto (induk `items-end`) -> persentase tak punya acuan -> batang
+  // kolaps jadi 0 (grafik tampak KOSONG walau data ada). Sekarang pembungkus
+  // `h-full` + `items-end` di dalamnya, jadi tinggi persen dihitung benar.
   return (
-    <div className="flex h-32 items-end gap-[3px] sm:h-36" role="img" aria-label="Grafik token AI per jam (24 jam terakhir)">
+    <div className="flex h-32 items-stretch gap-[3px] sm:h-36" role="img" aria-label="Grafik token AI per jam (24 jam terakhir)">
       {hourly.map((h) => {
         const v = nilai(h);
         const tinggi = v ? Math.max(6, Math.round((v / maks) * 100)) : 2;
         const jam = String(h.jam).padStart(2, '0');
         const tip = `${jam}:00 - ${fmt(v)} token (in ${fmt(h.inputTokens)} / out ${fmt(h.outputTokens)} / ${h.requests} req)`;
         return (
-          <div key={h.jam} className="group relative flex-1" title={tip}>
+          <div key={h.jam} className="group relative flex h-full flex-1 items-end" title={tip}>
             <div
               className={`w-full rounded-t-sm transition-all ${v ? 'bg-accent' : 'bg-border-soft/60'}`}
               style={{ height: `${tinggi}%` }}
