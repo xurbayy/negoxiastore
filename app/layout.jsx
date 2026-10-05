@@ -176,6 +176,7 @@ import { isUserBanned } from './lib/snapshot';
 import CookieConsent from './components/CookieConsent';
 import AdSense from './components/AdSense';
 import EmojiHydrator from './components/EmojiHydrator';
+import AuthGagalNotice from './components/AuthGagalNotice';
 
 export default async function RootLayout({ children }) {
   const session = await getSession();
@@ -224,6 +225,7 @@ export default async function RootLayout({ children }) {
             </div>
           </main>
         ) : children}
+        <AuthGagalNotice />
         <CookieConsent />
         <script
           type="application/ld+json"

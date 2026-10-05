@@ -25,8 +25,13 @@ export async function GET(request) {
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
   const redirect = process.env.DISCORD_REDIRECT_URI || `${ORIGIN}/api/auth/callback`;
 
-  if (!code || !clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/?auth=gagal', ORIGIN));
+  // Kode alasan SPESIFIK supaya kegagalan login bisa didiagnosa dari URL
+  // (?auth=gagal&kode=...). Sebelumnya semua disamarkan jadi "gagal" saja.
+  if (!code) {
+    return NextResponse.redirect(new URL('/?auth=gagal&kode=tanpa_code', ORIGIN));
+  }
+  if (!clientId || !clientSecret) {
+    return NextResponse.redirect(new URL(`/?auth=gagal&kode=env_kosong_${!clientId ? 'client_id' : 'client_secret'}`, ORIGIN));
   }
 
   // Verifikasi nonce CSRF (cookie sekali pakai -> dihapus).
@@ -34,8 +39,11 @@ export async function GET(request) {
     const store = await cookies();
     const expected = store.get('nexo_oauth_state')?.value;
     store.delete('nexo_oauth_state');
-    if (!expected || !stateNonce || expected !== stateNonce) {
-      return NextResponse.redirect(new URL('/?auth=gagal', ORIGIN));
+    if (!expected) {
+      return NextResponse.redirect(new URL('/?auth=gagal&kode=cookie_state_hilang', ORIGIN));
+    }
+    if (!stateNonce || expected !== stateNonce) {
+      return NextResponse.redirect(new URL('/?auth=gagal&kode=state_mismatch', ORIGIN));
     }
   }
 
@@ -52,7 +60,18 @@ export async function GET(request) {
         redirect_uri: redirect,
       }),
     });
-    if (!tokenRes.ok) throw new Error(`token HTTP ${tokenRes.status}`);
+    if (!tokenRes.ok) {
+      // Baca alasan asli dari Discord supaya jelas: invalid_client = secret
+      // salah; invalid_grant = code kedaluwarsa/dipakai 2x; redirect mismatch
+      // = redirect_uri tidak sama persis dengan yang didaftarkan.
+      let alasan = `HTTP ${tokenRes.status}`;
+      try {
+        const errBody = await tokenRes.json();
+        alasan = errBody.error || alasan;
+        if (errBody.error_description) alasan += `: ${errBody.error_description}`;
+      } catch { /* body bukan JSON */ }
+      return NextResponse.redirect(new URL(`/?auth=gagal&kode=token_${encodeURIComponent(alasan)}`, ORIGIN));
+    }
     const { access_token } = await tokenRes.json();
 
     // 2. Ambil profil Discord
@@ -121,7 +140,9 @@ export async function GET(request) {
     });
 
     return NextResponse.redirect(new URL(returnTo, ORIGIN));
-  } catch {
-    return NextResponse.redirect(new URL('/?auth=gagal', ORIGIN));
+  } catch (e) {
+    // Kegagalan di tahap 2/3 (profil Discord atau simpan sesi/DB).
+    const pesan = (e && (e.message || String(e))) || 'tak_diketahui';
+    return NextResponse.redirect(new URL(`/?auth=gagal&kode=server_${encodeURIComponent(pesan).slice(0, 90)}`, ORIGIN));
   }
 }
