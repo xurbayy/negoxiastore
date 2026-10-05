@@ -624,8 +624,11 @@ export default function AdminShell({ username, avatar = null }) {
       {/* AutoRefresh: menyegarkan server-component /admin berkala + saat tab
           kembali terlihat. Komentar lama di bawah MENGAKU ini sudah ada, padahal
           TIDAK pernah dirender -> diperbaiki 2026-10-03 (permintaan pemilik:
-          "data harus langsung berubah"). */}
-      <AutoRefresh intervalMs={5000} />
+          "data harus langsung berubah").
+          OPTIMASI 2026-10-05: 5s -> 10s. Refresh RSC ini HANYA cek session JWT
+          (tanpa query DB) dan data panel sudah diambil client-side via
+          /api/admin/data (poll terpisah 10s) - 5s murni membuang request. */}
+      <AutoRefresh intervalMs={10000} />
 
       {/* Konten */}
       <div className="min-w-0 flex-1">
