@@ -54,6 +54,14 @@ async function pruneNow(db, now) {
   await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_emoji_catalog_name ON web.emoji_catalog (name)');
   await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_snapshots_ts_desc ON web.monitor_snapshots (ts DESC)');
   await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_missions_user ON public.daily_missions (user_id)');
+  // INDEX BARU (optimasi 2026-10-05): query HOT dari /api/me + notifikasi.
+  // Tanpa ini /api/me (poll tiap 60 dtk per user) full-scan data_requests
+  // (WHERE discord_id AND status='done' ORDER BY filled_at DESC) tiap poll.
+  // Sudah dibuat juga langsung di DB produksi - IF NOT EXISTS = idempoten.
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_dr_user_status_filled ON web.data_requests (discord_id, status, filled_at DESC)');
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_wn_user_created ON web.web_notifications (discord_id, created_at DESC)');
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_nr_notif_user ON web.notif_reads (notification_id, discord_id)');
+  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_dr_user_pending ON web.data_requests (discord_id, status)');
 
   // Snapshot: 14 hari (DITURUNKAN dari 30, fix 2026-10-04).
   // Dengan simpan 1x/10 menit = 144 baris/hari, 14 hari = ~2.016 baris
