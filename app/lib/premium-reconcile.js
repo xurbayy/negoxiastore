@@ -21,6 +21,7 @@
 //  - bot_commands grant_premium done (executed_at + days, cap 3650)
 //  - revoke_premium done (lewat panel web) membatalkan event sebelumnya.
 import { getDb, schemaReady, PROXY_AKTIF } from './db';
+import { sisipNotif } from './notif';
 
 const DAY = 86_400_000;
 const RE_ENQUEUE_COOLDOWN_MS = 5 * 60_000;
@@ -307,10 +308,7 @@ async function notifyAdmin(db, userId) {
       args: [adminId, 'Premium dicabut manual terdeteksi', body, Date.now() - 6 * 60 * 60_000],
     });
     if (existing.rows.length) return; // sudah ada notif serupa < 6 jam -> jangan dobel
-    await db.execute({
-      sql: 'INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)',
-      args: [adminId, 'info', 'Premium dicabut manual terdeteksi', body, Date.now()],
-    });
+    await sisipNotif({ userId: adminId, type: 'info', title: 'Premium dicabut manual terdeteksi', body, db }).catch(() => {});
   } catch {}
 }
 

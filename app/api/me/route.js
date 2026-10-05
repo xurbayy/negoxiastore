@@ -1,5 +1,6 @@
 import { getSession } from '../../lib/session';
 import { getDb, schemaReady } from '../../lib/db';
+import { sisipNotif } from '../../lib/notif';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -132,15 +133,7 @@ export async function GET() {
           args: [session.discordId],
         });
         if (flip.rowsAffected > 0) {
-          await db.execute({
-            sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-            args: [
-              session.discordId,
-              'NEXO Pass kamu AKTIF!',
-              'Semua perk premium sudah jalan in-game: inventori unlimited, bonus kuota, dan prioritas render.',
-              now,
-            ],
-          });
+          await sisipNotif({ userId: session.discordId, type: 'event', title: 'NEXO Pass kamu AKTIF!', body: 'Semua perk premium sudah jalan in-game: inventori unlimited, bonus kuota, dan prioritas render.', db });
         }
       } else if (!isPremium && wasPremium) {
         const flip = await db.execute({
@@ -148,25 +141,9 @@ export async function GET() {
           args: [session.discordId],
         });
         if (flip.rowsAffected > 0) {
-          await db.execute({
-            sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'info', ?, ?, ?)",
-            args: [
-              session.discordId,
-              'Langganan NEXO Pass berakhir',
-              'Inventori kembali dibatasi 5 unit per item. Aktifkan lagi kapan saja di halaman Premium.',
-              now,
-            ],
-          });
+          await sisipNotif({ userId: session.discordId, type: 'info', title: 'Langganan NEXO Pass berakhir', body: 'Inventori kembali dibatasi 5 unit per item. Aktifkan lagi kapan saja di halaman Premium.', db });
           // Siklus langganan langkah 4: satu pengingat "aktifkan lagi" (event).
-          await db.execute({
-            sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-            args: [
-              session.discordId,
-              'Aktifkan lagi NEXO Pass',
-              'Beli ulang kapan saja - Rp 20.000/bulan, semua perk balik lagi.',
-              now + 1,
-            ],
-          });
+          await sisipNotif({ userId: session.discordId, type: 'event', title: 'Aktifkan lagi NEXO Pass', body: 'Beli ulang kapan saja - Rp 20.000/bulan, semua perk balik lagi.', db });
         }
       }
     }

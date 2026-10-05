@@ -12,6 +12,7 @@
 // butuh Discord (mis. DM admin, timeout Discord) tetap lewat bot.
 import { getDb, schemaReady } from './db';
 import { restockItem, setItemPrice, setDiscount, removeDiscount, HttpError } from './shopAdmin';
+import { sisipNotif } from './notif';
 
 // Aksi yang BISA dieksekusi langsung dari web.
 export const AKSI_LANGSUNG = new Set([
@@ -111,11 +112,8 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
         args: [userId, itemKey, qty],
       });
       // Notifikasi ke user (paritas dengan jalur bot webBridge add_item).
-      // Tabel web_notifications ada di schema web (sama seperti /api/bot/notify).
-      await db.execute({
-        sql: `INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)`,
-        args: [userId, 'info', 'Item Diterima', `Admin telah menambahkan ${qty}x ${itemKey} ke inventory-mu melalui Web.`, Date.now()],
-      }).catch(() => {});
+      // Lewat helper terpusat: sisip bell + push perangkat (kalau dinyalakan).
+      await sisipNotif({ userId, type: 'info', title: 'Item Diterima', body: `Admin telah menambahkan ${qty}x ${itemKey} ke inventory-mu melalui Web.`, db }).catch(() => {});
       return `+${qty}x ${itemKey} ke ${userId}`;
     }
     case 'remove_item': {
@@ -127,10 +125,7 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
         args: [qty, userId, itemKey],
       });
       if (!r.rowsAffected) throw new HttpError(404, `${userId} tidak punya ${itemKey}.`);
-      await db.execute({
-        sql: `INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)`,
-        args: [userId, 'info', 'Item Diambil', `Admin telah menghapus ${qty}x ${itemKey} dari inventory-mu melalui Web.`, Date.now()],
-      }).catch(() => {});
+      await sisipNotif({ userId, type: 'info', title: 'Item Diambil', body: `Admin telah menghapus ${qty}x ${itemKey} dari inventory-mu melalui Web.`, db }).catch(() => {});
       return `-${qty}x ${itemKey} dari ${userId}`;
     }
 

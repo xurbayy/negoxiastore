@@ -4,6 +4,7 @@ import { getDb, schemaReady } from '../../../lib/db';
 import { touchActivity } from '../../../lib/activity';
 import { PLAN_DAYS } from '../../../lib/premiumPlan';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';
+import { sisipNotif } from '../../../lib/notif';
 // Invalidasi ON-WRITE + catat ke Activity Log (permintaan pemilik 2026-10-04:
 // "semua kegiatan tak terkecuali" masuk activity log).
 import { invalidateLive } from '../../../lib/snapshot';
@@ -121,10 +122,7 @@ export async function POST(request) {
         args: [order.discord_id, now],
       });
       // Notifikasi web untuk user: pembayaran diterima
-      await db.execute({
-        sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'event', ?, ?, ?)",
-        args: [order.discord_id, `Pembayaran Order #${orderId} Diterima`, `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, now],
-      });
+      await sisipNotif({ userId: order.discord_id, type: 'event', title: `Pembayaran Order #${orderId} Diterima`, body: `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, db }).catch(() => {});
     }
   } else {
     // reject
@@ -134,10 +132,7 @@ export async function POST(request) {
     });
     if (flip.rowsAffected > 0 && order.discord_id) {
       // Notifikasi web untuk user: pesanan ditolak
-      await db.execute({
-        sql: "INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, 'info', ?, ?, ?)",
-        args: [order.discord_id, `Pesanan Order #${orderId} Ditolak`, 'Bukti transfer kamu tidak dapat kami verifikasi (nominal/nama tidak cocok atau gambar tidak jelas). Jika kamu sudah membayar, hubungi admin di Discord dengan menyebutkan Order ID. Kamu boleh membuat pesanan baru dengan bukti yang benar.', now],
-      });
+      await sisipNotif({ userId: order.discord_id, type: 'info', title: `Pesanan Order #${orderId} Ditolak`, body: 'Bukti transfer kamu tidak dapat kami verifikasi (nominal/nama tidak cocok atau gambar tidak jelas). Jika kamu sudah membayar, hubungi admin di Discord dengan menyebutkan Order ID. Kamu boleh membuat pesanan baru dengan bukti yang benar.', db }).catch(() => {});
     }
   }
 

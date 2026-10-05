@@ -1,5 +1,5 @@
 import { verifyBearer, json, ready } from '../../../lib/api-helpers';
-import { getDb } from '../../../lib/db';
+import { sisipNotif } from '../../../lib/notif';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +14,8 @@ export async function POST(request) {
   if (!userId || !type || !title) return json({ ok: false, error: 'missing fields' }, 400);
 
   await ready();
-  const db = getDb();
-  await db.execute({
-    sql: 'INSERT INTO web_notifications (discord_id, type, title, body, created_at) VALUES (?, ?, ?, ?, ?)',
-    args: [String(userId), String(type), String(title), text ? String(text) : null, Date.now()],
-  });
+  // Lewat helper terpusat: sisip bell + kirim push perangkat (kalau dinyalakan).
+  await sisipNotif({ userId, type, title, body: text });
 
   return json({ ok: true });
 }

@@ -3,6 +3,7 @@ import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
 import Footer from '../components/Footer';
 import MeClient from '../components/MeClient';
+import PushToggle from '../components/PushToggle';
 
 export const metadata = {
   title: 'Profil Saya',
@@ -19,6 +20,7 @@ export default async function MePage() {
       <main className="relative mx-auto max-w-3xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative">
+          {session && <div className="mb-4"><PushToggle /></div>}
           <MeClient betaGames={null} />
         </div>
       </main>

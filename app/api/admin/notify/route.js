@@ -72,5 +72,20 @@ export async function POST(request) {
     args: [discordId, type, title, text || null, type === 'token' ? code : null, Date.now()],
   });
 
+  // Push ke perangkat (best-effort, tidak menggagalkan respons):
+  //  - target satu user -> push ke perangkat dia.
+  //  - broadcast (discord_id NULL) -> push ke SEMUA user yang menyalakan.
+  try {
+    const { kirimPush } = await import('../../../../lib/pushNotif');
+    if (discordId) {
+      await kirimPush(discordId, { title, body: text, url: '/me', tag: 'nexo-broadcast' });
+    } else {
+      const r = await db.execute({ sql: "SELECT discord_id FROM push_prefs WHERE enabled = 1", args: [] });
+      for (const row of (r.rows || [])) {
+        kirimPush(row.discord_id, { title, body: text, url: '/me', tag: 'nexo-broadcast' }).catch(() => {});
+      }
+    }
+  } catch { /* push opsional */ }
+
   return NextResponse.json({ ok: true, target: target === 'all' ? 'semua user' : discordId });
 }
