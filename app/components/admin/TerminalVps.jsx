@@ -155,9 +155,10 @@ export default function TerminalVps({ send }) {
       // muat log+status tiap 2 dtk selama ~24 dtk supaya banner startup bot
       // TERLIHAT MENGALIR di konsol (bukan cuma 1 baris "dijadwalkan"),
       // plus kartu status langsung menunjukkan Online/Offline.
+      // Polling 1 dtk (bukan 2) supaya terasa langsung saat bot mati/hidup.
       let langkah = 0;
-      const interval = 2000;
-      const total = 24000;
+      const interval = 1000;
+      const total = 30000;
       const jeda = (ms) => new Promise((r) => setTimeout(r, ms));
       for (langkah = 0; langkah < total; langkah += interval) {
         await jeda(interval);
@@ -169,8 +170,8 @@ export default function TerminalVps({ send }) {
           const res = await fetch('/api/admin/vps', { cache: 'no-store' });
           const d = await res.json().catch(() => ({}));
           if (d?.bot?.aktif && (aksi === 'restart' || aksi === 'start')) {
-            // Tunggu 4 dtk lagi supaya banner startup sempat muncul penuh.
-            await jeda(4000);
+            // Tunggu 3 dtk lagi supaya banner startup sempat muncul penuh.
+            await jeda(3000);
             muatLog();
             setPantau('✓ Bot sudah ONLINE lagi. Log startup ada di konsol di atas.');
             return;
