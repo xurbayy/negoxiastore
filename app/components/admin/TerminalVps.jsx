@@ -135,20 +135,31 @@ export default function TerminalVps({ send }) {
   }, [muat, muatLog]);
 
   const mintaKonfirmasi = useCallback((aksi) => {
+    // Kalau bot TERDETEKSI TIDAK RESPONSIF (beku), restart biasa pakai SIGTERM
+    // bisa nyangkut; tawarkan RESTART PAKSA (SIGKILL) lewat terminal.
+    const beku = st?.bot?.aktif && st?.bot?.responsif === false;
     const meta = {
-      restart: { judul: 'Restart Bot', body: 'Restart bot sekarang? Bot akan mati ±2 detik lalu hidup lagi.' },
+      restart: {
+        judul: beku ? 'Restart Bot (Bot Terdeteksi Beku)' : 'Restart Bot',
+        body: beku
+          ? 'Bot TIDAK merespons (beku). Restart normal tetap dicoba, tapi kalau tidak pulih dalam 30 dtk, jalankan perintah "restart_force" di konsol (SIGKILL + start).'
+          : 'Restart bot sekarang? Bot akan mati ±2 detik lalu hidup lagi.',
+      },
       stop: { judul: 'Hentikan Bot', body: 'HENTIKAN bot? Web TIDAK bisa baca/tulis data sampai bot di-start lagi.' },
       start: { judul: 'Hidupkan Bot', body: 'Hidupkan bot sekarang?' },
     };
     const m = meta[aksi] || { judul: `Aksi: ${aksi}`, body: `Lakukan ${aksi}?` };
     setKonfirm({ aksi, ...m });
-  }, []);
+  }, [st]);
 
   const jalankanKontrol = useCallback(async (aksi) => {
     setKonfirm(null);
     setBusy(true);
     setPantau(`Perintah ${aksi} dikirim. Memantau proses startup bot...`);
     try {
+      // Catat pid/uptime SEBELUM perintah supaya bisa VERIFIKASI restart
+      // benar-benar terjadi (bukan cuma "bot aktif" - bot beku pun "aktif").
+      const sejakSebelum = st?.bot?.sejakMs || null;
       await fetch('/api/admin/vps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aksi }) });
       // Perintah tercatat di DB (terminal_log). Sekarang PANTAU startup:
       // muat log+status tiap 2 dtk selama ~24 dtk supaya banner startup bot
@@ -164,16 +175,25 @@ export default function TerminalVps({ send }) {
         if (!hidup.current) break;
         muatLog();
         muat();
-        // Kalau bot sudah online lagi (restart/start) -> berhenti memantau awal.
+        // VERIFIKASI JUJUR (insiden 2026-10-05): "bot aktif" SAJA tidak cukup
+        // - bot beku pun "aktif" di systemd, dan dulu UI bilang sukses padahal
+        // uptime tidak pernah reset. Sekarang restart/start dinyatakan sukses
+        // HANYA kalau sejakMs (ActiveEnterTimestamp) benar-benar berubah.
         try {
           const res = await fetch('/api/admin/vps', { cache: 'no-store' });
           const d = await res.json().catch(() => ({}));
+          const sejakSesudah = d?.bot?.sejakMs || null;
+          const berubah = Boolean(sejakSebelum && sejakSesudah && Math.abs(sejakSesudah - sejakSebelum) > 1000);
           if (d?.bot?.aktif && (aksi === 'restart' || aksi === 'start')) {
-            // Tunggu 3 dtk lagi supaya banner startup sempat muncul penuh.
-            await jeda(3000);
-            muatLog();
-            setPantau('✓ Bot sudah ONLINE lagi. Log startup ada di konsol di atas.');
-            return;
+            if (aksi === 'start' || berubah || !sejakSebelum) {
+              // Tunggu 3 dtk lagi supaya banner startup sempat muncul penuh.
+              await jeda(3000);
+              muatLog();
+              setPantau('✓ Bot sudah ONLINE lagi (uptime ter-reset). Log startup ada di konsol di atas.');
+              return;
+            }
+            // Aktif tapi timestamp TIDAK berubah = restart belum tereksekusi
+            // (atau bot beku yang masih "aktif"). Lanjut memantau.
           }
           if (!d?.bot?.aktif && aksi === 'stop') {
             setPantau('✓ Bot BERHASIL dihentikan (status: Offline).');
@@ -181,19 +201,26 @@ export default function TerminalVps({ send }) {
           }
         } catch { /* lanjut memantau */ }
       }
-      setPantau('Selesai memantau. Periksa konsol untuk status terakhir bot.');
+      // Habis 30 dtk tanpa bukti restart -> beri arahan jujur (jangan klaim sukses).
+      if (aksi === 'restart' || aksi === 'start') {
+        setPantau('⚠ Bot belum menunjukkan bukti restart (uptime belum ter-reset). Coba lagi, atau jalankan "restart_force" di konsol (SIGKILL + start).');
+      } else {
+        setPantau('Selesai memantau. Periksa konsol untuk status terakhir bot.');
+      }
     } catch {
       setPantau('✗ Gagal mengirim perintah. Coba lagi.');
     } finally {
       setBusy(false);
       setTimeout(() => { muat(); muatLog(); }, 3000);
     }
-  }, [muat, muatLog]);
+  }, [muat, muatLog, st]);
 
   const v = st?.vps;
   const b = st?.bot;
   const r = st?.render;
   const online = b?.aktif;
+  // Beku = systemd bilang aktif, tapi bot tidak menjawab probe agent.
+  const beku = Boolean(b?.aktif && b?.responsif === false);
 
   return (
     <div className="space-y-4">
@@ -231,13 +258,28 @@ export default function TerminalVps({ send }) {
 
       {/* Ringkasan status (kartu ringkas) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        <MiniKartu label="Status Bot" nilai={online ? 'Online' : 'Offline'} warna={online ? 'text-success' : 'text-danger'} />
+        <MiniKartu
+          label="Status Bot"
+          nilai={online ? (beku ? 'Beku' : 'Online') : 'Offline'}
+          warna={online ? (beku ? 'text-danger' : 'text-success') : 'text-danger'}
+          sub={beku ? 'Tidak merespons - restart paksa' : (st?.lewat === 'agent' ? 'via agent' : undefined)}
+        />
         <MiniKartu label="RAM Bot" nilai={b?.memMb != null ? `${b.memMb} MB` : '-'} />
         <MiniKartu label="Uptime Bot" nilai={b?.uptime?.teks || '-'} />
         <MiniKartu label="Ping WS" nilai={b?.ping != null ? `${b.ping} ms` : '-'} />
         <MiniKartu label="Uptime VPS" nilai={fmtUptime(v?.uptimeVpsDetik)} />
         <MiniKartu label="Disk" nilai={v?.disk ? `${v.disk.persen}%` : '-'} sub={v?.disk ? `${v.disk.usedGb}/${v.disk.totalGb} GB` : ''} />
       </div>
+
+      {/* PERINGATAN BOT BEKU: systemd bilang aktif tapi bot tidak menjawab. */}
+      {beku && (
+        <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <b>Bot terdeteksi BEKU</b> (proses hidup tapi tidak merespons). Restart normal mungkin tidak cukup karena
+          SIGTERM tidak diproses event loop yang hang. Jalankan{' '}
+          <code className="rounded bg-danger/15 px-1.5 py-0.5 font-mono font-bold">restart_force</code> di konsol
+          (SIGKILL + start), atau tunggu watchdog systemd memulihkan otomatis (±1,5 menit).
+        </div>
+      )}
 
       {/* RENDER CANVAS */}
       <div className="rounded-xl border border-border-soft bg-card-cream/60 px-4 py-3">
