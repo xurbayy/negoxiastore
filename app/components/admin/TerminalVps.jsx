@@ -66,6 +66,7 @@ export default function TerminalVps({ send }) {
   const [busy, setBusy] = useState(false);
   const [konfirm, setKonfirm] = useState(null);
   const [riwayat, setRiwayat] = useState([]); // garis dari console log bot
+  const [pantau, setPantau] = useState(null); // status pemantauan setelah restart/stop
   const hidup = useRef(true);
 
   // Riwayat metrik untuk diagram (maks 40 titik).
@@ -146,13 +147,45 @@ export default function TerminalVps({ send }) {
   const jalankanKontrol = useCallback(async (aksi) => {
     setKonfirm(null);
     setBusy(true);
+    setPantau(`Perintah ${aksi} dikirim. Memantau proses startup bot...`);
     try {
       await fetch('/api/admin/vps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aksi }) });
-      // Perintah tercatat di DB (terminal_log) -> muat ulang konsol dari server.
-      setTimeout(muatLog, 1200);
-      setTimeout(() => { muat(); muatLog(); }, 5000);
-    } catch { /* diamkan */ } finally {
+      // Perintah tercatat di DB (terminal_log). Sekarang PANTAU startup:
+      // muat log+status tiap 2 dtk selama ~24 dtk supaya banner startup bot
+      // TERLIHAT MENGALIR di konsol (bukan cuma 1 baris "dijadwalkan"),
+      // plus kartu status langsung menunjukkan Online/Offline.
+      let langkah = 0;
+      const interval = 2000;
+      const total = 24000;
+      const jeda = (ms) => new Promise((r) => setTimeout(r, ms));
+      for (langkah = 0; langkah < total; langkah += interval) {
+        await jeda(interval);
+        if (!hidup.current) break;
+        muatLog();
+        muat();
+        // Kalau bot sudah online lagi (restart/start) -> berhenti memantau awal.
+        try {
+          const res = await fetch('/api/admin/vps', { cache: 'no-store' });
+          const d = await res.json().catch(() => ({}));
+          if (d?.bot?.aktif && (aksi === 'restart' || aksi === 'start')) {
+            // Tunggu 4 dtk lagi supaya banner startup sempat muncul penuh.
+            await jeda(4000);
+            muatLog();
+            setPantau('✓ Bot sudah ONLINE lagi. Log startup ada di konsol di atas.');
+            return;
+          }
+          if (!d?.bot?.aktif && aksi === 'stop') {
+            setPantau('✓ Bot BERHASIL dihentikan (status: Offline).');
+            return;
+          }
+        } catch { /* lanjut memantau */ }
+      }
+      setPantau('Selesai memantau. Periksa konsol untuk status terakhir bot.');
+    } catch {
+      setPantau('✗ Gagal mengirim perintah. Coba lagi.');
+    } finally {
       setBusy(false);
+      setTimeout(() => { muat(); muatLog(); }, 3000);
     }
   }, [muat, muatLog]);
 
@@ -226,6 +259,15 @@ export default function TerminalVps({ send }) {
       </div>
 
       {/* CONSOLE besar (gaya Pterodactyl) */}
+      {pantau && (
+        <div className={`rounded-xl border px-4 py-2.5 text-sm font-semibold ${
+          pantau.startsWith('✓') ? 'border-success/40 bg-success/10 text-success'
+            : pantau.startsWith('✗') ? 'border-danger/40 bg-danger/10 text-danger'
+              : 'border-accent/40 bg-accent/10 text-accent'
+        }`}>
+          {pantau}
+        </div>
+      )}
       <ConsoleLog riwayat={riwayat} refresh={muatLog} online={online} />
 
       {/* Modal konfirmasi kontrol bot (Mulai/Restart/Hentikan). WAJIB dirender
