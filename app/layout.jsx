@@ -177,6 +177,7 @@ import CookieConsent from './components/CookieConsent';
 import AdSense from './components/AdSense';
 import EmojiHydrator from './components/EmojiHydrator';
 import AuthGagalNotice from './components/AuthGagalNotice';
+import NotifPrompt from './components/NotifPrompt';
 
 export default async function RootLayout({ children }) {
   const session = await getSession();
@@ -226,6 +227,7 @@ export default async function RootLayout({ children }) {
           </main>
         ) : children}
         <AuthGagalNotice />
+        <NotifPrompt />
         <CookieConsent />
         <script
           type="application/ld+json"

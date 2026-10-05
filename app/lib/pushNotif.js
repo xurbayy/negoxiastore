@@ -94,11 +94,14 @@ export async function jumlahPerangkat(userId) {
  * Kirim push ke semua perangkat user. Tidak melempar error - kegagalan push
  * tidak boleh menggagalkan alur utama (insert notif). Langganan mati (410/404)
  * otomatis dibersihkan.
+ *
+ * PER-DEVICE (2026-10-05): TIDAK cek push_prefs - subscription ITU consent.
+ * Setiap perangkat yang subscribe menerima push; matikan = unsubscribe device
+ * itu saja. Tidak ada konsep "user aktifkan semua perangkat sekaligus".
  */
 export async function kirimPush(userId, { title, body, url, tag } = {}) {
   try {
     if (!_init()) return { ok: false, alasan: 'vapid_belum_diset' };
-    if (!(await pushAktif(userId))) return { ok: false, alasan: 'push_mati' };
     const db = getDb();
     const r = await db.execute({ sql: 'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE discord_id = ?', args: [String(userId)] });
     const subs = r.rows || [];

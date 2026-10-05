@@ -10,6 +10,15 @@ function countdown(expiresAt) {
   return h > 0 ? `${h}j ${m}m` : `${m}m`;
 }
 
+function b64ToU8(base64) {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(b64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
 // Bel notifikasi v3: personal (admin/broadcast) + turunan snapshot.
 // Penutupan TIDAK lagi di localStorage - disimpan ke DB per user, jadi notif
 // yang sudah di-clear tetap hilang walau ganti perangkat, cache dibersihkan,
@@ -26,6 +35,63 @@ export default function Notifications() {
   const [enabled, setEnabled] = useState(null);
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
+  // Toggle notifikasi perangkat (push) - per-device via localStorage + subscription.
+  const [pushStatus, setPushStatus] = useState('memuat'); // memuat | aktif | mati | tak_didukung
+  const [pushSibuk, setPushSibuk] = useState(false);
+  const [vapid, setVapid] = useState(null);
+
+  // Cek status push perangkat ini (subscription = consent per-device).
+  const cekPush = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushStatus('tak_didukung');
+      return;
+    }
+    try {
+      const res = await fetch('/api/me/push', { cache: 'no-store' });
+      if (res.status !== 200) return; // tamu, jangan set status
+      const d = await res.json().catch(() => ({}));
+      if (!d.tersedia) { setPushStatus('tak_didukung'); return; }
+      setVapid(d.vapid);
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      setPushStatus(sub ? 'aktif' : 'mati');
+    } catch { setPushStatus('mati'); }
+  }, []);
+
+  // Toggle on/off perangkat ini.
+  const togglePush = useCallback(async () => {
+    if (pushSibuk) return;
+    setPushSibuk(true);
+    try {
+      if (pushStatus === 'aktif') {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = reg ? await reg.pushManager.getSubscription() : null;
+        if (sub) {
+          await sub.unsubscribe();
+          await fetch('/api/me/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aksi: 'matikan', endpoint: sub.endpoint }) });
+        }
+        setPushStatus('mati');
+      } else {
+        if (Notification.permission !== 'granted') {
+          const izin = await Notification.requestPermission();
+          if (izin !== 'granted') { setPushStatus('mati'); return; }
+        }
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(vapid) });
+        }
+        await fetch('/api/me/push', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ aksi: 'subscribe', subscription: sub.toJSON() }) });
+        setPushStatus('aktif');
+      }
+    } catch { /* diamkan */ } finally { setPushSibuk(false); }
+  }, [pushStatus, pushSibuk, vapid]);
+
+  // Cek push saat komponen mount + saat dropdown dibuka.
+  useEffect(() => { cekPush(); }, [cekPush]);
+  useEffect(() => { if (open) cekPush(); }, [open, cekPush]);
 
   const load = useCallback(async () => {
     // Hemat egress (optimasi 2026-10-05): jangan poll saat tab tersembunyi -
@@ -217,6 +283,33 @@ export default function Notifications() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Toggle notifikasi perangkat (per-device, di dalam dropdown) */}
+          {enabled === true && pushStatus !== 'memuat' && pushStatus !== 'tak_didukung' && (
+            <div className="border-t border-border-soft px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-ink">Notifikasi Perangkat</p>
+                  <p className="text-[0.65rem] text-ink-muted">
+                    {pushStatus === 'aktif' ? 'Aktif di perangkat ini' : 'Nonaktif di perangkat ini'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={togglePush}
+                  disabled={pushSibuk}
+                  aria-label={pushStatus === 'aktif' ? 'Matikan notifikasi perangkat' : 'Aktifkan notifikasi perangkat'}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${
+                    pushStatus === 'aktif' ? 'bg-accent' : 'bg-border-soft'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    pushStatus === 'aktif' ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
