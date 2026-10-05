@@ -386,6 +386,13 @@ export async function ensureSchema() {
     );
   `);
 
+  // PROXY MODE (2026-10-05): SEMUA di bawah ini adalah DDL (ALTER TABLE /
+  // CREATE TABLE) untuk MEMBUAT/migrasi skema. Saat lewat proxy bot, DDL
+  // DIBLOKIR (403) -> dan kalau tetap dijalankan, SETIAP request web gagal
+  // (lemot + data kosong). Skema SUDAH ADA di PostgreSQL VPS, jadi cukup
+  // berhenti di sini saat proxy aktif.
+  if (PROXY_AKTIF) return;
+
   // Migrasi kolom pengaturan per-model (permintaan pemilik 2026-10-02):
   // "gw mau bisa custom per model dari berapa banyak max text yang bisa dikasih
   // sama ai itu dan kecerdasannya pake takaran 1-10".
