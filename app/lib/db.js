@@ -1,4 +1,5 @@
 import { createPgClient } from './pgAdapter.js';
+import { createDbProxyClient, PROXY_AKTIF } from './dbProxy.js';
 
 // PostgreSQL (Supabase) client - singleton async via pg Pool (max 5).
 // Antarmuka dipertahankan: db.execute({sql,args}) +
@@ -50,6 +51,13 @@ function withTransientRetry(client) {
 
 export function getDb() {
   if (_db) return _db;
+  // PRIORITAS PROXY BOT (2026-10-05): kalau BOT_API_URL diset, semua query
+  // lewat bot VPS (DB lokal, cepat, port DB tidak dibuka ke internet).
+  // Kalau tidak diset -> fallback Postgres langsung (dev lokal / Supabase).
+  if (PROXY_AKTIF) {
+    _db = withTransientRetry(createDbProxyClient());
+    return _db;
+  }
   _db = withTransientRetry(createPgClient());
   return _db;
 }

@@ -16,7 +16,15 @@ export let _lastSafeError = null;
 // segar (halaman AutoRefresh), tapi round-trip DB berkurang drastis. Hasil
 // null (error) tidak di-cache supaya retry langsung query ulang.
 const _live = new Map(); // key -> { val, at }
-const LIVE_TTL_MS = 12_000;
+// TTL 3 DETIK (dipercepat dari 12 dtk, 2026-10-05): DB kini LOKAL di VPS
+// (query ~1ms lewat bot, bukan 170ms ke Jerman). Jadi cache bisa jauh lebih
+// pendek -> data web & AI nyaris realtime - tanpa membebani (query lokal murah).
+// Kalau proxy bot TIDAK aktif (fallback Postgres remote), TTL dinaikkan lagi
+// otomatis supaya tidak membanjiri koneksi jarak jauh.
+const LIVE_TTL_MS = (() => {
+  const lokal = Boolean(process.env.BOT_API_URL); // proxy bot = DB lokal cepat
+  return lokal ? 3_000 : 12_000;
+})();
 async function live(key, fn) {
   const now = Date.now();
   const hit = _live.get(key);
@@ -83,14 +91,51 @@ async function safeQuery(fn) {
   return null;
 }
 
-// Snapshot monitor terbaru dari bot (null kalau belum pernah push / DB mati).
+// Snapshot monitor terbaru - DISUSUN LIVE DARI BOT (2026-10-05).
+// Dulu: baca baris terakhir tabel monitor_snapshots (di-push bot tiap 10 menit
+// -> AI/dashboard bisa basi hingga 10-20 menit). Sekarang: minta bot menyusun
+// snapshot SEGAR on-demand (bot query DB lokal ~1ms) -> data nyaris realtime.
+// Bot cache 2 dtk, jadi poll beruntun tidak membebani. Kalau bot mati/gagal,
+// FALLBACK ke tabel snapshot push (perilaku lama) supaya halaman tetap hidup.
+const _proxyUrl = (process.env.BOT_API_URL || '').replace(/\/+$/, '');
+const _proxyKey = process.env.BOT_API_KEY || '';
+async function _snapshotLive() {
+  if (!_proxyUrl || !_proxyKey) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(`${_proxyUrl}/snapshot/live`, {
+      headers: { Authorization: `Bearer ${_proxyKey}` },
+      signal: ctrl.signal,
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const d = await res.json().catch(() => null);
+    return d && d.ok && d.snapshot ? d.snapshot : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 export async function getLatestSnapshot() {
   const kini = Date.now();
-  // Cache baca 45 dtk: snapshot yang disimpan hanya berubah tiap 10 menit
-  // (throttle), jadi hasil cache = data yang sama dengan query segar. Memangkas
-  // egress Supabase drastis (lihat SNAP_CACHE_MS di atas). Data real-time tidak
-  // lewat sini - mereka query tabel public.* langsung.
-  if (_snapCache && kini - _snapCache.at < SNAP_CACHE_MS) return _snapCache.snap;
+  // Cache 30 dtk untuk snapshot LIVE (bot sendiri sudah cache 2 dtk). Snapshot
+  // live jarang berubah drastis; 30 dtk cukup realtime untuk AI & dashboard.
+  if (_snapCache && kini - _snapCache.at < 30_000) return _snapCache.snap;
+
+  // 1) Coba snapshot LIVE dari bot (paling segar).
+  const liveSnap = await _snapshotLive();
+  if (liveSnap) {
+    const lama = _snapCache && _snapCache.snap ? _snapCache.snap : {};
+    const merged = { ...lama, ...liveSnap }; // gabung: field live menang
+    _snapCache = { snap: merged, at: kini };
+    _lastGood = { ...(_lastGood || {}), snap: merged, at: kini, snapAt: kini };
+    return merged;
+  }
+
+  // 2) FALLBACK: baris snapshot push terakhir (kalau bot offline).
   const r = await safeQuery(async () => {
     await schemaReady();
     const db = getDb();

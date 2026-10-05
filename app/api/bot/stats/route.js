@@ -39,7 +39,14 @@ export async function POST(request) {
   // 24 jam (144 titik) dan 7 hari (1.008 titik).
   //
   // Efek: 1.188 baris/hari -> 144 baris/hari (-88%). DB tidak membengkak.
-  const JARAK_SNAPSHOT_MS = 10 * 60_000;
+  // ==========================================
+  // SIMPAN SNAPSHOT - 3 MENIT (dipercepat dari 10, 2026-10-05)
+  // ==========================================
+  // Snapshot tabel = SUMBER GRAFIK TREN. Data utama (AI/dashboard) kini dibaca
+  // LIVE dari bot (/snapshot/live), jadi tabel ini tidak lagi jadi jalur
+  // "kesegaran data". 3 menit (480 titik/hari) = tren lebih halus, dan karena
+  // DB lokal (bukan Supabase) bebannya murah. Bisa diatur via SNAPSHOT_JARAK_MS.
+  const JARAK_SNAPSHOT_MS = Math.max(60_000, parseInt(process.env.SNAPSHOT_JARAK_MS, 10) || 3 * 60_000);
   try {
     const terakhir = await db.execute('SELECT ts FROM monitor_snapshots ORDER BY ts DESC LIMIT 1');
     const tsTerakhir = terakhir.rows.length ? Number(terakhir.rows[0].ts) : 0;
