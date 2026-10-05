@@ -1,12 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import ConfirmModal from './ConfirmModal';
+import StatusSistem from './StatusSistem';
 
 // ==========================================
 // TerminalVps — panel kontrol VPS di admin
 // ==========================================
-// Kartu live: CPU, RAM, Uptime, vCPU, Ping WS, memori bot, disk.
+// Kartu live: CPU, RAM, Uptime, vCPU, Ping WS, memori bot, disk, render canvas.
 // Tombol: Restart / Stop / Start bot (lewat /api/admin/vps -> bot -> systemctl).
+// Terminal WHITELIST: jalankan perintah aman (log, status, disk, dll) - id
+// perintah tetap, bukan string bebas (lihat bot utils/vpsStatus.js).
 // Polling 5 detik (ringan, endpoint lokal di VPS).
 function fmtUptime(detik) {
   if (!Number.isFinite(detik)) return '-';
@@ -43,6 +47,7 @@ export default function TerminalVps({ send }) {
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState([]);
+  const [konfirm, setKonfirm] = useState(null); // { aksi, judul, body }
   const hidup = useRef(true);
 
   const muat = useCallback(async () => {
@@ -66,9 +71,20 @@ export default function TerminalVps({ send }) {
     return () => { hidup.current = false; clearInterval(iv); document.removeEventListener('visibilitychange', onVis); };
   }, [muat]);
 
-  const kontrol = useCallback(async (aksi) => {
-    const konfirmasi = { restart: 'Restart bot sekarang? Bot akan mati ±10 detik lalu hidup lagi.', stop: 'HENTIKAN bot? Web TIDAK bisa baca/tulis data sampai bot di-start lagi.', start: 'Hidupkan bot?' };
-    if (!window.confirm(konfirmasi[aksi] || `Lakukan ${aksi}?`)) return;
+  // Tombol kontrol -> buka ConfirmModal SENDIRI (bukan window.confirm bawaan
+  // browser yang kuno - aturan panel admin: semua konfirmasi pakai ConfirmModal).
+  const mintaKonfirmasi = useCallback((aksi) => {
+    const meta = {
+      restart: { judul: 'Restart Bot', body: 'Restart bot sekarang? Bot akan mati ±10 detik lalu hidup lagi.' },
+      stop: { judul: 'Hentikan Bot', body: 'HENTIKAN bot? Web TIDAK bisa baca/tulis data sampai bot di-start lagi.' },
+      start: { judul: 'Hidupkan Bot', body: 'Hidupkan bot sekarang?' },
+    };
+    const m = meta[aksi] || { judul: `Aksi: ${aksi}`, body: `Lakukan ${aksi}?` };
+    setKonfirm({ aksi, ...m });
+  }, []);
+
+  const jalankanKontrol = useCallback(async (aksi) => {
+    setKonfirm(null);
     setBusy(true);
     setLog((l) => [{ t: new Date().toLocaleTimeString('id-ID'), teks: `> ${aksi}...` }, ...l].slice(0, 30));
     try {
@@ -98,9 +114,9 @@ export default function TerminalVps({ send }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => kontrol('restart')} className="btn-solid btn-solid-accent">Restart Bot</button>
-          <button type="button" disabled={busy} onClick={() => kontrol('stop')} className="btn-solid btn-solid-danger">Stop Bot</button>
-          <button type="button" disabled={busy} onClick={() => kontrol('start')} className="btn-solid btn-solid-success">Start Bot</button>
+          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('restart')} className="btn-solid btn-solid-accent">Restart Bot</button>
+          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('stop')} className="btn-solid btn-solid-danger">Stop Bot</button>
+          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('start')} className="btn-solid btn-solid-success">Start Bot</button>
         </div>
       </div>
 
@@ -110,6 +126,10 @@ export default function TerminalVps({ send }) {
           {String(err).includes('BOT_API_URL') && <span className="block mt-1 text-xs">Aktifkan setelah domain API terpasang & env Vercel diisi.</span>}
         </p>
       )}
+
+      {/* Status Sistem (dipindah dari Dashboard - permintaan pemilik 2026-10-05):
+          info layanan (DB, bot, AI, pembayaran) nyambung duduk bersama kontrol. */}
+      <StatusSistem />
 
       {/* Kartu status (permintaan pemilik: CPU, RAM, Uptime, vCPU) */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -171,6 +191,104 @@ export default function TerminalVps({ send }) {
             <p key={i}><span className="text-slate-500">{x.t}</span> {x.teks}</p>
           ))}
         </div>
+      </div>
+
+      {/* TERMINAL WHITELIST (permintaan pemilik 2026-10-05): jalankan perintah
+          aman langsung dari web. Perintah TERBATAS (log, status, disk, dll) -
+          bukan shell bebas. Keamanan dijaga di bot (id tetap, execFile). */}
+      <TerminalPanel />
+
+      {/* Konfirmasi aksi kontrol - pakai ConfirmModal sendiri, bukan
+          window.confirm bawaan browser yang kuno. */}
+      {konfirm && (
+        <ConfirmModal
+          title={konfirm.judul}
+          body={konfirm.body}
+          busy={busy}
+          onCancel={() => setKonfirm(null)}
+          onConfirm={() => jalankanKontrol(konfirm.aksi)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Panel terminal whitelist (self-contained, ambil daftar perintah sendiri) ──
+function TerminalPanel() {
+  const [daftar, setDaftar] = useState([]);
+  const [pilih, setPilih] = useState('');
+  const [jalan, setJalan] = useState(false);
+  const [riwayat, setRiwayat] = useState([]);
+
+  useEffect(() => {
+    let hidup = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/vps/terminal', { cache: 'no-store' });
+        const d = await res.json().catch(() => ({}));
+        if (hidup && d.ok && Array.isArray(d.perintah)) {
+          setDaftar(d.perintah);
+          if (d.perintah[0]) setPilih(d.perintah[0].id);
+        }
+      } catch { /* diamkan */ }
+    })();
+    return () => { hidup = false; };
+  }, []);
+
+  const jalankan = useCallback(async () => {
+    if (!pilih || jalan) return;
+    setJalan(true);
+    const t = new Date().toLocaleTimeString('id-ID');
+    try {
+      const res = await fetch('/api/admin/vps/terminal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ perintah: pilih }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setRiwayat((r) => [{
+        t, label: d.label || pilih, ok: d.ok, ms: d.ms,
+        keluaran: d.ok ? d.keluaran : `[gagal] ${d.error || 'error'}`,
+      }, ...r].slice(0, 20));
+    } catch (e) {
+      setRiwayat((r) => [{ t, label: pilih, ok: false, keluaran: `[gagal] ${e?.message || 'error'}` }, ...r].slice(0, 20));
+    } finally {
+      setJalan(false);
+    }
+  }, [pilih, jalan]);
+
+  return (
+    <div className="rounded-xl border border-border-soft bg-card-cream/60 px-4 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Terminal Perintah</p>
+        <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[0.65rem] font-bold text-ink-muted">WHITELIST - perintah aman</span>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <select
+          value={pilih}
+          onChange={(e) => setPilih(e.target.value)}
+          className="min-w-0 flex-1 rounded-lg border border-border-soft bg-white px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+        >
+          {daftar.length === 0 && <option value="">(memuat perintah…)</option>}
+          {daftar.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+        </select>
+        <button type="button" onClick={jalankan} disabled={!pilih || jalan} className="btn-solid btn-solid-dark disabled:opacity-40">
+          {jalan ? 'Menjalankan…' : 'Jalankan'}
+        </button>
+      </div>
+
+      <div className="mt-3 max-h-72 overflow-y-auto rounded-lg bg-[#0b1020] px-3 py-2 font-mono text-xs leading-relaxed text-slate-300">
+        {riwayat.length === 0 ? (
+          <p className="text-slate-500">Pilih perintah lalu klik Jalankan. Contoh: Log bot, Status, Disk.</p>
+        ) : riwayat.map((x, i) => (
+          <div key={i} className="mb-2 border-b border-white/5 pb-2 last:border-0">
+            <p className="text-slate-500">
+              {x.t} <span className={x.ok ? 'text-[#7BA05B]' : 'text-[#C74B3C]'}>{x.ok ? '✓' : '✗'}</span> {x.label}
+              {x.ms != null && <span className="ml-1 text-slate-600">({x.ms}ms)</span>}
+            </p>
+            <pre className="mt-1 whitespace-pre-wrap break-words">{x.keluaran}</pre>
+          </div>
+        ))}
       </div>
     </div>
   );
