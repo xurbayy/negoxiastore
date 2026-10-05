@@ -209,8 +209,10 @@ export default function Dashboard({ data }) {
   const topAll = topGamesAll[0] || null;
   const gdTopAll = topAll ? gameDisplay(String(topAll.game || '').toLowerCase(), betaMap) : null;
 
+  // URUTAN: permintaan pemilik 2026-10-05: "Top Game Sepanjang Masa" paling
+  // atas (wide, full-width di mobile), lalu kartu kecil bersebelahan.
+  // "Player Terdaftar" pindah ke baris yang sama dengan Hutang (bukan di atas).
   const cards = [
-    { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
     // Kartu Top Game Sepanjang Masa - pakai icon (emoji) + sub (main + poin).
     // wide=true: full-width di mobile (2 kolom jadi sempit, kartu ini perlu
     // ruang supaya nama game + statistik terbaca - permintaan pemilik).
@@ -227,9 +229,6 @@ export default function Dashboard({ data }) {
     { label: 'Poin Beredar', value: fmt(m.totalMoney), pick: (s) => s.totalMoney, color: '#C74B3C' },
     { label: 'Member NEXO Pass', value: fmt(m.premiumCount), pick: null },
     { label: 'Game Hari Ini', value: fmt(m.gamesToday), pick: (s) => s.gamesToday },
-    // "Game 7 Hari" diganti "Pemain In-Game" (permintaan pemilik 2026-10-03):
-    // lebih berguna untuk memantau kondisi LIVE daripada kumulatif mingguan.
-    // Sumber: liveStats.inGameNow (public.playing_users, real-time dari DB).
     {
       label: 'Pemain In-Game',
       value: fmt(data.liveStats?.inGameNow ?? 0),
@@ -239,18 +238,15 @@ export default function Dashboard({ data }) {
     {
       label: 'Item Terjual',
       value: botKirimItem ? fmt(totalItemTerjual) : '-',
-      // Keterangan tambahan di bawah angka: hari ini + poin yang dibelanjakan,
-      // supaya satu kartu menjawab "berapa banyak" dan "berapa nilainya".
       sub: botKirimItem
         ? `${fmt(itemHariIni)} hari ini · ${fmt(totalPoinBelanja)} poin`
         : 'bot belum kirim data ini',
       pick: null,
     },
+    // Baris bawah: Player Terdaftar + Hutang bersebelahan (permintaan pemilik).
+    { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
     { label: 'Hutang Aktif', value: fmt(m.loans?.count), pick: null },
     { label: 'Hutang Telat', value: fmt(m.loans?.overdue), pick: null },
-    // RAM Bot / Ping WS / Uptime bot DIHAPUS dari Dashboard (permintaan pemilik
-    // 2026-10-05): info itu sudah lengkap & realtime di tab "Terminal VPS",
-    // jadi di sini hanya duplikat yang bikin panel penuh.
   ];
 
   const maxPlays = Math.max(...(m.topGamesToday || []).map((g) => g.plays), 1);
