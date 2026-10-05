@@ -7,7 +7,7 @@
 //    habis; revoke_premium 'done' disimpan selamanya (niat admin).
 //  - Sisanya (data_requests done, command lama, klaim lama, notif read lama,
 //    webhook event, emoji_registry removed, snapshot) di-prune per umur.
-import { schemaReady } from './db';
+import { schemaReady, PROXY_AKTIF } from './db';
 
 const DAY = 86_400_000;
 // CATATAN (fix 2026-10-04): nama key ini sempat TERKORUPSI (ada karakter
@@ -51,17 +51,23 @@ async function deleteLimitedByRowid(db, table, whereSql, args, limit = 5000) {
 async function pruneNow(db, now) {
   // INDEX TAMBAHAN (fix 2026-10-04): tabel yang sering di-query tapi belum
   // punya index selain primary key -> query jadi lambat seiring data bertambah.
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_emoji_catalog_name ON web.emoji_catalog (name)');
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_snapshots_ts_desc ON web.monitor_snapshots (ts DESC)');
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_missions_user ON public.daily_missions (user_id)');
-  // INDEX BARU (optimasi 2026-10-05): query HOT dari /api/me + notifikasi.
-  // Tanpa ini /api/me (poll tiap 60 dtk per user) full-scan data_requests
-  // (WHERE discord_id AND status='done' ORDER BY filled_at DESC) tiap poll.
-  // Sudah dibuat juga langsung di DB produksi - IF NOT EXISTS = idempoten.
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_dr_user_status_filled ON web.data_requests (discord_id, status, filled_at DESC)');
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_wn_user_created ON web.web_notifications (discord_id, created_at DESC)');
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_nr_notif_user ON web.notif_reads (notification_id, discord_id)');
-  await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_dr_user_pending ON web.data_requests (discord_id, status)');
+  // PROXY MODE (fix 2026-10-05): lewat proxy bot, perintah CREATE INDEX DIBLOKIR
+  // (403) karena bot melarang DDL dari web. Semua index ini SUDAH ADA di DB
+  // produksi (dibuat saat migrasi), jadi di mode proxy cukup dilewati - kalau
+  // tidak, tiap prune (10 menit) menulis 7 baris "query DITOLAK" ke log bot.
+  if (!PROXY_AKTIF) {
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_emoji_catalog_name ON web.emoji_catalog (name)');
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_snapshots_ts_desc ON web.monitor_snapshots (ts DESC)');
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_missions_user ON public.daily_missions (user_id)');
+    // INDEX BARU (optimasi 2026-10-05): query HOT dari /api/me + notifikasi.
+    // Tanpa ini /api/me (poll tiap 60 dtk per user) full-scan data_requests
+    // (WHERE discord_id AND status='done' ORDER BY filled_at DESC) tiap poll.
+    // Sudah dibuat juga langsung di DB produksi - IF NOT EXISTS = idempoten.
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_dr_user_status_filled ON web.data_requests (discord_id, status, filled_at DESC)');
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_wn_user_created ON web.web_notifications (discord_id, created_at DESC)');
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_nr_notif_user ON web.notif_reads (notification_id, discord_id)');
+    await tryExec(db, 'CREATE INDEX IF NOT EXISTS idx_dr_user_pending ON web.data_requests (discord_id, status)');
+  }
 
   // Snapshot: 14 hari (DITURUNKAN dari 30, fix 2026-10-04).
   // Dengan simpan 1x/10 menit = 144 baris/hari, 14 hari = ~2.016 baris
@@ -346,7 +352,8 @@ export async function pruneOldData(db) {
     await schemaReady();
     const now = Date.now();
     try {
-      await db.execute('CREATE TABLE IF NOT EXISTS web_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+      // PROXY MODE: web_meta sudah ada di DB VPS; CREATE = 403 -> lewati.
+      if (!PROXY_AKTIF) await db.execute('CREATE TABLE IF NOT EXISTS web_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
     } catch {}
     const last = await db.execute({ sql: 'SELECT value FROM web_meta WHERE key = ?', args: [PRUNE_KEY] }).catch(() => null);
     if (last && last.rows.length && now - Number(last.rows[0].value) < PRUNE_EVERY_MS) return;

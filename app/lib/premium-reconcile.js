@@ -20,7 +20,7 @@
 //  - orders.status = paid (30 hari dari paid_at)
 //  - bot_commands grant_premium done (executed_at + days, cap 3650)
 //  - revoke_premium done (lewat panel web) membatalkan event sebelumnya.
-import { getDb, schemaReady } from './db';
+import { getDb, schemaReady, PROXY_AKTIF } from './db';
 
 const DAY = 86_400_000;
 const RE_ENQUEUE_COOLDOWN_MS = 5 * 60_000;
@@ -55,7 +55,8 @@ export async function reconcilePremium(db, snapshot) {
   try {
     await schemaReady();
     try {
-      await db.execute('CREATE TABLE IF NOT EXISTS web_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+      // PROXY MODE: web_meta sudah ada di DB VPS; CREATE = 403 -> lewati.
+      if (!PROXY_AKTIF) await db.execute('CREATE TABLE IF NOT EXISTS web_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
     } catch {}
 
     const now = Date.now();
