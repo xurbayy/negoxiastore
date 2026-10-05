@@ -86,7 +86,7 @@ export default function BroadcastManager({ send, data } = {}) {
           <button
             type="submit"
             disabled={busy || !form.title.trim() || (form.target === 'one' && !/^\d{5,25}$/.test(form.targetOne))}
-            className="rounded-lg bg-accent text-ink! px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+            className="btn-solid btn-solid-accent disabled:opacity-40"
           >
             {busy ? 'Mengirim…' : 'Kirim Notifikasi'}
           </button>
@@ -195,8 +195,8 @@ function DiscordAnnouncement({ send, data }) {
       </div>
       <textarea value={text} onChange={(e) => setText(e.target.value.slice(0, 800))} rows={2} placeholder={cur ? 'Tulis pesan baru untuk menimpa...' : 'Isi pengumuman, biarkan kosong bila tidak ada'} className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none" />
       <div className="mt-2 flex gap-2">
-        <button type="button" disabled={busy || !text.trim()} onClick={() => push(text.trim(), 'Pengumuman')} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Pasang</button>
-        {cur && <button type="button" disabled={busy} onClick={() => push('', 'Penghapusan')} className="rounded-lg border border-danger/40 px-4 py-2 text-sm font-semibold text-danger transition hover:bg-danger/10 disabled:opacity-40 cursor-pointer">Hapus</button>}
+        <button type="button" disabled={busy || !text.trim()} onClick={() => push(text.trim(), 'Pengumuman')} className="btn-solid btn-solid-accent disabled:opacity-40">Pasang</button>
+        {cur && <button type="button" disabled={busy} onClick={() => push('', 'Penghapusan')} className="btn-solid btn-solid-danger disabled:opacity-40">Hapus</button>}
       </div>
       {msg && <p className={`mt-3 rounded-xl border px-4 py-2 text-sm ${msg.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{msg.text}</p>}
     </div>

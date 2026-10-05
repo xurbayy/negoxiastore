@@ -149,7 +149,7 @@ function AmountAction({ label, hint, danger, disabled, onSubmit }) {
           type="button"
           disabled={disabled || !val}
           onClick={() => { onSubmit(parseInt(val, 10)); setVal(''); }}
-          className="shrink-0 rounded-lg bg-accent text-ink! px-4 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer"
+          className="btn-solid btn-solid-accent shrink-0 disabled:opacity-40"
         >
           Kirim
         </button>
@@ -246,7 +246,7 @@ function ItemUserPanel({ uid, busy, send, items, setFeedback }) {
           type="button"
           disabled={disabled}
           onClick={() => kirim('remove_item')}
-          className="rounded-lg border border-danger/40 px-4 py-2 text-sm font-bold text-danger transition hover:bg-danger/10 disabled:opacity-40 cursor-pointer"
+          className="btn-solid btn-solid-danger disabled:opacity-40"
         >
           Hapus Item
         </button>

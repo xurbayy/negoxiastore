@@ -58,7 +58,7 @@ export default function Nexopass({ send, data }) {
           <label htmlFor="g-days" className="block text-xs uppercase tracking-wider text-ink-muted">Hari, 30 sama dengan 1 bulan, 3650 berarti seumur hidup</label>
           <input id="g-days" type="number" value={form.days} onChange={(e) => setForm({ ...form, days: parseInt(e.target.value, 10) || 0 })} className="mt-1.5 w-32 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
-        <button type="submit" disabled={busy || !form.userId} className="rounded-lg bg-accent text-ink! px-5 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer">Grant</button>
+        <button type="submit" disabled={busy || !form.userId} className="btn-solid btn-solid-accent disabled:opacity-40">Grant</button>
       </form>
 
       {feedback && (
@@ -100,7 +100,7 @@ export default function Nexopass({ send, data }) {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-ink-muted">{m.grantedBy}</td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => setConfirm({ action: 'revoke_premium', payload: { userId: m.userId }, label: `Revoke premium ${m.username}` })} className="rounded-lg border border-danger/40 bg-white px-2.5 py-1 text-xs font-semibold text-danger shadow-sm transition hover:bg-danger hover:text-white active:translate-y-px cursor-pointer">
+                    <button type="button" onClick={() => setConfirm({ action: 'revoke_premium', payload: { userId: m.userId }, label: `Revoke premium ${m.username}` })} className="btn-solid btn-solid-danger">
                       Revoke
                     </button>
                   </td>

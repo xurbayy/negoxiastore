@@ -89,7 +89,7 @@ export default function FeedbackManager({ send, data }) {
                 </div>
                 <button
                   onClick={() => handleDelete(f.id)}
-                  className="shrink-0 self-start rounded-lg border border-danger/20 px-3 py-1.5 text-xs font-semibold text-danger transition hover:bg-danger/10"
+                  className="btn-solid btn-solid-danger shrink-0 self-start"
                 >
                   Hapus
                 </button>

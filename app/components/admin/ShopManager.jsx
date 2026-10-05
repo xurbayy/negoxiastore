@@ -295,7 +295,7 @@ function NumRow({ placeholder, onSubmit, busy }) {
   return (
     <div className="flex gap-1.5">
       <input value={v} onChange={(e) => setV(e.target.value)} inputMode="numeric" placeholder={placeholder} className="w-40 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
-      <button type="button" disabled={busy || !v} onClick={() => { const n = parseInt(v, 10); if (Number.isFinite(n)) { onSubmit(n); setV(''); } }} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-ink! shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
+      <button type="button" disabled={busy || !v} onClick={() => { const n = parseInt(v, 10); if (Number.isFinite(n)) { onSubmit(n); setV(''); } }} className="btn-solid btn-solid-accent disabled:opacity-40">OK</button>
     </div>
   );
 }
@@ -312,7 +312,7 @@ function DiscountRow({ onSubmit, busy, hargaNormal }) {
       <div className="flex gap-1.5">
         <input value={price} onChange={(e) => setPrice(e.target.value)} inputMode="numeric" placeholder="harga diskon" className="w-28 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
         <input value={hours} onChange={(e) => setHours(e.target.value)} inputMode="numeric" placeholder="jam (1-720)" className="w-24 rounded-md border border-border-soft bg-bg-soft px-2 py-1.5 text-xs text-ink focus:border-accent focus:outline-none" />
-        <button type="button" disabled={busy || !valid} onClick={() => { onSubmit(priceNum, hoursNum); setPrice(''); setHours(''); }} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-ink! shadow-sm transition hover:brightness-95 active:translate-y-px disabled:opacity-40 cursor-pointer">OK</button>
+        <button type="button" disabled={busy || !valid} onClick={() => { onSubmit(priceNum, hoursNum); setPrice(''); setHours(''); }} className="btn-solid btn-solid-accent disabled:opacity-40">OK</button>
       </div>
       {price && Number.isFinite(priceNum) && (
         <p className={`text-[0.65rem] ${lebihMurah ? 'text-ink-muted' : 'text-danger font-semibold'}`}>

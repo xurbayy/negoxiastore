@@ -21,6 +21,7 @@ import PlayerLookup from './PlayerLookup';
 import Titles from './Titles';
 import ManualOrders from './ManualOrders';
 import TerminalVps from './TerminalVps';
+import VpsWidget from './VpsWidget';
 
 // Sidebar dikelompokkan per area kerja + badge angka live (dari data yang
 // sudah di-poll - tanpa API baru). Visual saja, alur data tidak berubah.
@@ -697,6 +698,10 @@ export default function AdminShell({ username, avatar = null }) {
         </div>
       </div>
     </div>
+    {/* Widget VPS mengambang (permintaan pemilik 2026-10-05): info CPU/RAM/
+        Uptime/Disk selalu terlihat di tab admin mana pun. Disembunyikan di tab
+        "terminal" karena halaman itu sudah menampilkan info VPS lengkap. */}
+    {tab !== 'terminal' && <VpsWidget />}
     </>
   );
 }

@@ -76,7 +76,7 @@ export default function BankManager({ send, data }) {
                     : <span className="inline-flex items-center rounded-full bg-success px-2.5 py-1 text-[0.68rem] font-extrabold uppercase tracking-wider text-white">Aman</span>}
                 </td>
                 <td className="px-4 py-3">
-                  <button type="button" onClick={() => setConfirm({ userId: l.userId, username: l.username })} className="rounded-lg border border-danger/40 bg-white px-2.5 py-1 text-xs font-semibold text-danger shadow-sm transition hover:bg-danger hover:text-white active:translate-y-px cursor-pointer">
+                  <button type="button" onClick={() => setConfirm({ userId: l.userId, username: l.username })} className="btn-solid btn-solid-danger">
                     Bebaskan Hutang
                   </button>
                 </td>

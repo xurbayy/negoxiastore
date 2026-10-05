@@ -160,7 +160,7 @@ export default function Moderasi({ send, data }) {
           <p className="text-xs text-ink-muted max-w-lg mb-2">Peringatan: Menghapus seluruh data progres, level, inventori, title, dan saldo pengguna. Tidak bisa dibatalkan!</p>
           <button
             onClick={() => initiateAction('wipe')}
-            className="w-full rounded-lg border border-danger/40 bg-white px-5 py-2 text-sm font-bold text-danger shadow-sm transition hover:bg-danger hover:text-white active:scale-95 sm:w-auto self-start cursor-pointer"
+            className="btn-solid btn-solid-danger w-full sm:w-auto self-start"
           >
             Reset Data Player Ini
           </button>
@@ -231,7 +231,7 @@ export default function Moderasi({ send, data }) {
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => { setDiscordId(bannedOf(b)); initiateAction('unban', bannedOf(b)); }}
-                          className="rounded-lg border border-success/40 bg-white px-3 py-1 text-xs font-bold text-success shadow-sm transition hover:bg-success hover:text-white active:scale-95 cursor-pointer"
+                          className="btn-solid btn-solid-success"
                         >
                           Unban/Cabut
                         </button>

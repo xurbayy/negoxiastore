@@ -72,7 +72,7 @@ export default function RedeemManager({ send, data }) {
           <label htmlFor="p-quota" className="block text-xs uppercase tracking-wider text-ink-muted">Kuota</label>
           <input id="p-quota" type="number" value={form.quota} onChange={(e) => setForm({ ...form, quota: parseInt(e.target.value, 10) || 0 })} className="mt-1.5 w-24 rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none" />
         </div>
-        <button type="submit" disabled={busy || !form.code || !form.rewardValue} className="rounded-lg bg-accent text-ink! px-5 py-2 text-sm font-bold text-white shadow-md transition hover:-translate-y-px hover:brightness-105 active:translate-y-0 active:shadow-sm disabled:opacity-40 cursor-pointer">Buat Kode</button>
+        <button type="submit" disabled={busy || !form.code || !form.rewardValue} className="btn-solid btn-solid-accent disabled:opacity-40">Buat Kode</button>
       </form>
 
       {feedback && (
@@ -116,7 +116,7 @@ export default function RedeemManager({ send, data }) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => setConfirm({ code: c.code })} className="rounded-lg border border-danger/40 bg-white px-2.5 py-1 text-xs font-semibold text-danger shadow-sm transition hover:bg-danger hover:text-white active:translate-y-px cursor-pointer">Hapus</button>
+                    <button type="button" onClick={() => setConfirm({ code: c.code })} className="btn-solid btn-solid-danger">Hapus</button>
                   </td>
                 </tr>
               );
@@ -196,7 +196,7 @@ function NotifyForm({ codes, onSent }) {
             ))}
           </select>
         </div>
-        <button type="submit" disabled={busy || !form.code || (form.target === 'one' && !/^\d{5,25}$/.test(form.targetOne))} className="rounded-lg bg-accent text-ink! px-5 py-2 text-sm font-semibold transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Kirim</button>
+        <button type="submit" disabled={busy || !form.code || (form.target === 'one' && !/^\d{5,25}$/.test(form.targetOne))} className="btn-solid btn-solid-accent disabled:opacity-40">Kirim</button>
       </div>
       {msg && (
         <p className={`mt-3 rounded-xl border px-4 py-3 text-sm ${msg.ok ? 'border-success/40 bg-success/10 text-success' : 'border-danger/40 bg-danger/10 text-danger'}`}>{msg.text}</p>

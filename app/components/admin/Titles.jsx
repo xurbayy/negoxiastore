@@ -54,7 +54,7 @@ export default function Titles({ send, data }) {
             <option value="">- pilih title -</option>
             {titles.map((t) => <option key={t.key} value={t.key}>{t.label.replace(/<[^>]+>/g, '').trim()} ({t.key})</option>)}
           </select>
-          <button type="submit" disabled={busy || !tForm.userId || !tForm.titleKey} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Beri Title</button>
+          <button type="submit" disabled={busy || !tForm.userId || !tForm.titleKey} className="btn-solid btn-solid-accent mt-3 w-full disabled:opacity-40">Beri Title</button>
         </form>
 
         {/* Set admin title */}
@@ -68,7 +68,7 @@ export default function Titles({ send, data }) {
             className="mt-3 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 font-mono text-sm text-ink! focus:border-accent focus:outline-none" />
           <textarea value={aForm.text} onChange={(e) => setAForm({ ...aForm, text: e.target.value.slice(0, 100) })} placeholder="Teks title, maks 100 karakter" rows={2}
             className="mt-2 w-full rounded-lg border border-border-soft bg-bg-soft px-3 py-2 text-sm text-ink! focus:border-accent focus:outline-none" />
-          <button type="submit" disabled={busy || !aForm.userId || !aForm.text.trim()} className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink! transition hover:bg-accent-hover disabled:opacity-40 cursor-pointer">Pasang</button>
+          <button type="submit" disabled={busy || !aForm.userId || !aForm.text.trim()} className="btn-solid btn-solid-accent mt-3 w-full disabled:opacity-40">Pasang</button>
         </form>
       </div>
 
@@ -88,7 +88,7 @@ export default function Titles({ send, data }) {
                 <span className="flex items-center gap-3">
                   <RichText text={h.adminTitle} />
                   <button type="button" disabled={busy} onClick={() => setConfirm({ userId: h.userId, username: h.username })}
-                    className="rounded-lg border border-danger/40 px-3 py-1 text-xs font-semibold text-danger transition hover:bg-danger/10 cursor-pointer disabled:opacity-40">Hapus</button>
+                    className="btn-solid btn-solid-danger">Hapus</button>
                 </span>
               </li>
             ))}

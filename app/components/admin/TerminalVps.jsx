@@ -97,9 +97,9 @@ export default function TerminalVps({ send }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => kontrol('restart')} className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-500/20 disabled:opacity-40 cursor-pointer">Restart Bot</button>
-          <button type="button" disabled={busy} onClick={() => kontrol('stop')} className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-2 text-sm font-semibold text-danger transition hover:bg-danger/20 disabled:opacity-40 cursor-pointer">Stop Bot</button>
-          <button type="button" disabled={busy} onClick={() => kontrol('start')} className="rounded-lg border border-success/40 bg-success/10 px-4 py-2 text-sm font-semibold text-success transition hover:bg-success/20 disabled:opacity-40 cursor-pointer">Start Bot</button>
+          <button type="button" disabled={busy} onClick={() => kontrol('restart')} className="btn-solid btn-solid-accent">Restart Bot</button>
+          <button type="button" disabled={busy} onClick={() => kontrol('stop')} className="btn-solid btn-solid-danger">Stop Bot</button>
+          <button type="button" disabled={busy} onClick={() => kontrol('start')} className="btn-solid btn-solid-success">Start Bot</button>
         </div>
       </div>
 

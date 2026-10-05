@@ -231,6 +231,95 @@ select:focus-visible {
 /* Blob dekoratif tidak boleh melebar dari kontainer (anti scroll horizontal) */
 section, .nx-shell, main { position: relative; overflow-x: clip; }
 
+/* ── TOMBOL AKSI PANEL ADMIN (SOLID) ──
+   Permintaan pemilik 2026-10-05: tombol aksi di admin jangan semi-transparan
+   (bg-color/10) yang terlihat "kabur" di atas latar cream. Semua tombol aksi
+   sekarang SOLID: latar pekat + teks putih + sedikit bayangan supaya terangkat,
+   tetap satu bahasa visual (radius pill, font tebal) dengan tombol situs. */
+.btn-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+.btn-solid:hover { transform: translateY(-1px); }
+.btn-solid:active { transform: translateY(0); }
+.btn-solid:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+/* Varian warna aksen */
+.btn-solid-accent { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(241, 154, 26, 0.28); }
+.btn-solid-accent:hover { background: var(--accent-hover); }
+.btn-solid-danger { background: var(--danger); color: #fff; box-shadow: 0 2px 8px rgba(199, 75, 60, 0.28); }
+.btn-solid-danger:hover { background: #A83F32; }
+.btn-solid-success { background: var(--success); color: #fff; box-shadow: 0 2px 8px rgba(123, 160, 91, 0.28); }
+.btn-solid-success:hover { background: #6B8E4E; }
+/* Netral: latar cream pekat + garis, tetap solid (bukan transparan) */
+.btn-solid-neutral { background: var(--card-cream); color: var(--ink); border-color: var(--line); box-shadow: 0 1px 3px rgba(43, 33, 24, 0.08); }
+.btn-solid-neutral:hover { background: var(--bg-soft); }
+/* Gelap: untuk tombol utama panel (mis. "Kirim ke Bot") */
+.btn-solid-dark { background: var(--ink); color: #fff; box-shadow: 0 2px 8px rgba(43, 33, 24, 0.24); }
+.btn-solid-dark:hover { background: #3D2F22; }
+
+/* ══════════════════════════════════════════════════════════
+   WIDGET VPS MENGAMBANG (pojok kanan bawah panel admin)
+   Menampilkan CPU/RAM/Uptime/Disk VPS ringkas, collapsible.
+   ══════════════════════════════════════════════════════════ */
+.vps-widget {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 45;
+  width: 15rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--card-dark);
+  color: #E8E8F0;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+@media (max-width: 767px) {
+  /* Di mobile: lebih kecil & tidak menghalangi; tetap bisa diketuk untuk buka. */
+  .vps-widget { width: 11.5rem; right: 0.6rem; bottom: 0.6rem; }
+}
+.vps-widget-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  background: var(--card-dark-2);
+  border: none;
+  color: inherit;
+  text-align: left;
+}
+.vps-widget-body {
+  padding: 0.4rem 0.75rem 0.7rem;
+  display: grid;
+  gap: 0.55rem;
+}
+.vps-row-line {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+.vps-row-fill { height: 100%; border-radius: 9999px; transition: width 0.5s ease; }
+.vps-dot { width: 7px; height: 7px; border-radius: 9999px; flex-shrink: 0; }
+.vps-dot-ok { background: #7BA05B; box-shadow: 0 0 0 3px rgba(123, 160, 91, 0.2); }
+.vps-dot-warn { background: #F19A1A; box-shadow: 0 0 0 3px rgba(241, 154, 26, 0.2); }
+.vps-dot-bad { background: #C74B3C; box-shadow: 0 0 0 3px rgba(199, 75, 60, 0.2); }
+
 /* ── FADE UP SCROLL REVEAL ── */
 .fade-up {
   opacity: 0;
