@@ -765,27 +765,25 @@ export default function MeClient({ betaGames = null }) {
         <div className="space-y-5">
           {/* ── Inventori ── */}
           <div className="nx-card px-6 py-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <h3 className="font-display text-lg text-ink">Inventori</h3>
               {isPremium ? (
                 <span className="nx-badge bg-success font-extrabold text-white">Unlimited</span>
               ) : (
-                // Indikator kapasitas gratis. Dulu bar-nya nempel banget ke teks
-                // "2/5" (gap-2 + bar tipis) sehingga terbaca mepet. Sekarang bar
-                // lebih longgar, ada pemisah, dan angka diberi lebar tetap supaya
-                // tidak bergeser saat nilainya berubah.
-                <span className="flex items-center gap-2.5" title="Maksimal 5 item berbeda untuk akun gratis">
+                // Indikator kapasitas gratis - dibungkus badge supaya tidak
+                // gepeng/geser saat teks header panjang di layar kecil.
+                <span className="flex shrink-0 items-center gap-2 rounded-full border border-border-soft bg-bg-soft px-2.5 py-1" title="Maksimal 5 item berbeda untuk akun gratis">
                   <span className="flex gap-1" aria-hidden="true">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <span
                         key={i}
-                        className={`h-2 w-4 rounded-full transition-colors ${i < (p.inventory || []).length ? 'bg-accent' : 'bg-border-soft'}`}
+                        className={`h-1.5 w-3 rounded-full transition-colors ${i < (p.inventory || []).length ? 'bg-accent' : 'bg-border-soft'}`}
                       />
                     ))}
                   </span>
-                  <span className="h-3.5 w-px bg-border-soft" aria-hidden="true" />
-                  <span className="min-w-[2.25rem] text-right text-xs font-semibold tabular-nums text-ink-muted">
-                    {(p.inventory || []).length}/5
+                  <span className="h-3 w-px bg-border-soft" aria-hidden="true" />
+                  <span className="text-xs font-bold tabular-nums text-ink">
+                    {(p.inventory || []).length}<span className="font-medium text-ink-muted">/5</span>
                   </span>
                 </span>
               )}
@@ -798,20 +796,34 @@ export default function MeClient({ betaGames = null }) {
             ) : (
               <>
                 <ul className="mt-4 space-y-2">
-                  {p.inventory.slice(invPage * 10, (invPage + 1) * 10).map((it) => (
-                    <li key={it.itemKey} className="inv-item flex items-center justify-between gap-2 rounded-xl border border-border-soft bg-card-cream/70 px-3.5 py-2.5 text-sm">
-                      <span className="flex min-w-0 items-center gap-2 text-ink">
-                        {it.emojiUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={it.emojiUrl} alt="" width={18} height={18} className="h-4.5 w-4.5 shrink-0" />
-                        ) : it.emoji ? (
-                          <span aria-hidden="true">{it.emoji}</span>
-                        ) : null}
-                        <span className="truncate">{it.name}</span>
-                      </span>
-                      <span className="rounded-full bg-accent/15 px-2 py-0.5 font-mono text-xs font-bold text-accent-hover">×{it.quantity}</span>
-                    </li>
-                  ))}
+                  {p.inventory.slice(invPage * 10, (invPage + 1) * 10).map((it) => {
+                    // ANTI TOKEN MENTAH (gotcha lama): token Discord tanpa
+                    // emojiUrl TIDAK BOLEH sampai ke DOM. Coba resolve via
+                    // registry; kalau gagal, jangan render (fallback tile).
+                    const rawToken = typeof it.emoji === 'string' && /^<(a)?:[A-Za-z0-9_]+:\d+>$/.test(it.emoji.trim());
+                    const resolveSrc = it.emojiUrl || (rawToken ? emojiSrc(it.emoji.trim().replace(/^<a?:([A-Za-z0-9_]+):\d+>$/, '$1'), 64) : null);
+                    const unicode = !rawToken && typeof it.emoji === 'string' ? it.emoji : null;
+                    const pakaiEmoji = Boolean(resolveSrc || unicode);
+                    return (
+                      <li key={it.itemKey} className="inv-item flex items-center justify-between gap-3 rounded-xl border border-border-soft bg-card-cream/70 px-3 py-2.5 text-sm">
+                        <span className="flex min-w-0 items-center gap-2.5 text-ink">
+                          {/* Tile ikon: rata & seragam untuk semua item */}
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft bg-bg-soft">
+                            {resolveSrc ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={resolveSrc} alt="" width={20} height={20} className="h-5 w-5" loading="lazy" />
+                            ) : unicode ? (
+                              <span aria-hidden="true" className="text-base leading-none">{unicode}</span>
+                            ) : (
+                              <span aria-hidden="true" className="text-xs font-bold text-ink-faint">{String(it.name || '?').slice(0, 1).toUpperCase()}</span>
+                            )}
+                          </span>
+                          <span className="truncate font-medium">{it.name}</span>
+                        </span>
+                        <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 font-mono text-xs font-bold text-accent-hover">×{it.quantity}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 {p.inventory.length > 10 && (
                   <div className="mt-4 flex items-center justify-between">

@@ -4,6 +4,7 @@ import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 // stripEmojiToken dari lib/snapshot - SATU sumber (dulu file ini punya salinan
 // fungsi yang sama, padahal regex-nya identik).
 import { stripEmojiToken as stripEmoji } from '../lib/textUtil';
+import GuildEmoji from './GuildEmoji';
 
 // Kartu sambutan utk user yang sudah login: ringkasan profil dari cache bot
 // (kalau snapshot data_requests tersedia) + shortcut ke fitur utama.
@@ -24,7 +25,12 @@ export default async function WelcomeBack({ username }) {
               </span>
               <span>Level {profile.level}</span>
               {profile.dailyStreak > 0 && <span>Streak {profile.dailyStreak} hari</span>}
-              {profile.guild && <span>{stripEmoji(profile.guild.name)}</span>}
+              {profile.guild && (
+                <span className="inline-flex items-center gap-1.5">
+                  <GuildEmoji token={profile.guild.emoji} size={16} />
+                  {stripEmoji(profile.guild.name)}
+                </span>
+              )}
             </p>
           ) : (
             <p className="mt-1 text-sm text-ink-muted">

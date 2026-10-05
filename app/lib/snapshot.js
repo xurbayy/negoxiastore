@@ -330,6 +330,10 @@ export async function getLiveLeaderboard(limit = 10) {
 }
 
 // Leaderboard GUILD langsung dari DB bot (public.guilds + jumlah member).
+// EMOJI GUILD (2026-10-05): kolom `emoji` ikut diambil - bot menyimpan emoji
+// guild TERPISAH dari nama (token Discord <:nama:id> / <a:nama:id>), persis
+// seperti UI bot yang merender `${g.emoji} ${g.name}`. Tanpa ini, web hanya
+// menampilkan nama guild polos tanpa ikonnya.
 export async function getLiveGuildBoard(limit = 10) {
   // Cache 12 dtk per limit: halaman komunitas/leaderboard panggil ini.
   return live('gb:' + limit, async () => {
@@ -337,7 +341,7 @@ export async function getLiveGuildBoard(limit = 10) {
       await schemaReady();
       const db = getDb();
       const res = await db.execute(
-        `SELECT g.guild_code, g.name, g.total_points,
+        `SELECT g.guild_code, g.name, g.emoji, g.war_wins, g.total_points,
                 (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
            FROM public.guilds g
           ORDER BY g.total_points DESC
@@ -348,6 +352,8 @@ export async function getLiveGuildBoard(limit = 10) {
         rank: i + 1,
         code: row.guild_code,
         name: row.name || 'Guild',
+        emoji: row.emoji || null,
+        warWins: Number(row.war_wins || 0),
         points: Number(row.total_points || 0),
         members: Number(row.members || 0),
       }));

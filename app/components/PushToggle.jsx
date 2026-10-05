@@ -125,7 +125,7 @@ export default function PushToggle() {
 
       {status === 'izin_ditolak' && (
         <p className="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
-          Izin notifikasi diblokir di browser ini. Buka pengaturan situs di browser, izinkan Notifikasi, lalu muat ulang halaman.
+          Izin notifikasi diblokir di browser ini. Nyalakan dulu izin Notifikasi untuk situs ini di pengaturan browser (ikon gembok di address bar), lalu coba lagi.
         </p>
       )}
       {pesan && status !== 'izin_ditolak' && (

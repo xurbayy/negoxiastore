@@ -36,8 +36,9 @@ export default function Notifications() {
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
   // Toggle notifikasi perangkat (push) - per-device via localStorage + subscription.
-  const [pushStatus, setPushStatus] = useState('memuat'); // memuat | aktif | mati | tak_didukung
+  const [pushStatus, setPushStatus] = useState('memuat'); // memuat | aktif | mati | diblokir | tak_didukung
   const [pushSibuk, setPushSibuk] = useState(false);
+  const [pushPesan, setPushPesan] = useState(null);
   const [vapid, setVapid] = useState(null);
 
   // Cek status push perangkat ini (subscription = consent per-device).
@@ -47,6 +48,9 @@ export default function Notifications() {
       setPushStatus('tak_didukung');
       return;
     }
+    // Izin notifikasi diblokir browser? Langganan tidak akan bisa dibuat ->
+    // tandai 'diblokir' supaya UI menampilkan validasi (nyalakan izin dulu).
+    if (Notification.permission === 'denied') { setPushStatus('diblokir'); return; }
     try {
       const res = await fetch('/api/me/push', { cache: 'no-store' });
       if (res.status !== 200) return; // tamu, jangan set status
@@ -62,7 +66,15 @@ export default function Notifications() {
   // Toggle on/off perangkat ini.
   const togglePush = useCallback(async () => {
     if (pushSibuk) return;
+    // VALIDASI: izin notifikasi diblokir browser -> toggle tidak boleh nyala
+    // diam-diam. Suruh nyalain izinnya dulu, baru toggle bisa dipakai.
+    if (pushStatus !== 'aktif' && typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+      setPushStatus('diblokir');
+      setPushPesan(null);
+      return;
+    }
     setPushSibuk(true);
+    setPushPesan(null);
     try {
       if (pushStatus === 'aktif') {
         const reg = await navigator.serviceWorker.getRegistration();
@@ -75,7 +87,17 @@ export default function Notifications() {
       } else {
         if (Notification.permission !== 'granted') {
           const izin = await Notification.requestPermission();
-          if (izin !== 'granted') { setPushStatus('mati'); return; }
+          if (izin === 'denied') {
+            // Diblokir (user pilih Blokir / sudah pernah diblokir) ->
+            // jangan diam-diam gagal, tampilkan validasi.
+            setPushStatus('diblokir');
+            return;
+          }
+          if (izin !== 'granted') {
+            // Prompt ditutup tanpa jawaban -> tetap mati + ajak coba lagi.
+            setPushPesan('Izin belum diberikan. Coba lagi, lalu pilih Izinkan saat browser bertanya.');
+            return;
+          }
         }
         const reg = await navigator.serviceWorker.register('/sw.js');
         await navigator.serviceWorker.ready;
@@ -292,7 +314,7 @@ export default function Notifications() {
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-ink">Notifikasi Perangkat</p>
                   <p className="text-[0.65rem] text-ink-muted">
-                    {pushStatus === 'aktif' ? 'Aktif di perangkat ini' : 'Nonaktif di perangkat ini'}
+                    {pushStatus === 'aktif' ? 'Aktif di perangkat ini' : pushStatus === 'diblokir' ? 'Diblokir di browser ini' : 'Nonaktif di perangkat ini'}
                   </p>
                 </div>
                 <button
@@ -309,6 +331,14 @@ export default function Notifications() {
                   }`} />
                 </button>
               </div>
+              {pushStatus === 'diblokir' && (
+                <p className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-2.5 py-1.5 text-[0.65rem] leading-relaxed text-danger">
+                  Izin notifikasi diblokir browser. Nyalakan dulu izin Notifikasi untuk situs ini di pengaturan browser (ikon gembok di address bar), lalu coba lagi.
+                </p>
+              )}
+              {pushPesan && pushStatus !== 'diblokir' && (
+                <p className="mt-2 text-[0.65rem] leading-relaxed text-ink-muted">{pushPesan}</p>
+              )}
             </div>
           )}
         </div>

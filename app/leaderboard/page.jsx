@@ -6,6 +6,7 @@ import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
+import GuildEmoji from '../components/GuildEmoji';
 import LeaderboardClient from '../leaderboard/LeaderboardClient';
 
 export const metadata = {
@@ -86,7 +87,13 @@ export default async function LeaderboardPage() {
                   {guilds.map((g) => (
                     <tr key={g.rank + g.name} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
                       <td className="px-4 py-3 font-display text-ink">{g.rank}</td>
-                      <td className="px-4 py-3 font-semibold text-ink">{stripEmojiToken(g.name)}</td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-2 font-semibold text-ink">
+                          {/* Emoji guild dari kolom guilds.emoji (bot) - nama tampil bersih */}
+                          <GuildEmoji token={g.emoji} size={18} />
+                          <span className="truncate">{stripEmojiToken(g.name)}</span>
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right" title={fmtPenuh(g.points)}>{fmtRingkas(g.points)}</td>
                       <td className="hidden px-4 py-3 text-right text-ink-muted sm:table-cell">{g.warWins}</td>
                       <td className="px-4 py-3 text-right text-ink-muted">{g.members}</td>

@@ -136,7 +136,7 @@ export default function TerminalVps({ send }) {
 
   const mintaKonfirmasi = useCallback((aksi) => {
     const meta = {
-      restart: { judul: 'Restart Bot', body: 'Restart bot sekarang? Bot akan mati ±10 detik lalu hidup lagi.' },
+      restart: { judul: 'Restart Bot', body: 'Restart bot sekarang? Bot akan mati ±2 detik lalu hidup lagi.' },
       stop: { judul: 'Hentikan Bot', body: 'HENTIKAN bot? Web TIDAK bisa baca/tulis data sampai bot di-start lagi.' },
       start: { judul: 'Hidupkan Bot', body: 'Hidupkan bot sekarang?' },
     };
