@@ -266,26 +266,24 @@ export default function Moderasi({ send, data }) {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm transition-all duration-300">
-          <div className="w-full max-w-sm transform overflow-hidden rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-border-soft/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-all duration-300">
+          <div className="flex max-h-[90dvh] w-full max-w-sm transform flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-border-soft/50 sm:p-6">
             <h3 className="mb-2 text-lg font-bold text-ink">
               {modal.action === 'alert' ? 'Perhatian' : 'Konfirmasi Aksi'}
             </h3>
-            <p className="mb-6 text-sm leading-relaxed text-ink-muted">{modal.message}</p>
-            <div className="flex justify-end gap-3">
+            <p className="mb-5 overflow-y-auto text-sm leading-relaxed text-ink-muted sm:mb-6">{modal.message}</p>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
               {modal.action !== 'alert' && (
                 <button
                   onClick={() => setModal(null)}
-                  className="rounded-lg border border-border-soft bg-bg-soft px-4 py-2 text-sm font-medium text-ink transition hover:bg-border-soft cursor-pointer"
+                  className="btn-solid btn-solid-neutral w-full sm:w-auto"
                 >
                   Batal
                 </button>
               )}
               <button
                 onClick={modal.action === 'alert' ? () => setModal(null) : confirmAction}
-                className={`rounded-lg px-5 py-2 text-sm font-bold shadow-md transition hover:brightness-105 active:scale-95 cursor-pointer ${
-                  modal.action === 'alert' ? 'bg-accent text-white' : 'bg-danger text-white'
-                }`}
+                className={`w-full sm:w-auto ${modal.action === 'alert' ? 'btn-solid btn-solid-accent' : 'btn-solid btn-solid-danger'}`}
               >
                 {modal.confirmText}
               </button>

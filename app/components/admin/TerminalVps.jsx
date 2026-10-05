@@ -159,14 +159,14 @@ export default function TerminalVps({ send }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="font-display text-xl text-ink">Terminal VPS</h2>
           <p className="mt-0.5 text-xs text-ink-muted">
             Kontrol bot & server langsung. Bot di VPS {v?.vcpu || 6} vCPU / {v ? Math.round(v.ram.totalMb / 1024) : 8} GiB, DB PostgreSQL lokal.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
           <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('start')} className="btn-solid btn-solid-success">Mulai</button>
           <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('restart')} className="btn-solid btn-solid-accent">Restart</button>
           <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('stop')} className="btn-solid btn-solid-danger">Hentikan</button>
@@ -289,7 +289,7 @@ function ConsoleLog({ riwayat, setRiwayat, online }) {
       <div
         ref={boxRef}
         onScroll={onScroll}
-        className="h-96 overflow-y-auto px-4 py-3 font-mono text-xs leading-relaxed"
+        className="h-72 overflow-y-auto px-3 py-3 font-mono text-xs leading-relaxed sm:h-96 sm:px-4"
       >
         {riwayat.length === 0 ? (
           <p className="text-slate-500">Console siap. Ketik <span className="text-slate-300">help</span> lalu Enter untuk daftar perintah, atau ketik mis. <span className="text-slate-300">logs</span>, <span className="text-slate-300">df</span>, <span className="text-slate-300">free</span>.</p>

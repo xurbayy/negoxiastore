@@ -79,8 +79,9 @@ export default function VpsWidget() {
   const disk = v?.disk?.persen;
 
   // Ringkas 1 baris saat tertutup: CPU & RAM (info paling penting).
+  // Kelas "terbuka" dipasang supaya CSS mobile melebarkan widget saat dibuka.
   return (
-    <div className="vps-widget">
+    <div className={`vps-widget ${open ? 'terbuka' : ''}`}>
       <button
         type="button"
         className="vps-widget-head"

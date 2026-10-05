@@ -64,7 +64,7 @@ export default function PlayerProfileCard({ player, onClose }) {
     >
       <div
         ref={ref}
-        className={`w-full ${player.hasPass ? 'max-w-md' : 'max-w-sm'} overflow-hidden rounded-2xl border border-border-soft bg-card-cream shadow-2xl transition-all duration-200 ${show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
+        className={`max-h-[88dvh] w-full ${player.hasPass ? 'max-w-md' : 'max-w-sm'} overflow-y-auto rounded-2xl border border-border-soft bg-card-cream shadow-2xl transition-all duration-200 ${show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
       >
         {/* Header */}
         <div className="nx-dark px-5 py-5">

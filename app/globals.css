@@ -287,8 +287,19 @@ section, .nx-shell, main { position: relative; overflow-x: clip; }
   font-size: 0.75rem;
 }
 @media (max-width: 767px) {
-  /* Di mobile: lebih kecil & tidak menghalangi; tetap bisa diketuk untuk buka. */
-  .vps-widget { width: 11.5rem; right: 0.6rem; bottom: 0.6rem; }
+  /* Di mobile: ciutkan jadi pil kecil di kiri-bawah supaya TIDAK menutupi
+     konten utama / tombol panel. Body-nya disembunyikan (dibuka lewat klik
+     -> widget melebar ke atas). Aman dari keyboard & area tekan. */
+  .vps-widget {
+    width: auto;
+    max-width: calc(100vw - 1.2rem);
+    left: 0.6rem;
+    right: auto;
+    bottom: 0.6rem;
+  }
+  /* Saat terbuka di mobile: melebar penuh tapi tetap di bawah. */
+  .vps-widget.terbuka { width: calc(100vw - 1.2rem); }
+  .vps-widget .vps-widget-head { padding: 0.5rem 0.7rem; }
 }
 .vps-widget-head {
   display: flex;
