@@ -369,11 +369,17 @@ async function _jalankan(aksi, p, actorId, db) {
     case 'reset_daily': {
       const userId = req(p.userId, 'userId');
       await ensureUser(db, userId);
+      // KUOTA 24 JAM BERGULIR (2026-10-06): sumber kebenaran = tabel daily_earns
+      // (SUM 24 jam terakhir). Reset = hapus log 24 jam terakhir user ini.
+      // last_daily_at dibiarkan (streak login terpisah, tidak ikut direset).
+      try {
+        await db.execute({ sql: 'DELETE FROM public.daily_earns WHERE user_id = ?', args: [userId] });
+      } catch (e) { /* tabel belum ada di DB lama - lanjut ke reset cache */ }
       await db.execute({
-        sql: 'UPDATE public.users SET daily_points = 0, daily_reset = NULL, last_daily_at = NULL WHERE user_id = ?',
+        sql: 'UPDATE public.users SET daily_points = 0, daily_reset = NULL WHERE user_id = ?',
         args: [userId],
       });
-      return `Limit harian ${userId} di-reset`;
+      return `Kuota 24 jam ${userId} di-reset`;
     }
     case 'reset_missions': {
       // userId kosong = re-roll misi SEMUA pemain (perilaku bot).
