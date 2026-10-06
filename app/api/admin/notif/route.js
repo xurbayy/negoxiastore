@@ -1,6 +1,6 @@
-import { getAdminSession, getSession } from '../../../../lib/session';
-import { getDb, schemaReady } from '../../../../lib/db';
-import { json } from '../../../../lib/api-helpers';
+import { getAdminSession, getSession } from '../../../lib/session';
+import { getDb, schemaReady } from '../../../lib/db';
+import { json } from '../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
