@@ -941,6 +941,9 @@ export default function AnalisisAI() {
   // relevan (permintaan pemilik 2026-10-02: "langsung dari ai aja yang relevan").
   // Menggantikan tombol "Muat ulang".
   const [saranAI, setSaranAI] = useState(false);
+  // FIX 2026-10-06: pesan hasil "Cari topik AI" khusus ditampilkan DI BAWAH
+  // tombol (dulu pesannya nyasar ke bawah halaman sehingga user tidak lihat).
+  const [pesanSaranAI, setPesanSaranAI] = useState(null); // { ok, teks }
   // Cooldown 60 detik setelah generate - hemat token & cegah spam.
   const [saranAICooldown, setSaranAICooldown] = useState(0);
   useEffect(() => {
@@ -964,20 +967,31 @@ export default function AnalisisAI() {
     }
     setSaranAI(true);
     setSaranAICooldown(60); // mulai cooldown
-    setSaranDismiss(new Set());
+    setPesanSaranAI(null);
     try {
       const url = '/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&ai=1'
         + '&provider=' + encodeURIComponent(provider) + '&model=' + encodeURIComponent(modelInput.trim());
       const res = await fetch(url, { cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
-      if (d.ok && Array.isArray(d.saran)) setSaranDin(d.saran);
-      if (!d.ok || !d.saran?.length) {
-        setPesanSimpan('AI tidak menghasilkan topik - coba lagi atau ganti model.');
-        setTimeout(() => setPesanSimpan(null), 5000);
+      // FIX 2026-10-06 (laporan pemilik: "udah gw pake AI kok tetep ga refresh"):
+      //   Dulu server diam-diam fallback ke saran lama saat AI gagal (ok:true),
+      //   jadi UI terlihat "tidak refresh" tanpa penjelasan. Sekarang server
+      //   jujur (ok:false + alasan) dan UI MENAMPILKAN alasan aslinya di bawah
+      //   tombol supaya pemilik tahu harus apa (ganti model, cek kuota, dst).
+      if (d.ok && Array.isArray(d.saran) && d.saran.length) {
+        setSaranDin(d.saran);
+        // Bersihkan dismiss HANYA saat sukses - tag baru pasti tampil semua.
+        setSaranDismiss(new Set());
+        setPesanSaranAI({ ok: true, teks: `✓ ${d.saran.length} topik baru dari AI siap dipakai - lihat tag di bawah.` });
+      } else {
+        setPesanSaranAI({ ok: false, teks: 'AI gagal bikin topik: ' + (d.error || 'tidak ada alasan dari server.') });
+        // Gagal bukan alasan mengunci user 60 dtk - kurangi cooldown supaya
+        // bisa langsung coba lagi (mis. setelah ganti model).
+        setSaranAICooldown(10);
       }
     } catch {
-      setPesanSimpan('Gagal cari topik AI. Cek koneksi/model.');
-      setTimeout(() => setPesanSimpan(null), 5000);
+      setPesanSaranAI({ ok: false, teks: 'Gagal menghubungi server untuk cari topik AI. Cek koneksi lalu coba lagi.' });
+      setSaranAICooldown(10);
     }
     finally { setSaranAI(false); }
   }, [peran, provider, modelInput, saranAICooldown]);
@@ -2516,6 +2530,20 @@ export default function AnalisisAI() {
                 AI sedang membaca data & menyusun topik paling relevan... (5-15 detik)
               </p>
             )}
+            {/* FIX 2026-10-06: pesan hasil cari topik (sukses/gagal) ditampilkan
+                DI SINI - tepat di bawah tombol. Dulu pesannya cuma muncul di
+                bagian bawah halaman (dekat Arsip Jawaban), jadi pemilik yang
+                klik "Cari topik AI" tidak melihat penjelasan apa pun dan
+                menyimpulkan "kok ga refresh". */}
+            {!saranAI && pesanSaranAI && (
+              <p className={`mt-2 rounded-lg px-3 py-2 text-[0.7rem] font-semibold ${
+                pesanSaranAI.ok
+                  ? 'bg-success/10 text-success'
+                  : 'bg-danger/10 text-danger'
+              }`}>
+                {pesanSaranAI.teks}
+              </p>
+            )}
             {/* Di HP tombol dibuat GRID 2 kolom: label panjang seperti
                 "Pertumbuhan Komunitas" jadi tidak memaksa satu baris penuh, dan
                 tingginya naik ke 40px supaya nyaman ditekan jari (sebelumnya 30px,
@@ -2872,6 +2900,15 @@ export default function AnalisisAI() {
                 <p className="mt-2 flex items-center gap-2 rounded-lg bg-accent/5 px-3 py-2 text-[0.7rem] font-semibold text-accent">
                   <span className="pulse-dot" aria-hidden="true" />
                   AI sedang membaca data & menyusun topik paling relevan... (5-15 detik)
+                </p>
+              )}
+              {/* FIX 2026-10-06: hasil cari topik tampil di sini juga (mode
+                  diskusi) - sebelumnya pesan nyasar ke bawah halaman. */}
+              {!saranAI && pesanSaranAI && (
+                <p className={`mt-2 rounded-lg px-3 py-2 text-[0.7rem] font-semibold ${
+                  pesanSaranAI.ok ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+                }`}>
+                  {pesanSaranAI.teks}
                 </p>
               )}
               <div className="flex flex-wrap gap-1.5">

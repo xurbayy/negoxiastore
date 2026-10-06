@@ -6,6 +6,10 @@ import { tanyaGroq } from '../../../../lib/groq';
 import { json } from '../../../../lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
+// FIX 2026-10-06: AI generate bisa butuh >10 dtk (baca snapshot + 1 request
+// LLM). Tanpa maxDuration, fungsi dipotong di tengah -> klien dapat error
+// koneksi dan UI "seolah tidak refresh". Naikkan batas durasi.
+export const maxDuration = 60;
 
 // ==========================================
 // /api/admin/ai/saran - saran pertanyaan untuk kartu panel
@@ -40,10 +44,21 @@ export async function GET(request) {
   const model = url.searchParams.get('model') || undefined;
 
   // 0) AI GENERATE saran dari kondisi terkini (paling relevan).
+  //
+  // FIX 2026-10-06 (laporan pemilik: "udah gw pake AI kok tetep ga refresh"):
+  //   Dulu kalau AI gagal (model error/timeout/balasan kosong), route ini
+  //   DIAM-DIAM lanjut ke fallback dan tetap balas { ok: true, sumber: 'snapshot' }
+  //   berisi saran LAMA. Frontend lihat ok=true -> pasang saran lama -> tag
+  //   "tidak refresh" TANPA pesan error apa pun, dan user tidak tahu AI gagal.
+  //   Sekarang: kalau mintaAI=1 tapi AI gagal, balas ok:false + alasan asli
+  //   supaya UI bisa bilang kenapa (dan user bisa ganti model / coba lagi).
   if (mintaAI) {
+    let alasan = 'AI tidak menghasilkan topik.';
     try {
       const snap = await getLatestSnapshot();
-      if (snap) {
+      if (!snap) {
+        alasan = 'Data snapshot belum tersedia - jalankan bot dulu supaya data terkirim.';
+      } else {
         const konteks = await susunKonteks(snap, {}, { ringkas: true });
         const hasil = await tanyaGroq([
           { role: 'system', content: 'Kamu asisten analisis NEXO. Tugas: usulkan pertanyaan analisis PALING relevan dengan kondisi data saat ini. Bahasa Indonesia santai.' },
@@ -68,15 +83,27 @@ export async function GET(request) {
             .filter((s) => s.length > 8 && s.endsWith('?'))
             .slice(0, 8);
           if (baris.length >= 3) {
+            // FIX 2026-10-06: ID saran AI dibuat UNIK per generate (cap waktu).
+            // Dulu id selalu 'ai-0'..'ai-7' - kalau user pernah dismiss tag
+            // (saranDismiss di localStorage menyimpan id), hasil generate BARU
+            // dengan id yang sama langsung ikut tersembunyi = "ga refresh".
+            const cap = Date.now().toString(36);
             return json({
               ok: true,
               sumber: 'ai',
-              saran: baris.map((s, i) => ({ id: `ai-${i}`, label: s.slice(0, 70), tanya: s, sumber: 'ai' })),
+              saran: baris.map((s, i) => ({ id: `ai-${cap}-${i}`, label: s.slice(0, 70), tanya: s, sumber: 'ai' })),
             });
           }
+          alasan = 'AI menjawab tapi formatnya tidak sesuai (bukan daftar pertanyaan). Coba model lain.';
+        } else {
+          alasan = hasil?.error || 'AI tidak merespons. Cek koneksi provider / kuota model.';
         }
       }
-    } catch { /* gagal AI -> lanjut fallback dinamis */ }
+    } catch (e) {
+      alasan = e?.message || 'Gagal memanggil AI.';
+    }
+    // JUJUR: jangan fallback senyap. UI akan menampilkan alasan ini.
+    return json({ ok: false, error: alasan, sumber: 'gagal-ai' }, 200);
   }
 
   // 1) SARAN DARI AGEN (hasil cek agen sebelumnya) - HANYA kalau masih BARU.
