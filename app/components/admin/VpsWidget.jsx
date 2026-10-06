@@ -55,28 +55,48 @@ function Baris({ label, nilai, persen }) {
 export default function VpsWidget() {
   const [st, setSt] = useState(null);
   const [open, setOpen] = useState(false);
+  // Uptime tick LOKAL: data server di-refresh tiap beberapa detik, tapi
+  // detik berjalan dihitung di browser supaya angka uptime terasa hidup
+  // (tidak "beku" di menit yang sama selama polling).
+  const [tick, setTick] = useState(0);
 
   const muat = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/vps', { cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
-      if (d.ok) setSt(d);
+      if (d.ok) { setSt(d); setTick((t) => t + 1); }
     } catch { /* diamkan - widget tidak boleh mengganggu */ }
   }, []);
 
   useEffect(() => {
     muat();
-    const iv = setInterval(() => { if (!document.hidden) muat(); }, 8000);
+    // Poll adaptif: saat TERBUKA 5 dtk (user sedang melihat - harus real-time),
+    // saat tertutup 10 dtk (hemat). Hanya saat tab terlihat.
+    const iv = setInterval(() => { if (!document.hidden) muat(); }, open ? 5000 : 10000);
     const onVis = () => { if (!document.hidden) muat(); };
     document.addEventListener('visibilitychange', onVis);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis); };
-  }, [muat]);
+  }, [muat, open]);
+
+  // Tick tiap 10 dtk untuk memperbarui uptime yang berjalan (tanpa fetch).
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 10000);
+    return () => clearInterval(t);
+  }, []);
 
   const v = st?.vps;
   const b = st?.bot;
   const cpu = v?.cpuPersen;
   const ram = v?.ram?.persen;
   const disk = v?.disk?.persen;
+  // Beku = systemd bilang aktif tapi bot tidak menjawab probe agent.
+  const beku = Boolean(b?.aktif && b?.responsif === false);
+  // Uptime BERJALAN: uptime saat data diambil + umur data (dari timestamp
+  // server `sekarang`). `tick` cuma memaksa re-render tiap 10 dtk supaya
+  // angkanya ikut naik walau fetch belum datang.
+  const uptimeJalan = Number.isFinite(v?.uptimeVpsDetik)
+    ? v.uptimeVpsDetik + Math.max(0, Math.round((Date.now() - (v?.sekarang || Date.now())) / 1000))
+    : null;
 
   // Ringkas 1 baris saat tertutup: CPU & RAM (info paling penting).
   // Kelas "terbuka" dipasang supaya CSS mobile melebarkan widget saat dibuka.
@@ -85,11 +105,11 @@ export default function VpsWidget() {
       <button
         type="button"
         className="vps-widget-head"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => { setOpen((o) => !o); muat(); }}
         aria-expanded={open}
         aria-label={open ? 'Tutup info VPS' : 'Buka info VPS'}
       >
-        <span className={`vps-dot ${b?.aktif ? 'vps-dot-ok' : 'vps-dot-bad'}`} aria-hidden="true" />
+        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (b?.aktif ? 'vps-dot-ok' : 'vps-dot-bad')}`} aria-hidden="true" />
         <span className="flex-1 font-bold tracking-wide text-white">VPS</span>
         {!open && (
           <span className="font-mono text-[0.7rem] text-slate-300">
@@ -108,10 +128,10 @@ export default function VpsWidget() {
           <Baris label="Disk" nilai={`${disk ?? '-'}%`} persen={disk} />
           <div className="mt-0.5 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-white/10 pt-2">
             <span className="text-slate-400">Uptime</span>
-            <span className="text-right font-semibold text-white">{fmtUptime(v?.uptimeVpsDetik)}</span>
+            <span className="text-right font-semibold text-white">{fmtUptime(uptimeJalan)}</span>
             <span className="text-slate-400">Bot</span>
-            <span className={`text-right font-semibold ${b?.aktif ? 'text-[#7BA05B]' : 'text-[#C74B3C]'}`}>
-              {b?.aktif ? `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}` : 'Offline'}
+            <span className={`text-right font-semibold ${beku ? 'text-[#F19A1A]' : (b?.aktif ? 'text-[#7BA05B]' : 'text-[#C74B3C]')}`}>
+              {beku ? 'BEKU - pakai Restart Paksa' : (b?.aktif ? `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}` : 'Offline')}
             </span>
             {v?.load && (
               <>
@@ -123,6 +143,7 @@ export default function VpsWidget() {
           {v?.disk && (
             <p className="text-[0.65rem] text-slate-500">{v.disk.usedGb} / {v.disk.totalGb} GB disk terpakai</p>
           )}
+          <p className="text-[0.6rem] text-slate-600">Live · diperbarui tiap 5 dtk saat dibuka</p>
         </div>
       )}
     </div>
