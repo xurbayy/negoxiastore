@@ -79,7 +79,14 @@ export async function GET(request) {
     } catch { /* gagal AI -> lanjut fallback dinamis */ }
   }
 
-  // 1) SARAN DARI AGEN (hasil cek agen sebelumnya) - kecuali mode segar.
+  // 1) SARAN DARI AGEN (hasil cek agen sebelumnya) - HANYA kalau masih BARU.
+  //
+  // FIX 2026-10-06 (laporan pemilik: "kenapa sarannya ga sesuai"): dulu saran
+  // agen selalu menang terlepas dari umurnya - padahal agen terakhir jalan 4
+  // hari lalu (02 Okt), jadi saran seperti "24 server kosong" / "69 pemain
+  // belum main" merujuk kondisi LAMA yang sudah berubah. Sekarang saran agen
+  // hanya dipakai kalau maksimal 48 JAM - kalau lebih tua, pakai snapshot
+  // segar (real-time) atau statis.
   if (!segar) {
     try {
       await schemaReady();
@@ -88,7 +95,11 @@ export async function GET(request) {
         sql: 'SELECT saran, dibuat_at FROM ai_agen_saran WHERE peran = ? ORDER BY dibuat_at DESC LIMIT 8',
         args: [peran],
       });
-      const dariAgen = (r.rows || []).map((x, i) => ({
+      const rows = (r.rows || []).filter((x) => {
+        const ts = Number(x.dibuat_at || 0);
+        return ts > 0 && Date.now() - ts < 48 * 3600 * 1000; // < 48 jam
+      });
+      const dariAgen = rows.map((x, i) => ({
         id: `agen-${peran}-${i}`,
         label: String(x.saran).slice(0, 60),
         tanya: String(x.saran),
@@ -99,6 +110,7 @@ export async function GET(request) {
   }
 
   // 2) SARAN DINAMIS dari snapshot (real-time) - termasuk mode segar.
+  //    Dipakai kalau agen basi/tidak ada -> saran dihitung dari data segar.
   try {
     const snap = await getLatestSnapshot();
     const saran = saranDinamis(snap).map((s) => ({ id: s.id, label: s.label, tanya: s.tanya, sumber: 'snapshot' }));

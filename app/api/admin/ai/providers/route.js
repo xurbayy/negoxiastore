@@ -120,6 +120,12 @@ export async function POST(request) {
   const tipe = String(body?.tipe || 'provider').trim();
 
   if (tipe === 'model') {
+    // BATAS MODEL (permintaan pemilik 2026-10-06): maksimal 10 model aktif
+    // supaya dropdown tidak spam/kebanyakan.
+    const jmlModel = await db.execute('SELECT COUNT(*) AS n FROM ai_models');
+    if (Number(jmlModel.rows?.[0]?.n || 0) >= 10) {
+      return json({ ok: false, error: 'Batas model tercapai (maks 10). Hapus model lama dulu.' }, 400);
+    }
     const label = String(body?.label || '').trim().slice(0, 60);
     const model = String(body?.model || '').trim().slice(0, 160);
     const provider = String(body?.provider || '').trim().slice(0, 60);
@@ -138,6 +144,11 @@ export async function POST(request) {
   }
 
   // Provider baru. API key OPSIONAL (bisa ditambah belakangan via Edit).
+  // BATAS PROVIDER (permintaan pemilik 2026-10-06): maksimal 5 provider.
+  const jmlProv = await db.execute('SELECT COUNT(*) AS n FROM ai_providers');
+  if (Number(jmlProv.rows?.[0]?.n || 0) >= 5) {
+    return json({ ok: false, error: 'Batas provider tercapai (maks 5). Hapus provider lama dulu.' }, 400);
+  }
   const nama = String(body?.nama || '').trim().slice(0, 60);
   const baseUrl = String(body?.base_url || '').trim().slice(0, 300);
   const apiKey = String(body?.api_key || '').trim().slice(0, 500);
