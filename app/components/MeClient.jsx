@@ -12,6 +12,7 @@ import ShareCardButton from './ShareCardButton';
 // sisaHari: dihitung SAAT RENDER (bukan daysLeft dari bot yang bisa basi).
 import { sisaHari } from '../lib/premiumPlan';
 import { stripEmojiToken as stripEmoji } from '../lib/textUtil';
+import GuildEmoji from './GuildEmoji';
 // Isi skeleton profil yang SAMA dengan app/me/loading.jsx (anti skeleton dobel).
 import { MeSkeletonBody } from './PageSkeleton';
 
@@ -527,7 +528,14 @@ export default function MeClient({ betaGames = null }) {
                     <span className="mr-2 text-xs">in-game: {p.usernameInGame}</span>
                   )}
                   Level {p.level} · Rank #{p.globalRank ?? '-'} global
-                  {p.guild && <span> · {stripEmoji(p.guild.name)}</span>}
+                  {/* FIX 2026-10-06: emoji guild ikut tampil (sebelumnya cuma
+                      nama polos) supaya konsisten dengan Discord & leaderboard.
+                      Mendukung token custom maupun emoji unicode. */}
+                  {p.guild && (
+                    <span className="inline-flex items-center gap-1">
+                      {' · '}<GuildEmoji token={p.guild.emoji} size={14} /> {stripEmoji(p.guild.name)}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
