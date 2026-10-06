@@ -1,13 +1,22 @@
 // ==========================================
 // app/components/GuildEmoji.jsx
-// Render emoji guild (token Discord <:nama:id> / <a:nama:id>) sebagai <img>.
+// Render emoji guild: token Discord <:nama:id> / <a:nama:id> ATAU emoji unicode.
 // ==========================================
 // Bot menyimpan emoji guild di kolom TERPISAH (guilds.emoji), jadi token-nya
-// tidak pernah nyasar ke dalam teks nama. Komponen ini konversi token ke URL
-// CDN Discord LANGSUNG dari ID (tanpa tergantung registry/katalog) - persis
-// pola _emojiUrl di bot. Kalau bukan token Discord (emoji unicode atau kosong),
-// fallback ke emojiSrc() berbasis nama; kalau dua-duanya gagal, tidak render
-// apa pun supaya layout tetap rapi.
+// tidak pernah nyasar ke dalam teks nama. Isi kolom bisa DUA bentuk:
+//   1. Token Discord custom: '<:negoxiaremovebgpreview:1516450592204128287>'
+//      atau animasi '<a:swords:...>' -> dirender <img> dari CDN Discord
+//      (langsung dari ID, tanpa tergantung registry/katalog).
+//   2. Emoji UNICODE: '👑', '⚔️', dst (form modal bot menerima emoji apa pun).
+//
+// BUGFIX 2026-10-06 (laporan pemilik: "emoji guild ga sesuai yang di web"):
+//   Dulu komponen ini HANYA mengenali token Discord. Guild yang emoji-nya
+//   unicode (mis. Titut pakai 👑) jatuh ke fallback castle -> di web tampil
+//   kastil, padahal di Discord tampil mahkota = "ga sesuai". Sekarang unicode
+//   dirender sebagai teks apa adanya; castle HANYA untuk kasus kosong/gagal.
+//
+// Kalau token bukan format Discord dan bukan unicode (mis. teks sampah),
+// tidak render apa pun supaya layout tetap rapi.
 
 import { emojiSrc } from '../lib/emojis';
 
@@ -23,22 +32,52 @@ function cdnUrl(token) {
 /**
  * Ikon emoji guild. Ukuran default 18px (seukuran teks tabel).
  * @param {object} props
- * @param {string|null} props.token  Token emoji Discord dari DB bot (guilds.emoji / profile.guild.emoji)
+ * @param {string|null} props.token  Token emoji Discord ATAU emoji unicode dari DB bot (guilds.emoji / profile.guild.emoji)
  * @param {string|null} props.fallbackToken  Sumber cadangan (mis. nama guild ikut mengandung token)
  */
 export default function GuildEmoji({ token, fallbackToken, size = 18, className = '' }) {
   const u = cdnUrl(token) || cdnUrl(fallbackToken);
-  // Token tidak ada / unicode: pakai ikon castle (identik dengan judul tabel
-  // guild di leaderboard) supaya baris tanpa emoji tetap punya ikon rapi.
-  const src = u ? u.url : emojiSrc('castle', 64);
+  if (u) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={u.url}
+        alt={u.name}
+        title={`:${u.name}:`}
+        width={size}
+        height={size}
+        className={`inline-block shrink-0 align-middle ${className}`}
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+
+  // Unicode: pakai nilai token apa adanya (kalau kosong, pakai fallbackToken).
+  const teks = String(token || fallbackToken || '').trim();
+  if (teks) {
+    return (
+      <span
+        role="img"
+        aria-label={teks}
+        title={teks}
+        className={`inline-block shrink-0 text-center align-middle leading-none ${className}`}
+        style={{ fontSize: Math.round(size * 0.9), width: size }}
+      >
+        {teks}
+      </span>
+    );
+  }
+
+  // Kosong / gagal: pakai ikon castle (identik dengan judul tabel guild)
+  // supaya baris tanpa emoji tetap punya ikon rapi.
+  const src = emojiSrc('castle', 64);
   if (!src) return null;
-  const alt = u?.name || 'guild';
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt={alt}
-      title={`:${alt}:`}
+      alt="guild"
+      title=":guild:"
       width={size}
       height={size}
       className={`inline-block shrink-0 align-middle ${className}`}
