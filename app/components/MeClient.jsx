@@ -6,7 +6,7 @@ import { emojiSrc } from '../lib/emojisClient';
 // Helper bersama diambil dari lib/formatClient - SATU sumber untuk fmt, timeAgo,
 // dan gameName. Dulu file ini punya salinan sendiri-sendiri (fmt, stripEmoji,
 // GAME_NAMES) sehingga isinya bisa menyimpang dari halaman lain.
-import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh } from '../lib/formatClient';
+import { gameName, fmt as fmtLib, fmtRingkas, fmtPenuh, fmtSisaWaktu } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
 import ShareCardButton from './ShareCardButton';
 // sisaHari: dihitung SAAT RENDER (bukan daysLeft dari bot yang bisa basi).
@@ -600,6 +600,43 @@ export default function MeClient({ betaGames = null }) {
               </div>
             )}
           </dl>
+
+          {/* ITEM BERWAKTU AKTIF (permintaan pemilik 2026-10-06: "semua yang
+              ada waktunya kasih tau berapa jam lagi biar tau kapan
+              berakhirnya"). Data itemAktif dari bot berisi TIMESTAMP - sisa
+              waktu dihitung di sini saat render supaya tidak basi. */}
+          {p.itemAktif && (
+            <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3">
+              <p className="text-[0.65rem] font-bold uppercase tracking-widest text-accent">Item Aktif</p>
+              <ul className="mt-1.5 space-y-1 text-xs text-ink">
+                {p.itemAktif.vipPass && (
+                  <li className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-semibold">👑 VIP Pass</span>
+                    <span className="text-ink-muted">({p.itemAktif.vipPass.game})</span>
+                    <span className="text-ink-muted">· berakhir dalam <b className="text-ink">{fmtSisaWaktu(p.itemAktif.vipPass.until)}</b></span>
+                  </li>
+                )}
+                {p.itemAktif.dailyBoost && (
+                  <li className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-semibold">⚡ Daily Boost</span>
+                    <span className="text-ink-muted">· tanpa batas kuota · berakhir dalam <b className="text-ink">{fmtSisaWaktu(p.itemAktif.dailyBoost.until)}</b></span>
+                  </li>
+                )}
+                {p.itemAktif.coinMagnet && (
+                  <li className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-semibold">🧲 Coin Magnet</span>
+                    <span className="text-ink-muted">(+{Math.round((p.itemAktif.coinMagnet.value - 1) * 100)}%) · berakhir dalam <b className="text-ink">{fmtSisaWaktu(p.itemAktif.coinMagnet.until)}</b></span>
+                  </li>
+                )}
+                {p.itemAktif.multiplier > 1 && (
+                  <li className="flex flex-wrap items-center gap-x-2">
+                    <span className="font-semibold">✖️ Points Card ×{p.itemAktif.multiplier}</span>
+                    <span className="text-ink-muted">· aktif di game berikutnya (sekali pakai)</span>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

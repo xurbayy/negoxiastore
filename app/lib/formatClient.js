@@ -183,3 +183,27 @@ export const THINKING_LABEL = {
   max: 'Max',
   thinking: 'Thinking',
 };
+
+// ==========================================
+// FORMAT SISA WAKTU (2026-10-06)
+// ==========================================
+// Permintaan pemilik: "semua yang ada waktunya kasih tau berapa jam lagi
+// biar tau kapan berakhirnya". Dipakai untuk countdown item aktif
+// (VIP Pass / Daily Boost / Coin Magnet) di /me.
+// Terima TIMESTAMP ms (bukan durasi) - konsisten dengan pola premium.expiresAt
+// yang dihitung saat render supaya tidak basi.
+export function fmtSisaWaktu(untilMs) {
+  const sisa = Number(untilMs) - Date.now();
+  if (!Number.isFinite(sisa) || sisa <= 0) return 'sudah berakhir';
+  const totalMenit = Math.floor(sisa / 60000);
+  if (totalMenit < 1) return 'kurang dari 1 menit';
+  const jam = Math.floor(totalMenit / 60);
+  const menit = totalMenit % 60;
+  if (jam >= 24) {
+    const hari = Math.floor(jam / 24);
+    const sisaJam = jam % 24;
+    return `${hari} hari ${sisaJam} jam`;
+  }
+  if (jam > 0) return `${jam} jam ${menit} menit`;
+  return `${menit} menit`;
+}
