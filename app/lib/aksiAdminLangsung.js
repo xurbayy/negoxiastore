@@ -52,6 +52,24 @@ export async function jalankanAksiLangsung(aksi, payload, actorId) {
   const db = getDb();
   const p = payload || {};
 
+  const hasil = await _jalankan(aksi, p, actorId, db);
+
+  // INVALIDASI CACHE KATALOG (fix 2026-10-06 - "disetujui tapi ga ada reaksi"):
+  // aksi agen (restock/set_price/set_discount/create_promo/...) menulis ke DB,
+  // TAPI cache liveCatalog (swr 12 dtk) tidak dibersihkan karena jalur ini
+  // dulu tidak memanggil invalidateCatalog - beda dengan /api/admin/shop yang
+  // sudah memanggil. Akibatnya halaman /shop & data yang dibaca web bisa
+  // menampilkan stok/harga LAMA sampai TTL habis, dan pemilik mengira aksinya
+  // tidak jalan padahal data di DB sudah berubah.
+  try {
+    const { invalidateCatalog } = await import('./liveCatalog');
+    invalidateCatalog();
+  } catch { /* cache gagal dibersihkan tidak boleh menggagalkan aksi */ }
+
+  return hasil;
+}
+
+async function _jalankan(aksi, p, actorId, db) {
   switch (aksi) {
     // ---------- POIN ----------
     case 'add_points': {

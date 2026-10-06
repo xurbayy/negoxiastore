@@ -218,8 +218,20 @@ export default function AgenAI({ onSelesai }) {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ putusan }),
       });
       const d = await res.json().catch(() => ({}));
-      if (d.ok) { flash(putusan === 'setuju' ? 'Disetujui - aksi dikirim ke bot.' : 'Ditolak.'); await muat(); }
-      else flash('Gagal: ' + (d.error || 'tidak diketahui'));
+      if (d.ok) {
+        // FIX 2026-10-06 ("disetujui tapi ga ada reaksi"): dulu pesannya selalu
+        // "aksi dikirim ke bot" walau aksinya dieksekusi LANGSUNG ke DB
+        // (d.langsung = true). Sekarang tampilkan HASIL nyatanya, mis.
+        // "Stok coin_magnet -> 10", supaya pemilik langsung tahu efeknya.
+        if (putusan === 'setuju') {
+          if (d.pengingatId) flash(`✓ Pengingat dipasang (${d.waktuTeks || ''}).`);
+          else if (d.langsung) flash(`✓ Dieksekusi: ${d.hasil || 'berhasil'}`);
+          else flash(`✓ Disetujui - perintah #${d.commandId || '?'} masuk antrean bot.`);
+        } else {
+          flash('Ditolak.');
+        }
+        await muat();
+      } else flash('Gagal: ' + (d.error || 'tidak diketahui'));
     } catch (e) { flash('Gagal: ' + e.message); }
   }, [muat]);
 
