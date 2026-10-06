@@ -49,6 +49,12 @@ export async function POST(request) {
   const aksi = String(body?.aksi || '');
   // 'force' = restart paksa (SIGKILL + start) untuk bot yang beku.
   if (!['restart', 'stop', 'start', 'force'].includes(aksi)) return json({ ok: false, error: 'aksi tidak valid' }, 400);
-  const d = await panggilVps('/vps/kontrol', 'POST', { aksi, aktor });
+  // BUGFIX KRITIS 2026-10-06 (laporan pemilik: "restart di web beku mulu,
+  // udah restart paksa dan restart biasa"):
+  //   Dulu baris ini menulis `{ aksi, aktor }` padahal variabelnya bernama
+  //   `actor` -> ReferenceError -> POST SELALU 500 -> perintah restart TIDAK
+  //   PERNAH sampai ke VPS. Tombol Mulai/Restart/Restart Paksa/Hentikan di
+  //   panel diam-diam tidak berfungsi sejak panel dibuat.
+  const d = await panggilVps('/vps/kontrol', 'POST', { aksi, aktor: actor });
   return json(d);
 }
