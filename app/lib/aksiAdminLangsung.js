@@ -13,6 +13,7 @@
 import { getDb, schemaReady } from './db';
 import { restockItem, setItemPrice, setDiscount, removeDiscount, HttpError } from './shopAdmin';
 import { sisipNotif } from './notif';
+import { pushKeSemuaPerangkat } from './broadcast';
 
 // Aksi yang BISA dieksekusi langsung dari web.
 export const AKSI_LANGSUNG = new Set([
@@ -112,6 +113,17 @@ async function _jalankan(aksi, p, actorId, db) {
     }
     case 'set_discount': {
       const r = await setDiscount(p.itemKey, p.discountPrice, p.durationHours);
+      // PUSH FLASH SALE (fix audit 2026-10-06): dulu diskon dibuat tapi user
+      // hanya tahu kalau kebetulan membuka /shop & lonceng. Sekarang kirim
+      // push ke SEMUA perangkat yang subscribe (lonceng sudah punya sumber
+      // turunan `d:flash:...` di /api/me/notifications - jadi di sini PUSH
+      // saja supaya tidak muncul entri kembar).
+      await pushKeSemuaPerangkat({
+        title: `⚡ Flash Sale: ${r.itemKey}`,
+        body: `Harga turun jadi ${Number(r.discountPrice).toLocaleString('id-ID')} poin! Cek di /shop.`,
+        url: '/shop',
+        tag: 'nexo-flash-' + r.itemKey,
+      }).catch(() => {});
       return `Diskon ${r.itemKey}: ${r.originalPrice} -> ${r.discountPrice}`;
     }
     case 'remove_discount': {
@@ -212,6 +224,19 @@ async function _jalankan(aksi, p, actorId, db) {
               ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
         args: [channel, text],
       });
+      // PUSH PENGUMUMAN (fix audit 2026-10-06): pengumuman baru dulu hanya
+      // muncul di lonceng saat user buka web. Sekarang push ke semua perangkat
+      // yang subscribe. Hanya saat DIISI (text ada) - hapus pengumuman tidak
+      // perlu notif. Lonceng sudah punya sumber turunan (`d:ann:...`) jadi
+      // di sini PUSH saja supaya tidak dobel.
+      if (text) {
+        await pushKeSemuaPerangkat({
+          title: p.channel === 'shop' ? '🏷️ Promo Toko' : '📢 Pengumuman',
+          body: text,
+          url: p.channel === 'shop' ? '/shop' : '/me',
+          tag: 'nexo-ann-' + channel,
+        }).catch(() => {});
+      }
       return `Pengumuman ${p.channel === 'shop' ? 'shop' : 'global'} ${text ? 'dipasang' : 'dihapus'}`;
     }
 

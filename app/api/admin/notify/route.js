@@ -74,15 +74,29 @@ export async function POST(request) {
 
   // Push ke perangkat (best-effort, tidak menggagalkan respons):
   //  - target satu user -> push ke perangkat dia.
-  //  - broadcast (discord_id NULL) -> push ke SEMUA user yang menyalakan.
+  //  - broadcast (discord_id NULL) -> push ke SEMUA user yang punya perangkat
+  //    ter-subscribe.
+  //
+  // FIX 2026-10-06 (audit notif): broadcast dulu query `push_prefs WHERE
+  // enabled=1` - tabel USANG. Sejak desain per-device (2026-10-05), consent =
+  // ADA BARIS di push_subscriptions, bukan flag enable di push_prefs. Akibat
+  // bug: user yang menyalakan notif di perangkat TAPI tidak punya baris
+  // push_prefs = TIDAK menerima broadcast. Sekarang ambil daftar penerima dari
+  // push_subscriptions (distinct per user) supaya SEMUA perangkat yang
+  // subscribe benar-benar dikirimi.
   try {
     const { kirimPush } = await import('../../../lib/pushNotif');
     if (discordId) {
       await kirimPush(discordId, { title, body: text, url: '/me', tag: 'nexo-broadcast' });
     } else {
-      const r = await db.execute({ sql: "SELECT discord_id FROM push_prefs WHERE enabled = 1", args: [] });
-      for (const row of (r.rows || [])) {
-        kirimPush(row.discord_id, { title, body: text, url: '/me', tag: 'nexo-broadcast' }).catch(() => {});
+      const r = await db.execute({ sql: 'SELECT DISTINCT discord_id FROM push_subscriptions', args: [] });
+      const penerima = (r.rows || []).map((row) => String(row.discord_id)).filter(Boolean);
+      // Kirim paralel terbatas (batch 25) supaya tidak membanjiri event loop
+      // saat penerima banyak.
+      for (let i = 0; i < penerima.length; i += 25) {
+        await Promise.all(penerima.slice(i, i + 25).map((uid) =>
+          kirimPush(uid, { title, body: text, url: '/me', tag: 'nexo-broadcast' }).catch(() => {})
+        ));
       }
     }
   } catch { /* push opsional */ }
