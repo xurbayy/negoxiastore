@@ -59,7 +59,7 @@ const STAT_ICONS = {
 // Lucky Dice DIHAPUS 2026-10-06 - digantikan NEXO Language (game belajar
 // bahasa Inggris, 4 mode: Classic/Mystery Word/Sentence Builder/Survival).
 const BETA_FALLBACK = [
-  { key: 'language', mode: 'solo', name: 'NEXO Language', desc: 'Belajar bahasa Inggris lewat minigame - 4 mode seru!' },
+  { key: 'language', mode: 'solo', name: 'NEXO Language (BETA)', desc: 'Belajar bahasa Inggris lewat minigame - 4 mode seru!' },
   { key: 'sum', mode: 'mp', name: 'Sum Duel', desc: 'Pilih angka terdekat ke target - butuh 2+ pemain.' },
   { key: 'heal', mode: 'coop', name: 'Heal Squad', desc: 'Kalahkan Virus bareng tim - butuh 2+ pemain.' },
 ];
