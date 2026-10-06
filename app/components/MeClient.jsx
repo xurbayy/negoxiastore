@@ -809,19 +809,26 @@ export default function MeClient({ betaGames = null }) {
         <div className="space-y-5">
           {/* ── Inventori ── */}
           <div className="nx-card px-6 py-6">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-display text-lg text-ink">Inventori</h3>
+            {/* FIX 2026-10-06 (laporan pemilik: "angka 1/5 keluar dari kartu"
+                di Windows): baris header dibuat tahan-overflow.
+                - judul dapat min-w-0 + truncate -> menyusut, bukan mendorong badge
+                - badge dapat max-w-full + gap lebih rapat + titik lebih tipis
+                Penyebab: di viewport lg (>=1024) kolom kanan cuma 1/3 lebar dan
+                badge dulu pas-pasan (sisa ~1px) - cukup beda font/zoom Windows
+                untuk membuatnya meluber keluar padding kartu. */}
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="min-w-0 truncate font-display text-lg text-ink">Inventori</h3>
               {isPremium ? (
-                <span className="nx-badge bg-success font-extrabold text-white">Unlimited</span>
+                <span className="nx-badge shrink-0 bg-success font-extrabold text-white">Unlimited</span>
               ) : (
                 // Indikator kapasitas gratis - dibungkus badge supaya tidak
                 // gepeng/geser saat teks header panjang di layar kecil.
-                <span className="flex shrink-0 items-center gap-2 rounded-full border border-border-soft bg-bg-soft px-2.5 py-1" title="Maksimal 5 item berbeda untuk akun gratis">
-                  <span className="flex gap-1" aria-hidden="true">
+                <span className="flex max-w-full shrink-0 items-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-2 py-1" title="Maksimal 5 item berbeda untuk akun gratis">
+                  <span className="flex gap-0.5" aria-hidden="true">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <span
                         key={i}
-                        className={`h-1.5 w-3 rounded-full transition-colors ${i < (p.inventory || []).length ? 'bg-accent' : 'bg-border-soft'}`}
+                        className={`h-1.5 w-2 rounded-full transition-colors ${i < (p.inventory || []).length ? 'bg-accent' : 'bg-border-soft'}`}
                       />
                     ))}
                   </span>
