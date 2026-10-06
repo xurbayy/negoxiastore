@@ -182,7 +182,7 @@ export default function Dashboard({ data }) {
     : (snap.invites && typeof snap.invites === 'object' ? snap.invites : {});
   // Stale = bot tidak terlihat >3 menit (pakai heartbeat DB, bukan snapshot push).
   const stale = heartbeat > 0 && nowMs() - heartbeat > 3 * 60_000;
-  // Peta beta dari payload bot: key (dice/sum/heal) -> nama & mode resmi.
+  // Peta beta dari payload bot: key (language/sum/heal) -> nama & mode resmi.
   const betaMap = {};
   for (const b of snap.betaGames || []) betaMap[String(b.key).toLowerCase()] = b;
 

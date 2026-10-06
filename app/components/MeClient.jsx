@@ -56,8 +56,10 @@ const STAT_ICONS = {
 
 // Fallback daftar game beta - HANYA dipakai kalau snapshot bot belum pernah
 // push (bot offline baru pertama). Sumber utama: payload bot betaGames.
+// Lucky Dice DIHAPUS 2026-10-06 - digantikan NEXO Language (game belajar
+// bahasa Inggris, 4 mode: Classic/Mystery Word/Sentence Builder/Survival).
 const BETA_FALLBACK = [
-  { key: 'dice', mode: 'solo', name: 'Lucky Dice', desc: 'Lempar 2 dadu - 7 x2, 11 x3, dobel bonus!' },
+  { key: 'language', mode: 'solo', name: 'NEXO Language', desc: 'Belajar bahasa Inggris lewat minigame - 4 mode seru!' },
   { key: 'sum', mode: 'mp', name: 'Sum Duel', desc: 'Pilih angka terdekat ke target - butuh 2+ pemain.' },
   { key: 'heal', mode: 'coop', name: 'Heal Squad', desc: 'Kalahkan Virus bareng tim - butuh 2+ pemain.' },
 ];
