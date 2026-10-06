@@ -131,14 +131,14 @@ export default function PlayerLookup() {
 
           {/* Inventori + misi */}
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+            <div className="nx-card min-w-0 px-4 py-4 sm:px-5 sm:py-5">
               <h3 className="font-display text-ink">Inventori</h3>
               {inv.length === 0 ? <p className="mt-2 text-sm text-ink-muted">Kosong.</p> : (
                 <ul className="mt-2 space-y-1 text-sm">
                   {inv.map((i) => (
                     <li key={i.itemKey} className="flex justify-between gap-2">
-                      <RichText text={`${i.emoji || ''} ${i.name}`} />
-                      <span className="text-ink-muted">{premium ? `×${i.quantity}` : `${i.quantity}/5`}</span>
+                      <span className="min-w-0 break-words"><RichText text={`${i.emoji || ''} ${i.name}`} /></span>
+                      <span className="shrink-0 text-ink-muted">{premium ? `×${i.quantity}` : `${i.quantity}/5`}</span>
                     </li>
                   ))}
                 </ul>

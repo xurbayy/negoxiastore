@@ -690,7 +690,7 @@ export default function MeClient({ betaGames = null }) {
 
       {/* ═══ GRID 2 KOLOM ═══ */}
       <div className="grid gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
+        <div className="min-w-0 space-y-5 lg:col-span-2">
           {/* ── Misi harian ── */}
           {p.missions?.missions?.length > 0 && (
             <div className="nx-card px-6 py-6">
@@ -806,24 +806,29 @@ export default function MeClient({ betaGames = null }) {
         </div>
 
         {/* ═══ KOLOM KANAN ═══ */}
-        <div className="space-y-5">
+        {/* FIX 2026-10-06 (lanjutan laporan "Cincin Partner ... ga lengkap"):
+            item grid defaultnya min-width:auto -> kolom BISA melebar mengikuti
+            konten sehingga truncate di dalamnya batal dan teks mendorong/keluar
+            kartu. min-w-0 memaksa kolom menghormati lebar grid, jadi nama item
+            benar-benar menyusut/berpindah baris bukan terpotong/meluber. */}
+        <div className="min-w-0 space-y-5">
           {/* ── Inventori ── */}
           <div className="nx-card px-6 py-6">
-            {/* FIX 2026-10-06 (laporan pemilik: "angka 1/5 keluar dari kartu"
-                di Windows): baris header dibuat tahan-overflow.
-                - judul dapat min-w-0 + truncate -> menyusut, bukan mendorong badge
-                - badge dapat max-w-full + gap lebih rapat + titik lebih tipis
-                Penyebab: di viewport lg (>=1024) kolom kanan cuma 1/3 lebar dan
-                badge dulu pas-pasan (sisa ~1px) - cukup beda font/zoom Windows
-                untuk membuatnya meluber keluar padding kartu. */}
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="min-w-0 truncate font-display text-lg text-ink">Inventori</h3>
+            {/* FIX 2026-10-06 (laporan pemilik: "angka 1/5 keluar dari kartu" +
+                "Cincin Partner ... ga lengkap" di Windows).
+                - judul dapat shrink-0 + whitespace-nowrap -> judul TIDAK PERNAH
+                  terpotong (sebelumnya truncate bikin "Invento…")
+                - header flex-wrap: kalau ruang benar-benar sempit, badge turun
+                  baris sendiri (ml-auto, rata kanan), bukan memotong judul
+                - badge shrink-0 supaya tidak gepeng saat ruang sempit */}
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+              <h3 className="shrink-0 whitespace-nowrap font-display text-lg text-ink">Inventori</h3>
               {isPremium ? (
-                <span className="nx-badge shrink-0 bg-success font-extrabold text-white">Unlimited</span>
+                <span className="nx-badge ml-auto shrink-0 bg-success font-extrabold text-white">Unlimited</span>
               ) : (
                 // Indikator kapasitas gratis - dibungkus badge supaya tidak
                 // gepeng/geser saat teks header panjang di layar kecil.
-                <span className="flex max-w-full shrink-0 items-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-2 py-1" title="Maksimal 5 item berbeda untuk akun gratis">
+                <span className="ml-auto flex max-w-full shrink-0 items-center gap-1.5 rounded-full border border-border-soft bg-bg-soft px-2 py-1" title="Maksimal 5 item berbeda untuk akun gratis">
                   <span className="flex gap-0.5" aria-hidden="true">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <span
@@ -869,7 +874,7 @@ export default function MeClient({ betaGames = null }) {
                               <span aria-hidden="true" className="text-xs font-bold text-ink-faint">{String(it.name || '?').slice(0, 1).toUpperCase()}</span>
                             )}
                           </span>
-                          <span className="truncate font-medium">{it.name}</span>
+                          <span className="min-w-0 break-words font-medium">{it.name}</span>
                         </span>
                         <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 font-mono text-xs font-bold text-accent-hover">×{it.quantity}</span>
                       </li>
