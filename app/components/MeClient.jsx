@@ -821,14 +821,13 @@ export default function MeClient({ betaGames = null }) {
             benar-benar menyusut/berpindah baris bukan terpotong/meluber. */}
         <div className="min-w-0 space-y-5">
           {/* ── Inventori ── */}
-          <div className="nx-card px-6 py-6">
-            {/* FIX 2026-10-06 (laporan pemilik: "angka 1/5 keluar dari kartu" +
-                "Cincin Partner ... ga lengkap" di Windows).
-                - judul dapat shrink-0 + whitespace-nowrap -> judul TIDAK PERNAH
-                  terpotong (sebelumnya truncate bikin "Invento…")
-                - header flex-wrap: kalau ruang benar-benar sempit, badge turun
-                  baris sendiri (ml-auto, rata kanan), bukan memotong judul
-                - badge shrink-0 supaya tidak gepeng saat ruang sempit */}
+          {/* RAPIHKAN 2026-10-06 (lanjutan "udah kebaca semua cuma ga rapi"):
+              kartu kolom kanan cuma ~229px, padding lama (24px) + tile 32px +
+              gap lebar bikin nama item hanya dapat ~65px -> "Cincin Partner"
+              wrap 2 baris (tinggi baris 62px, kelihatan tidak rapi).
+              Solusi: rapatkan proporsi ruang - padding kartu 16px, item 10px,
+              tile 28px, badge lebih ringkas -> nama dapat ~105px = 1 baris. */}
+          <div className="nx-card px-4 py-5">
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
               <h3 className="shrink-0 whitespace-nowrap font-display text-lg text-ink">Inventori</h3>
               {isPremium ? (
@@ -859,7 +858,7 @@ export default function MeClient({ betaGames = null }) {
               </p>
             ) : (
               <>
-                <ul className="mt-4 space-y-2">
+                <ul className="mt-3 space-y-1.5">
                   {p.inventory.slice(invPage * 10, (invPage + 1) * 10).map((it) => {
                     // ANTI TOKEN MENTAH (gotcha lama): token Discord tanpa
                     // emojiUrl TIDAK BOLEH sampai ke DOM. Coba resolve via
@@ -869,22 +868,22 @@ export default function MeClient({ betaGames = null }) {
                     const unicode = !rawToken && typeof it.emoji === 'string' ? it.emoji : null;
                     const pakaiEmoji = Boolean(resolveSrc || unicode);
                     return (
-                      <li key={it.itemKey} className="inv-item flex items-center justify-between gap-3 rounded-xl border border-border-soft bg-card-cream/70 px-3 py-2.5 text-sm">
-                        <span className="flex min-w-0 items-center gap-2.5 text-ink">
+                      <li key={it.itemKey} className="inv-item flex items-center justify-between gap-2 rounded-xl border border-border-soft bg-card-cream/70 px-2.5 py-2 text-sm">
+                        <span className="flex min-w-0 flex-1 items-center gap-2 text-ink">
                           {/* Tile ikon: rata & seragam untuk semua item */}
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-soft bg-bg-soft">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border-soft bg-bg-soft">
                             {resolveSrc ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={resolveSrc} alt="" width={20} height={20} className="h-5 w-5" loading="lazy" />
+                              <img src={resolveSrc} alt="" width={18} height={18} className="h-4.5 w-4.5" loading="lazy" />
                             ) : unicode ? (
-                              <span aria-hidden="true" className="text-base leading-none">{unicode}</span>
+                              <span aria-hidden="true" className="text-sm leading-none">{unicode}</span>
                             ) : (
                               <span aria-hidden="true" className="text-xs font-bold text-ink-faint">{String(it.name || '?').slice(0, 1).toUpperCase()}</span>
                             )}
                           </span>
                           <span className="min-w-0 break-words font-medium">{it.name}</span>
                         </span>
-                        <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 font-mono text-xs font-bold text-accent-hover">×{it.quantity}</span>
+                        <span className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 font-mono text-[11px] font-bold text-accent-hover">×{it.quantity}</span>
                       </li>
                     );
                   })}
