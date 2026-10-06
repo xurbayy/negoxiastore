@@ -112,6 +112,22 @@ export async function POST(request) {
         // nunggu poll bot berikutnya). Gagal = tidak fatal, poll tetap
         // menarik antrean.
         notifyQueue(['grant_premium']).catch(() => {});
+
+        // NOTIF ADMIN (permintaan pemilik 2026-10-06): pemilik harus tahu
+        // ada pembelian NEXO Pass masuk - masuk ke notif panel + push
+        // perangkat admin yang menyalakan toggle.
+        try {
+          const { sisipNotifAdmin } = await import('../../../lib/adminNotif');
+          const u = await db.execute({ sql: 'SELECT username FROM users WHERE discord_id = ? LIMIT 1', args: [orow.discord_id] }).catch(() => ({ rows: [] }));
+          const nama = u.rows?.[0]?.username || orow.discord_id;
+          await sisipNotifAdmin({
+            tipe: 'premium',
+            judul: '💎 Pembelian NEXO Pass',
+            isi: `${nama} membayar Rp${Number(amount).toLocaleString('id-ID')} (Order #${orderId}). Pass diaktifkan otomatis.`,
+            url: '/admin#dashboard',
+            db,
+          });
+        } catch { /* notif admin opsional */ }
       }
     }
   } else if (failed) {

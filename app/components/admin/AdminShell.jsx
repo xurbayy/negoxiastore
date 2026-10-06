@@ -6,6 +6,7 @@ import { NexoLogo } from '../ui';
 // Isi skeleton panel yang SAMA dengan app/admin/loading.jsx (anti skeleton dobel).
 import { AdminSkeletonBody, AdminAiSkeletonBody } from '../PageSkeleton';
 import AutoRefresh from '../AutoRefresh';
+import PanelNotif from './PanelNotif';
 import Dashboard from './Dashboard';
 import AnalisisAI from './AnalisisAI';
 import Ekonomi from './Ekonomi';
@@ -443,6 +444,13 @@ export default function AdminShell({ username, avatar = null }) {
           >
             Lihat Situs
           </Link>
+
+          {/* ==========================================
+              NOTIF PANEL ADMIN (pintar) - permintaan pemilik 2026-10-06
+              ==========================================
+              Bell khusus admin: pembelian NEXO Pass, alert VPS (CPU/RAM/disk
+              >= 80%), laporan agen. Ada TOGGLE notif perangkat (pola user). */}
+          <PanelNotif />
 
           {/* ==========================================
               TOMBOL NOTIF PENGINGAT - di navbar, sebelah profil

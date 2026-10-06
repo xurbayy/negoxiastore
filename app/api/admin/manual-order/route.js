@@ -123,6 +123,18 @@ export async function POST(request) {
       });
       // Notifikasi web untuk user: pembayaran diterima
       await sisipNotif({ userId: order.discord_id, type: 'event', title: `Pembayaran Order #${orderId} Diterima`, body: `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, db }).catch(() => {});
+      // NOTIF ADMIN (permintaan pemilik 2026-10-06): pembelian NEXO Pass masuk
+      // ke notif panel + push perangkat admin.
+      try {
+        const { sisipNotifAdmin } = await import('../../../lib/adminNotif');
+        await sisipNotifAdmin({
+          tipe: 'premium',
+          judul: '💎 Pembelian NEXO Pass (Manual)',
+          isi: `Order #${orderId} disetujui. NEXO Pass ${PLAN_DAYS} hari aktif untuk ${order.discord_id}.`,
+          url: '/admin#dashboard',
+          db,
+        });
+      } catch { /* opsional */ }
     }
   } else {
     // reject
