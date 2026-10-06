@@ -89,8 +89,15 @@ export default function VpsWidget() {
   const cpu = v?.cpuPersen;
   const ram = v?.ram?.persen;
   const disk = v?.disk?.persen;
-  // Beku = systemd bilang aktif tapi bot tidak menjawab probe agent.
-  const beku = Boolean(b?.aktif && b?.responsif === false);
+  // FIX 2026-10-06: bedakan "sedang start" vs "beku" (lihat TerminalVps.jsx).
+  // Bot yang baru di-restart jangan dicap BEKU - API-nya butuh ~11-16 dtk
+  // untuk listen; vonis dini bikin user restart berulang ("beku mulu").
+  // Fallback uptime < 90 dtk dipakai supaya web tetap benar walau agent
+  // VPS belum ikut di-update (field sedangMulai belum ada).
+  const uptimeDetik = b?.uptime?.detik;
+  const uptimeMuda = Number.isFinite(uptimeDetik) && uptimeDetik < 90;
+  const sedangMulai = Boolean(b?.aktif && b?.responsif === false && (b?.sedangMulai || uptimeMuda));
+  const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda);
   // Uptime BERJALAN: uptime saat data diambil + umur data (dari timestamp
   // server `sekarang`). `tick` cuma memaksa re-render tiap 10 dtk supaya
   // angkanya ikut naik walau fetch belum datang.
@@ -109,7 +116,7 @@ export default function VpsWidget() {
         aria-expanded={open}
         aria-label={open ? 'Tutup info VPS' : 'Buka info VPS'}
       >
-        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (b?.aktif ? 'vps-dot-ok' : 'vps-dot-bad')}`} aria-hidden="true" />
+        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (b?.aktif ? (sedangMulai ? 'vps-dot-warn' : 'vps-dot-ok') : 'vps-dot-bad')}`} aria-hidden="true" />
         <span className="flex-1 font-bold tracking-wide text-white">VPS</span>
         {!open && (
           <span className="font-mono text-[0.7rem] text-slate-300">
@@ -130,8 +137,8 @@ export default function VpsWidget() {
             <span className="text-slate-400">Uptime</span>
             <span className="text-right font-semibold text-white">{fmtUptime(uptimeJalan)}</span>
             <span className="text-slate-400">Bot</span>
-            <span className={`text-right font-semibold ${beku ? 'text-[#F19A1A]' : (b?.aktif ? 'text-[#7BA05B]' : 'text-[#C74B3C]')}`}>
-              {beku ? 'BEKU - pakai Restart Paksa' : (b?.aktif ? `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}` : 'Offline')}
+            <span className={`text-right font-semibold ${beku ? 'text-[#F19A1A]' : (b?.aktif ? (sedangMulai ? 'text-[#F19A1A]' : 'text-[#7BA05B]') : 'text-[#C74B3C]')}`}>
+              {beku ? 'BEKU - pakai Restart Paksa' : (b?.aktif ? (sedangMulai ? 'Sedang mulai' : `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}`) : 'Offline')}
             </span>
             {v?.load && (
               <>

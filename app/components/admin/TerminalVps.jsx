@@ -152,7 +152,11 @@ export default function TerminalVps({ send }) {
   }, [muat, muatLog]);
 
   const mintaKonfirmasi = useCallback((aksi) => {
-    const beku = st?.bot?.aktif && st?.bot?.responsif === false;
+    // "Beku" sejati = aktif tapi tidak responsif DAN bukan masa startup
+    // (samakan dengan logika `beku` di bawah - termasuk fallback uptime muda).
+    const um = st?.bot?.uptime?.detik;
+    const muda = Number.isFinite(um) && um < 90;
+    const beku = st?.bot?.aktif && st?.bot?.responsif === false && !st?.bot?.sedangMulai && !muda;
     const meta = {
       restart: {
         judul: beku ? 'Restart Bot (Bot Terdeteksi Beku)' : 'Restart Bot',
@@ -241,8 +245,19 @@ export default function TerminalVps({ send }) {
   const b = st?.bot;
   const r = st?.render;
   const online = b?.aktif;
-  // Beku = systemd bilang aktif, tapi bot tidak menjawab probe agent.
-  const beku = Boolean(b?.aktif && b?.responsif === false);
+  // FIX 2026-10-06 (laporan pemilik: "restart bot, web beku mulu"):
+  //   Dulu: aktif + responsif===false SELALU tampil "Beku" + tombol Restart
+  //   Paksa. Padahal saat bot BARU start (systemd aktif ~detik 5, API bot
+  //   listen ~detik 11-16) probe agent gagal -> panel bilang "Beku" -> user
+  //   klik Restart Paksa -> bot restart dari nol -> beku palsu lagi = loop.
+  //   Sekarang: bot dengan uptime < 90 dtk dianggap "Sedang mulai" (netral,
+  //   tanpa tombol paksa). Fallback uptime dipakai supaya web tetap benar
+  //   walau agent VPS belum ikut di-update (field sedangMulai belum ada).
+  //   "Beku" hanya untuk bot yang sudah lama hidup tapi benar-benar diam.
+  const uptimeDetik = b?.uptime?.detik;
+  const uptimeMuda = Number.isFinite(uptimeDetik) && uptimeDetik < 90;
+  const sedangMulai = Boolean(b?.aktif && b?.responsif === false && (b?.sedangMulai || uptimeMuda));
+  const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda);
 
   return (
     <div className="space-y-4">
@@ -283,9 +298,9 @@ export default function TerminalVps({ send }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         <MiniKartu
           label="Status Bot"
-          nilai={online ? (beku ? 'Beku' : 'Online') : 'Offline'}
-          warna={online ? (beku ? 'text-danger' : 'text-success') : 'text-danger'}
-          sub={beku ? 'Tidak merespons - restart paksa' : (st?.lewat === 'agent' ? 'via agent' : undefined)}
+          nilai={online ? (beku ? 'Beku' : (sedangMulai ? 'Sedang mulai' : 'Online')) : 'Offline'}
+          warna={online ? (beku ? 'text-danger' : (sedangMulai ? 'text-accent' : 'text-success')) : 'text-danger'}
+          sub={beku ? 'Tidak merespons - restart paksa' : (sedangMulai ? 'Bot baru dinyalakan - menunggu siap' : (st?.lewat === 'agent' ? 'via agent' : undefined))}
         />
         <MiniKartu label="RAM Bot" nilai={b?.memMb != null ? `${b.memMb} MB` : '-'} />
         <MiniKartu label="Uptime Bot" nilai={b?.uptime?.teks || '-'} />
@@ -294,7 +309,10 @@ export default function TerminalVps({ send }) {
         <MiniKartu label="Disk" nilai={v?.disk ? `${v.disk.persen}%` : '-'} sub={v?.disk ? `${v.disk.usedGb}/${v.disk.totalGb} GB` : ''} />
       </div>
 
-      {/* PERINGATAN BOT BEKU: systemd bilang aktif tapi bot tidak menjawab. */}
+      {/* PERINGATAN BOT BEKU: systemd bilang aktif tapi bot tidak menjawab.
+          FIX 2026-10-06: hanya tampil kalau BUKAN masa startup (sedangMulai).
+          Bot yang baru di-restart jangan divonis beku - API-nya memang butuh
+          ~11-16 dtk untuk listen, dan vonis dini bikin user restart berulang. */}
       {beku && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
           <span className="min-w-0 flex-1">
@@ -303,6 +321,16 @@ export default function TerminalVps({ send }) {
             watchdog systemd memulihkan otomatis (±1,5 menit).
           </span>
           <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('force')} className="btn-solid btn-solid-danger shrink-0">Restart Paksa</button>
+        </div>
+      )}
+
+      {/* Bot baru start: netral, tanpa tombol paksa (bukan beku, cuma belum siap). */}
+      {sedangMulai && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-accent">
+          <span className="min-w-0 flex-1">
+            <b>Bot sedang dinyalakan.</b> API bot biasanya siap dalam ±15 detik. Tunggu sebentar - kalau
+            status tidak berubah setelah 1 menit, baru pertimbangkan Restart Paksa.
+          </span>
         </div>
       )}
 

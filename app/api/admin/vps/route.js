@@ -3,6 +3,10 @@ import { json } from '../../../lib/api-helpers';
 import { panggilVps, vpsTersedia } from '../../../lib/vpsBridge';
 
 export const dynamic = 'force-dynamic';
+// FIX 2026-10-06: probe agent kini RETRY 3x saat bot baru start (worst-case
+// ~9,5 dtk: 3x timeout 2 dtk + 2x jeda 1 dtk + sampling CPU 1 dtk). Naikkan
+// batas durasi fungsi supaya respons tidak dipotong di tengah jalan.
+export const maxDuration = 30;
 
 // ==========================================
 // /api/admin/vps  —  kontrol VPS via AGENT (fallback: bot)
