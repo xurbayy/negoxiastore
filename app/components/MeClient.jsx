@@ -99,6 +99,50 @@ export default function MeClient({ betaGames = null }) {
   //  - Tab TIDAK aktif (idle/background) -> berhenti total, hemat
   //  - Tab kembali aktif                -> langsung load() sekali (terasa instan)
   //  - Ada perubahan data              -> load() tambahan (langsung tampil)
+  //
+  // UPGRADE REALTIME (2026-10-06): selain poll di atas (jaring pengaman),
+  // sekarang ada long-poll /api/realtime yang ditahan sampai ADA PERUBAHAN
+  // DATA (trigger Postgres -> NOTIFY -> bot naikkan versi). Begitu admin
+  // grant item/poin/premium dari web, profil user ikut ter-update dalam
+  // <1-2 dtk - tidak lagi nunggu 20 dtk.
+  useEffect(() => {
+    if (!state.authenticated) return;
+    let hidup = true;
+    let timer = null;
+    let versi = 0;
+    let gagal = 0;
+    const jeda = (ms) => new Promise((r) => { timer = setTimeout(r, ms); });
+
+    async function loop() {
+      while (hidup) {
+        const mulai = Date.now();
+        try {
+          const res = await fetch('/api/realtime' + (versi ? '?sejak=' + versi : ''), { cache: 'no-store' });
+          const d = await res.json().catch(() => ({}));
+          if (!hidup) return;
+          if (d?.ok) {
+            gagal = 0;
+            const v = Number(d.versi) || 0;
+            if (v > versi) {
+              if (versi > 0 && !document.hidden) load(); // data berubah -> tarik profil segar
+              versi = v;
+            }
+            if (Date.now() - mulai < 1000) await jeda(1500);
+            continue;
+          }
+          gagal++;
+          await jeda(Math.min(20000, 4000 * gagal));
+        } catch {
+          gagal++;
+          if (!hidup) return;
+          await jeda(20000);
+        }
+      }
+    }
+    const t0 = setTimeout(loop, 1500);
+    return () => { hidup = false; clearTimeout(t0); if (timer) clearTimeout(timer); };
+  }, [state.authenticated, load]);
+
   useEffect(() => {
     if (!state.authenticated) return;
     let iv = null;
