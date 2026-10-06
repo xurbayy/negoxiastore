@@ -327,11 +327,14 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
   }
 
   // Penjualan HARI INI - untuk melihat tren, bukan cuma total.
+  // FIX 2026-10-06: itemTerjualToday dari bot berisi item_key (SQL mentah,
+  // tidak di-map seperti itemTerjualAll) - baca dua bentuk.
+  const namaDari = (t) => t.itemKey ?? t.item_key;
   const terjualHariIni = m.itemTerjualToday;
   if (Array.isArray(terjualHariIni) && terjualHariIni.length) {
-    const petaNama = new Map(items.map((i) => [i.itemKey, i.name]));
+    const petaNama = new Map(items.map((i) => [i.itemKey ?? i.item_key, i.name]));
     L.push('Terjual HARI INI: ' + terjualHariIni.slice(0, 15)
-      .map((t) => `${petaNama.get(t.itemKey) || t.itemKey}(${t.kali}x)`).join(', '));
+      .map((t) => { const k = namaDari(t); return `${petaNama.get(k) || k}(${t.kali}x)`; }).join(', '));
   } else if (Array.isArray(terjualHariIni)) {
     L.push('Terjual HARI INI: belum ada penjualan.');
   }
@@ -500,16 +503,31 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
   // ---------- Stok & item yang benar-benar dipakai ----------
   L.push('');
   L.push('### STOK & KEPEMILIKAN ITEM');
+  // FIX 2026-10-06 (prompt berisi "undefined=1970-01-21" - ditemukan saat
+  // audit "AI baca data asli atau halu"): bot mengirim field SQL MENTAH
+  // (item_key, restocked_at - snake_case + restocked_at dalam DETIK),
+  // sedangkan kode ini membaca r.itemKey (camelCase) + menganggap ms ->
+  // undefined + epoch 0 (1970). Sekarang baca DUA bentuk + normalisasi
+  // satuan waktu (nilai < 1e12 pasti detik -> x1000).
+  const namaItem = (x) => x.itemKey ?? x.item_key ?? '(tak diketahui)';
+  const keMs = (t) => {
+    const n = Number(t);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return n < 1e12 ? n * 1000 : n; // detik -> ms
+  };
   const restok = m.restockTerakhir || [];
   L.push('Item pernah di-restock: ' + restok.length + ' jenis');
   if (restok.length) {
     L.push('Restock terakhir: ' + restok.slice(0, 8)
-      .map((r) => r.itemKey + '=' + new Date(Number(r.terakhir)).toISOString().slice(0, 10)).join(', '));
+      .map((r) => {
+        const ms = keMs(r.terakhir ?? r.restocked_at);
+        return namaItem(r) + '=' + (ms ? new Date(ms).toISOString().slice(0, 10) : '-');
+      }).join(', '));
   }
   const dipegang = m.itemDipegang || [];
   if (dipegang.length) {
     L.push('Item paling banyak dipegang pemain: ' + dipegang.slice(0, 10)
-      .map((x) => x.itemKey + '(' + x.pemilik + ' pemilik/' + x.total + ' unit)').join(', '));
+      .map((x) => namaItem(x) + '(' + (x.pemilik ?? x.owners ?? 0) + ' pemilik/' + (x.total ?? 0) + ' unit)').join(', '));
   }
 
   // ---------- Bank & guild ----------

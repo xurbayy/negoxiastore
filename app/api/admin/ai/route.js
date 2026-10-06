@@ -343,8 +343,16 @@ export async function POST(request) {
         db.execute('SELECT COUNT(*) AS aktif, COALESCE(SUM(total_due),0) AS total_due FROM public.bank_loans').catch(() => ({ rows: [{ aktif: 0, total_due: 0 }] })),
         db.execute('SELECT title_key, COUNT(*) AS owners FROM public.user_titles GROUP BY title_key ORDER BY owners DESC LIMIT 10').catch(() => ({ rows: [] })),
         db.execute("SELECT item_key, COUNT(*) AS dibeli, COALESCE(SUM(amount),0) AS poin FROM public.transactions WHERE item_key IS NOT NULL GROUP BY item_key ORDER BY dibeli DESC LIMIT 12").catch(() => ({ rows: [] })),
+        // FIX 2026-10-06 (retensi selalu 0 - "AI halu"): public.users.created_at
+        // di VPS bertipe TEXT ("2026-05-30 16:45:35" / "...+00"), sedangkan
+        // played_at bertipe bigint (epoch ms). Versi lama membandingkan keduanya
+        // dengan angka epoch -> Postgres error "operator does not exist:
+        // text > bigint" -> seluruh query retensi gagal senyap (.catch) ->
+        // AI SELALU melihat pemain baru 30 hari = 0, aktif 7/30 hari = 0.
+        // Sekarang: created_at di-cast ::timestamptz lalu dibandingkan dengan
+        // to_timestamp(epoch/1000); played_at tetap bigint dibandingkan angka.
         db.execute(`SELECT
-            (SELECT COUNT(*) FROM public.users WHERE created_at > $1) AS baru_30d,
+            (SELECT COUNT(*) FROM public.users WHERE created_at::timestamptz > to_timestamp($1 / 1000.0)) AS baru_30d,
             (SELECT COUNT(*) FROM public.game_scores WHERE played_at > $1) AS game_30d,
             (SELECT COUNT(DISTINCT user_id) FROM public.game_scores WHERE played_at > $2) AS aktif_7d,
             (SELECT COUNT(DISTINCT user_id) FROM public.game_scores WHERE played_at > $1) AS aktif_30d`,
