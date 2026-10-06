@@ -56,25 +56,51 @@ export default function Ekonomi({ send, data }) {
         {uid && uid.length < 5 && <p className="mt-2 text-xs text-danger">ID minimal 5 digit.</p>}
       </div>
 
+      {/* FIX 2026-10-06 (laporan pemilik: "ekonomi di page admin ga valid -
+          set rpg level/giveaway/set level namanya masih ekonomi"): dulu semua
+          aksi numpuk di SATU kartu "Aksi Ekonomi" - padahal Set Level/Streak/
+          RPG Level itu progres, reset misi/clear lock itu utilitas, giveaway
+          itu aksi global. Sekarang dipisah per kategori dengan judul jujur. */}
+
       <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
-        <h2 className="font-display text-ink">Aksi Ekonomi</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <h2 className="font-display text-ink">Kelola Poin</h2>
+        <p className="mt-1 text-xs text-ink-muted">Atur poin satu user (perlu ID di panel &quot;Cari User&quot;).</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <AmountAction label="Tambah Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('add_points', { userId: uid, amount: v })} />
           <AmountAction label="Kurangi Poin" hint="maks 1.000.000" disabled={!uid || busy} onSubmit={(v) => submit('remove_points', { userId: uid, amount: v })} />
           <AmountAction label="Set Poin" hint="0 sampai 100 jt - DESTRUKTIF" danger disabled={!uid || busy} onSubmit={(v) => submit('set_points', { userId: uid, amount: v }, true)} />
+        </div>
+      </div>
+
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <h2 className="font-display text-ink">Kelola Progres &amp; Streak</h2>
+        <p className="mt-1 text-xs text-ink-muted">Atur level, streak harian/menang, dan RPG level satu user.</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <AmountAction label="Set Level" hint="1-1000" disabled={!uid || busy} onSubmit={(v) => submit('set_level', { userId: uid, level: v })} />
           <AmountAction label="Set Daily Streak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_streak', { userId: uid, value: v })} />
           <AmountAction label="Set Winstreak" hint="0-3650" disabled={!uid || busy} onSubmit={(v) => submit('set_winstreak', { userId: uid, value: v })} />
           <AmountAction label="Set RPG Level" hint="1-100 (season berjalan)" disabled={!uid || busy} onSubmit={(v) => submit('set_rpg_level', { userId: uid, level: v })} />
-          <AmountAction label="Giveaway Semua Player" hint="maks 250.000 - DESTRUKTIF" danger disabled={busy} onSubmit={(v) => submit('giveaway', { amount: v }, true)} />
-          <AmountAction label="Bebaskan Hutang" hint="clear loan user ini" disabled={!uid || busy} onSubmit={() => submit('clear_loan', { userId: uid }, true)} />
         </div>
+      </div>
 
-        {/* Aksi cepat (tanpa nominal) */}
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <h2 className="font-display text-ink">Utilitas User</h2>
+        <p className="mt-1 text-xs text-ink-muted">Perbaikan cepat untuk satu user: hutang, limit harian, misi, sesi macet.</p>
         <div className="mt-4 flex flex-wrap gap-2">
+          <QuickAction label="Bebaskan Hutang" disabled={!uid || busy} onClick={() => submit('clear_loan', { userId: uid }, true)} />
           <QuickAction label="Reset Limit Harian" disabled={!uid || busy} onClick={() => submit('reset_daily', { userId: uid })} />
           <QuickAction label="Reset Misi User" disabled={!uid || busy} onClick={() => submit('reset_missions', { userId: uid })} />
           <QuickAction label="Clear Sesi Macet User" disabled={!uid || busy} onClick={() => submit('clear_lock', { userId: uid })} />
+        </div>
+      </div>
+
+      <div className="nx-card px-4 py-4 sm:px-5 sm:py-5">
+        <h2 className="font-display text-ink">Aksi Global (Semua Player)</h2>
+        <p className="mt-1 text-xs text-ink-muted">Berlaku untuk SEMUA pemain sekaligus - tanpa pilih user.</p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <AmountAction label="Giveaway Semua Player" hint="maks 250.000 - DESTRUKTIF" danger disabled={busy} onSubmit={(v) => submit('giveaway', { amount: v }, true)} />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
           <QuickAction label="Reset Misi SEMUA Player" danger disabled={busy} onClick={() => submit('reset_missions', { userId: null }, true)} />
           <QuickAction label="Clear SEMUA Sesi Macet" danger disabled={busy} onClick={() => submit('clear_lock', { userId: null }, true)} />
         </div>

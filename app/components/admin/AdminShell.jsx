@@ -28,7 +28,7 @@ import VpsWidget from './VpsWidget';
 // sudah di-poll - tanpa API baru). Visual saja, alur data tidak berubah.
 const TAB_GROUPS = [
   { label: 'Pantau', tabs: [['ai', 'NEXO AI'], ['dashboard', 'Dashboard'], ['players', 'Player Lookup'], ['log', 'Activity Log']] },
-  { label: 'Ekonomi & Toko', tabs: [['ekonomi', 'Ekonomi'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
+  { label: 'Kelola Pemain', tabs: [['ekonomi', 'Kelola Pemain'], ['shop', 'Shop'], ['bank', 'Bank'], ['redeem', 'Redeem'], ['manualorders', 'Pembayaran QRIS']] },
   { label: 'Member', tabs: [['nexopass', 'NEXO Pass'], ['titles', 'Titles']] },
   { label: 'Komunitas', tabs: [['broadcast', 'Broadcast'], ['moderasi', 'Sanksi & Moderasi'], ['feedback', 'Feedback']] },
   { label: 'Sistem', tabs: [['terminal', 'Terminal VPS']] },
