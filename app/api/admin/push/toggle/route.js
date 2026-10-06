@@ -28,18 +28,11 @@ async function aktor() {
   return null;
 }
 
-let _siap = null;
-async function pastikanTabel(db) {
-  if (_siap) return _siap;
-  _siap = db.execute(`CREATE TABLE IF NOT EXISTS web.admin_push_devices (
-    endpoint    TEXT PRIMARY KEY,
-    discord_id  TEXT NOT NULL,
-    p256dh      TEXT,
-    auth        TEXT,
-    created_at  BIGINT NOT NULL
-  )`).catch(() => {});
-  return _siap;
-}
+// CATATAN (fix 2026-10-06): route ini DULU mencoba CREATE TABLE tiap request.
+// Produksi lewat proxy bot yang MEMBLOKIR DDL -> percobaan gagal + membanjiri
+// log VPS ("query DITOLAK (DDL)"). Tabel web.admin_push_devices sudah
+// dikelola migrasi VPS (owner role nexo) - route sekarang tidak membuat
+// tabel, hanya mentoleransi tabel belum ada.
 
 // discord_id penanda admin yang menyalakan toggle di panel.
 async function ambilUserId() {
@@ -51,7 +44,6 @@ export async function GET(request) {
   if (!(await aktor())) return json({ ok: false, error: 'forbidden' }, 403);
   await schemaReady();
   const db = getDb();
-  await pastikanTabel(db);
   const endpoint = new URL(request.url).searchParams.get('endpoint') || '';
   let aktif = false;
   try {
@@ -70,7 +62,6 @@ export async function POST(request) {
   if (!(await aktor())) return json({ ok: false, error: 'forbidden' }, 403);
   await schemaReady();
   const db = getDb();
-  await pastikanTabel(db);
 
   let body;
   try { body = await request.json(); } catch { body = null; }
