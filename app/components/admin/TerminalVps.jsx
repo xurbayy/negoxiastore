@@ -101,8 +101,14 @@ export default function TerminalVps({ send }) {
   }, []);
 
   // Riwayat PERSISTEN dari DB (lintas device) + log bot live dari journalctl.
-  // Konsol = [riwayat_db (membekas)] + [log_bot_live] digabung, dibaca dari
-  // server - jadi device mana pun menampilkan isi yang SAMA.
+  // FIX 2026-10-05 (konsol terasa "beku"/bingung):
+  //   Dulu dua sumber ditempel berurutan ([logBot, riwayatDB]) - riwayat DB
+  //   datang urutan TERBARU-DULU, jadi perintah baru muncul di posisi acak
+  //   (bukan di bawah), auto-scroll tidak mengejar, dan tiap poll konten
+  //   "melompat". Sekarang SEMUA entri dibawa sebagai epoch ms dan DIGABUNG
+  //   KRONOLOGIS: yang terbaru SELALU di bawah, tampil dengan jam lokal yang
+  //   sama (dulu log bot jam UTC server vs riwayat jam WIB browser - beda 7
+  //   jam dan bikin bingung).
   const muatLog = useCallback(async () => {
     try {
       const [resR, resL] = await Promise.all([
@@ -112,14 +118,25 @@ export default function TerminalVps({ send }) {
       const dR = await resR.json().catch(() => ({}));
       const dL = await resL.json().catch(() => ({}));
       if (!hidup.current) return;
-      const barisHist = (dR.ok && Array.isArray(dR.riwayat)) ? dR.riwayat.map((h) => ({
-        jenis: h.ok ? 'out' : 'err',
-        t: h.created_at ? new Date(Number(h.created_at)).toLocaleTimeString('id-ID') : '',
-        teks: `$ ${h.perintah || ''}  [${h.jenis}${h.aktor ? ' · ' + h.aktor : ''}]\n${h.keluaran || ''}`,
-      })) : [];
-      const barisBot = (dL.ok && Array.isArray(dL.baris)) ? dL.baris.map((b) => ({ jenis: 'bot', t: b.t, teks: b.pesan })) : [];
-      // Log bot live di depan, riwayat perintah di belakang (kronologis).
-      setRiwayat([...barisBot, ...barisHist].slice(-400));
+      const jamLokal = (ms) => (ms ? new Date(ms).toLocaleTimeString('id-ID') : '');
+      const barisHist = (dR.ok && Array.isArray(dR.riwayat)) ? dR.riwayat.map((h) => {
+        const ms = Number(h.created_at) || 0;
+        return {
+          jenis: h.ok ? 'out' : 'err',
+          ts: ms,
+          t: jamLokal(ms),
+          teks: `$ ${h.perintah || ''}  [${h.jenis}${h.aktor ? ' · ' + h.aktor : ''}]\n${h.keluaran || ''}`,
+        };
+      }) : [];
+      const barisBot = (dL.ok && Array.isArray(dL.baris)) ? dL.baris.map((b) => {
+        const ms = Number(b.ms) || 0;
+        return { jenis: 'bot', ts: ms, t: jamLokal(ms) || b.t || '', teks: b.pesan };
+      }) : [];
+      // GABUNG KRONOLOGIS by epoch (ascending) - terbaru di paling bawah.
+      const semua = [...barisBot, ...barisHist]
+        .sort((a, b) => (a.ts || 0) - (b.ts || 0))
+        .slice(-400);
+      setRiwayat(semua);
     } catch { /* diamkan */ }
   }, []);
 
@@ -135,15 +152,17 @@ export default function TerminalVps({ send }) {
   }, [muat, muatLog]);
 
   const mintaKonfirmasi = useCallback((aksi) => {
-    // Kalau bot TERDETEKSI TIDAK RESPONSIF (beku), restart biasa pakai SIGTERM
-    // bisa nyangkut; tawarkan RESTART PAKSA (SIGKILL) lewat terminal.
     const beku = st?.bot?.aktif && st?.bot?.responsif === false;
     const meta = {
       restart: {
         judul: beku ? 'Restart Bot (Bot Terdeteksi Beku)' : 'Restart Bot',
         body: beku
-          ? 'Bot TIDAK merespons (beku). Restart normal tetap dicoba, tapi kalau tidak pulih dalam 30 dtk, jalankan perintah "restart_force" di konsol (SIGKILL + start).'
+          ? 'Bot TIDAK merespons (beku). Restart normal tetap dicoba, tapi kalau tidak pulih dalam 30 dtk, pakai tombol "Restart Paksa" (SIGKILL + start).'
           : 'Restart bot sekarang? Bot akan mati ±2 detik lalu hidup lagi.',
+      },
+      force: {
+        judul: 'Restart PAKSA Bot (SIGKILL)',
+        body: 'Bot akan DIBUNUH PAKSA (SIGKILL) lalu dinyalakan ulang. Pakai ini kalau bot beku dan restart normal tidak mempan. Lanjutkan?',
       },
       stop: { judul: 'Hentikan Bot', body: 'HENTIKAN bot? Web TIDAK bisa baca/tulis data sampai bot di-start lagi.' },
       start: { judul: 'Hidupkan Bot', body: 'Hidupkan bot sekarang?' },
@@ -184,7 +203,8 @@ export default function TerminalVps({ send }) {
           const d = await res.json().catch(() => ({}));
           const sejakSesudah = d?.bot?.sejakMs || null;
           const berubah = Boolean(sejakSebelum && sejakSesudah && Math.abs(sejakSesudah - sejakSebelum) > 1000);
-          if (d?.bot?.aktif && (aksi === 'restart' || aksi === 'start')) {
+          // 'force' juga diverifikasi: SIGKILL pasti mengganti ActiveEnterTimestamp.
+          if (d?.bot?.aktif && (aksi === 'restart' || aksi === 'start' || aksi === 'force')) {
             if (aksi === 'start' || berubah || !sejakSebelum) {
               // Tunggu 3 dtk lagi supaya banner startup sempat muncul penuh.
               await jeda(3000);
@@ -203,7 +223,9 @@ export default function TerminalVps({ send }) {
       }
       // Habis 30 dtk tanpa bukti restart -> beri arahan jujur (jangan klaim sukses).
       if (aksi === 'restart' || aksi === 'start') {
-        setPantau('⚠ Bot belum menunjukkan bukti restart (uptime belum ter-reset). Coba lagi, atau jalankan "restart_force" di konsol (SIGKILL + start).');
+        setPantau('⚠ Bot belum menunjukkan bukti restart (uptime belum ter-reset). Coba tombol "Restart Paksa" (SIGKILL + start).');
+      } else if (aksi === 'force') {
+        setPantau('⚠ Restart paksa dikirim tapi uptime belum ter-reset. Cek kartu Status Bot & konsol.');
       } else {
         setPantau('Selesai memantau. Periksa konsol untuk status terakhir bot.');
       }
@@ -231,10 +253,11 @@ export default function TerminalVps({ send }) {
             Kontrol bot & server langsung. Bot di VPS {v?.vcpu || 6} vCPU / {v ? Math.round(v.ram.totalMb / 1024) : 8} GiB, DB PostgreSQL lokal.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('start')} className="btn-solid btn-solid-success">Mulai</button>
           <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('restart')} className="btn-solid btn-solid-accent">Restart</button>
-          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('stop')} className="btn-solid btn-solid-danger">Hentikan</button>
+          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('force')} className="btn-solid btn-solid-danger" title="Bunuh paksa (SIGKILL) + start - pakai saat bot beku">Restart Paksa</button>
+          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('stop')} className="btn-ghost">Hentikan</button>
         </div>
       </div>
 
@@ -273,11 +296,13 @@ export default function TerminalVps({ send }) {
 
       {/* PERINGATAN BOT BEKU: systemd bilang aktif tapi bot tidak menjawab. */}
       {beku && (
-        <div className="rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
-          <b>Bot terdeteksi BEKU</b> (proses hidup tapi tidak merespons). Restart normal mungkin tidak cukup karena
-          SIGTERM tidak diproses event loop yang hang. Jalankan{' '}
-          <code className="rounded bg-danger/15 px-1.5 py-0.5 font-mono font-bold">restart_force</code> di konsol
-          (SIGKILL + start), atau tunggu watchdog systemd memulihkan otomatis (±1,5 menit).
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          <span className="min-w-0 flex-1">
+            <b>Bot terdeteksi BEKU</b> (proses hidup tapi tidak merespons). Restart normal mungkin tidak cukup karena
+            SIGTERM tidak diproses event loop yang hang - pakai <b>Restart Paksa</b> (SIGKILL + start), atau tunggu
+            watchdog systemd memulihkan otomatis (±1,5 menit).
+          </span>
+          <button type="button" disabled={busy} onClick={() => mintaKonfirmasi('force')} className="btn-solid btn-solid-danger shrink-0">Restart Paksa</button>
         </div>
       )}
 
@@ -343,6 +368,10 @@ function MiniKartu({ label, nilai, sub, warna }) {
 function ConsoleLog({ riwayat, refresh, online }) {
   const [baris, setBaris] = useState('');
   const [jalan, setJalan] = useState(false);
+  // Perintah yang SEDANG diproses (optimistic entry). Ditampilkan instan di
+  // dasar konsol supaya terasa "gerak" - eksekusi di VPS bisa makan beberapa
+  // detik (journalctl/psql), dan tanpa ini layar diam sampai respons balik.
+  const [proses, setProses] = useState(null);
   const autoRef = useRef(true);
   const boxRef = useRef(null);
 
@@ -350,7 +379,7 @@ function ConsoleLog({ riwayat, refresh, online }) {
   useEffect(() => {
     const el = boxRef.current;
     if (el && autoRef.current) el.scrollTop = el.scrollHeight;
-  }, [riwayat]);
+  }, [riwayat, proses]);
 
   function onScroll() {
     const el = boxRef.current;
@@ -364,6 +393,8 @@ function ConsoleLog({ riwayat, refresh, online }) {
     if (!cmd || jalan) return;
     setBaris('');
     setJalan(true);
+    const jam = new Date().toLocaleTimeString('id-ID');
+    setProses({ cmd, t: jam });
     try {
       await fetch('/api/admin/vps/terminal', {
         method: 'POST',
@@ -374,15 +405,21 @@ function ConsoleLog({ riwayat, refresh, online }) {
       if (refresh) await refresh();
     } catch { /* diamkan */ } finally {
       setJalan(false);
+      setProses(null);
     }
   }, [baris, jalan, refresh]);
+
+  const kosong = riwayat.length === 0 && !proses;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border-soft bg-[#0b1020]">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
         <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-400">Console</span>
-        <span className={`flex items-center gap-1.5 text-[0.7rem] font-bold ${online ? 'text-[#7BA05B]' : 'text-[#C74B3C]'}`}>
-          <span className={`h-2 w-2 rounded-full ${online ? 'bg-[#7BA05B]' : 'bg-[#C74B3C]'}`} /> {online ? 'Terhubung' : 'Terputus'}
+        <span className="flex items-center gap-3">
+          {jalan && <span className="font-mono text-[0.7rem] text-[#F19A1A]">menjalankan…</span>}
+          <span className={`flex items-center gap-1.5 text-[0.7rem] font-bold ${online ? 'text-[#7BA05B]' : 'text-[#C74B3C]'}`}>
+            <span className={`h-2 w-2 rounded-full ${online ? 'bg-[#7BA05B]' : 'bg-[#C74B3C]'}`} /> {online ? 'Terhubung' : 'Terputus'}
+          </span>
         </span>
       </div>
 
@@ -391,7 +428,7 @@ function ConsoleLog({ riwayat, refresh, online }) {
         onScroll={onScroll}
         className="h-72 overflow-y-auto px-3 py-3 font-mono text-xs leading-relaxed sm:h-96 sm:px-4"
       >
-        {riwayat.length === 0 ? (
+        {kosong ? (
           <p className="text-slate-500">Console siap. Ketik <span className="text-slate-300">help</span> lalu Enter untuk daftar perintah, atau ketik mis. <span className="text-slate-300">logs</span>, <span className="text-slate-300">df</span>, <span className="text-slate-300">free</span>.</p>
         ) : riwayat.map((x, i) => (
           <pre key={i} className={`whitespace-pre-wrap break-words ${
@@ -400,9 +437,14 @@ function ConsoleLog({ riwayat, refresh, online }) {
               : x.jenis === 'out' ? 'text-[#8FD08F]'
               : 'text-slate-300'
           }`}>
-            {x.jenis === 'bot' && x.t ? <span className="text-slate-500">{x.t} </span> : null}{x.teks}
+            {x.t ? <span className="text-slate-500">{x.t} </span> : null}{x.teks}
           </pre>
         ))}
+        {proses && (
+          <pre className="whitespace-pre-wrap break-words text-[#F19A1A]">
+            <span className="text-slate-500">{proses.t} </span>$ {proses.cmd} <span className="animate-pulse">▍menjalankan…</span>
+          </pre>
+        )}
       </div>
 
       <form onSubmit={kirim} className="flex items-center gap-2 border-t border-white/10 px-3 py-2">

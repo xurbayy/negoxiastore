@@ -43,7 +43,8 @@ export async function POST(request) {
   let body;
   try { body = await request.json(); } catch { body = null; }
   const aksi = String(body?.aksi || '');
-  if (!['restart', 'stop', 'start'].includes(aksi)) return json({ ok: false, error: 'aksi tidak valid' }, 400);
+  // 'force' = restart paksa (SIGKILL + start) untuk bot yang beku.
+  if (!['restart', 'stop', 'start', 'force'].includes(aksi)) return json({ ok: false, error: 'aksi tidak valid' }, 400);
   const d = await panggilVps('/vps/kontrol', 'POST', { aksi, aktor });
   return json(d);
 }
