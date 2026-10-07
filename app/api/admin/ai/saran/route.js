@@ -89,8 +89,15 @@ export async function GET(request) {
           // dapat respons non-JSON -> UI tampil "tidak ada alasan dari server").
           // Diuji 4 variasi dengan konteks asli: 2000 token + 'minimal' =
           // 9,1 dtk dengan 8 baris valid (6x lebih cepat, jauh dari batas).
+          //
+          // TIMEOUT 25 dtk (bukan 60): provider kadang lambat mendadak (uji
+          // live: 1 dari 3 request kena 60 dtk = fungsi Vercel dipotong, tanpa
+          // kesempatan retry). Dengan 25 dtk, request lambat DIBATALKAN lebih
+          // awal -> tanyaGroq masih sempat retry kunci berikutnya / jalur error
+          // rapi sebelum Vercel memotong di 60 dtk.
           maxTokens: 2000,
           thinking: 'minimal',
+          timeoutMs: 25000,
         });
         if (hasil.ok && hasil.teks) {
           // Parser TOLERAN (FIX 2026-10-07): model kadang menulis "1. ..." atau

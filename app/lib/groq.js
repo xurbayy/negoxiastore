@@ -679,6 +679,15 @@ export async function tanyaGroq(pesan, opsi = {}) {
   const thinking = String(opsi.thinking || 'auto').toLowerCase();
   const peta = petaThinking(thinking);
   const suhu = peta.suhu;
+  // TIMEOUT PER-REQUEST (FIX 2026-10-07): dulu keras 60 dtk = sama dengan batas
+  // Vercel, jadi provider yang lambat bikin fungsi DIPOTONG tanpa kesempatan
+  // retry/fallback (klien dapat respons non-JSON). Sekarang bisa diatur
+  // pemanggil: opsi.timeoutMs (mis. "Cari topik AI" pakai 25000 supaya masih
+  // ada waktu retry sebelum 60 dtk Vercel). Default tetap 60000 untuk
+  // pemakaian lama (chat, agen - yang memang butuh waktu panjang).
+  const timeoutMs = Number.isFinite(Number(opsi.timeoutMs)) && Number(opsi.timeoutMs) >= 5000
+    ? Math.min(120000, Number(opsi.timeoutMs))
+    : 60000;
   // Instruksi kedalaman disisipkan sebagai pesan sistem tambahan (hanya bila ada).
   const pesanFinal = peta.instruksi
     ? [{ role: 'system', content: peta.instruksi }, ...pesan]
@@ -718,7 +727,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
           // ditambahkan bila level bukan 'auto'.
           ...fieldThinking(thinking, url),
         }),
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
 
       if (res.ok) {
@@ -784,7 +793,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
               temperature: suhu,
               ...fieldThinking(thinking, url),
             }),
-            signal: AbortSignal.timeout(60000),
+            signal: AbortSignal.timeout(timeoutMs),
           });
           if (res2.ok) {
             const data2 = await res2.json().catch(() => null);
@@ -834,7 +843,7 @@ export async function tanyaGroq(pesan, opsi = {}) {
               temperature: suhu,
               ...fieldThinking(thinking, url),
             }),
-            signal: AbortSignal.timeout(60000),
+            signal: AbortSignal.timeout(timeoutMs),
           });
           if (res2.ok) {
             let d2;
