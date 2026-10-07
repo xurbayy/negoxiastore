@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { fmt, fmtRingkas, timeAgo } from '../../lib/formatClient';
 import { emojiSrc } from '../../lib/emojisClient';
 import { GAME_META } from '../../lib/game-meta';
@@ -141,11 +141,33 @@ function delta24(series, pick) {
 
 const DAY_MS = 86400000;
 
+// ==========================================
+// ANTI-FLICKER STATUS BOT (FIX 2026-10-07: "pasti ke offline dulu baru
+// kayak refresh online gitu jadi ga jelas infonya")
+// ==========================================
+// MASALAH: getBotHeartbeat() bisa mengembalikan null saat blip DB sesaat
+// (query gagal -> safeQuery return null). Dashboard lalu fallback ke snap.ts
+// yang bisa LAMA (cache snapshot 30 dtk, fallback sampai 5 menit) -> heartbeat
+// dianggap >3 menit -> "BOT OFFLINE" kedip, padahal bot sehat. Poll berikutnya
+// normal lagi -> "BOT ONLINE". Info jadi tidak jelas.
+//
+// SOLUSI DUA LAPIS:
+//   1. Kalau botHeartbeat TIDAK tersedia (null/0), JANGAN pakai snap.ts untuk
+//      vonis offline - tampil "memeriksa" netral (kuning), bukan OFFLINE.
+//      snap.ts hanya dipakai kalau memang masih segar (<3 menit).
+//   2. Anti-flicker: vonis OFFLINE baru keluar kalau 2 poll BERTURUT-TURUT
+//      melihat stale. Sekali kedip tidak cukup untuk mengubah status.
+//      (State disimpan di useRef - per-instance, tidak bocor antar komponen.)
+
 export default function Dashboard({ data }) {
   const snap = data.snapshot;
   // Heartbeat bot LANGSUNG dari DB (public.bridge_meta.last_seen) - akurat
-  // walau snapshot push belum masuk. Fallback ke snap.ts untuk kompatibilitas.
-  const heartbeat = data.botHeartbeat || snap?.ts || 0;
+  // walau snapshot push belum masuk.
+  const hbDb = Number(data.botHeartbeat) || 0;
+  const hbSnap = Number(snap?.ts) || 0;
+  // Sumber heartbeat: DB dulu; kalau DB null, pakai snapshot HANYA kalau
+  // snapshot masih segar (<3 menit) - snapshot lama tidak dipakai untuk vonis.
+  const heartbeat = hbDb > 0 ? hbDb : (hbSnap > 0 && (nowMs() - hbSnap) < 3 * 60_000 ? hbSnap : 0);
   const fullSeries = useMemo(() => data.series || [], [data.series]);
   const [range, setRange] = useState(7); // 1 | 7 hari
   const series = useMemo(() => {
@@ -156,6 +178,9 @@ export default function Dashboard({ data }) {
     return fullSeries;
   }, [fullSeries, range]);
 
+  // ANTI-FLICKER (state per-instance): butuh 2 cek berturut-turut sebelum
+  // vonis OFFLINE. Reset instan begitu heartbeat terlihat segar lagi.
+  const staleRef = useRef({ berturut: 0, terakhir: 0 });
   if (!snap) {
     // Status Sistem TETAP tampil walau snapshot bot belum masuk - justru di
     // saat seperti inilah info health paling dibutuhkan (permintaan pemilik
@@ -180,8 +205,22 @@ export default function Dashboard({ data }) {
   const invites = (m.invites && typeof m.invites === 'object')
     ? m.invites
     : (snap.invites && typeof snap.invites === 'object' ? snap.invites : {});
-  // Stale = bot tidak terlihat >3 menit (pakai heartbeat DB, bukan snapshot push).
-  const stale = heartbeat > 0 && nowMs() - heartbeat > 3 * 60_000;
+  // Stale mentah: bot tidak terlihat >3 menit. heartbeat=0 (sumber tidak
+  // tersedia sama sekali) BUKAN stale - kita belum tahu apa-apa.
+  const staleMentah = heartbeat > 0 && nowMs() - heartbeat > 3 * 60_000;
+  // ANTI-FLICKER: hitung beruntun (bukan useState - tidak perlu re-render
+  // ekstra; nilai dibaca di render yang sama).
+  const sr = staleRef.current;
+  if (staleMentah) {
+    if (nowMs() - sr.terakhir > 15_000) sr.berturut = 0; // rangkaian lama -> mulai baru
+    sr.berturut += 1;
+    sr.terakhir = nowMs();
+  } else {
+    sr.berturut = 0;
+  }
+  const stale = sr.berturut >= 2;
+  // "Memeriksa" = belum ada sumber heartbeat sama sekali (baru buka / blip).
+  const memeriksa = !stale && heartbeat === 0;
   // Peta beta dari payload bot: key (language/sum/heal) -> nama & mode resmi.
   const betaMap = {};
   for (const b of snap.betaGames || []) betaMap[String(b.key).toLowerCase()] = b;
@@ -259,10 +298,12 @@ export default function Dashboard({ data }) {
           Pernyataan "aksi admin menunggu bot" sengaja ditampilkan (2026-10-03)
           supaya admin & pembeli NEXO Pass tidak salah paham: datanya sudah
           tersimpan di antrean, hanya eksekusinya menunggu bot online. */}
-      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-white ${stale ? 'bg-danger' : 'bg-success'}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-white ${stale ? 'bg-danger' : (memeriksa ? 'bg-warning' : 'bg-success')}`}>
         <p className="text-sm font-bold">
-          {/* SEDERHANA (permintaan pemilik 2026-10-03): cukup BOT ONLINE / BOT OFFLINE */}
-          {stale ? '⚠ BOT OFFLINE' : '● BOT ONLINE'}
+          {/* SEDERHANA (permintaan pemilik 2026-10-03): cukup BOT ONLINE / BOT OFFLINE.
+              "MEMERIKSA" (kuning) = belum ada sumber heartbeat - JANGAN vonis
+              OFFLINE (fix anti-flicker 2026-10-07). */}
+          {stale ? '⚠ BOT OFFLINE' : (memeriksa ? '● MEMERIKSA STATUS...' : '● BOT ONLINE')}
         </p>
         <p className="text-xs text-white/80">
           {snap.bot?.guildCount ?? 0} server · snapshot {timeAgo(snap.ts)}
