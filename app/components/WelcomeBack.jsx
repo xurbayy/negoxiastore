@@ -17,7 +17,8 @@ export default async function WelcomeBack({ username }) {
       <div className="nx-card flex flex-wrap items-center justify-between gap-5 px-6 py-5">
         <div>
           <p className="text-sm font-medium text-ink-muted">Selamat datang kembali,</p>
-          <p className="mt-1 font-display text-xl tracking-tight text-ink">{username}</p>
+          {/* Nama: TIDAK dipotong - wrap (permintaan pemilik 2026-10-07). */}
+          <p className="mt-1 wrap-anywhere font-display text-xl tracking-tight text-ink">{username}</p>
           {profile ? (
             <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
               <span className="inline-flex items-center gap-1.5" title={fmtPenuh(profile.points)}>

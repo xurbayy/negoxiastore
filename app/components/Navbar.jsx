@@ -175,7 +175,10 @@ export default function Navbar({ session, premiumActive = false }) {
                     {(session.username || '?').slice(0, 2).toUpperCase()}
                   </span>
                 )}
-                <span className="hidden max-w-[110px] truncate text-sm font-semibold text-ink xl:inline">{session.username}</span>
+                {/* Nama di navbar: batas lebar DIPERTAHANKAN (navbar sempit,
+                    teks panjang bisa mendorong menu) TAPI judul lengkap
+                    selalu bisa dibaca lewat tooltip `title`. */}
+                <span className="hidden max-w-[110px] truncate text-sm font-semibold text-ink xl:inline" title={session.username}>{session.username}</span>
               </Link>
             </>
           )}

@@ -89,7 +89,9 @@ export default function PlayerProfileCard({ player, onClose }) {
               />
             )}
             <div className="min-w-0">
-              <p className="truncate font-display text-lg text-card-cream">{player.username}</p>
+              {/* Nama pemain: TIDAK dipotong - wrap (permintaan pemilik
+                  2026-10-07: nama panjang harus terbaca semua). */}
+              <p className="wrap-anywhere font-display text-lg text-card-cream">{player.username}</p>
               {player.rank != null && (
                 <p className="mt-0.5 text-xs text-ink-faint">
                   Peringkat #{player.rank} {player.board === 'richest' ? '· Terkaya' : '· Top Pemain'}

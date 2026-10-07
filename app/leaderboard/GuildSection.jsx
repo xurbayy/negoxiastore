@@ -39,12 +39,15 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
 
   return (
     <section className="mt-12" aria-labelledby="lb-guild">
+      {/* JUDUL DIPERJELAS (permintaan pemilik 2026-10-07): "kasih jelas
+          10 guild terkuat gitu ada info jelas seperti top pemain" - dulu
+          cuma "Guild Terkuat", sekarang sejajar dengan "Top 10 Pemain". */}
       <h2 id="lb-guild" className="font-display text-xl text-ink">
         {emojiSrc('castle') && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={emojiSrc('castle')} alt="" width={20} height={20} className="mr-2 inline h-5 w-5 align-middle" />
         )}
-        Guild Terkuat
+        Top 10 Guild Terkuat
       </h2>
       <div className="nx-card mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">
@@ -88,12 +91,14 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                       type="button"
                       onClick={() => adaKode && setSelected(g)}
                       disabled={!adaKode}
-                      className="group inline-flex min-w-0 flex-1 items-center gap-2 text-left font-semibold text-ink transition hover:text-accent-hover cursor-pointer disabled:cursor-default"
+                      className="group inline-flex min-w-[160px] flex-1 items-center gap-2 text-left font-semibold text-ink transition hover:text-accent-hover cursor-pointer disabled:cursor-default"
                       aria-label={`Lihat detail guild ${stripEmojiToken(g.name)}`}
                     >
-                      {/* Emoji guild dari kolom guilds.emoji (bot) - nama tampil bersih */}
+                      {/* Emoji guild dari kolom guilds.emoji (bot) - nama tampil bersih.
+                          NAMA GUILD: tidak dipotong (wrap-anywhere) - sama dengan
+                          permintaan nama user di tabel pemain. */}
                       <GuildEmoji token={g.emoji} size={18} />
-                      <span className="truncate">{stripEmojiToken(g.name)}</span>
+                      <span className="min-w-0 wrap-anywhere">{stripEmojiToken(g.name)}</span>
                       {isMyGuild(g.code) && (
                         // Pill "Guild Kamu" - pola sama pill "Kamu" di tabel pemain.
                         <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Guild Kamu</span>

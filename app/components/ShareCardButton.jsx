@@ -99,6 +99,35 @@ function potongByLebar(ctx, teks, maksLebar) {
   return '…';
 }
 
+/**
+ * Tulis NAMA tanpa memotong (permintaan pemilik 2026-10-07: "ga mau ada nama
+ * yang kepotong ... walau di device kecil tetap kebaca semuanya").
+ *
+ * CARA: font di-SHRINK bertahap (bukan teks dipotong) sampai nama muat penuh.
+ * Batas minimum `minUk` supaya nama ekstrem tetap terbaca (bukan jadi 8px);
+ * hanya kalau di batas minimum masih tidak muat, baru potong sebagai jaring
+ * terakhir. Font diset di sini - pemanggil tidak perlu set font sebelum.
+ *
+ * @param {string} fontTemplate - template font dengan "%d" pengganti ukuran,
+ *        mis. '800 %dpx "Plus Jakarta Sans", system-ui, sans-serif'
+ */
+function tulisNamaAuto(ctx, teks, x, y, maksLebar, ukAwal, minUk, fontTemplate, align = 'center') {
+  const t = String(teks || '?');
+  let uk = ukAwal;
+  ctx.font = fontTemplate.replace('%d', String(uk));
+  while (ctx.measureText(t).width > maksLebar && uk > minUk) {
+    uk -= 2;
+    ctx.font = fontTemplate.replace('%d', String(uk));
+  }
+  const finalTeks = ctx.measureText(t).width > maksLebar ? potongByLebar(ctx, t, maksLebar) : t;
+  const lebar = ctx.measureText(finalTeks).width;
+  const lamaAlign = ctx.textAlign;
+  ctx.textAlign = align;
+  ctx.fillText(finalTeks, x, y);
+  ctx.textAlign = lamaAlign;
+  return { teks: finalTeks, lebar, uk };
+}
+
 function loadImg(src) {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
@@ -204,11 +233,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
     ctx.strokeStyle = ACCENT; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(avCx, avCy, avR + 8, 0, Math.PI * 2); ctx.stroke();
 
-    // Nama & ID
+    // Nama & ID - nama pakai auto-shrink (TIDAK dipotong, permintaan pemilik
+    // 2026-10-07); ID tetap font kecil di bawahnya.
     ctx.textAlign = 'center';
     ctx.fillStyle = '#FBF7EC';
-    ctx.font = '800 42px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText(potongByLebar(ctx, player.username || '?', leftW - 80), avCx, avCy + avR + 60);
+    tulisNamaAuto(ctx, player.username, avCx, avCy + avR + 60, leftW - 80, 42, 20, '800 %dpx "Plus Jakarta Sans", system-ui, sans-serif');
     
     ctx.fillStyle = 'rgba(169,156,142,1)';
     ctx.font = '600 20px "Plus Jakarta Sans", system-ui, sans-serif';
@@ -385,11 +414,11 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   if (rank === 1 && crownImg) ctx.drawImage(crownImg, avCxLb - 30, avCyLb - avRLb - 78, 60, 60);
   if ((rank === 2 || rank === 3) && medalImg) ctx.drawImage(medalImg, avCxLb - 26, avCyLb - avRLb - 72, 52, 52);
 
-  // Nama + sub-judul peringkat
+  // Nama + sub-judul peringkat - nama pakai auto-shrink (TIDAK dipotong,
+  // permintaan pemilik 2026-10-07: nama panjang tetap kebaca semua).
   ctx.textAlign = 'center';
   ctx.fillStyle = '#2B2118';
-  ctx.font = '800 68px "Plus Jakarta Sans", system-ui, sans-serif';
-  ctx.fillText(potongByLebar(ctx, player.username || '?', W - 128), W / 2, avCyLb + avRLb + 86);
+  tulisNamaAuto(ctx, player.username, W / 2, avCyLb + avRLb + 86, W - 128, 68, 30, '800 %dpx "Plus Jakarta Sans", system-ui, sans-serif');
   ctx.fillStyle = '#6E6157';
   ctx.font = '600 30px "Plus Jakarta Sans", system-ui, sans-serif';
   ctx.fillText(potongByLebar(ctx, `Peringkat ${rank} Top Pemain${isPodium ? '  ·  masuk podium' : ''}`, W - 128), W / 2, avCyLb + avRLb + 152);

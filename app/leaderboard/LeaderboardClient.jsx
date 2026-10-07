@@ -71,7 +71,7 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                       <button
                         type="button"
                         onClick={() => openCard(p, 'top')}
-                        className="group inline-flex min-w-0 flex-1 items-center gap-2.5 text-left font-semibold text-ink transition hover:text-accent-hover cursor-pointer"
+                        className="group inline-flex min-w-[160px] flex-1 items-center gap-2.5 text-left font-semibold text-ink transition hover:text-accent-hover cursor-pointer"
                         aria-label={`Lihat profil ${p.username}`}
                       >
                         {p.avatarUrl ? (
@@ -81,7 +81,13 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={avatarUser(p.userId, null, 56)} alt="" width={28} height={28} loading="lazy" className="h-7 w-7 shrink-0 rounded-full border border-border-soft group-hover:border-accent" />
                         )}
-                        <span className="truncate">{p.username}</span>
+                        {/* NAMA USER: TIDAK BOLEH TERPOTONG (permintaan pemilik
+                            2026-10-07: "ga mau ada nama yang ... kepotong, walau
+                            di device kecil tetap kebaca semua"). Dulu `truncate`
+                            memotong jadi "bagasagustina..." - sekarang nama
+                            membungkus ke baris berikutnya (wrap-anywhere:
+                            patah di titik mana pun, termasuk nama tanpa spasi). */}
+                        <span className="min-w-0 flex-1 wrap-anywhere">{p.username}</span>
                         {hasPass(p.userId) && (
                           // Badge NEXO Pass: custom emoji :NEXO Pass: milik kita
                           // (server xurbaybase, id 1548184905018507306) langsung

@@ -485,7 +485,9 @@ export default function MeClient({ betaGames = null }) {
               />
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="font-display text-2xl text-card-cream" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.3)' }}>{p.username}</h1>
+                  {/* Nama user: TIDAK dipotong - wrap (permintaan pemilik
+                      2026-10-07: nama panjang harus terbaca semua di HP). */}
+                  <h1 className="wrap-anywhere font-display text-2xl text-card-cream" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.3)' }}>{p.username}</h1>
                   {/* Title badge - standardized with nx-badge */}
                   {p.titleInfo && (
                     <span

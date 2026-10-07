@@ -11,7 +11,8 @@ import GuildEmoji from './GuildEmoji';
 // KARTU DETAIL GUILD (permintaan pemilik 2026-10-07)
 // ==========================================
 // Muncul saat NAMA GUILD di tabel "Guild Terkuat" diklik. Isi:
-//   - Header: emoji + nama guild + kode + bio + tombol bagikan
+//   - Header: emoji + nama guild + kode + tombol bagikan (BIO DIHAPUS dari
+//     web - permintaan pemilik 2026-10-07; bio tetap di Discord)
 //   - Statistik: LEVEL / Total Poin / WINRATE / Member (4 tile)
 //   - RIWAYAT WAR: 10 war terakhir (lawan, hasil, tanggal)
 //   - OWNER, ADMIN (kalau ada), MEMBER: avatar, emoji peran di DEPAN nama,
@@ -95,9 +96,12 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
               <GuildEmoji token={guild?.emoji} size={32} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-display text-lg text-card-cream">{guild?.name || 'Memuat...'}</p>
+              {/* Nama guild: tidak dipotong (wrap-anywhere), konsisten dengan
+                  permintaan "nama tidak boleh kepotong". BIO DIHAPUS dari web
+                  (permintaan pemilik 2026-10-07: "di leaderboard guild web ga
+                  usah cantumin bionya") - bio tetap ada di Discord. */}
+              <p className="wrap-anywhere font-display text-lg text-card-cream">{guild?.name || 'Memuat...'}</p>
               {guild?.code && <p className="mt-0.5 text-[0.65rem] text-ink-faint">Kode: {guild.code}</p>}
-              {guild?.bio && <p className="mt-0.5 line-clamp-2 text-xs text-ink-faint">{guild.bio}</p>}
             </div>
             {tombolShare}
           </div>
@@ -304,7 +308,9 @@ function AnggotaBaris({ m }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={emojiSrc(roleEmoji)} alt={roleTitle} title={roleTitle} width={16} height={16} className="h-4 w-4 shrink-0" />
       )}
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{m.username}</span>
+      {/* Nama anggota: TIDAK dipotong - wrap ke baris berikutnya (permintaan
+          pemilik 2026-10-07: nama panjang harus terbaca semua di device kecil). */}
+      <span className="min-w-0 flex-1 wrap-anywhere text-sm font-semibold text-ink">{m.username}</span>
       <span className="shrink-0 text-[0.65rem] text-ink-faint">Lv.{m.level}</span>
       {m.premium && (
         // Badge NEXO Pass - custom emoji resmi (sama dengan leaderboard pemain).

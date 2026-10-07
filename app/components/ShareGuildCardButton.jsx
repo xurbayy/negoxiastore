@@ -226,6 +226,32 @@ function potongByLebar(ctx, teks, maksLebar) {
   return '…';
 }
 
+/**
+ * Tulis NAMA tanpa memotong (permintaan pemilik 2026-10-07: "ga mau ada nama
+ * yang kepotong ... walau di device kecil tetap kebaca semuanya").
+ * Font di-SHRINK bertahap sampai nama muat penuh; batas minimum `minUk`
+ * supaya tetap terbaca. Potong hanya sebagai jaring terakhir (kasus ekstrem).
+ * Font diset di sini - pemanggil tidak perlu set font sebelum.
+ * Return `{ teks, lebar, uk }` = teks yang benar-benar digambar + lebarnya
+ * (ctx.font tetap pada ukuran final setelah panggilan ini).
+ */
+function tulisNamaAuto(ctx, teks, x, y, maksLebar, ukAwal, minUk, fontTemplate, align = 'center') {
+  const t = String(teks || '?');
+  let uk = ukAwal;
+  ctx.font = fontTemplate.replace('%d', String(uk));
+  while (ctx.measureText(t).width > maksLebar && uk > minUk) {
+    uk -= 2;
+    ctx.font = fontTemplate.replace('%d', String(uk));
+  }
+  const finalTeks = ctx.measureText(t).width > maksLebar ? potongByLebar(ctx, t, maksLebar) : t;
+  const lebar = ctx.measureText(finalTeks).width;
+  const lamaAlign = ctx.textAlign;
+  ctx.textAlign = align;
+  ctx.fillText(finalTeks, x, y);
+  ctx.textAlign = lamaAlign;
+  return { teks: finalTeks, lebar, uk };
+}
+
 function loadImg(src) {
   return new Promise((resolve) => {
     if (!src) return resolve(null);
@@ -337,10 +363,10 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, sunIm
   ctx.beginPath(); ctx.arc(ecx, ecy, er + 11, 0, Math.PI * 2); ctx.stroke();
 
   // ── Nama guild + kode ──
-  ctx.textAlign = 'center';
+  // Nama guild pakai auto-shrink (TIDAK dipotong, permintaan pemilik
+  // 2026-10-07: nama panjang tetap kebaca semua).
   ctx.fillStyle = '#2B2118';
-  ctx.font = `800 60px ${FONT}`;
-  ctx.fillText(potongByLebar(ctx, detail.name || 'Guild', W - 220), W / 2, ecy + er + 70);
+  tulisNamaAuto(ctx, detail.name, W / 2, ecy + er + 70, W - 220, 60, 28, `800 %dpx ${FONT}`);
   ctx.fillStyle = '#6E6157';
   ctx.font = `600 26px ${FONT}`;
   // Sub-judul: kode + member + winrate (W/L) - winrate penting untuk dilihat
@@ -485,22 +511,19 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, sunIm
     if (coinImg) ctx.drawImage(coinImg, coinX, acy - coinD / 2, coinD, coinD);
     const kananMulai = coinX - 10; // batas blok kanan (badge NP tidak boleh lewat)
 
-    // Nama: dipotong agar MUAT antara kursor kiri dan blok kanan. Kalau
-    // premium, sisakan ruang badge (28 + jarak 8) supaya badge tidak PERNAH
-    // menimpa teks nama (kasus nama sangat panjang di sel 466px).
+    // Nama: AUTO-SHRINK sampai muat (TIDAK dipotong, permintaan pemilik
+    // 2026-10-07). Kalau premium, sisakan ruang badge (28 + jarak 8) supaya
+    // badge tidak PERNAH menimpa teks nama (kasus nama sangat panjang).
     const ruangBadge = m.premium && nexopassImg ? 36 : 0;
     const nameMax = Math.max(60, kananMulai - cursor - ruangBadge);
-    const namaTeks = potongByLebar(ctx, m.username || '?', nameMax);
     ctx.fillStyle = '#2B2118';
-    ctx.font = `700 26px ${FONT}`;
-    ctx.fillText(namaTeks, cursor, acy + 9);
+    const hasilNama = tulisNamaAuto(ctx, m.username, cursor, acy + 9, nameMax, 26, 16, `700 %dpx ${FONT}`, 'left');
 
-    // Badge NEXO Pass TEPAT di samping nama (setelah teks nama yang sudah
-    // dipotong - jadi selalu menempel, tidak mengambang di tengah sel).
+    // Badge NEXO Pass TEPAT di samping nama (setelah teks nama - jadi selalu
+    // menempel, tidak mengambang di tengah sel).
     if (m.premium && nexopassImg) {
-      const namaW = ctx.measureText(namaTeks).width;
       const badgeD = 28;
-      const bx = Math.min(cursor + namaW + 8 + badgeD / 2, kananMulai - badgeD / 2);
+      const bx = Math.min(cursor + hasilNama.lebar + 8 + badgeD / 2, kananMulai - badgeD / 2);
       gambarBadgeNexoPass(ctx, bx, acy, badgeD, nexopassImg);
     }
   }
