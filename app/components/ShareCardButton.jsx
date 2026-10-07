@@ -139,7 +139,7 @@ function loadImg(src) {
   });
 }
 
-async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg }) {
+async function renderCard({ player, coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg }) {
   const dariProfilHitung = player.board === 'profil';
   // Leaderboard portrait 4:5 (1080x1350), Profil Banner landscape (1200x630)
   const W = dariProfilHitung ? 1200 : 1080;
@@ -411,7 +411,7 @@ async function renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopa
   ctx.beginPath(); ctx.arc(avCxLb, avCyLb, avRLb + 13, 0, Math.PI * 2); ctx.stroke();
 
   // Ornamen podium: mahkota #1, medali #2/#3
-  if (rank === 1 && crownImg) ctx.drawImage(crownImg, avCxLb - 30, avCyLb - avRLb - 78, 60, 60);
+  if (rank === 1 && partyImg) ctx.drawImage(partyImg, avCxLb - 30, avCyLb - avRLb - 78, 60, 60);
   if ((rank === 2 || rank === 3) && medalImg) ctx.drawImage(medalImg, avCxLb - 26, avCyLb - avRLb - 72, 52, 52);
 
   // Nama + sub-judul peringkat - nama pakai auto-shrink (TIDAK dipotong,
@@ -532,9 +532,9 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
       // di antaranya aslinya GIF dan canvas tidak bisa menggambar GIF.
       // Nama emoji disamakan dengan MeClient.STAT_ICONS supaya kartu & halaman
       // profil memakai ikon yang sama.
-      const [coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg] = await Promise.all([
+      const [coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg] = await Promise.all([
         loadImg(emojiSrcStatis('goldcoin', 128)),
-        loadImg(emojiSrcStatis('crown', 128)),
+        loadImg(emojiSrcStatis('party', 128)),  // #1 podium: emoji GIF party (permintaan pemilik 2026-10-07)
         loadImg(emojiSrcStatis('medal', 128)),
         loadImg('/nexo-logo-256.png'),
         // download3 = merek NEXO Pass resmi (badge status di header)
@@ -545,7 +545,7 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
         loadImg(emojiSrcStatis('trophy', 128)),
         loadImg(emojiSrcStatis('267042fire', 128)),
       ]);
-      const canvas = await renderCard({ player, coinImg, crownImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg });
+      const canvas = await renderCard({ player, coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
 
