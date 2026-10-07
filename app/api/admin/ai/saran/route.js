@@ -75,12 +75,30 @@ export async function GET(request) {
             '',
             'Aturan: maksimal 70 karakter per pertanyaan. Langsung ke inti. Jangan umum/basi.',
           ].join('\n') },
-        ], { provider, model, maxTokens: 700, thinking: 'low' });
+        ], {
+          provider, model,
+          // FIX 2026-10-07 ("Cari topik AI gagal"): dulu maxTokens 700 + thinking
+          // 'low' -> untuk model reasoning, 700 token sering HABIS di "berpikir"
+          // (finish_reason=length, content kosong) DAN waktu respons sampai
+          // 57,5 dtk (mepet batas 60 dtk Vercel -> kadang timeout -> browser
+          // dapat respons non-JSON -> UI tampil "tidak ada alasan dari server").
+          // Diuji 4 variasi dengan konteks asli: 2000 token + 'minimal' =
+          // 9,1 dtk dengan 8 baris valid (6x lebih cepat, jauh dari batas).
+          maxTokens: 2000,
+          thinking: 'minimal',
+        });
         if (hasil.ok && hasil.teks) {
+          // Parser TOLERAN (FIX 2026-10-07): model kadang menulis "1. ..." atau
+          // "* ..." atau baris tanpa "?" di akhir. Dulu filter WAJIB endsWith('?')
+          // -> jawaban yang isinya bagus ikut dibuang ("format tidak sesuai").
+          // Sekarang: buang prefix nomor/bullet, terima baris panjang yang
+          // mengandung tanda tanya ATAU minimal 15 karakter (pertanyaan jelas),
+          // tambahkan '?' kalau belum ada.
           const baris = String(hasil.teks)
             .split('\n')
-            .map((s) => s.replace(/^\s*[-*\d.)\]]+\s*/, '').trim())
-            .filter((s) => s.length > 8 && s.endsWith('?'))
+            .map((s) => s.replace(/^\s*[-*•\d.)\]]+\s*/, '').replace(/\*\*/g, '').trim())
+            .filter((s) => s.length > 12 && (s.includes('?') || s.length >= 15))
+            .map((s) => (s.endsWith('?') ? s : s + '?'))
             .slice(0, 8);
           if (baris.length >= 3) {
             // FIX 2026-10-06: ID saran AI dibuat UNIK per generate (cap waktu).

@@ -972,7 +972,14 @@ export default function AnalisisAI() {
       const url = '/api/admin/ai/saran?peran=' + encodeURIComponent(peran || 'umum') + '&ai=1'
         + '&provider=' + encodeURIComponent(provider) + '&model=' + encodeURIComponent(modelInput.trim());
       const res = await fetch(url, { cache: 'no-store' });
-      const d = await res.json().catch(() => ({}));
+      // FIX 2026-10-07 ("tidak ada alasan dari server"): dulu kalau server
+      // dipotong (timeout 60 dtk Vercel), body BUKAN JSON -> `d = {}` -> UI
+      // menampilkan pesan generik tanpa sebab. Sekarang dibedakan: respons
+      // non-JSON (kemungkinan timeout) dapat pesan yang menjelaskan.
+      const rawTxt = await res.text().catch(() => '');
+      let d = {};
+      try { d = JSON.parse(rawTxt); } catch { d = {}; }
+      const bodyNonJson = rawTxt && Object.keys(d).length === 0;
       // FIX 2026-10-06 (laporan pemilik: "udah gw pake AI kok tetep ga refresh"):
       //   Dulu server diam-diam fallback ke saran lama saat AI gagal (ok:true),
       //   jadi UI terlihat "tidak refresh" tanpa penjelasan. Sekarang server
@@ -984,7 +991,12 @@ export default function AnalisisAI() {
         setSaranDismiss(new Set());
         setPesanSaranAI({ ok: true, teks: `✓ ${d.saran.length} topik baru dari AI siap dipakai - lihat tag di bawah.` });
       } else {
-        setPesanSaranAI({ ok: false, teks: 'AI gagal bikin topik: ' + (d.error || 'tidak ada alasan dari server.') });
+        const alasanTampil = d.error
+          ? d.error
+          : (bodyNonJson
+            ? 'Server tidak sempat menjawab (timeout 60 detik). Model ini terlalu lambat untuk data sekarang - coba lagi, atau ganti ke model yang lebih cepat.'
+            : 'tidak ada alasan dari server.');
+        setPesanSaranAI({ ok: false, teks: 'AI gagal bikin topik: ' + alasanTampil });
         // Gagal bukan alasan mengunci user 60 dtk - kurangi cooldown supaya
         // bisa langsung coba lagi (mis. setelah ganti model).
         setSaranAICooldown(10);
