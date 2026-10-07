@@ -741,7 +741,18 @@ export async function tanyaGroq(pesan, opsi = {}) {
           totalTokens: data.usage.total_tokens ?? null,
         } : null;
 
-        const teks = data?.choices?.[0]?.message?.content;
+        // ==========================================
+        // FIX 2026-10-07 (AGEN TIDAK PERNAH KELUAR LAPORAN):
+        // Model REASONING (mis. deepseek-v4-flash, o1-style) menaruh hasil
+        // "berpikir" di field `reasoning` dan jawaban akhir di `content`.
+        // Kalau token HABIS saat berpikir (finish_reason='length'), `content`
+        // KOSONG tapi `reasoning` berisi teks panjang. Dulu kode cuma baca
+        // `content` -> dianggap "balasan kosong" -> agen GAGAL SELALU walau
+        // provider & kunci sehat. Sekarang: fallback ke `reasoning` (dibuang
+        // kalimat "thinking"-nya lewat bersihkanJawaban) supaya laporan tetap
+        // keluar walau token pas-pasan.
+        const msg = data?.choices?.[0]?.message;
+        const teks = msg?.content || msg?.reasoning || '';
         if (teks) { catat(true, data?.usage); return { ok: true, teks: bersihkanJawaban(teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage }; }
 
         if (!data?.choices) {
@@ -749,7 +760,14 @@ export async function tanyaGroq(pesan, opsi = {}) {
           if (sse2?.teks) { catat(true, sse2.usage); return { ok: true, teks: bersihkanJawaban(sse2.teks), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: sse2.usage }; }
         }
 
-        terakhir = { kode: res.status, error: 'AI mengirim balasan kosong.' };
+        // Pesan error lebih informatif: sebut kalau token habis untuk reasoning.
+        const finishReason = data?.choices?.[0]?.finish_reason;
+        terakhir = {
+          kode: res.status,
+          error: finishReason === 'length'
+            ? `AI kehabisan token saat berpikir (finish_reason=length). Model reasoning butuh maxTokens lebih besar - naikkan di pengaturan model atau ganti model non-reasoning.`
+            : 'AI mengirim balasan kosong.',
+        };
         // RETRY: model free kadang kosong saat pertama. Coba ulang sekali.
         // FIX 2026-10-04: dulu blok ini mereferensikan `h` dan `payload` yang
         // TIDAK ADA (selalu ReferenceError -> ditelan catch -> retry tidak
@@ -770,7 +788,10 @@ export async function tanyaGroq(pesan, opsi = {}) {
           });
           if (res2.ok) {
             const data2 = await res2.json().catch(() => null);
-            const teks2 = data2?.choices?.[0]?.message?.content;
+            // FIX 2026-10-07: fallback ke reasoning juga di jalur retry
+            // (model reasoning -> content kosong tapi reasoning berisi).
+            const msg2 = data2?.choices?.[0]?.message;
+            const teks2 = msg2?.content || msg2?.reasoning || '';
             if (teks2) { catat(true, data2?.usage); return { ok: true, teks: bersihkanJawaban(teks2), kunciDipakai: i + 1, provider: namaProvider, providerLabel: label, model, usage: data2?.usage || null }; }
           }
         } catch { /* retry gagal - lanjut */ }

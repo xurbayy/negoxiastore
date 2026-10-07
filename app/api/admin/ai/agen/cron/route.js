@@ -78,7 +78,9 @@ export async function GET(request) {
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab bahasa Indonesia santai.' },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     { role: 'user', content: PROMPT_AGEN + '\n\nBuat laporan harian + usulan aksi.' },
-  ], { provider: providerAgen, model: modelAgen, maxTokens: 3000, thinking: 'auto' });
+    // FIX 2026-10-07: maxTokens 8000 (bukan 3000) - model reasoning butuh ruang
+    // berpikir; 3000 habis di reasoning -> content kosong -> laporan tak pernah ada.
+  ], { provider: providerAgen, model: modelAgen, maxTokens: 8000, thinking: 'auto' });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error }, 502);
 

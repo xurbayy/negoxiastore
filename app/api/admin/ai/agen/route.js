@@ -114,10 +114,13 @@ export async function POST(request) {
     model: String(body?.model || '').trim() || undefined,
     // TOKEN & THINKING AGEN DIPATOK SERVER (permintaan pemilik 2026-10-02, revisi
     // 2026-10-04): agen jalan 24/7, jadi efisiensi diatur di sini - bukan dari UI.
-    // 3000 token cukup untuk laporan MENYELURUH (semua bidang).
+    // REVISI 2026-10-07 (agen tidak pernah keluar laporan): 3000 token TERLALU
+    // KECIL untuk model reasoning (mis. deepseek-v4-flash) - token habis buat
+    // "berpikir" (finish_reason=length) sehingga content KOSONG & agen GAGAL
+    // selalu. 8000 memberi ruang berpikir + laporan lengkap.
     // Thinking SELALU 'auto' (permintaan pemilik: "agent default thinking dan
     // ga bisa diubah lagi") - web biarkan provider memutuskan sendiri.
-    maxTokens: 3000,
+    maxTokens: 8000,
     thinking: 'auto',
   });
 
