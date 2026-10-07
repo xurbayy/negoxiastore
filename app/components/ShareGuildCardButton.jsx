@@ -13,7 +13,9 @@ import { avatarUser } from '../lib/avatarClient';
 // rasio aman untuk media sosial) berisi:
 //   - Header gelap: wordmark NEXO + pill peringkat guild (#N)
 //   - Emoji + nama guild + kode + jumlah member
-//   - 3 tile: Total Poin / War Wins / Member
+//   - 4 tile: LEVEL (:sun58:) / Total Poin (:goldcoin:) / WINRATE
+//     (:ClashingSwords:) / Member (:users0:) - emoji SAMA dengan bot,
+//     level & winrate pakai rumus SAMA (satu sumber, tidak mungkin beda)
 //   - DAFTAR SEMUA ANGGOTA (owner, admin, member) + POIN MASING-MASING,
 //     supaya orang paham "kok total poinnya segini" (transparan, permintaan
 //     pemilik). Pemegang NEXO Pass dapat badge resmi TEPAT di samping namanya
@@ -55,12 +57,13 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
       // Semua gambar dimuat paralel. Emoji custom pakai PNG STATIS
       // (emojiSrcStatis) karena canvas tidak bisa menggambar GIF.
       // SEMUA emoji = emoji RESMI bot (permintaan pemilik 2026-10-07):
-      //   goldcoin = Poin, ClashingSwords = War, users0 (group) = Member,
-      //   crown/admin/member = peran anggota (sama dengan roleIcons bot).
-      const [coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
+      //   sun58 = Level, goldcoin = Poin, ClashingSwords (swords) = Winrate,
+      //   users0 (group) = Member, crown/admin/member = peran anggota.
+      const [coinImg, swordsImg, groupImg, sunImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
         loadImg(emojiSrcStatis('goldcoin', 128)),
-        loadImg(emojiSrcStatis('swords', 128)),    // :ClashingSwords: - tile War
+        loadImg(emojiSrcStatis('swords', 128)),    // :ClashingSwords: - tile Winrate
         loadImg(emojiSrcStatis('group', 128)),     // :users0: - tile Member
+        loadImg(emojiSrcStatis('sun58', 128)),     // :sun58: - tile Level
         loadImg(emojiSrcStatis('crown', 128)),
         loadImg(emojiSrcStatis('admin', 128)),
         loadImg(emojiSrcStatis('member', 128)),
@@ -75,7 +78,7 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
 
       const canvas = await renderCard({
         detail: d, anggota,
-        coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
+        coinImg, swordsImg, groupImg, sunImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
       });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
@@ -245,7 +248,7 @@ function tokenEmojiUrl(token) {
 // ─────────────────────────────────────────────────────────────
 // Render kartu 1080x1350
 // ─────────────────────────────────────────────────────────────
-async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
+async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, sunImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
   const W = 1080;
   const H = 1350;
   const canvas = document.createElement('canvas');
@@ -340,19 +343,27 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   ctx.fillText(potongByLebar(ctx, detail.name || 'Guild', W - 220), W / 2, ecy + er + 70);
   ctx.fillStyle = '#6E6157';
   ctx.font = `600 26px ${FONT}`;
-  ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member`, W - 220), W / 2, ecy + er + 116);
+  // Sub-judul: kode + member + winrate (W/L) - winrate penting untuk dilihat
+  // sebelum masuk daftar anggota. "Belum war" kalau tidak ada war.
+  const wrTxt = detail.warWins > 0 || detail.warLosses > 0
+    ? `${detail.warWins}W / ${detail.warLosses}L`
+    : 'Belum war';
+  ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member  ·  ${wrTxt}`, W - 220), W / 2, ecy + er + 116);
 
-  // ── 3 tile statistik - emoji SAMA dengan embed bot nxguild:
-  //    :goldcoin: Poin · :ClashingSwords: War · :users0: Member ──
+  // ── 4 tile statistik - emoji SAMA dengan embed bot nxguild:
+  //    :sun58: Level · :goldcoin: Poin · :ClashingSwords: Winrate ·
+  //    :users0: Member. 4 kolom dalam 1 baris supaya tinggi kartu tidak
+  //    berubah (daftar anggota tetap dapat ruang yang sama). ──
   const tileY = 482;
   const tileH = 132;
   const tiles = [
+    { icon: sunImg, label: 'Level', value: String(detail.level ?? '-') },
     { icon: coinImg, label: 'Total Poin', value: fmtRingkas(detail.points) },
-    { icon: swordsImg, label: 'War', value: detail.warWins > 0 || detail.warLosses > 0 ? `${detail.warWins}W / ${detail.warLosses}L` : 'Belum war' },
+    { icon: swordsImg, label: 'Winrate', value: detail.winrate != null ? `${detail.winrate}%` : '-' },
     { icon: groupImg, label: 'Member', value: `${detail.membersCount}/10` },
   ];
-  const gap = 20;
-  const tileW = (W - 128 - gap * 2) / 3;
+  const gap = 16;
+  const tileW = (W - 128 - gap * 3) / 4;
   for (let i = 0; i < tiles.length; i++) {
     const tx = 64 + i * (tileW + gap);
     ctx.fillStyle = '#F4EEDF';
@@ -366,17 +377,17 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
     if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 20, tileY + 24, 40, 40);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#2B2118';
-    // Auto-shrink: "Belum war" / "12W / 8L" bisa lebih lebar dari tile -
+    // Auto-shrink: nilai panjang ("46,4 jt") bisa lebih lebar dari tile -
     // kecilkan font bertahap sampai muat (pola sama kartu profil pemain).
-    let uk = 44;
+    let uk = 40;
     ctx.font = `800 ${uk}px ${FONT}`;
-    while (ctx.measureText(tiles[i].value).width > tileW - 32 && uk > 22) {
+    while (ctx.measureText(tiles[i].value).width > tileW - 24 && uk > 20) {
       uk -= 2;
       ctx.font = `800 ${uk}px ${FONT}`;
     }
     ctx.fillText(tiles[i].value, tcx, tileY + 96);
     ctx.fillStyle = '#A99C8E';
-    ctx.font = `700 20px ${FONT}`;
+    ctx.font = `700 18px ${FONT}`;
     ctx.fillText(tiles[i].label.toUpperCase(), tcx, tileY + 122);
     ctx.textAlign = 'left';
   }

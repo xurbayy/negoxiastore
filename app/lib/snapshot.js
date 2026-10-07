@@ -329,6 +329,35 @@ export async function getLiveLeaderboard(limit = 10) {
   });
 }
 
+// ==========================================
+// LEVEL & WINRATE GUILD - SISI WEB (2026-10-07)
+// ==========================================
+// RUMUS SAMA PERSIS dengan bot (utils/guildDatabase.js): level dihitung dari
+// total poin dengan kurva 500.000 × n^1.5. Disimpan di sini (bukan cuma
+// dipakai dari payload bot) supaya query langsung getLiveGuildBoard/
+// getLiveGuildDetail juga menghasilkan angka yang SAMA - satu kebenaran.
+const GUILD_LEVEL_BASE = 500_000;
+export function hitungLevelGuild(totalPoints) {
+  const pts = Math.max(0, Number(totalPoints) || 0);
+  let level = 1;
+  let sisa = pts;
+  while (level < 500) {
+    const butuh = Math.floor(GUILD_LEVEL_BASE * Math.pow(level, 1.5));
+    if (sisa < butuh) break;
+    sisa -= butuh;
+    level++;
+  }
+  const butuhLevel = Math.floor(GUILD_LEVEL_BASE * Math.pow(level, 1.5));
+  return { level, xpDiLevel: sisa, xpButuhLevel: butuhLevel };
+}
+// Winrate: menang berapa, kalah berapa, persennya berapa (null kalau belum war).
+export function hitungWinrateGuild(warWins, warLosses) {
+  const w = Math.max(0, Number(warWins) || 0);
+  const l = Math.max(0, Number(warLosses) || 0);
+  const total = w + l;
+  return { wins: w, losses: l, total, pct: total > 0 ? Math.round((w / total) * 100) : null };
+}
+
 // Leaderboard GUILD langsung dari DB bot (public.guilds + jumlah member).
 // EMOJI GUILD (2026-10-05): kolom `emoji` ikut diambil - bot menyimpan emoji
 // guild TERPISAH dari nama (token Discord <:nama:id> / <a:nama:id>), persis
@@ -341,22 +370,36 @@ export async function getLiveGuildBoard(limit = 10) {
       await schemaReady();
       const db = getDb();
       const res = await db.execute(
-        `SELECT g.guild_code, g.name, g.emoji, g.war_wins, g.total_points,
+        `SELECT g.guild_code, g.name, g.emoji, g.war_wins, g.war_losses, g.total_points,
                 (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
            FROM public.guilds g
           ORDER BY g.total_points DESC
           LIMIT ?`,
         [limit]
       );
-      return res.rows.map((row, i) => ({
-        rank: i + 1,
-        code: row.guild_code,
-        name: row.name || 'Guild',
-        emoji: row.emoji || null,
-        warWins: Number(row.war_wins || 0),
-        points: Number(row.total_points || 0),
-        members: Number(row.members || 0),
-      }));
+      return res.rows.map((row, i) => {
+        const pts = Number(row.total_points || 0);
+        const w = Number(row.war_wins || 0);
+        const l = Number(row.war_losses || 0);
+        const lvl = hitungLevelGuild(pts);
+        const wr = hitungWinrateGuild(w, l);
+        return {
+          rank: i + 1,
+          code: row.guild_code,
+          name: row.name || 'Guild',
+          emoji: row.emoji || null,
+          warWins: w,
+          warLosses: l,
+          // LEVEL & WINRATE (permintaan pemilik 2026-10-07): rumus SAMA
+          // dengan bot - ditampilkan di web + bot, angka tidak mungkin beda.
+          level: lvl.level,
+          xpDiLevel: lvl.xpDiLevel,
+          xpButuhLevel: lvl.xpButuhLevel,
+          winrate: wr.pct,
+          points: pts,
+          members: Number(row.members || 0),
+        };
+      });
     });
     return r || [];
   });
@@ -378,7 +421,7 @@ export async function getLiveGuildDetail(code) {
     const r = await safeQuery(async () => {
       await schemaReady();
       const db = getDb();
-      const [guildRes, memberRes] = await Promise.all([
+      const [guildRes, memberRes, warRes] = await Promise.all([
         db.execute(
           `SELECT g.guild_code, g.name, g.emoji, g.bio, g.owner_id, g.war_wins, g.war_losses,
                   g.total_points, g.created_at,
@@ -398,6 +441,21 @@ export async function getLiveGuildDetail(code) {
                      u.points DESC`,
           [Date.now(), kode]
         ),
+        // RIWAYAT WAR (permintaan pemilik 2026-10-07): 10 war terakhir guild
+        // ini - lawan siapa, hasilnya apa. Sumber SAMA dengan bot (tabel
+        // guild_wars status='ended'). Ditampilkan di modal + kartu share.
+        db.execute(
+          `SELECT w.id, w.guild_a, w.guild_b, w.winner, w.ended_at, w.started_at,
+                  ga.name AS name_a, ga.emoji AS emoji_a,
+                  gb.name AS name_b, gb.emoji AS emoji_b
+             FROM public.guild_wars w
+             LEFT JOIN public.guilds ga ON ga.guild_code = w.guild_a
+             LEFT JOIN public.guilds gb ON gb.guild_code = w.guild_b
+            WHERE w.status = 'ended' AND (w.guild_a = ? OR w.guild_b = ?)
+            ORDER BY w.id DESC
+            LIMIT 10`,
+          [kode, kode]
+        ),
       ]);
       const g = guildRes.rows?.[0];
       if (!g) return null;
@@ -413,6 +471,19 @@ export async function getLiveGuildDetail(code) {
       const owner = anggota.find((m) => m.role === 'owner') || null;
       const admins = anggota.filter((m) => m.role === 'admin');
       const members = anggota.filter((m) => m.role !== 'owner' && m.role !== 'admin');
+      const warHistory = (warRes.rows || []).map((w) => {
+        const akuA = w.guild_a === kode;
+        return {
+          id: Number(w.id),
+          lawanCode: akuA ? w.guild_b : w.guild_a,
+          lawanNama: (akuA ? w.name_b : w.name_a) || (akuA ? w.guild_b : w.guild_a),
+          lawanEmoji: (akuA ? w.emoji_b : w.emoji_a) || null,
+          hasil: w.winner === 'draw' ? 'draw' : (w.winner === kode ? 'menang' : 'kalah'),
+          endedAt: w.ended_at || w.started_at || null,
+        };
+      });
+      const lvl = hitungLevelGuild(g.total_points);
+      const wr = hitungWinrateGuild(g.war_wins, g.war_losses);
       return {
         code: g.guild_code,
         name: g.name || 'Guild',
@@ -420,8 +491,14 @@ export async function getLiveGuildDetail(code) {
         bio: g.bio || null,
         ownerId: g.owner_id ? String(g.owner_id) : null,
         points: Number(g.total_points || 0),
-        warWins: Number(g.war_wins || 0),
-        warLosses: Number(g.war_losses || 0),
+        warWins: wr.wins,
+        warLosses: wr.losses,
+        // LEVEL & WINRATE (permintaan pemilik 2026-10-07): angka SAMA dengan
+        // bot (rumus hitungLevelGuild/hitungWinrateGuild).
+        level: lvl.level,
+        xpDiLevel: lvl.xpDiLevel,
+        xpButuhLevel: lvl.xpButuhLevel,
+        winrate: wr.pct,
         membersCount: Number(g.members || 0),
         // Peringkat guild di papan (dipakai pill "#N" di kartu share).
         rank: Number(g.rank || 1),
@@ -429,6 +506,7 @@ export async function getLiveGuildDetail(code) {
         owner,
         admins,
         members,
+        warHistory,
       };
     });
     return r;

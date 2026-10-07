@@ -18,6 +18,9 @@ import ShareGuildCardButton from '../components/ShareGuildCardButton';
 //     anggota + poin + badge NEXO Pass di samping nama pemegangnya)
 //   - Kalau user login & punya guild: barisnya DI-HIGHLIGHT + pill "Guild
 //     Kamu" (permintaan pemilik 2026-10-07, pola sama pill "Kamu" pemain)
+//   - KOLOM BARU (permintaan pemilik 2026-10-07): LEVEL (dari total poin,
+//     rumus sama dengan bot) + WINRATE (W/L + persen, emoji bot:
+//     :sun58: level, :ClashingSwords: war)
 // Login hanya dibutuhkan saat klik share (dicek di sisi klien), sama seperti
 // kartu pemain. Data tabel tetap dari server (getLiveGuildBoard) - komponen
 // ini hanya menangani interaksi. `myGuildCode` dari server (getUserGuild).
@@ -25,6 +28,14 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
   const [selected, setSelected] = useState(null);
   const isMyGuild = (code) => myGuildCode && code && String(code) === String(myGuildCode);
   const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
+
+  // Winrate ditampilkan "3W / 2L (60%)" - "Belum war" kalau 0 war (null).
+  const teksWinrate = (g) => {
+    const w = Number(g.warWins || 0);
+    const l = Number(g.warLosses || 0);
+    if (w + l === 0) return 'Belum war';
+    return `${w}W / ${l}L (${g.winrate != null ? g.winrate : Math.round((w / (w + l)) * 100)}%)`;
+  };
 
   return (
     <section className="mt-12" aria-labelledby="lb-guild">
@@ -41,14 +52,15 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
               <th scope="col" className="px-4 py-3">#</th>
               <th scope="col" className="px-4 py-3">Guild</th>
+              <th scope="col" className="px-4 py-3 text-right">Level</th>
               <th scope="col" className="px-4 py-3 text-right">Total Poin</th>
-              <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">War Wins</th>
+              <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">Winrate</th>
               <th scope="col" className="px-4 py-3 text-right">Member</th>
             </tr>
           </thead>
           <tbody>
             {guilds.length === 0 && (
-              <tr><td colSpan="5" className="px-4 py-6 text-center text-ink-muted">Belum ada guild terdaftar.</td></tr>
+              <tr><td colSpan="6" className="px-4 py-6 text-center text-ink-muted">Belum ada guild terdaftar.</td></tr>
             )}
             {guilds.map((g) => {
               // Guard: fallback snapshot lama tidak punya `code` - kalau tidak
@@ -90,8 +102,27 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                     {adaKode && <ShareGuildCardButton guild={g} loggedIn={loggedIn} />}
                   </div>
                 </td>
+                {/* LEVEL: emoji :sun58: SAMA dengan bot (nxg/nxlb). */}
+                <td className="px-4 py-3 text-right">
+                  <span className="inline-flex items-center gap-1.5 font-display text-ink" title={`${(g.xpDiLevel || 0).toLocaleString('id-ID')} / ${(g.xpButuhLevel || 0).toLocaleString('id-ID')} poin ke level berikutnya`}>
+                    {emojiSrc('sun58') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={emojiSrc('sun58')} alt="" width={16} height={16} className="inline h-4 w-4" />
+                    )}
+                    {g.level ?? '-'}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-right" title={fmtPenuh(g.points)}>{fmtRingkas(g.points)}</td>
-                <td className="hidden px-4 py-3 text-right text-ink-muted sm:table-cell">{g.warWins}</td>
+                {/* WINRATE: emoji :ClashingSwords: SAMA dengan bot. */}
+                <td className="hidden px-4 py-3 text-right text-ink-muted sm:table-cell">
+                  <span className="inline-flex items-center gap-1.5">
+                    {emojiSrc('swords') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={emojiSrc('swords')} alt="" width={16} height={16} className="inline h-4 w-4" />
+                    )}
+                    {teksWinrate(g)}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-right text-ink-muted">{g.members}</td>
               </tr>
               );

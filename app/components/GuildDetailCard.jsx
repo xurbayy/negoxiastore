@@ -4,6 +4,7 @@ import { cloneElement, useEffect, useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
+import { stripEmojiToken } from '../lib/textUtil';
 import GuildEmoji from './GuildEmoji';
 
 // ==========================================
@@ -11,7 +12,8 @@ import GuildEmoji from './GuildEmoji';
 // ==========================================
 // Muncul saat NAMA GUILD di tabel "Guild Terkuat" diklik. Isi:
 //   - Header: emoji + nama guild + kode + bio + tombol bagikan
-//   - Statistik: Total Poin / War Wins / Member
+//   - Statistik: LEVEL / Total Poin / WINRATE / Member (4 tile)
+//   - RIWAYAT WAR: 10 war terakhir (lawan, hasil, tanggal)
 //   - OWNER, ADMIN (kalau ada), MEMBER: avatar, emoji peran di DEPAN nama,
 //     level, badge NEXO Pass, dan POIN MASING-MASING - transparan, orang
 //     bisa lihat kenapa total poin guild segitu (bukan angka misterius).
@@ -19,12 +21,15 @@ import GuildEmoji from './GuildEmoji';
 // EMOJI = PERSIS EMBED BOT nxguild (permintaan pemilik 2026-10-07: "untuk
 // ini semua gunakan emoji yang ada di bot"):
 //   :stats: Statistik   -> chart   (1517007751002460330)
+//   :sun58: Level guild -> sun58   (1516386653365866597)
 //   :goldcoin: Poin     -> goldcoin (1516390096419684422)
 //   :ClashingSwords:    -> swords   (1516375357031321730)
 //   :users0: Member     -> group    (1516381292986634300)
 //   :Crown: owner       -> crown    (1516383025531846816)
 //   :admin: admin       -> admin    (1517019924097404948)
 //   :SVD_member: member -> member   (1517021034069491883)
+//   :book: riwayat      -> book     (1516379457366134804)
+//   hasil war: ceklis (menang) / silang (kalah) / shield (draw)
 // Baris anggota meniru format bot: ":Crown: xurbayy • Lv.89 • 3,884,375 pts".
 //
 // Data diambil dari /api/guild/[code] saat modal dibuka - halaman leaderboard
@@ -112,7 +117,9 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
         {guild && (
           <>
             {/* Statistik guild - emoji SAMA dengan embed bot nxguild:
-                :stats: judul, :goldcoin: poin, :ClashingSwords: war, :users0: member */}
+                :stats: judul, :sun58: level, :goldcoin: poin, :ClashingSwords:
+                war/winrate, :users0: member. 4 tile = grid-cols-2 di HP,
+                4 kolom di layar >=sm supaya angka tidak sesak. */}
             <div className="border-t border-border-soft px-5 py-3">
               <p className="flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">
                 {emojiSrc('chart') && (
@@ -122,10 +129,67 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
                 Statistik
               </p>
             </div>
-            <div className="grid grid-cols-3 items-stretch gap-2 px-5 pb-4 pt-1">
+            <div className="grid grid-cols-2 items-stretch gap-2 px-5 pb-4 pt-1 sm:grid-cols-4">
+              <GuildStat
+                icon="sun58"
+                label="Level"
+                value={String(guild.level ?? '-')}
+                full={guild.xpButuhLevel ? `${(guild.xpDiLevel || 0).toLocaleString('id-ID')} / ${guild.xpButuhLevel.toLocaleString('id-ID')} poin ke level berikutnya` : undefined}
+              />
               <GuildStat icon="goldcoin" label="Total Poin" value={fmtRingkas(guild.points)} full={fmtPenuh(guild.points)} />
-              <GuildStat icon="swords" label="War" value={guild.warWins > 0 || guild.warLosses > 0 ? `${guild.warWins}W / ${guild.warLosses}L` : 'Belum war'} />
+              <GuildStat
+                icon="swords"
+                label="Winrate"
+                value={guild.winrate != null ? `${guild.winrate}%` : 'Belum war'}
+                full={guild.warWins > 0 || guild.warLosses > 0 ? `${guild.warWins} menang / ${guild.warLosses} kalah` : 'Belum pernah war'}
+              />
               <GuildStat icon="group" label="Member" value={`${guild.membersCount}/10`} />
+            </div>
+
+            {/* RIWAYAT WAR (permintaan pemilik 2026-10-07): 10 war terakhir -
+                lawan siapa, hasilnya apa. Emoji hasil SAMA dengan bot
+                (:ceklis: menang, :silang: kalah, :shield: draw). */}
+            <div className="border-t border-border-soft px-5 py-4">
+              <p className="mb-2 flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">
+                {emojiSrc('book') && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={emojiSrc('book')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
+                )}
+                Riwayat War (10 Terakhir)
+              </p>
+              {(guild.warHistory || []).length === 0 ? (
+                <p className="rounded-lg bg-white/60 px-3 py-2 text-[0.7rem] text-ink-muted">
+                  Belum ada riwayat war. Tantang guild lain lewat <code className="font-mono">nxguild</code>!
+                </p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {guild.warHistory.map((h) => {
+                    // Tanggal aman: normalisasi offset "+00" -> "+00:00"
+                    // (tanpa ini Date INVALID di beberapa browser).
+                    let tanggal = '-';
+                    try {
+                      const norm = String(h.endedAt).replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00');
+                      const d = new Date(norm);
+                      if (!isNaN(d.getTime())) tanggal = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
+                    } catch { /* '-' */ }
+                    const icon = h.hasil === 'menang' ? 'ceklis' : h.hasil === 'kalah' ? 'silang' : 'shield';
+                    const warna = h.hasil === 'menang' ? 'text-accent-hover' : h.hasil === 'kalah' ? 'text-ink-muted' : 'text-ink-faint';
+                    return (
+                      <li key={h.id} className="flex items-center gap-2.5 rounded-xl border border-border-soft bg-white/60 px-3 py-2">
+                        {emojiSrc(icon) && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={emojiSrc(icon)} alt={h.hasil} title={h.hasil} width={16} height={16} className="h-4 w-4 shrink-0" />
+                        )}
+                        <span className={`shrink-0 text-[0.6rem] font-bold uppercase tracking-wider ${warna}`}>{h.hasil}</span>
+                        <span className="min-w-0 flex-1 truncate text-xs text-ink-muted">
+                          vs <GuildEmoji token={h.lawanEmoji} size={13} /> <span className="font-semibold text-ink">{stripEmojiToken(h.lawanNama)}</span>
+                        </span>
+                        <span className="shrink-0 text-[0.65rem] text-ink-faint">{tanggal}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
 
             {/* Anggota: OWNER dulu, lalu ADMIN, lalu MEMBER.
