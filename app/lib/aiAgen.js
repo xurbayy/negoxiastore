@@ -164,6 +164,30 @@ export const PROMPT_AGEN = [
   '- Setiap usulan WAJIB punya alasan (angka) dan risiko (jujur & spesifik).',
   '- Kalau tidak ada yang layak, tulis "Tidak ada usulan hari ini."',
   '- Jangan mengarang angka. Kalau data tidak ada, katakan tidak ada.',
+  '',
+  // ==========================================
+  // ANTI-HALUSINASI (FIX 2026-10-07): laporan agen beberapa kali SALAH karena
+  // menebak isi kode dari cuplikan kecil (yang dikirim cuma ~5000-9000 karakter
+  // dari 73.000+ baris). Contoh nyata salah: bilang "emoji hardcode bikin crash"
+  // padahal fallback-nya ada di baris berikutnya; bilang "matchId Date.now()"
+  // padahal kodenya `context.id || Date.now()`; bilang "SQL injection" padahal
+  // semua pakai prepared statement. Aturan di bawah WAJIB dipatuhi.
+  // ==========================================
+  'ATURAN BUKTI (WAJIB - laporan yang melanggar ini akan menyesatkan pemilik):',
+  '- Kamu HANYA melihat CUPLIKAN kode (bukan file lengkap). JANGAN menyimpulkan',
+  '  isi file dari cuplikan. Kalau cuplikan tidak menunjukkan masalah, JANGAN',
+  '  tulis masalah di file itu.',
+  '- Setiap klaim soal KODE wajib menyebut: nama file + nama fungsi + KUTIPAN',
+  '  baris yang kamu lihat di data. Kalau tidak bisa mengutip, JANGAN klaim.',
+  '- DILARANG menulis kata "race condition", "SQL injection", "crash", "celah",',
+  '  "eksploit" TANPA kutipan kode yang membuktikannya dari data yang dikirim.',
+  '- Cuplikan yang kamu lihat mungkin BARIS TENGAH fungsi - jangan menyimpulkan',
+  '  bagian awal/akhir fungsi yang tidak terlihat (fallback, guard, validasi',
+  '  sering ada di baris yang tidak dikirim).',
+  '- Kalau kamu hanya MENDuga (bukan bukti), tulis dengan awalan "DUGAAN (perlu',
+  '  cek manual):" - jangan campur dengan temuan berbukti.',
+  '- Lebih baik melaporkan SEDIKIT temuan yang terbukti daripada banyak temuan',
+  '  yang menebak. Pemilik memakai laporan ini untuk keputusan nyata.',
 ].join('\n');
 
 /**
