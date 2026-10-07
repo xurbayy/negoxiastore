@@ -1,1 +1,0 @@
-NAMA=party GIF=true URL=https://cdn.discordapp.com/emojis/1516446871785046149.gif?size=64&quality=lossless
