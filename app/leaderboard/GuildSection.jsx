@@ -49,8 +49,8 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
         )}
         Top 10 Guild Terkuat
       </h2>
-      <div className="nx-card mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className="nx-card nx-scroll mt-4 overflow-x-auto">
+        <table className="min-w-[660px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
               <th scope="col" className="px-4 py-3">#</th>
@@ -108,11 +108,11 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                     {adaKode && <ShareGuildCardButton guild={g} loggedIn={loggedIn} />}
                   </div>
                 </td>
-                {/* LEVEL: TANPA emoji (permintaan pemilik 2026-10-07:
-                    "pada level ga perlu pake emoji tambahan"). Tooltip
-                    tetap menjelaskan progres poin. */}
+                {/* LEVEL: TANPA emoji (permintaan pemilik 2026-10-07) +
+                    level = DARI MENANG WAR (revisi: "level itu diambil dari
+                    win di guild itu") - tooltip tampilkan progres menang. */}
                 <td className="px-4 py-3 text-right">
-                  <span className="font-display text-ink" title={`${(g.xpDiLevel || 0).toLocaleString('id-ID')} / ${(g.xpButuhLevel || 0).toLocaleString('id-ID')} poin ke level berikutnya`}>
+                  <span className="font-display text-ink" title={`${g.xpDiLevel || 0} / ${g.xpButuhLevel || 0} menang lagi ke level berikutnya`}>
                     {g.level ?? '-'}
                   </span>
                 </td>

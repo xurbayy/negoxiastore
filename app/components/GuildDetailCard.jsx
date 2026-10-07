@@ -137,7 +137,7 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
               <GuildStat
                 label="Level"
                 value={String(guild.level ?? '-')}
-                full={guild.xpButuhLevel ? `${(guild.xpDiLevel || 0).toLocaleString('id-ID')} / ${guild.xpButuhLevel.toLocaleString('id-ID')} poin ke level berikutnya` : undefined}
+                full={guild.xpButuhLevel ? `${guild.xpDiLevel || 0} / ${guild.xpButuhLevel} menang lagi ke level berikutnya` : undefined}
               />
               <GuildStat icon="goldcoin" label="Poin" value={fmtRingkas(guild.points)} full={fmtPenuh(guild.points)} />
               <GuildStat
@@ -148,6 +148,32 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
               />
               <GuildStat icon="group" label="Member" value={`${guild.membersCount}/10`} />
             </div>
+
+            {/* PROGRESS BAR LEVEL (permintaan pemilik 2026-10-07:
+                "(6,902,147/13,500,000 pts) gw mau level itu pake progress
+                bar"). Level = DARI MENANG WAR, jadi progresnya satuan menang:
+                "3 / 5 menang lagi ke level 6". Bar lebar penuh di bawah tile. */}
+            {guild.xpButuhLevel > 0 && (
+              <div className="px-5 pb-4">
+                <div className="mb-1 flex items-center justify-between text-[0.62rem] font-semibold text-ink-muted">
+                  <span>Level {guild.level}</span>
+                  <span>{guild.xpDiLevel || 0} / {guild.xpButuhLevel} menang lagi ke level {(guild.level || 0) + 1}</span>
+                </div>
+                <div
+                  className="h-2.5 overflow-hidden rounded-full border border-border-soft bg-white/70"
+                  role="progressbar"
+                  aria-valuenow={guild.xpDiLevel || 0}
+                  aria-valuemin={0}
+                  aria-valuemax={guild.xpButuhLevel}
+                  aria-label={`Progres level ${guild.level} menuju level ${(guild.level || 0) + 1}`}
+                >
+                  <div
+                    className="h-full rounded-full bg-accent transition-all"
+                    style={{ width: `${Math.round(((guild.xpDiLevel || 0) / guild.xpButuhLevel) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Anggota: OWNER dulu, lalu ADMIN, lalu MEMBER.
                 Emoji peran di DEPAN nama + poin masing-masing (transparan),

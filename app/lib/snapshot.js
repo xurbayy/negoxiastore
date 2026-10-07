@@ -330,24 +330,28 @@ export async function getLiveLeaderboard(limit = 10) {
 }
 
 // ==========================================
-// LEVEL & WINRATE GUILD - SISI WEB (2026-10-07)
+// LEVEL & WINRATE GUILD - SISI WEB (2026-10-07, REVISI WIN)
 // ==========================================
-// RUMUS SAMA PERSIS dengan bot (utils/guildDatabase.js): level dihitung dari
-// total poin dengan kurva 500.000 × n^1.5. Disimpan di sini (bukan cuma
-// dipakai dari payload bot) supaya query langsung getLiveGuildBoard/
-// getLiveGuildDetail juga menghasilkan angka yang SAMA - satu kebenaran.
-const GUILD_LEVEL_BASE = 500_000;
-export function hitungLevelGuild(totalPoints) {
-  const pts = Math.max(0, Number(totalPoints) || 0);
+// RUMUS SAMA PERSIS dengan bot (utils/guildDatabase.js getGuildLevel):
+// LEVEL GUILD DIHITUNG DARI JUMLAH MENANG WAR (permintaan pemilik:
+// "level itu diambil dari win di guild itu") - naik dari level n ke n+1
+// butuh n MENANG (deret triangular: Lv.2@1, Lv.3@3, Lv.4@6, Lv.5@10...
+// Lv.10@45 menang; 0 menang = Lv.1). Disimpan di sini (bukan cuma dipakai
+// dari payload bot) supaya query langsung getLiveGuildBoard/getLiveGuildDetail
+// menghasilkan angka SAMA - satu kebenaran.
+// Field xpDiLevel/xpButuhLevel = MENANG di level berjalan / MENANG untuk naik
+// (kontrak payload webBridge dipertahankan, satuan menang bukan poin).
+export function hitungLevelGuild(warWins) {
+  const menang = Math.max(0, Math.floor(Number(warWins) || 0));
   let level = 1;
-  let sisa = pts;
+  let sisa = menang;
   while (level < 500) {
-    const butuh = Math.floor(GUILD_LEVEL_BASE * Math.pow(level, 1.5));
+    const butuh = Math.max(1, Math.floor(level)); // n menang untuk naik dari n
     if (sisa < butuh) break;
     sisa -= butuh;
     level++;
   }
-  const butuhLevel = Math.floor(GUILD_LEVEL_BASE * Math.pow(level, 1.5));
+  const butuhLevel = Math.max(1, Math.floor(level));
   return { level, xpDiLevel: sisa, xpButuhLevel: butuhLevel };
 }
 // Winrate: menang berapa, kalah berapa, persennya berapa (null kalau belum war).
@@ -381,7 +385,8 @@ export async function getLiveGuildBoard(limit = 10) {
         const pts = Number(row.total_points || 0);
         const w = Number(row.war_wins || 0);
         const l = Number(row.war_losses || 0);
-        const lvl = hitungLevelGuild(pts);
+        // LEVEL dari MENANG war (bukan poin) - revisi permintaan pemilik.
+        const lvl = hitungLevelGuild(w);
         const wr = hitungWinrateGuild(w, l);
         return {
           rank: i + 1,
@@ -461,7 +466,7 @@ export async function getLiveGuildDetail(code) {
       const owner = anggota.find((m) => m.role === 'owner') || null;
       const admins = anggota.filter((m) => m.role === 'admin');
       const members = anggota.filter((m) => m.role !== 'owner' && m.role !== 'admin');
-      const lvl = hitungLevelGuild(g.total_points);
+      const lvl = hitungLevelGuild(g.war_wins);
       const wr = hitungWinrateGuild(g.war_wins, g.war_losses);
       return {
         code: g.guild_code,

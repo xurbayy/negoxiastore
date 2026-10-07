@@ -143,6 +143,35 @@ select:focus-visible {
   background: var(--card-dark-2);
 }
 
+/* SCROLLBAR HORIZONTAL TABEL LEADERBOARD (permintaan pemilik 2026-10-07:
+   "pake scroll bar dibawah biar kebaca semua"). Tabel beri min-width ->
+   di HP selalu bisa digeser ke kanan, semua kolom & nama kebaca penuh.
+   Scrollbar dibuat TEBAL + terlihat (track gelap tipis, thumb oranye-coklat)
+   supaya jelas ada kontrol geser di bawah, bukan scrollbar tipis yang
+   menyatu dengan layar. Dipakai wrapper .nx-card.overflow-x-auto di
+   LeaderboardClient + GuildSection. */
+.nx-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) rgba(43, 33, 24, 0.06);
+}
+.nx-scroll::-webkit-scrollbar {
+  height: 12px;
+}
+.nx-scroll::-webkit-scrollbar-track {
+  background: rgba(43, 33, 24, 0.06);
+  border-radius: 999px;
+}
+.nx-scroll::-webkit-scrollbar-thumb {
+  background: var(--line, #E3D9C2);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.nx-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-muted, #6E6157);
+  background-clip: content-box;
+}
+
 /* Inset well */
 .nx-well {
   background: var(--bg-soft);
