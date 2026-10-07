@@ -59,7 +59,12 @@ export async function GET(request) {
       if (!snap) {
         alasan = 'Data snapshot belum tersedia - jalankan bot dulu supaya data terkirim.';
       } else {
-        const konteks = await susunKonteks(snap, {}, { ringkas: true });
+        // FIX 2026-10-07: konteks DIPANGKAS untuk "Cari topik AI" (batasChar 8000).
+        // Tugas ini cuma butuh gambaran umum untuk 8 pertanyaan - konteks penuh
+        // (20.000 char ~ 5000 token) bikin respons 30-60 dtk (mepet timeout 60s
+        // Vercel, kadang gagal). 8000 char ~ 2000 token jauh lebih cepat dan
+        // bagian depan (ringkasan, server, game, toko) tetap lengkap.
+        const konteks = await susunKonteks(snap, {}, { ringkas: true, batasChar: 8000 });
         const hasil = await tanyaGroq([
           { role: 'system', content: 'Kamu asisten analisis NEXO. Tugas: usulkan pertanyaan analisis PALING relevan dengan kondisi data saat ini. Bahasa Indonesia santai.' },
           { role: 'user', content: 'DATA NEXO SAAT INI:\n\n' + konteks },

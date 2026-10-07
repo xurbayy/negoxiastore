@@ -884,7 +884,15 @@ export async function susunKonteks(snap, panel = {}, opsi = {}) {
   // FEEDBACK, TREN - padahal agen butuh itu untuk laporan lengkap.
   // 20000 char ~ 5000 token - cukup untuk SEMUA bagian (server, toko, promo,
   // pinjaman bernama, profil pemain, log error, pendapatan, log admin, feedback).
-  const BATAS_KONTEKS = 20000;
+  //
+  // FIX 2026-10-07 ("Cari topik AI" timeout): pemanggil boleh minta batas LEBIH
+  // KECIL lewat opsi.batasChar. "Cari topik AI" cuma butuh gambaran umum untuk
+  // 8 pertanyaan - konteks 5000 token bikin respons 30-60 dtk (mepet batas
+  // 60 dtk Vercel -> timeout). Dengan 8000 char (~2000 token) respons jauh
+  // lebih cepat tanpa kehilangan bagian depan (ringkasan, server, game, toko).
+  const BATAS_KONTEKS = Number.isFinite(Number(opsi.batasChar)) && Number(opsi.batasChar) > 2000
+    ? Number(opsi.batasChar)
+    : 20000;
   let teks = L.join('\n');
   if (teks.length > BATAS_KONTEKS) {
     // Buang bagian belakang sampai muat. Setiap bagian dipisah '### '.
