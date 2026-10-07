@@ -16,8 +16,10 @@ import { avatarUser } from '../lib/avatarClient';
 //   - 3 tile: Total Poin / War Wins / Member
 //   - DAFTAR SEMUA ANGGOTA (owner, admin, member) + POIN MASING-MASING,
 //     supaya orang paham "kok total poinnya segini" (transparan, permintaan
-//     pemilik). Pemegang NEXO Pass dapat badge resmi di samping namanya.
-//     Penanda peran: mahkota = owner, tameng = admin.
+//     pemilik). Pemegang NEXO Pass dapat badge resmi TEPAT di samping namanya
+//     (permintaan pemilik: "muncul di samping namanya"), poin pakai emoji
+//     goldcoin, dan ikon peran resmi bot: crown = owner, admin = admin,
+//     member = member (pola sama dengan daftar anggota di Discord).
 //   - Strip CTA + domain
 //
 // Share: Web Share API (HP) / unduh + tautan clipboard (desktop).
@@ -52,12 +54,15 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
 
       // Semua gambar dimuat paralel. Emoji custom pakai PNG STATIS
       // (emojiSrcStatis) karena canvas tidak bisa menggambar GIF.
-      const [coinImg, trophyImg, userImg, crownImg, shieldImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
+      // Ikon peran = emoji RESMI bot (sama dengan daftar anggota di Discord):
+      // crown = owner, admin = admin, member = member.
+      const [coinImg, trophyImg, userImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
         loadImg(emojiSrcStatis('goldcoin', 128)),
         loadImg(emojiSrcStatis('trophy', 128)),
         loadImg(emojiSrcStatis('user', 128)),
         loadImg(emojiSrcStatis('crown', 128)),
-        loadImg(emojiSrcStatis('shield', 128)),
+        loadImg(emojiSrcStatis('admin', 128)),
+        loadImg(emojiSrcStatis('member', 128)),
         loadImg(emojiSrcStatis('download3', 128)), // merek NEXO Pass resmi
         loadImg(emojiSrcStatis('castle', 128)),    // cadangan kalau emoji guild kosong
         loadImg('/nexo-logo-256.png'),
@@ -69,7 +74,7 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
 
       const canvas = await renderCard({
         detail: d, anggota,
-        coinImg, trophyImg, userImg, crownImg, shieldImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
+        coinImg, trophyImg, userImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
       });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
@@ -239,7 +244,7 @@ function tokenEmojiUrl(token) {
 // ─────────────────────────────────────────────────────────────
 // Render kartu 1080x1350
 // ─────────────────────────────────────────────────────────────
-async function renderCard({ detail, anggota, coinImg, trophyImg, userImg, crownImg, shieldImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
+async function renderCard({ detail, anggota, coinImg, trophyImg, userImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
   const W = 1080;
   const H = 1350;
   const canvas = document.createElement('canvas');
@@ -430,40 +435,54 @@ async function renderCard({ detail, anggota, coinImg, trophyImg, userImg, crownI
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(acx, acy, avr, 0, Math.PI * 2); ctx.stroke();
 
-    // Poin (rata kanan) - lalu badge NEXO Pass & ikon peran dihitung dari kiri
+    // ── Tata letak baris (diperbaiki 2026-10-07) ──
+    // URUTAN dari kiri: avatar → ikon peran → NAMA → badge NEXO Pass
+    // (NEMPEL di samping nama, permintaan pemilik) → ... → poin + goldcoin
+    // (rata kanan). Versi lama menaruh badge/ikon dari arah KANAN sehingga
+    // mengambang di tengah sel saat nama pendek - terlihat tidak nyambung.
+    const role = String(m.role || 'member').toLowerCase();
+    const nameX = acx + avr + 12;
+    let cursor = nameX;
+
+    // Ikon peran resmi bot SEBELUM nama (pola daftar anggota Discord).
+    const roleImg = role === 'owner' ? crownImg : role === 'admin' ? adminImg : memberImg;
+    if (roleImg) {
+      ctx.drawImage(roleImg, cursor, acy - 12, 24, 24);
+      cursor += 24 + 8;
+    }
+
+    // Blok kanan: poin + goldcoin (selalu rata kanan).
     const ptsTxt = fmtRingkas(m.points);
     ctx.font = `700 26px ${FONT}`;
     const ptsW = ctx.measureText(ptsTxt).width;
+    const coinD = 24;
     const ptsRight = x0 + cellW - 16;
+    const coinX = ptsRight - ptsW - 8 - coinD; // koin persis sebelum angka
     ctx.fillStyle = '#2B2118';
     ctx.textAlign = 'right';
     ctx.fillText(ptsTxt, ptsRight, acy + 9);
     ctx.textAlign = 'left';
-    let cursor = ptsRight - ptsW - 12;
+    if (coinImg) ctx.drawImage(coinImg, coinX, acy - coinD / 2, coinD, coinD);
+    const kananMulai = coinX - 10; // batas blok kanan (badge NP tidak boleh lewat)
 
-    // Badge NEXO Pass (kalau premium) - PERSIS di samping nama, seperti
-    // di leaderboard web & Discord.
-    if (m.premium && nexopassImg) {
-      gambarBadgeNexoPass(ctx, cursor - 14, acy, 28, nexopassImg);
-      cursor -= 28 + 8;
-    }
-
-    // Ikon peran: mahkota = owner, tameng = admin (member polos).
-    const role = String(m.role || 'member').toLowerCase();
-    if (role === 'owner' && crownImg) {
-      ctx.drawImage(crownImg, cursor - 22, acy - 11, 22, 22);
-      cursor -= 22 + 8;
-    } else if (role === 'admin' && shieldImg) {
-      ctx.drawImage(shieldImg, cursor - 22, acy - 11, 22, 22);
-      cursor -= 22 + 8;
-    }
-
-    // Nama (dipotong agar tidak menabrak badge/poin)
-    const nameX = acx + avr + 12;
-    const nameMax = Math.max(60, cursor - nameX - 6);
+    // Nama: dipotong agar MUAT antara kursor kiri dan blok kanan. Kalau
+    // premium, sisakan ruang badge (28 + jarak 8) supaya badge tidak PERNAH
+    // menimpa teks nama (kasus nama sangat panjang di sel 466px).
+    const ruangBadge = m.premium && nexopassImg ? 36 : 0;
+    const nameMax = Math.max(60, kananMulai - cursor - ruangBadge);
+    const namaTeks = potongByLebar(ctx, m.username || '?', nameMax);
     ctx.fillStyle = '#2B2118';
     ctx.font = `700 26px ${FONT}`;
-    ctx.fillText(potongByLebar(ctx, m.username || '?', nameMax), nameX, acy + 9);
+    ctx.fillText(namaTeks, cursor, acy + 9);
+
+    // Badge NEXO Pass TEPAT di samping nama (setelah teks nama yang sudah
+    // dipotong - jadi selalu menempel, tidak mengambang di tengah sel).
+    if (m.premium && nexopassImg) {
+      const namaW = ctx.measureText(namaTeks).width;
+      const badgeD = 28;
+      const bx = Math.min(cursor + namaW + 8 + badgeD / 2, kananMulai - badgeD / 2);
+      gambarBadgeNexoPass(ctx, bx, acy, badgeD, nexopassImg);
+    }
   }
 
   // ── Strip CTA ──

@@ -52,7 +52,19 @@ export default function GuildSection({ guilds, loggedIn }) {
               const adaKode = Boolean(g.code);
               return (
               <tr key={g.code || g.rank + g.name} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
-                <td className="px-4 py-3 font-display text-ink">{g.rank}</td>
+                <td className="px-4 py-3 font-display text-ink">
+                  {/* Emoji podium SAMA dengan tabel pemain (permintaan pemilik
+                      2026-10-07): mahkota #1, medali #2/#3. */}
+                  {Number(g.rank) === 1 && emojiSrc('crown') && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={emojiSrc('crown')} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
+                  )}
+                  {Number(g.rank) > 1 && Number(g.rank) <= 3 && emojiSrc('medal') && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={emojiSrc('medal')} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
+                  )}
+                  {g.rank}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     {/* Klik nama guild -> buka detail (owner/admin/member + poin) */}
