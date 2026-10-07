@@ -573,7 +573,14 @@ export async function POST(request) {
 
   // KODE BASE: kalau bot mengirim ringkasan kode, tambahkan ke konteks. Ini
   // yang membuat peran bug/security/exploit/analyst bisa menganalisis kode.
-  const konteksKode = susunKonteksKode(snap?.kodeBase);
+  //
+  // FIX 2026-10-07 (respons 28-42 dtk + timeout): untuk DISKUSI/chat, batasi
+  // konteks kode ke 5000 char (cuplikan rawan tetap ikut - yang dipotong daftar
+  // file panjang). Mode analisis dapat 9000 (detail penuh). Ini memangkas waktu
+  // respons secara signifikan di provider gratis tanpa kehilangan inti.
+  const konteksKode = susunKonteksKode(snap?.kodeBase, {
+    batas: mode === 'analisis' ? 9000 : 5000,
+  });
 
   // Tandai jenis tugas supaya AI tahu BENTUK jawaban yang diinginkan.
   // Inilah pembeda dua mode yang diminta pemilik:

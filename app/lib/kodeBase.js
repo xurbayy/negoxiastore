@@ -16,14 +16,23 @@
 // lengkap. Kredensial (.env) TIDAK pernah dibaca. Ini menjaga payload tetap
 // kecil & aman.
 
-const BATAS_KODE = 9000; // batas karakter konteks kode (cukup untuk cuplikan + sebagian daftar)
+// BATAS KODE: dulu 9000 char (tetap) - ternyata untuk model reasoning di
+// provider gratis, 9000 char kode + konteks data = respons 28-42 dtk (mepet
+// batas 60 dtk Vercel, sering timeout). Sekarang bisa diatur per pemanggil:
+//   - Mode analisis/diskusi panjang -> 9000 (detail).
+//   - Chat cepat -> 5000 (cuplikan rawan saja, tetap berguna).
+const BATAS_KODE_DEFAULT = 9000;
 
 /**
  * Bentuk konteks kode base dari ringkasan yang dikirim bot.
  * @param {object} kodeBase - { files: [{ path, lines, funcs: [], cuplikan: [] }], ringkas }
+ * @param {object} [opsi] - { batas?: number } batas karakter (default 9000)
  * @returns {string}
  */
-export function susunKonteksKode(kodeBase) {
+export function susunKonteksKode(kodeBase, opsi = {}) {
+  const BATAS_KODE = Number.isFinite(Number(opsi.batas)) && Number(opsi.batas) >= 2000
+    ? Number(opsi.batas)
+    : BATAS_KODE_DEFAULT;
   if (!kodeBase || !Array.isArray(kodeBase.files) || !kodeBase.files.length) {
     return [
       '',
