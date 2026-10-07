@@ -13,8 +13,9 @@ import ShareCardButton from '../components/ShareCardButton';
 // Share (wajib login): tiap baris punya tombol yang merender kartu peringkat
 // 4:5 di canvas lalu dibagikan via Web Share API (HP) / unduh (desktop).
 // Pemegang NEXO Pass (premiumIds dari snapshot bot) dapat badge logo kecil.
-// `children` = bagian Guild Terkuat (server component).
-export default function LeaderboardClient({ players, myId, loggedIn, premiumIds = [], children }) {
+// Bagian Guild Terkuat pindah ke GuildSection (client component sendiri,
+// permintaan pemilik 2026-10-07) karena barisnya kini bisa diklik + di-share.
+export default function LeaderboardClient({ players, myId, loggedIn, premiumIds = [] }) {
   const [selected, setSelected] = useState(null);
   const isMe = (id) => myId && String(id) === String(myId);
   const hasPass = (id) => premiumIds.includes(String(id));
@@ -125,9 +126,6 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
           </table>
         </div>
       </section>
-
-      {/* Guild Terkuat (server component dari page) */}
-      {children}
 
       {selected && <PlayerProfileCard player={selected} onClose={() => setSelected(null)} />}
     </>

@@ -362,6 +362,79 @@ export async function getLiveGuildBoard(limit = 10) {
   });
 }
 
+// DETAIL GUILD (permintaan pemilik 2026-10-07): "kalo nama guild di klik
+// yang muncul nama guildnya + owner + admin + member + poin masing-masing".
+// Dibaca LANGSUNG dari DB bot (public.guilds + guild_members + users + premium)
+// supaya transparan - orang bisa lihat kenapa total poin guild segitu.
+//
+// Dikembalikan: guild { code, name, emoji, bio, points, warWins, warLosses,
+// membersCount, rank, owner, admins[], members[] } - owner/admins/members sudah
+// diurut: owner dulu, admin, lalu member; masing-masing urut poin tertinggi.
+// `premium` per member = NEXO Pass aktif (badge di UI + kartu share).
+export async function getLiveGuildDetail(code) {
+  const kode = String(code || '').trim().toUpperCase();
+  if (!kode) return null;
+  return live('gd:' + kode, async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const [guildRes, memberRes] = await Promise.all([
+        db.execute(
+          `SELECT g.guild_code, g.name, g.emoji, g.bio, g.owner_id, g.war_wins, g.war_losses,
+                  g.total_points, g.created_at,
+                  (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members,
+                  (SELECT COUNT(*) + 1 FROM public.guilds g2 WHERE g2.total_points > g.total_points) AS rank
+             FROM public.guilds g WHERE g.guild_code = ? LIMIT 1`,
+          [kode]
+        ),
+        db.execute(
+          `SELECT m.user_id, m.role, m.joined_at,
+                  u.username, u.points, u.level, u.avatar_url,
+                  EXISTS(SELECT 1 FROM public.premium p WHERE p.user_id = m.user_id AND p.expires_at > ?) AS premium
+             FROM public.guild_members m
+             LEFT JOIN public.users u ON u.user_id = m.user_id
+            WHERE m.guild_code = ?
+            ORDER BY CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 ELSE 3 END,
+                     u.points DESC`,
+          [Date.now(), kode]
+        ),
+      ]);
+      const g = guildRes.rows?.[0];
+      if (!g) return null;
+      const anggota = (memberRes.rows || []).map((m) => ({
+        userId: String(m.user_id),
+        username: m.username || 'Pemain',
+        role: String(m.role || 'member').toLowerCase(),
+        points: Number(m.points || 0),
+        level: Number(m.level || 1),
+        avatarUrl: m.avatar_url || null,
+        premium: Boolean(m.premium),
+      }));
+      const owner = anggota.find((m) => m.role === 'owner') || null;
+      const admins = anggota.filter((m) => m.role === 'admin');
+      const members = anggota.filter((m) => m.role !== 'owner' && m.role !== 'admin');
+      return {
+        code: g.guild_code,
+        name: g.name || 'Guild',
+        emoji: g.emoji || null,
+        bio: g.bio || null,
+        ownerId: g.owner_id ? String(g.owner_id) : null,
+        points: Number(g.total_points || 0),
+        warWins: Number(g.war_wins || 0),
+        warLosses: Number(g.war_losses || 0),
+        membersCount: Number(g.members || 0),
+        // Peringkat guild di papan (dipakai pill "#N" di kartu share).
+        rank: Number(g.rank || 1),
+        createdAt: g.created_at || null,
+        owner,
+        admins,
+        members,
+      };
+    });
+    return r;
+  });
+}
+
 // BANK langsung dari DB bot (public.bank_loans) - 2026-10-03.
 // Bentuk hasil SAMA dengan snapshot.loans / snapshot.monitor.loans.
 export async function getLiveBank() {

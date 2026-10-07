@@ -1,13 +1,11 @@
-import { getLatestSnapshot, stripEmojiToken } from '../lib/snapshot';
+import { getLatestSnapshot } from '../lib/snapshot';
 import { getSession } from '../lib/session';
 import { userHasPremium } from '../lib/snapshot';
-import { emojiSrc } from '../lib/emojis';
-import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
-import GuildEmoji from '../components/GuildEmoji';
 import LeaderboardClient from '../leaderboard/LeaderboardClient';
+import GuildSection from '../leaderboard/GuildSection';
 
 export const metadata = {
   title: 'Leaderboard',
@@ -57,53 +55,13 @@ export default async function LeaderboardPage() {
               jadi tidak lagi bergantung pada bot mengirim/push data.
               Kalau memang belum ada pemain, tabel menampilkan "Belum ada data". */}
 
-          {/* Pemain -> Guild (client: baris pemain bisa diklik ->
-              kartu profil + PP fresh; guild tetap server component) */}
-          <LeaderboardClient players={players} myId={myId} loggedIn={Boolean(session)} premiumIds={premiumIds}>
+          {/* Pemain -> Guild. Baris pemain bisa diklik (kartu profil + PP
+              fresh); baris GUILD juga bisa diklik (detail: owner, admin,
+              member + poin masing-masing) dan punya tombol share canvas.
+              Keduanya client component; data tetap dirender dari server. */}
+          <LeaderboardClient players={players} myId={myId} loggedIn={Boolean(session)} premiumIds={premiumIds} />
 
-          {/* Guild */}
-          <section className="mt-12" aria-labelledby="lb-guild">
-            <h2 id="lb-guild" className="font-display text-xl text-ink">
-            {emojiSrc('castle') && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={emojiSrc('castle')} alt="" width={20} height={20} className="mr-2 inline h-5 w-5 align-middle" />
-            )}Guild Terkuat
-          </h2>
-            <div className="nx-card mt-4 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
-                    <th scope="col" className="px-4 py-3">#</th>
-                    <th scope="col" className="px-4 py-3">Guild</th>
-                    <th scope="col" className="px-4 py-3 text-right">Total Poin</th>
-                    <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">War Wins</th>
-                    <th scope="col" className="px-4 py-3 text-right">Member</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {guilds.length === 0 && (
-                    <tr><td colSpan="5" className="px-4 py-6 text-center text-ink-muted">Belum ada guild terdaftar.</td></tr>
-                  )}
-                  {guilds.map((g) => (
-                    <tr key={g.rank + g.name} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
-                      <td className="px-4 py-3 font-display text-ink">{g.rank}</td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-2 font-semibold text-ink">
-                          {/* Emoji guild dari kolom guilds.emoji (bot) - nama tampil bersih */}
-                          <GuildEmoji token={g.emoji} size={18} />
-                          <span className="truncate">{stripEmojiToken(g.name)}</span>
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right" title={fmtPenuh(g.points)}>{fmtRingkas(g.points)}</td>
-                      <td className="hidden px-4 py-3 text-right text-ink-muted sm:table-cell">{g.warWins}</td>
-                      <td className="px-4 py-3 text-right text-ink-muted">{g.members}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          </LeaderboardClient>
+          <GuildSection guilds={guilds} loggedIn={Boolean(session)} />
         </div>
       </main>
       <Footer />

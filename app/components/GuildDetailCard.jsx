@@ -1,0 +1,219 @@
+'use client';
+
+import { cloneElement, useEffect, useState } from 'react';
+import { emojiSrc } from '../lib/emojisClient';
+import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
+import { avatarUser } from '../lib/avatarClient';
+import GuildEmoji from './GuildEmoji';
+
+// ==========================================
+// KARTU DETAIL GUILD (permintaan pemilik 2026-10-07)
+// ==========================================
+// Muncul saat NAMA GUILD di tabel "Guild Terkuat" diklik. Isi:
+//   - Header: emoji + nama guild + kode + bio + tombol bagikan
+//   - Statistik: Total Poin / War Wins / Member
+//   - OWNER, ADMIN (kalau ada), MEMBER: avatar, nama, chip role, badge
+//     NEXO Pass, dan POIN MASING-MASING - transparan, orang bisa lihat
+//     kenapa total poin guild segitu (bukan angka misterius).
+//
+// Data diambil dari /api/guild/[code] saat modal dibuka - halaman leaderboard
+// tidak ikut berat saat load pertama, dan datanya selalu segar.
+// Tutup: ESC / klik backdrop (pola sama dengan PlayerProfileCard).
+export default function GuildDetailCard({ code, onClose, shareButton = null }) {
+  const [show, setShow] = useState(false);
+  const [guild, setGuild] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 10);
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => { clearTimeout(t); document.removeEventListener('keydown', onKey); };
+  }, [onClose]);
+
+  // Fetch detail guild saat modal dibuka (sekali per kode).
+  useEffect(() => {
+    let batal = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/guild/${encodeURIComponent(code)}`, { cache: 'no-store' });
+        const d = await res.json().catch(() => ({}));
+        if (batal) return;
+        if (d.ok && d.guild) setGuild(d.guild);
+        else setError(d.error || 'Gagal memuat detail guild.');
+      } catch {
+        if (!batal) setError('Gagal menghubungi server.');
+      }
+    })();
+    return () => { batal = true; };
+  }, [code]);
+
+  const admins = (guild && guild.admins) || [];
+  const members = (guild && guild.members) || [];
+  const semuaAnggota = guild ? [guild.owner, ...admins, ...members].filter(Boolean) : [];
+  // Jumlah poin SEMUA anggota - ditampilkan bersama total poin guild supaya
+  // hubungan kedua angka terlihat (transparansi, permintaan pemilik).
+  const totalPoinMember = semuaAnggota.reduce((a, m) => a + (m.points || 0), 0);
+
+  // Tombol share dari parent diberi DETAIL yang sudah dimuat (cloneElement)
+  // supaya klik share memakai data yang persis tampil di layar, tanpa fetch ulang.
+  const tombolShare = shareButton
+    ? (guild ? cloneElement(shareButton, { detail: guild }) : shareButton)
+    : null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-5 backdrop-blur-sm sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={guild ? `Detail guild ${guild.name}` : 'Detail guild'}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className={`max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border-soft bg-card-cream shadow-2xl transition-all duration-200 ${show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
+      >
+        {/* Header gelap - identitas guild */}
+        <div className="nx-dark px-5 py-5">
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-card-cream/10">
+              <GuildEmoji token={guild?.emoji} size={32} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-lg text-card-cream">{guild?.name || 'Memuat...'}</p>
+              {guild?.code && <p className="mt-0.5 text-[0.65rem] text-ink-faint">Kode: {guild.code}</p>}
+              {guild?.bio && <p className="mt-0.5 line-clamp-2 text-xs text-ink-faint">{guild.bio}</p>}
+            </div>
+            {tombolShare}
+          </div>
+        </div>
+
+        {error && (
+          <div className="px-5 py-8 text-center text-sm text-ink-muted">{error}</div>
+        )}
+
+        {!guild && !error && (
+          <div className="px-5 py-8 text-center text-sm text-ink-muted">
+            <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent align-middle" aria-hidden="true" />
+            Memuat detail guild...
+          </div>
+        )}
+
+        {guild && (
+          <>
+            {/* Statistik guild */}
+            <div className="grid grid-cols-3 items-stretch gap-2 px-5 py-4">
+              <GuildStat icon="goldcoin" label="Total Poin" value={fmtRingkas(guild.points)} full={fmtPenuh(guild.points)} />
+              <GuildStat icon="trophy" label="War Wins" value={String(guild.warWins)} />
+              <GuildStat icon="user" label="Member" value={String(guild.membersCount)} />
+            </div>
+
+            {/* Anggota: OWNER dulu, lalu ADMIN, lalu MEMBER.
+                Poin masing-masing ditampilkan (transparan) + badge NEXO Pass. */}
+            <div className="border-t border-border-soft px-5 py-4">
+              {guild.owner && (
+                <>
+                  <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">Owner</p>
+                  <AnggotaBaris m={guild.owner} />
+                </>
+              )}
+              {admins.length > 0 && (
+                <>
+                  <p className="mb-2 mt-4 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">Admin ({admins.length})</p>
+                  <ul className="space-y-1.5">
+                    {admins.map((m) => <li key={m.userId}><AnggotaBaris m={m} /></li>)}
+                  </ul>
+                </>
+              )}
+              {members.length > 0 && (
+                <>
+                  <p className="mb-2 mt-4 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">Member ({members.length})</p>
+                  <ul className="space-y-1.5">
+                    {members.map((m) => <li key={m.userId}><AnggotaBaris m={m} /></li>)}
+                  </ul>
+                </>
+              )}
+              {semuaAnggota.length === 0 && <p className="text-center text-xs text-ink-faint">Belum ada anggota.</p>}
+
+              {/* Transparansi: hubungan poin member vs total guild. Selisih
+                  kecil wajar - bot menghitung ulang total guild berkala. */}
+              {semuaAnggota.length > 0 && (
+                <p className="mt-4 rounded-lg bg-white/60 px-3 py-2 text-[0.68rem] leading-relaxed text-ink-muted">
+                  Total poin member: <span className="font-semibold text-ink">{fmtPenuh(totalPoinMember)}</span>
+                  {' · '}Total poin guild: <span className="font-semibold text-ink">{fmtPenuh(guild.points)}</span>
+                  {guild.points !== totalPoinMember && (
+                    <> <span className="text-ink-faint">(selisih kecil = pembaruan berkala bot)</span></>
+                  )}
+                </p>
+              )}
+            </div>
+
+            <div className="border-t border-border-soft px-5 py-3">
+              <p className="text-center text-[0.7rem] text-ink-faint">
+                Lihat detail guild in-game via <code className="font-mono">nxguild</code> di Discord.
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Sel statistik guild (pola sama dengan PlayerProfileCard.Stat).
+function GuildStat({ icon, label, value, full }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border-soft bg-white/60 px-2 py-2.5 text-center">
+      {emojiSrc(icon) ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={emojiSrc(icon)} alt="" width={16} height={16} className="mb-1 h-4 w-4 shrink-0" />
+      ) : null}
+      <p className="w-full truncate font-display text-sm leading-tight text-ink" title={full || String(value)}>{value}</p>
+      <p className="mt-auto w-full truncate pt-0.5 text-[0.6rem] uppercase tracking-wider text-ink-muted">{label}</p>
+    </div>
+  );
+}
+
+// Satu baris anggota: avatar + nama + chip role (owner/admin) + badge NEXO
+// Pass + poin masing-masing.
+function AnggotaBaris({ m }) {
+  const role = String(m.role || 'member').toLowerCase();
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-border-soft bg-white/60 px-3 py-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={avatarUser(m.userId, m.avatarUrl, 56)}
+        alt=""
+        width={28}
+        height={28}
+        loading="lazy"
+        className="h-7 w-7 shrink-0 rounded-full border border-border-soft"
+      />
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{m.username}</span>
+      {role === 'owner' && (
+        <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-accent-hover">Owner</span>
+      )}
+      {role === 'admin' && (
+        <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-ink-muted">Admin</span>
+      )}
+      {m.premium && (
+        // Badge NEXO Pass - custom emoji resmi (sama dengan leaderboard pemain).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="https://cdn.discordapp.com/emojis/1548184905018507306.png?size=64&quality=lossless"
+          alt="Pemegang NEXO Pass"
+          title="Pemegang NEXO Pass"
+          width={16}
+          height={16}
+          className="h-4 w-4 shrink-0"
+        />
+      )}
+      <span className="inline-flex shrink-0 items-center gap-1 text-xs text-ink-muted" title={fmtPenuh(m.points)}>
+        {emojiSrc('goldcoin') && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={emojiSrc('goldcoin')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
+        )}
+        {fmtRingkas(m.points)}
+      </span>
+    </div>
+  );
+}
