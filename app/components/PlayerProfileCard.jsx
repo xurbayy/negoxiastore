@@ -9,7 +9,10 @@ import { avatarUser } from '../lib/avatarClient';
 // diklik. Data 100% dari snapshot bot (leaderboard + richest) - tidak ada
 // request tambahan. Avatar fresh dikirim bot tiap push (60 dtk), jadi ganti
 // PP di Discord otomatis kebaca.
-export default function PlayerProfileCard({ player, onClose }) {
+// `shareButton` = tombol share dari parent (permintaan pemilik 2026-10-07:
+// "ketika klik top pemain juga gw mau ada tombol share seperti di
+// leaderboard guild") - ditaruh di header kanan, pola sama GuildDetailCard.
+export default function PlayerProfileCard({ player, onClose, shareButton = null }) {
   const ref = useRef(null);
   const [show, setShow] = useState(false);
 
@@ -88,7 +91,7 @@ export default function PlayerProfileCard({ player, onClose }) {
                 className="h-16 w-16 rounded-full ring-2 ring-accent shadow-[0_0_20px_rgba(241,154,26,0.35)]"
               />
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               {/* Nama pemain: TIDAK dipotong - wrap (permintaan pemilik
                   2026-10-07: nama panjang harus terbaca semua). */}
               <p className="wrap-anywhere font-display text-lg text-card-cream">{player.username}</p>
@@ -98,6 +101,9 @@ export default function PlayerProfileCard({ player, onClose }) {
                 </p>
               )}
             </div>
+            {/* Tombol share di header modal profil (permintaan pemilik
+                2026-10-07) - pola sama modal GuildDetailCard. */}
+            {shareButton}
           </div>
         </div>
 

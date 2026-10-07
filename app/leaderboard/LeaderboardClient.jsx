@@ -135,7 +135,22 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
         </div>
       </section>
 
-      {selected && <PlayerProfileCard player={selected} onClose={() => setSelected(null)} />}
+      {/* Modal profil + TOMBOL SHARE di header (permintaan pemilik
+          2026-10-07: "ketika klik top pemain juga gw mau ada tombol share
+          seperti di leaderboard guild") - data player diulang dari row +
+          premium dari hasPass (pola sama ShareCardButton di baris). */}
+      {selected && (
+        <PlayerProfileCard
+          player={selected}
+          onClose={() => setSelected(null)}
+          shareButton={
+            <ShareCardButton
+              player={{ ...selected, premium: selected.hasPass }}
+              loggedIn={loggedIn}
+            />
+          }
+        />
+      )}
     </>
   );
 }
