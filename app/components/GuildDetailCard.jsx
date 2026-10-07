@@ -12,9 +12,20 @@ import GuildEmoji from './GuildEmoji';
 // Muncul saat NAMA GUILD di tabel "Guild Terkuat" diklik. Isi:
 //   - Header: emoji + nama guild + kode + bio + tombol bagikan
 //   - Statistik: Total Poin / War Wins / Member
-//   - OWNER, ADMIN (kalau ada), MEMBER: avatar, nama, chip role, badge
-//     NEXO Pass, dan POIN MASING-MASING - transparan, orang bisa lihat
-//     kenapa total poin guild segitu (bukan angka misterius).
+//   - OWNER, ADMIN (kalau ada), MEMBER: avatar, emoji peran di DEPAN nama,
+//     level, badge NEXO Pass, dan POIN MASING-MASING - transparan, orang
+//     bisa lihat kenapa total poin guild segitu (bukan angka misterius).
+//
+// EMOJI = PERSIS EMBED BOT nxguild (permintaan pemilik 2026-10-07: "untuk
+// ini semua gunakan emoji yang ada di bot"):
+//   :stats: Statistik   -> chart   (1517007751002460330)
+//   :goldcoin: Poin     -> goldcoin (1516390096419684422)
+//   :ClashingSwords:    -> swords   (1516375357031321730)
+//   :users0: Member     -> group    (1516381292986634300)
+//   :Crown: owner       -> crown    (1516383025531846816)
+//   :admin: admin       -> admin    (1517019924097404948)
+//   :SVD_member: member -> member   (1517021034069491883)
+// Baris anggota meniru format bot: ":Crown: xurbayy • Lv.89 • 3,884,375 pts".
 //
 // Data diambil dari /api/guild/[code] saat modal dibuka - halaman leaderboard
 // tidak ikut berat saat load pertama, dan datanya selalu segar.
@@ -100,25 +111,48 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
 
         {guild && (
           <>
-            {/* Statistik guild */}
-            <div className="grid grid-cols-3 items-stretch gap-2 px-5 py-4">
+            {/* Statistik guild - emoji SAMA dengan embed bot nxguild:
+                :stats: judul, :goldcoin: poin, :ClashingSwords: war, :users0: member */}
+            <div className="border-t border-border-soft px-5 py-3">
+              <p className="flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">
+                {emojiSrc('chart') && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={emojiSrc('chart')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
+                )}
+                Statistik
+              </p>
+            </div>
+            <div className="grid grid-cols-3 items-stretch gap-2 px-5 pb-4 pt-1">
               <GuildStat icon="goldcoin" label="Total Poin" value={fmtRingkas(guild.points)} full={fmtPenuh(guild.points)} />
-              <GuildStat icon="trophy" label="War Wins" value={String(guild.warWins)} />
-              <GuildStat icon="user" label="Member" value={String(guild.membersCount)} />
+              <GuildStat icon="swords" label="War" value={guild.warWins > 0 || guild.warLosses > 0 ? `${guild.warWins}W / ${guild.warLosses}L` : 'Belum war'} />
+              <GuildStat icon="group" label="Member" value={`${guild.membersCount}/10`} />
             </div>
 
             {/* Anggota: OWNER dulu, lalu ADMIN, lalu MEMBER.
-                Poin masing-masing ditampilkan (transparan) + badge NEXO Pass. */}
+                Emoji peran di DEPAN nama + poin masing-masing (transparan),
+                format baris meniru bot: :Crown: nama • Lv.89 • 3,884,375 pts */}
             <div className="border-t border-border-soft px-5 py-4">
               {guild.owner && (
                 <>
-                  <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">Owner</p>
+                  <p className="mb-2 flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">
+                    {emojiSrc('crown') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={emojiSrc('crown')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
+                    )}
+                    Owner
+                  </p>
                   <AnggotaBaris m={guild.owner} />
                 </>
               )}
               {admins.length > 0 && (
                 <>
-                  <p className="mb-2 mt-4 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">Admin ({admins.length})</p>
+                  <p className="mb-2 mt-4 flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">
+                    {emojiSrc('admin') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={emojiSrc('admin')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
+                    )}
+                    Admin ({admins.length})
+                  </p>
                   <ul className="space-y-1.5">
                     {admins.map((m) => <li key={m.userId}><AnggotaBaris m={m} /></li>)}
                   </ul>
@@ -126,7 +160,13 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
               )}
               {members.length > 0 && (
                 <>
-                  <p className="mb-2 mt-4 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">Member ({members.length})</p>
+                  <p className="mb-2 mt-4 flex items-center gap-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-ink-muted">
+                    {emojiSrc('group') && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={emojiSrc('group')} alt="" width={14} height={14} className="h-3.5 w-3.5" />
+                    )}
+                    Anggota ({members.length})
+                  </p>
                   <ul className="space-y-1.5">
                     {members.map((m) => <li key={m.userId}><AnggotaBaris m={m} /></li>)}
                   </ul>
@@ -173,10 +213,17 @@ function GuildStat({ icon, label, value, full }) {
   );
 }
 
-// Satu baris anggota: avatar + nama + chip role (owner/admin) + badge NEXO
-// Pass + poin masing-masing.
+// Satu baris anggota - MENIRU format daftar anggota embed bot nxguild:
+//   ":Crown: xurbayy • Lv.89 • 3,884,375 pts"
+// Urutan web: avatar → emoji peran bot (crown/admin/member) → nama →
+// Lv.X → badge NEXO Pass → poin + goldcoin. Emoji peran memakai aset bot
+// yang sama (id Discord), jadi tampilannya konsisten dengan Discord.
 function AnggotaBaris({ m }) {
   const role = String(m.role || 'member').toLowerCase();
+  // Emoji peran PERSIS bot (commands/guild.js roleIcons):
+  //   owner = crown, admin = admin, member = member (SVD_member)
+  const roleEmoji = role === 'owner' ? 'crown' : role === 'admin' ? 'admin' : 'member';
+  const roleTitle = role === 'owner' ? 'Owner' : role === 'admin' ? 'Admin' : 'Member';
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-border-soft bg-white/60 px-3 py-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -188,13 +235,13 @@ function AnggotaBaris({ m }) {
         loading="lazy"
         className="h-7 w-7 shrink-0 rounded-full border border-border-soft"
       />
+      {emojiSrc(roleEmoji) && (
+        // Emoji peran bot (sama dengan embed nxguild di Discord)
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={emojiSrc(roleEmoji)} alt={roleTitle} title={roleTitle} width={16} height={16} className="h-4 w-4 shrink-0" />
+      )}
       <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{m.username}</span>
-      {role === 'owner' && (
-        <span className="shrink-0 rounded-full bg-accent/15 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-accent-hover">Owner</span>
-      )}
-      {role === 'admin' && (
-        <span className="shrink-0 rounded-full bg-ink/10 px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wider text-ink-muted">Admin</span>
-      )}
+      <span className="shrink-0 text-[0.65rem] text-ink-faint">Lv.{m.level}</span>
       {m.premium && (
         // Badge NEXO Pass - custom emoji resmi (sama dengan leaderboard pemain).
         // eslint-disable-next-line @next/next/no-img-element

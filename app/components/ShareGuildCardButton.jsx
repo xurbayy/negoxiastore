@@ -54,12 +54,13 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
 
       // Semua gambar dimuat paralel. Emoji custom pakai PNG STATIS
       // (emojiSrcStatis) karena canvas tidak bisa menggambar GIF.
-      // Ikon peran = emoji RESMI bot (sama dengan daftar anggota di Discord):
-      // crown = owner, admin = admin, member = member.
-      const [coinImg, trophyImg, userImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
+      // SEMUA emoji = emoji RESMI bot (permintaan pemilik 2026-10-07):
+      //   goldcoin = Poin, ClashingSwords = War, users0 (group) = Member,
+      //   crown/admin/member = peran anggota (sama dengan roleIcons bot).
+      const [coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
         loadImg(emojiSrcStatis('goldcoin', 128)),
-        loadImg(emojiSrcStatis('trophy', 128)),
-        loadImg(emojiSrcStatis('user', 128)),
+        loadImg(emojiSrcStatis('swords', 128)),    // :ClashingSwords: - tile War
+        loadImg(emojiSrcStatis('group', 128)),     // :users0: - tile Member
         loadImg(emojiSrcStatis('crown', 128)),
         loadImg(emojiSrcStatis('admin', 128)),
         loadImg(emojiSrcStatis('member', 128)),
@@ -74,7 +75,7 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
 
       const canvas = await renderCard({
         detail: d, anggota,
-        coinImg, trophyImg, userImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
+        coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
       });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
@@ -244,7 +245,7 @@ function tokenEmojiUrl(token) {
 // ─────────────────────────────────────────────────────────────
 // Render kartu 1080x1350
 // ─────────────────────────────────────────────────────────────
-async function renderCard({ detail, anggota, coinImg, trophyImg, userImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
+async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
   const W = 1080;
   const H = 1350;
   const canvas = document.createElement('canvas');
@@ -341,13 +342,14 @@ async function renderCard({ detail, anggota, coinImg, trophyImg, userImg, crownI
   ctx.font = `600 26px ${FONT}`;
   ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member`, W - 220), W / 2, ecy + er + 116);
 
-  // ── 3 tile statistik ──
+  // ── 3 tile statistik - emoji SAMA dengan embed bot nxguild:
+  //    :goldcoin: Poin · :ClashingSwords: War · :users0: Member ──
   const tileY = 482;
   const tileH = 132;
   const tiles = [
     { icon: coinImg, label: 'Total Poin', value: fmtRingkas(detail.points) },
-    { icon: trophyImg, label: 'War Wins', value: String(detail.warWins || 0) },
-    { icon: userImg, label: 'Member', value: String(detail.membersCount || 0) },
+    { icon: swordsImg, label: 'War', value: detail.warWins > 0 || detail.warLosses > 0 ? `${detail.warWins}W / ${detail.warLosses}L` : 'Belum war' },
+    { icon: groupImg, label: 'Member', value: `${detail.membersCount}/10` },
   ];
   const gap = 20;
   const tileW = (W - 128 - gap * 2) / 3;
@@ -364,7 +366,14 @@ async function renderCard({ detail, anggota, coinImg, trophyImg, userImg, crownI
     if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 20, tileY + 24, 40, 40);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#2B2118';
-    ctx.font = `800 44px ${FONT}`;
+    // Auto-shrink: "Belum war" / "12W / 8L" bisa lebih lebar dari tile -
+    // kecilkan font bertahap sampai muat (pola sama kartu profil pemain).
+    let uk = 44;
+    ctx.font = `800 ${uk}px ${FONT}`;
+    while (ctx.measureText(tiles[i].value).width > tileW - 32 && uk > 22) {
+      uk -= 2;
+      ctx.font = `800 ${uk}px ${FONT}`;
+    }
     ctx.fillText(tiles[i].value, tcx, tileY + 96);
     ctx.fillStyle = '#A99C8E';
     ctx.font = `700 20px ${FONT}`;
