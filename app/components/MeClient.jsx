@@ -58,10 +58,14 @@ const STAT_ICONS = {
 // push (bot offline baru pertama). Sumber utama: payload bot betaGames.
 // Lucky Dice DIHAPUS 2026-10-06 - digantikan NEXO Language (game belajar
 // bahasa Inggris, 4 mode: Classic/Mystery Word/Sentence Builder/Survival).
+//
+// DESC SERAGAM (permintaan pemilik 2026-10-07): semua game beta pakai teks
+// 'Game beta baru.' - sama persis dengan yang tampil di menu nxtest bot.
+// Deskripsi panjang per game DIHAPUS supaya tidak beda-beda.
 const BETA_FALLBACK = [
-  { key: 'language', mode: 'solo', name: 'NEXO Language (BETA)', desc: 'Belajar bahasa Inggris lewat minigame - 4 mode seru!' },
-  { key: 'sum', mode: 'mp', name: 'Sum Duel', desc: 'Pilih angka terdekat ke target - butuh 2+ pemain.' },
-  { key: 'heal', mode: 'coop', name: 'Heal Squad', desc: 'Kalahkan Virus bareng tim - butuh 2+ pemain.' },
+  { key: 'language', mode: 'solo', name: 'NEXO Language (BETA)', desc: 'Game beta baru.' },
+  { key: 'sum', mode: 'mp', name: 'Sum Duel', desc: 'Game beta baru.' },
+  { key: 'heal', mode: 'coop', name: 'Heal Squad', desc: 'Game beta baru.' },
 ];
 const MODE_LABEL = { solo: 'Solo', mp: 'Multiplayer', coop: 'Co-op' };
 // Ikon mode = emoji resmi yang SAMA dengan header grup di halaman Game
@@ -978,7 +982,11 @@ export default function MeClient({ betaGames = null }) {
                       <li key={g.key} className="flex items-center gap-3 rounded-xl border border-border-soft bg-card-cream/70 px-4 py-3 text-sm">
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="font-bold text-ink">{g.name}</span>
-                          <span className="text-xs leading-relaxed text-ink-muted">{g.desc}</span>
+                          {/* DESC: fallback 'Game beta baru.' kalau bot tidak mengirim
+                              desc (permintaan pemilik 2026-10-07: semua game beta
+                              pakai teks SERAGAM 'Game beta baru.' di menu nxtest &
+                              web - jangan deskripsi panjang yang beda-beda). */}
+                          <span className="text-xs leading-relaxed text-ink-muted">{g.desc || 'Game beta baru.'}</span>
                         </div>
                         {modeIcon ? (
                           // eslint-disable-next-line @next/next/no-img-element
