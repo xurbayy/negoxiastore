@@ -377,7 +377,7 @@ export async function getLiveGuildBoard(limit = 10) {
         `SELECT g.guild_code, g.name, g.emoji, g.war_wins, g.war_losses, g.total_points,
                 (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members
            FROM public.guilds g
-          ORDER BY g.total_points DESC
+          ORDER BY g.war_wins DESC, g.total_points DESC
           LIMIT ?`,
         [limit]
       );
@@ -436,7 +436,7 @@ export async function getLiveGuildDetail(code) {
           `SELECT g.guild_code, g.name, g.emoji, g.bio, g.owner_id, g.war_wins, g.war_losses,
                   g.total_points, g.created_at,
                   (SELECT COUNT(*) FROM public.guild_members m WHERE m.guild_code = g.guild_code) AS members,
-                  (SELECT COUNT(*) + 1 FROM public.guilds g2 WHERE g2.total_points > g.total_points) AS rank
+                  (SELECT COUNT(*) + 1 FROM public.guilds g2 WHERE (g2.war_wins > g.war_wins OR (g2.war_wins = g.war_wins AND g2.total_points > g.total_points))) AS rank
              FROM public.guilds g WHERE g.guild_code = ? LIMIT 1`,
           [kode]
         ),
