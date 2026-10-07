@@ -679,8 +679,12 @@ export default function AnalisisAI() {
         setBukaLaporan(0);
       }
     } catch (e) {
+      // FIX 2026-10-07 ("mode max/thinking timeout 58 dtk"): server sekarang
+      // membatalkan di 50 dtk dan membalas error rapi - jadi AbortError di sini
+      // (58 dtk) cuma terjadi kalau server benar-benar macet. Pesannya dibuat
+      // lebih informatif: sebut mode thinking tinggi memang lebih lambat.
       const pesanError = e?.name === 'AbortError'
-        ? 'Timeout 58 detik - AI terlalu lama merespons. Coba lagi atau ganti provider.'
+        ? 'Timeout 58 detik - AI terlalu lama merespons. Mode thinking tinggi (max/xhigh) memang lebih lambat; coba lagi, turunkan level thinking, atau ganti provider.'
         : 'Gagal menghubungi server: ' + (e?.message || e);
       if (modeKirim === 'diskusi') {
         setPesan((p) => [...p, { peran: 'ai', error: true, isi: pesanError, waktu: Date.now() }]);

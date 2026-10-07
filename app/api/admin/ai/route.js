@@ -665,11 +665,23 @@ export async function POST(request) {
   const maxTokens = Number(body?.max_tokens) || undefined;
   const thinking = body?.thinking ? String(body.thinking) : undefined;
 
+  // TIMEOUT SERVER (FIX 2026-10-07: "mode max/thinking timeout 58 dtk"):
+  // dulu route TIDAK mengirim timeoutMs -> tanyaGroq pakai default 60 dtk,
+  // SAMA dengan batas Vercel. Untuk mode thinking tinggi (max/xhigh/high),
+  // model reasoning bisa butuh >58 dtk -> UI (AbortController 58 dtk) nyerah
+  // DULUAN sebelum server sempat selesai / balas error rapi -> user cuma lihat
+  // "Timeout 58 detik" tanpa penjelasan.
+  // Sekarang server timeout 50 dtk: kalau provider lambat, tanyaGroq membatalkan
+  // lebih awal dan mengembalikan pesan error yang JELAS (masih ada ~10 dtk
+  // ruang sebelum UI 58 dtk / Vercel 60 dtk).
   const hasil = await tanyaGroq(pesan, {
     provider: providerPilihan || undefined,
     model: modelPilihan || undefined,
     maxTokens,
     thinking,
+    // 50 dtk (lihat catatan di atas) - mode thinking tinggi sering >58 dtk
+    // kalau dibiarkan default 60 dtk = UI nyerah duluan tanpa penjelasan.
+    timeoutMs: 50000,
   });
   if (!hasil.ok) {
     // Nama provider & env key untuk petunjuk - JANGAN hardcode "Groq",
