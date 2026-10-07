@@ -19,8 +19,8 @@ import ShareGuildCardButton from '../components/ShareGuildCardButton';
 //   - Kalau user login & punya guild: barisnya DI-HIGHLIGHT + pill "Guild
 //     Kamu" (permintaan pemilik 2026-10-07, pola sama pill "Kamu" pemain)
 //   - KOLOM BARU (permintaan pemilik 2026-10-07): LEVEL (dari total poin,
-//     rumus sama dengan bot) + WINRATE (W/L + persen, emoji bot:
-//     :sun58: level, :ClashingSwords: war)
+//     rumus sama dengan bot, TANPA emoji) + WINRATE (W/L + persen, emoji
+//     bot :ClashingSwords:) + label kolom poin = "Poin"
 // Login hanya dibutuhkan saat klik share (dicek di sisi klien), sama seperti
 // kartu pemain. Data tabel tetap dari server (getLiveGuildBoard) - komponen
 // ini hanya menangani interaksi. `myGuildCode` dari server (getUserGuild).
@@ -56,7 +56,8 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
               <th scope="col" className="px-4 py-3">#</th>
               <th scope="col" className="px-4 py-3">Guild</th>
               <th scope="col" className="px-4 py-3 text-right">Level</th>
-              <th scope="col" className="px-4 py-3 text-right">Total Poin</th>
+              {/* Label "Total Poin" -> "Poin" (permintaan pemilik 2026-10-07) */}
+              <th scope="col" className="px-4 py-3 text-right">Poin</th>
               <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">Winrate</th>
               <th scope="col" className="px-4 py-3 text-right">Member</th>
             </tr>
@@ -107,13 +108,11 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                     {adaKode && <ShareGuildCardButton guild={g} loggedIn={loggedIn} />}
                   </div>
                 </td>
-                {/* LEVEL: emoji :sun58: SAMA dengan bot (nxg/nxlb). */}
+                {/* LEVEL: TANPA emoji (permintaan pemilik 2026-10-07:
+                    "pada level ga perlu pake emoji tambahan"). Tooltip
+                    tetap menjelaskan progres poin. */}
                 <td className="px-4 py-3 text-right">
-                  <span className="inline-flex items-center gap-1.5 font-display text-ink" title={`${(g.xpDiLevel || 0).toLocaleString('id-ID')} / ${(g.xpButuhLevel || 0).toLocaleString('id-ID')} poin ke level berikutnya`}>
-                    {emojiSrc('sun58') && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('sun58')} alt="" width={16} height={16} className="inline h-4 w-4" />
-                    )}
+                  <span className="font-display text-ink" title={`${(g.xpDiLevel || 0).toLocaleString('id-ID')} / ${(g.xpButuhLevel || 0).toLocaleString('id-ID')} poin ke level berikutnya`}>
                     {g.level ?? '-'}
                   </span>
                 </td>
