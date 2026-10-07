@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
-import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import { stripEmojiToken } from '../lib/textUtil';
 import GuildEmoji from '../components/GuildEmoji';
 import GuildDetailCard from '../components/GuildDetailCard';
@@ -29,14 +28,6 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
   const isMyGuild = (code) => myGuildCode && code && String(code) === String(myGuildCode);
   const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
 
-  // Winrate ditampilkan "3W / 2L (60%)" - "Belum war" kalau 0 war (null).
-  const teksWinrate = (g) => {
-    const w = Number(g.warWins || 0);
-    const l = Number(g.warLosses || 0);
-    if (w + l === 0) return 'Belum war';
-    return `${w}W / ${l}L (${g.winrate != null ? g.winrate : Math.round((w / (w + l)) * 100)}%)`;
-  };
-
   return (
     <section className="mt-12" aria-labelledby="lb-guild">
       {/* JUDUL DIPERJELAS (permintaan pemilik 2026-10-07): "kasih jelas
@@ -50,21 +41,22 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
         Top 10 Guild Terkuat
       </h2>
       <div className="nx-card nx-scroll mt-4 overflow-x-auto">
-        <table className="min-w-[660px] text-left text-sm">
+        <table className="min-w-[560px] text-left text-sm">
           <thead>
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
               <th scope="col" className="px-4 py-3">#</th>
               <th scope="col" className="px-4 py-3">Guild</th>
+              {/* KOLOM: Level + WIN + Member SAJA (permintaan pemilik
+                  2026-10-07: "jadinya level WIN dan member gitu aja dulu
+                  yang lain nanti") - Poin & Winrate ditarik dulu. */}
               <th scope="col" className="px-4 py-3 text-right">Level</th>
-              {/* Label "Total Poin" -> "Poin" (permintaan pemilik 2026-10-07) */}
-              <th scope="col" className="px-4 py-3 text-right">Poin</th>
-              <th scope="col" className="hidden px-4 py-3 text-right sm:table-cell">Winrate</th>
+              <th scope="col" className="px-4 py-3 text-right">WIN</th>
               <th scope="col" className="px-4 py-3 text-right">Member</th>
             </tr>
           </thead>
           <tbody>
             {guilds.length === 0 && (
-              <tr><td colSpan="6" className="px-4 py-6 text-center text-ink-muted">Belum ada guild terdaftar.</td></tr>
+              <tr><td colSpan="5" className="px-4 py-6 text-center text-ink-muted">Belum ada guild terdaftar.</td></tr>
             )}
             {guilds.map((g) => {
               // Guard: fallback snapshot lama tidak punya `code` - kalau tidak
@@ -116,17 +108,9 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                     {g.level ?? '-'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right" title={fmtPenuh(g.points)}>{fmtRingkas(g.points)}</td>
-                {/* WINRATE: emoji :ClashingSwords: SAMA dengan bot. */}
-                <td className="hidden px-4 py-3 text-right text-ink-muted sm:table-cell">
-                  <span className="inline-flex items-center gap-1.5">
-                    {emojiSrc('swords') && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('swords')} alt="" width={16} height={16} className="inline h-4 w-4" />
-                    )}
-                    {teksWinrate(g)}
-                  </span>
-                </td>
+                {/* WIN: jumlah MENANG war (permintaan pemilik: "level WIN dan
+                    member gitu aja dulu") - angka polos tanpa emoji. */}
+                <td className="px-4 py-3 text-right" title={`${g.warWins || 0} menang`}>{g.warWins ?? 0}</td>
                 <td className="px-4 py-3 text-right text-ink-muted">{g.members}</td>
               </tr>
               );
