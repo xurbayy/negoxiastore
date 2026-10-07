@@ -197,6 +197,29 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/**
+ * Bintang 5 sudut sebagai VEKTOR (bukan glyph unicode) - pola SAMA dengan
+ * kartu share pemain (kartu pemain pakai vektor utk Level: "supaya sederhana
+ * & tajam di semua ukuran"). Glyph ⭐ via fillText di canvas sering tidak
+ * rapi (render font emoji OS beda-beda) - permintaan pemilik 2026-10-07:
+ * "emoji bintang di share masih belum rapi".
+ */
+function gambarBintang(ctx, cx, cy, r, warna) {
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const radius = i % 2 === 0 ? r : r * 0.44;
+    const sudut = (Math.PI / 5) * i - Math.PI / 2;
+    const x = cx + Math.cos(sudut) * radius;
+    const y = cy + Math.sin(sudut) * radius;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = warna;
+  ctx.fill();
+  ctx.restore();
+}
+
 // Badge NEXO Pass di canvas: lingkaran cream + cincin oranye + logo.
 // SAMA PERSIS dengan kartu pemain (satu tampilan untuk satu makna).
 function gambarBadgeNexoPass(ctx, cx, cy, d, logoImg) {
@@ -385,8 +408,9 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   const tileY = 482;
   const tileH = 132;
   const tiles = [
-    // LEVEL = emoji bintang ⭐ (permintaan pemilik 2026-10-07: 'pake emoji bintang')
-    { char: '⭐', label: 'Level', value: String(detail.level ?? '-') },
+    // LEVEL = bintang (permintaan pemilik 2026-10-07) - digambar VEKTOR
+    // (gambarBintang), bukan glyph unicode - lebih rapi & tajam.
+    { bintang: true, label: 'Level', value: String(detail.level ?? '-') },
     { icon: coinImg, label: 'Poin', value: fmtRingkas(detail.points) },
     { icon: swordsImg, label: 'Winrate', value: detail.winrate != null ? `${detail.winrate}%` : '-' },
     { icon: groupImg, label: 'Member', value: `${detail.membersCount}/10` },
@@ -403,18 +427,10 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
     roundRect(ctx, tx, tileY, tileW, tileH, 24);
     ctx.stroke();
     const tcx = tx + tileW / 2;
-    // Ikon tile: gambar registry (icon) ATAU glyph unicode (char - ⭐ untuk
-    // Level, permintaan pemilik 2026-10-07: semua tile kini ber-ikon).
-    const adaIkon = Boolean(tiles[i].icon || tiles[i].char);
+    // Ikon tile: gambar registry (icon) ATAU bintang vektor (Level).
+    const adaIkon = Boolean(tiles[i].icon || tiles[i].bintang);
     if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 20, tileY + 24, 40, 40);
-    else if (tiles[i].char) {
-      // Glyph unicode di canvas (font emoji OS - sama seperti emoji guild unicode).
-      ctx.font = '38px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
-      const base = ctx.textBaseline;
-      ctx.textBaseline = 'middle';
-      ctx.fillText(tiles[i].char, tcx, tileY + 44);
-      ctx.textBaseline = base;
-    }
+    else if (tiles[i].bintang) gambarBintang(ctx, tcx, tileY + 44, 20, ACCENT); // vektor - rapi di semua ukuran
     ctx.textAlign = 'center';
     ctx.fillStyle = '#2B2118';
     // Auto-shrink: nilai panjang ("46,4 jt") bisa lebih lebar dari tile -
