@@ -385,7 +385,8 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   const tileY = 482;
   const tileH = 132;
   const tiles = [
-    { icon: null, label: 'Level', value: String(detail.level ?? '-') },
+    // LEVEL = emoji bintang ⭐ (permintaan pemilik 2026-10-07: 'pake emoji bintang')
+    { char: '⭐', label: 'Level', value: String(detail.level ?? '-') },
     { icon: coinImg, label: 'Poin', value: fmtRingkas(detail.points) },
     { icon: swordsImg, label: 'Winrate', value: detail.winrate != null ? `${detail.winrate}%` : '-' },
     { icon: groupImg, label: 'Member', value: `${detail.membersCount}/10` },
@@ -402,10 +403,18 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
     roundRect(ctx, tx, tileY, tileW, tileH, 24);
     ctx.stroke();
     const tcx = tx + tileW / 2;
-    // Tile TANPA ikon (Level): angka & label dinaikkan supaya isi tetap
-    // center - bukan ada ruang kosong di atas (sejajar dengan tile lain).
-    const adaIkon = Boolean(tiles[i].icon);
-    if (adaIkon) ctx.drawImage(tiles[i].icon, tcx - 20, tileY + 24, 40, 40);
+    // Ikon tile: gambar registry (icon) ATAU glyph unicode (char - ⭐ untuk
+    // Level, permintaan pemilik 2026-10-07: semua tile kini ber-ikon).
+    const adaIkon = Boolean(tiles[i].icon || tiles[i].char);
+    if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 20, tileY + 24, 40, 40);
+    else if (tiles[i].char) {
+      // Glyph unicode di canvas (font emoji OS - sama seperti emoji guild unicode).
+      ctx.font = '38px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+      const base = ctx.textBaseline;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tiles[i].char, tcx, tileY + 44);
+      ctx.textBaseline = base;
+    }
     ctx.textAlign = 'center';
     ctx.fillStyle = '#2B2118';
     // Auto-shrink: nilai panjang ("46,4 jt") bisa lebih lebar dari tile -

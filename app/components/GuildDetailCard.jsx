@@ -135,6 +135,7 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
             </div>
             <div className="grid grid-cols-2 items-stretch gap-2 px-5 pb-4 pt-1 sm:grid-cols-4">
               <GuildStat
+                char="⭐"
                 label="Level"
                 value={String(guild.level ?? '-')}
                 full={guild.xpButuhLevel ? `${guild.xpDiLevel || 0} / ${guild.xpButuhLevel} menang lagi ke level berikutnya` : undefined}
@@ -228,12 +229,17 @@ export default function GuildDetailCard({ code, onClose, shareButton = null }) {
 }
 
 // Sel statistik guild (pola sama dengan PlayerProfileCard.Stat).
-function GuildStat({ icon, label, value, full }) {
+// char = GLYPH unicode (mis. '⭐' utk Level - permintaan pemilik
+// 2026-10-07: 'statistik pada level pake emoji bintang'; registry tidak
+// punya emoji star custom, jadi pakai unicode bawaan sistem).
+function GuildStat({ icon, char, label, value, full }) {
   return (
     <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border-soft bg-white/60 px-2 py-2.5 text-center">
       {emojiSrc(icon) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={emojiSrc(icon)} alt="" width={16} height={16} className="mb-1 h-4 w-4 shrink-0" />
+      ) : char ? (
+        <span className="mb-1 text-[16px] leading-none" aria-hidden="true">{char}</span>
       ) : null}
       <p className="w-full truncate font-display text-sm leading-tight text-ink" title={full || String(value)}>{value}</p>
       <p className="mt-auto w-full truncate pt-0.5 text-[0.6rem] uppercase tracking-wider text-ink-muted">{label}</p>

@@ -37,7 +37,7 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
           Top 10 Pemain
         </h2>
         <div className="nx-card nx-scroll mt-4 overflow-x-auto">
-          <table className="min-w-[560px] text-left text-sm">
+          <table className="w-full min-w-[560px] text-left text-sm">
             <thead>
               <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
                 <th scope="col" className="px-4 py-3">#</th>
