@@ -435,6 +435,29 @@ export async function getLiveGuildDetail(code) {
   });
 }
 
+// GUILD MILIK USER (permintaan pemilik 2026-10-07): "kalo udah login ada
+// tulisan Guild Kamu seperti di leaderboard pemain". Dipakai GuildSection
+// untuk menandai baris guild user + pill "Guild Kamu".
+// Mengembalikan { code, role } atau null kalau user tidak punya guild.
+// Cache 12 dtk per user (pola sama userHasPremium) - leaderboard di-refresh
+// AutoRefresh + dibuka ulang, query murah indexed.
+export async function getUserGuild(discordId) {
+  if (!discordId) return null;
+  return live('ug:' + discordId, async () => {
+    const r = await safeQuery(async () => {
+      await schemaReady();
+      const db = getDb();
+      const res = await db.execute({
+        sql: 'SELECT guild_code, role FROM public.guild_members WHERE user_id = ? LIMIT 1',
+        args: [String(discordId)],
+      });
+      if (!res.rows.length) return null;
+      return { code: String(res.rows[0].guild_code), role: String(res.rows[0].role || 'member').toLowerCase() };
+    });
+    return r;
+  });
+}
+
 // BANK langsung dari DB bot (public.bank_loans) - 2026-10-03.
 // Bentuk hasil SAMA dengan snapshot.loans / snapshot.monitor.loans.
 export async function getLiveBank() {

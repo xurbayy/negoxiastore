@@ -22,11 +22,14 @@ export default async function LeaderboardPage() {
   // LEADERBOARD LANGSUNG DARI DB BOT (2026-10-03): sejak satu database
   // (Supabase), data dibaca langsung dari public.users - tidak menunggu push
   // bot. Fallback ke snapshot kalau query DB gagal.
-  const { getLiveLeaderboard, getLiveGuildBoard, getLivePremiumIds } = await import('../lib/snapshot');
-  const [livePlayers, liveGuilds, livePremium] = await Promise.all([
+  const { getLiveLeaderboard, getLiveGuildBoard, getLivePremiumIds, getUserGuild } = await import('../lib/snapshot');
+  const [livePlayers, liveGuilds, livePremium, myGuild] = await Promise.all([
     getLiveLeaderboard(10),
     getLiveGuildBoard(10),
     getLivePremiumIds(),
+    // Guild milik user login -> pill "Guild Kamu" + highlight baris di tabel
+    // guild (permintaan pemilik 2026-10-07, pola sama pill "Kamu" pemain).
+    session ? getUserGuild(session.discordId) : null,
   ]);
   const snap = livePlayers.length ? null : await getLatestSnapshot();
   const players = livePlayers.length ? livePlayers : (snap?.leaderboard || []);
@@ -61,7 +64,7 @@ export default async function LeaderboardPage() {
               Keduanya client component; data tetap dirender dari server. */}
           <LeaderboardClient players={players} myId={myId} loggedIn={Boolean(session)} premiumIds={premiumIds} />
 
-          <GuildSection guilds={guilds} loggedIn={Boolean(session)} />
+          <GuildSection guilds={guilds} loggedIn={Boolean(session)} myGuildCode={myGuild?.code || null} />
         </div>
       </main>
       <Footer />

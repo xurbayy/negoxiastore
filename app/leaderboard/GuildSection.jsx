@@ -16,11 +16,15 @@ import ShareGuildCardButton from '../components/ShareGuildCardButton';
 //     + poin masing-masing, transparan)
 //   - Tiap baris punya tombol BAGIKAN -> kartu canvas versi guild (semua
 //     anggota + poin + badge NEXO Pass di samping nama pemegangnya)
+//   - Kalau user login & punya guild: barisnya DI-HIGHLIGHT + pill "Guild
+//     Kamu" (permintaan pemilik 2026-10-07, pola sama pill "Kamu" pemain)
 // Login hanya dibutuhkan saat klik share (dicek di sisi klien), sama seperti
 // kartu pemain. Data tabel tetap dari server (getLiveGuildBoard) - komponen
-// ini hanya menangani interaksi.
-export default function GuildSection({ guilds, loggedIn }) {
+// ini hanya menangani interaksi. `myGuildCode` dari server (getUserGuild).
+export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
   const [selected, setSelected] = useState(null);
+  const isMyGuild = (code) => myGuildCode && code && String(code) === String(myGuildCode);
+  const rowMe = 'bg-accent/15 border-l-4 border-l-accent';
 
   return (
     <section className="mt-12" aria-labelledby="lb-guild">
@@ -51,7 +55,7 @@ export default function GuildSection({ guilds, loggedIn }) {
               // ada kode, jangan render tombol klik/share (fetch akan 404).
               const adaKode = Boolean(g.code);
               return (
-              <tr key={g.code || g.rank + g.name} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
+              <tr key={g.code || g.rank + g.name} className={`border-b border-border-soft/60 last:border-0 ${isMyGuild(g.code) ? rowMe : 'hover:bg-card-cream/60'}`}>
                 <td className="px-4 py-3 font-display text-ink">
                   {/* Emoji podium SAMA dengan tabel pemain (permintaan pemilik
                       2026-10-07): mahkota #1, medali #2/#3. */}
@@ -78,6 +82,10 @@ export default function GuildSection({ guilds, loggedIn }) {
                       {/* Emoji guild dari kolom guilds.emoji (bot) - nama tampil bersih */}
                       <GuildEmoji token={g.emoji} size={18} />
                       <span className="truncate">{stripEmojiToken(g.name)}</span>
+                      {isMyGuild(g.code) && (
+                        // Pill "Guild Kamu" - pola sama pill "Kamu" di tabel pemain.
+                        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-white">Guild Kamu</span>
+                      )}
                     </button>
                     {adaKode && <ShareGuildCardButton guild={g} loggedIn={loggedIn} />}
                   </div>
