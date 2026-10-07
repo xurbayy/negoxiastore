@@ -808,14 +808,28 @@ export async function tanyaGroq(pesan, opsi = {}) {
       }
 
       let pesanErr = '';
-      try { const j = await res.json().catch(() => ({})); pesanErr = j?.error?.message || JSON.stringify(j); } catch { pesanErr = ''; }
+      // FIX 2026-10-07 (laporan "mode max & lainnya ga keluar"): provider kadang
+      // membalas HTML (halaman error Cloudflare 502/503), BUKAN JSON. Dulu
+      // res.json() gagal -> pesanErr kosong -> user cuma lihat "HTTP 502" tanpa
+      // sebab. Sekarang baca teks mentah dulu; kalau HTML, beri pesan yang jelas
+      // (gangguan sementara server provider) + retry otomatis di bawah.
+      let isHtml = false;
+      try {
+        const teksMentah = await res.text().catch(() => '');
+        isHtml = /^\s*</.test(teksMentah || '');
+        if (!isHtml && teksMentah) {
+          try { const j = JSON.parse(teksMentah); pesanErr = j?.error?.message || ''; } catch { pesanErr = ''; }
+        }
+      } catch { pesanErr = ''; }
 
       const kode = res.status;
       // Terjemahkan pesan provider (umumnya Inggris) ke Indonesia supaya
       // pemilik paham sebabnya (permintaan pemilik 2026-10-02: "semua validasi
       // ini pake bahasa indonesia").
       let rangkai = terjemahPesan(pesanErr) || ('HTTP ' + kode);
-      if (/too large|TPM|tokens per minute/i.test(pesanErr || '')) {
+      if (isHtml && kode >= 500) {
+        rangkai = `Server ${label} sedang gangguan sementara (HTTP ${kode}). Coba lagi sebentar, atau ganti model/provider lain.`;
+      } else if (/too large|TPM|tokens per minute/i.test(pesanErr || '')) {
         rangkai = `Data terlalu panjang untuk batas kuota ${label}. Coba lagi sebentar.`;
       } else if (kode === 403) {
         rangkai += ` [kunci ditolak atau nama MODEL salah. Cek model: ${model}]`;
@@ -848,7 +862,10 @@ export async function tanyaGroq(pesan, opsi = {}) {
           if (res2.ok) {
             let d2;
             try { d2 = await res2.json().catch(() => ({})); } catch (_) { d2 = null; }
-            const t2 = d2?.choices?.[0]?.message?.content;
+            // FIX 2026-10-07: fallback reasoning juga di retry 5xx (konsisten
+            // dengan 2 jalur lain - model reasoning bisa content kosong).
+            const msg2 = d2?.choices?.[0]?.message;
+            const t2 = msg2?.content || msg2?.reasoning || '';
             if (t2) {
               const u2 = d2?.usage ? {
                 promptTokens: d2.usage.prompt_tokens ?? null,

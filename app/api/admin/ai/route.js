@@ -676,10 +676,15 @@ export async function POST(request) {
       provider: hasil.provider,
       // Kode 429 = semua kunci kena limit. Pesan ini membantu admin tahu
       // harus menunggu, bukan mengira kodenya rusak.
+      // FIX 2026-10-07 ("mode max & lainnya ga keluar"): tambahkan penjelasan
+      // konkret rate limit provider gratis (RouterWay 5 request/menit) supaya
+      // pemilik tidak mengira mode thinking-nya yang rusak.
       kode: hasil.kode,
       petunjuk: hasil.kode === 429
-        ? `Semua kunci ${labelProv} kena batas kuota. Tunggu sebentar atau tambah kunci di ${envProv}.`
-        : undefined,
+        ? `Batas kuota ${labelProv} tercapai (provider gratis biasanya ~5 request/menit). Tunggu 1-2 menit lalu coba lagi - ini BUKAN masalah mode thinking. Kalau sering, tambah kunci di ${envProv}.`
+        : (hasil.kode >= 500
+          ? `Server ${labelProv} sedang gangguan sementara (HTTP ${hasil.kode}). Tunggu sebentar lalu coba lagi - ini bukan masalah mode thinking.`
+          : undefined),
     }, 502);
   }
 
