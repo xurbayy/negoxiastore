@@ -78,9 +78,11 @@ export async function GET(request) {
     { role: 'system', content: 'Kamu agen pemantau NEXO. Jawab bahasa Indonesia santai.' },
     { role: 'user', content: 'DATA SNAPSHOT BOT:\n\n' + konteks + konteksKode },
     { role: 'user', content: PROMPT_AGEN + '\n\nBuat laporan harian + usulan aksi.' },
-    // FIX 2026-10-07: maxTokens 8000 (bukan 3000) - model reasoning butuh ruang
-    // berpikir; 3000 habis di reasoning -> content kosong -> laporan tak pernah ada.
-  ], { provider: providerAgen, model: modelAgen, maxTokens: 8000, thinking: 'auto' });
+    // FIX 2026-10-07 (final): 4000 token + thinking 'minimal'.
+    //   - 3000: kehabisan token di reasoning -> content kosong -> gagal.
+    //   - 8000 + auto: cukup token tapi ~60+ dtk -> 504 (batas Vercel 60 dtk).
+    //   - 4000 + minimal: diuji langsung ~34 dtk, laporan lengkap. Aman dua-duanya.
+  ], { provider: providerAgen, model: modelAgen, maxTokens: 4000, thinking: 'minimal' });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error }, 502);
 

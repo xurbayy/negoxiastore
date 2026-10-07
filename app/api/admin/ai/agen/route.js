@@ -113,15 +113,21 @@ export async function POST(request) {
     provider: String(body?.provider || '').trim() || undefined,
     model: String(body?.model || '').trim() || undefined,
     // TOKEN & THINKING AGEN DIPATOK SERVER (permintaan pemilik 2026-10-02, revisi
-    // 2026-10-04): agen jalan 24/7, jadi efisiensi diatur di sini - bukan dari UI.
-    // REVISI 2026-10-07 (agen tidak pernah keluar laporan): 3000 token TERLALU
-    // KECIL untuk model reasoning (mis. deepseek-v4-flash) - token habis buat
-    // "berpikir" (finish_reason=length) sehingga content KOSONG & agen GAGAL
-    // selalu. 8000 memberi ruang berpikir + laporan lengkap.
-    // Thinking SELALU 'auto' (permintaan pemilik: "agent default thinking dan
-    // ga bisa diubah lagi") - web biarkan provider memutuskan sendiri.
-    maxTokens: 8000,
-    thinking: 'auto',
+    // 2026-10-04 & 2026-10-07). Riwayat singkat supaya tidak diutak-atik lagi:
+    //
+    // 1) 3000 token -> TERLALU KECIL untuk model reasoning (deepseek-v4-flash
+    //    dsb): token habis di "berpikir" (finish_reason=length) -> content
+    //    KOSONG -> agen gagal selalu.
+    // 2) 8000 token + thinking auto -> cukup token, TAPI waktu respons ~60+ dtk
+    //    untuk konteks agen penuh (14KB) -> TEPAT di batas 60 dtk Vercel ->
+    //    FUNCTION_INVOCATION_TIMEOUT (504).
+    // 3) SOLUSI FINAL (diuji langsung ke RouterWay): 4000 token +
+    //    reasoning_effort 'minimal' -> 34 detik, laporan lengkap 3200 char.
+    //    Aman di bawah 60 dtk DAN tidak kehabisan token.
+    // Kalau model non-reasoning dipakai, reasoning_effort diabaikan provider
+    // (aman - hanya parameter tambahan).
+    maxTokens: 4000,
+    thinking: 'minimal',
   });
 
   if (!hasil.ok) return json({ ok: false, error: hasil.error, providerLabel: hasil.providerLabel }, 502);
