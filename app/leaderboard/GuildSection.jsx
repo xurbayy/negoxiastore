@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { emojiSrc } from '../lib/emojisClient';
+import { emojiSrc, emojiSrcStatis } from '../lib/emojisClient';
 import { stripEmojiToken } from '../lib/textUtil';
 import GuildEmoji from '../components/GuildEmoji';
 import GuildDetailCard from '../components/GuildDetailCard';
@@ -46,11 +46,11 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
             <tr className="border-b border-border-soft text-xs uppercase tracking-wider text-ink-muted">
               <th scope="col" className="px-4 py-3">#</th>
               <th scope="col" className="px-4 py-3">Guild</th>
-              {/* KOLOM: Level + WIN + Member SAJA (permintaan pemilik
-                  2026-10-07: "jadinya level WIN dan member gitu aja dulu
-                  yang lain nanti") - Poin & Winrate ditarik dulu. */}
-              <th scope="col" className="px-4 py-3 text-right">Level</th>
+              {/* URUTAN KOLOM: WIN + Level + Member (permintaan pemilik
+                  2026-10-07: 'urutannya tu WIN LEVEL MEMBER') - Poin &
+                  Winrate ditarik dulu. */}
               <th scope="col" className="px-4 py-3 text-right">WIN</th>
+              <th scope="col" className="px-4 py-3 text-right">Level</th>
               <th scope="col" className="px-4 py-3 text-right">Member</th>
             </tr>
           </thead>
@@ -70,11 +70,11 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                       pengganti mahkota), medali #2/#3. */}
                   {Number(g.rank) === 1 && emojiSrc('party') && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('party')} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
+                    <img src={emojiSrc('party')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('party', 64); } }} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
                   )}
                   {Number(g.rank) > 1 && Number(g.rank) <= 3 && emojiSrc('medal') && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('medal')} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
+                    <img src={emojiSrc('medal')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('medal', 64); } }} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
                   )}
                   {g.rank}
                 </td>
@@ -101,17 +101,17 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                     {adaKode && <ShareGuildCardButton guild={g} loggedIn={loggedIn} />}
                   </div>
                 </td>
-                {/* LEVEL: TANPA emoji (permintaan pemilik 2026-10-07) +
-                    level = DARI MENANG WAR (revisi: "level itu diambil dari
-                    win di guild itu") - tooltip tampilkan progres menang. */}
+                {/* WIN: jumlah MENANG war - angka polos tanpa emoji
+                    (permintaan: urutan WIN LEVEL MEMBER). */}
+                <td className="px-4 py-3 text-right" title={`${g.warWins || 0} menang`}>{g.warWins ?? 0}</td>
+                {/* LEVEL: TANPA emoji, level = DARI MENANG WAR (revisi:
+                    "level itu diambil dari win di guild itu") - tooltip
+                    tampilkan progres menang. */}
                 <td className="px-4 py-3 text-right">
                   <span className="font-display text-ink" title={`${g.xpDiLevel || 0} / ${g.xpButuhLevel || 0} menang lagi ke level berikutnya`}>
                     {g.level ?? '-'}
                   </span>
                 </td>
-                {/* WIN: jumlah MENANG war (permintaan pemilik: "level WIN dan
-                    member gitu aja dulu") - angka polos tanpa emoji. */}
-                <td className="px-4 py-3 text-right" title={`${g.warWins || 0} menang`}>{g.warWins ?? 0}</td>
                 <td className="px-4 py-3 text-right text-ink-muted">{g.members}</td>
               </tr>
               );

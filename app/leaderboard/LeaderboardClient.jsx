@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { emojiSrc } from '../lib/emojisClient';
+import { emojiSrc, emojiSrcStatis } from '../lib/emojisClient';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
 import PlayerProfileCard from '../components/PlayerProfileCard';
@@ -60,11 +60,11 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                         permintaan pemilik 2026-10-07 (pengganti mahkota). */}
                     {Number(p.rank) === 1 && emojiSrc('party') && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('party')} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
+                      <img src={emojiSrc('party')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('party', 64); } }} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
                     )}
                     {Number(p.rank) > 1 && Number(p.rank) <= 3 && emojiSrc('medal') && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('medal')} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
+                      <img src={emojiSrc('medal')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('medal', 64); } }} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
                     )}
                     {p.rank}
                   </td>

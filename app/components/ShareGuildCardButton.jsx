@@ -62,7 +62,10 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
       //     emoji tambahan") - hanya angka
       //   - goldcoin = Poin, ClashingSwords (swords) = Winrate,
       //     users0 (group) = Member, crown/member = peran anggota.
-      const [coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, ...avatarImgsArr] = await Promise.all([
+      //   - PODIUM (permintaan pemilik 2026-10-07: "medali atau pialanya
+      //     di atas seperti kartu share top player"): #1 = party,
+      //     #2/#3 = medal (sama dengan tabel leaderboard).
+      const [coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, partyPodium, medalPodium, ...avatarImgsArr] = await Promise.all([
         loadImg(emojiSrcStatis('goldcoin', 128)),
         loadImg(emojiSrcStatis('swords', 128)),    // :ClashingSwords: - tile Winrate
         loadImg(emojiSrcStatis('group', 128)),     // :users0: - tile Member
@@ -73,6 +76,8 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
         loadImg(emojiSrcStatis('castle', 128)),    // cadangan kalau emoji guild kosong
         loadImg('/nexo-logo-256.png'),
         loadImg(tokenEmojiUrl(d.emoji)),
+        loadImg(emojiSrcStatis('party', 128)),     // podium #1
+        loadImg(emojiSrcStatis('medal', 128)),     // podium #2/#3
         ...anggota.map((m) => loadImg(avatarUser(m.userId, m.avatarUrl, 96))),
       ]);
       const avatarImgs = {};
@@ -80,7 +85,7 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
 
       const canvas = await renderCard({
         detail: d, anggota,
-        coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs,
+        coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, partyPodium, medalPodium, avatarImgs,
       });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
       if (!blob) throw new Error('render gagal');
@@ -299,7 +304,7 @@ function tokenEmojiUrl(token) {
 // ─────────────────────────────────────────────────────────────
 // Render kartu 1080x1350
 // ─────────────────────────────────────────────────────────────
-async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, avatarImgs }) {
+async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crownImg, adminImg, memberImg, nexopassImg, castleImg, logoImg, guildEmojiImg, partyPodium, medalPodium, avatarImgs }) {
   const W = 1080;
   const H = 1350;
   const canvas = document.createElement('canvas');
@@ -386,6 +391,15 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   ctx.strokeStyle = ACCENT;
   ctx.lineWidth = 4;
   ctx.beginPath(); ctx.arc(ecx, ecy, er + 11, 0, Math.PI * 2); ctx.stroke();
+
+  // PODIUM di ATAS lingkaran emoji guild (permintaan pemilik 2026-10-07:
+  // "medali atau pialanya di atas seperti kartu share top player") -
+  // posisi & ukuran MENIRU podium kartu pemain (crown/medal melayang 18px
+  // di atas puncak lingkaran): #1 = party, #2/#3 = medal.
+  const rankOrn = Number(detail.rank) || 0;
+  if (rankOrn === 1 && partyPodium) ctx.drawImage(partyPodium, ecx - 30, ecy - er - 78, 60, 60);
+  else if (rankOrn === 2 && medalPodium) ctx.drawImage(medalPodium, ecx - 27, ecy - er - 72, 54, 54);
+  else if (rankOrn === 3 && medalPodium) ctx.drawImage(medalPodium, ecx - 27, ecy - er - 72, 54, 54);
 
   // ── Nama guild + kode ──
   // Nama guild pakai auto-shrink (TIDAK dipotong, permintaan pemilik
