@@ -5,6 +5,7 @@ import { emojiSrcStatis } from '../lib/emojisClient';
 import { SITE_URL } from '../lib/site';
 import { fmtRingkas } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
+import { loadImg, loadEmojiCanvas } from '../lib/emojiCanvas';
 
 // ==========================================
 // KARTU BAGIKAN GUILD (permintaan pemilik 2026-10-07)
@@ -76,8 +77,8 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
         loadImg(emojiSrcStatis('castle', 128)),    // cadangan kalau emoji guild kosong
         loadImg('/nexo-logo-256.png'),
         loadImg(tokenEmojiUrl(d.emoji)),
-        loadImg(emojiSrcStatis('party', 128)),     // podium #1
-        loadImg(emojiSrcStatis('medal', 128)),     // podium #2/#3
+        loadEmojiCanvas('party', 128),             // podium #1 (fallback PNG->GIF)
+        loadEmojiCanvas('medal', 128),             // podium #2/#3 (fallback PNG->GIF)
         ...anggota.map((m) => loadImg(avatarUser(m.userId, m.avatarUrl, 96))),
       ]);
       const avatarImgs = {};
@@ -282,16 +283,6 @@ function tulisNamaAuto(ctx, teks, x, y, maksLebar, ukAwal, minUk, fontTemplate, 
   return { teks: finalTeks, lebar, uk };
 }
 
-function loadImg(src) {
-  return new Promise((resolve) => {
-    if (!src) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
 
 // Token emoji Discord (<:nama:id> / <a:nama:id>) -> URL PNG statis untuk canvas.
 // Mengembalikan null kalau bukan token (mis. emoji unicode atau kosong).

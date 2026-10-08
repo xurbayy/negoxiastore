@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { emojiSrcStatis } from '../lib/emojisClient';
 import { SITE_URL } from '../lib/site';
 import { fmtRingkas } from '../lib/formatClient';
+import { loadImg, loadEmojiCanvas } from '../lib/emojiCanvas';
 
 // Kartu "Sharing" - dipakai DUA konteks dengan desain yang SAMA (konsisten):
 //   1. Leaderboard : peringkat pemain (#N) + poin + level
@@ -128,16 +128,7 @@ function tulisNamaAuto(ctx, teks, x, y, maksLebar, ukAwal, minUk, fontTemplate, 
   return { teks: finalTeks, lebar, uk };
 }
 
-function loadImg(src) {
-  return new Promise((resolve) => {
-    if (!src) return resolve(null);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
+
 
 async function renderCard({ player, coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg }) {
   const dariProfilHitung = player.board === 'profil';
@@ -533,17 +524,20 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
       // Nama emoji disamakan dengan MeClient.STAT_ICONS supaya kartu & halaman
       // profil memakai ikon yang sama.
       const [coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg] = await Promise.all([
-        loadImg(emojiSrcStatis('goldcoin', 128)),
-        loadImg(emojiSrcStatis('party', 128)),  // #1 podium: emoji GIF party (permintaan pemilik 2026-10-07)
-        loadImg(emojiSrcStatis('medal', 128)),
+        loadEmojiCanvas('goldcoin', 128),
+        // #1 podium: emoji GIF party (permintaan pemilik 2026-10-07)
+        loadEmojiCanvas('party', 128),
+        // #2/#3 podium: emoji medali (1516381655089283203) - WAJIB punya
+        // fallback karena SVG/gambar gagal muat = ornamen hilang senyap.
+        loadEmojiCanvas('medal', 128),
         loadImg('/nexo-logo-256.png'),
         // download3 = merek NEXO Pass resmi (badge status di header)
-        loadImg(emojiSrcStatis('download3', 128)),
+        loadEmojiCanvas('download3', 128),
         // Level TIDAK memakai emoji custom - digambar sebagai BINTANG VEKTOR
         // (lihat gambarBintang) supaya sederhana & tajam di semua ukuran.
         // trophy = Menang, 267042fire = Streak harian.
-        loadImg(emojiSrcStatis('trophy', 128)),
-        loadImg(emojiSrcStatis('267042fire', 128)),
+        loadEmojiCanvas('trophy', 128),
+        loadEmojiCanvas('267042fire', 128),
       ]);
       const canvas = await renderCard({ player, coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg });
       const blob = await new Promise((res) => canvas.toBlob(res, 'image/png', 0.95));
