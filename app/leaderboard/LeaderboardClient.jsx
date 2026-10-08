@@ -6,6 +6,7 @@ import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
 import PlayerProfileCard from '../components/PlayerProfileCard';
 import ShareCardButton from '../components/ShareCardButton';
+import MedalIcon from '../components/MedalIcon';
 
 // Klien leaderboard: baris pemain jadi TOMBOL yang membuka kartu profil mini
 // (dengan avatar fresh). Data dari snapshot bot - avatarUrl dikirim tiap push
@@ -62,9 +63,8 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={emojiSrc('party')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('party', 64); } }} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
                     )}
-                    {Number(p.rank) > 1 && Number(p.rank) <= 3 && emojiSrc('medal') && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('medal')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('medal', 64); } }} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
+                    {Number(p.rank) > 1 && Number(p.rank) <= 3 && (
+                      <MedalIcon size={16} className="mr-1 inline h-4 w-4 align-middle" />
                     )}
                     {p.rank}
                   </td>

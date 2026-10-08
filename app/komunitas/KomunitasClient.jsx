@@ -17,6 +17,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { emojiSrc } from '../lib/emojisClient';
+import MedalIcon from '../components/MedalIcon';
 
 // ==========================================
 // STATE PENCARIAN & HALAMAN
@@ -51,7 +52,6 @@ function fmtRingkas(n) {
 // panjang angkanya beda (1 vs 100).
 function Peringkat({ rank }) {
   const crown = rank === 1 ? emojiSrc('crown') : null;
-  const medal = rank > 1 && rank <= 3 ? emojiSrc('medal') : null;
   return (
     <span
       className="flex w-9 shrink-0 items-center justify-center gap-1 font-display text-lg font-bold leading-none text-ink"
@@ -61,9 +61,8 @@ function Peringkat({ rank }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={crown} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
       )}
-      {medal && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={medal} alt="" width={16} height={16} className="h-4 w-[16px]" />
+      {rank > 1 && rank <= 3 && (
+        <MedalIcon size={16} className="h-4 w-[16px]" />
       )}
       {rank}
     </span>

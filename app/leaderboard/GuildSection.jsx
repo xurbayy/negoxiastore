@@ -6,6 +6,7 @@ import { stripEmojiToken } from '../lib/textUtil';
 import GuildEmoji from '../components/GuildEmoji';
 import GuildDetailCard from '../components/GuildDetailCard';
 import ShareGuildCardButton from '../components/ShareGuildCardButton';
+import MedalIcon from '../components/MedalIcon';
 
 // ==========================================
 // SEKSI GUILD TERKUAT (permintaan pemilik 2026-10-07)
@@ -72,9 +73,8 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('party')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('party', 64); } }} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
                   )}
-                  {Number(g.rank) > 1 && Number(g.rank) <= 3 && emojiSrc('medal') && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('medal')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('medal', 64); } }} alt="" width={16} height={16} className="mr-1 inline h-4 w-4 align-middle" />
+                  {Number(g.rank) > 1 && Number(g.rank) <= 3 && (
+                    <MedalIcon size={16} className="mr-1 inline h-4 w-4 align-middle" />
                   )}
                   {g.rank}
                 </td>
