@@ -309,7 +309,10 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   ctx.fillRect(0, 0, W, H);
 
   // ── Header gelap + wordmark ──
-  const HDR = 250;
+  // HDR dinaikkan 250 -> 290 (perbaikan 2026-10-08 "text peringkat ketindihin"):
+  // memberi ruang vertikal untuk nama + baris peringkat + sub-judul supaya tidak
+  // bertumpuk dan tidak menabrak tile statistik di bawahnya.
+  const HDR = 290;
   ctx.fillStyle = '#1E1E26';
   ctx.fillRect(0, 0, W, HDR);
 
@@ -395,32 +398,38 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   // ── Nama guild + kode ──
   // Nama guild pakai auto-shrink (TIDAK dipotong, permintaan pemilik
   // 2026-10-07: nama panjang tetap kebaca semua).
+  //
+  // SPACING (perbaikan 2026-10-08: "nama guild tabrakan sama logo/lingkaran"):
+  // dasar teks = `ecy + er` = HDR + 84 (dasar lingkaran). Nama diberi jarak
+  // +64 dari dasar lingkaran supaya glyph nama (font 54) TIDAK naik ke dalam
+  // lingkaran logo. peringkat +110, sub-judul +148 - semua punya jarak lega
+  // dan berhenti jauh sebelum tile statistik (tileY 512).
   ctx.fillStyle = '#2B2118';
-  tulisNamaAuto(ctx, detail.name, W / 2, ecy + er + 70, W - 220, 60, 28, `800 %dpx ${FONT}`);
+  tulisNamaAuto(ctx, detail.name, W / 2, ecy + er + 64, W - 220, 52, 28, `800 %dpx ${FONT}`);
   // Baris peringkat (permintaan pemilik 2026-10-08): MENIRU kartu share top
   // pemain - "Peringkat N Top Guild" + penanda podium untuk #1-#3.
   const isPodiumGuild = rankOrn >= 1 && rankOrn <= 3;
   ctx.textAlign = 'center';
   ctx.fillStyle = '#6E6157';
-  ctx.font = `600 30px ${FONT}`;
+  ctx.font = `600 28px ${FONT}`;
   ctx.fillText(
     potongByLebar(ctx, `Peringkat ${rankOrn} Top Guild${isPodiumGuild ? '  ·  masuk podium' : ''}`, W - 128),
     W / 2,
-    ecy + er + 116
+    ecy + er + 110
   );
   // Sub-judul: kode + member + winrate (W/L) - winrate penting untuk dilihat
   // sebelum masuk daftar anggota. "Belum war" kalau tidak ada war.
   const wrTxt = detail.warWins > 0 || detail.warLosses > 0
     ? `${detail.warWins}W / ${detail.warLosses}L`
     : 'Belum war';
-  ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member  ·  ${wrTxt}`, W - 220), W / 2, ecy + er + 154);
+  ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member  ·  ${wrTxt}`, W - 220), W / 2, ecy + er + 148);
 
   // ── 4 tile statistik. PERMINTAAN PEMILIK 2026-10-07: LEVEL TANPA emoji
   //    tambahan (hanya angka), label "Total Poin" -> "Poin". Tile ber-ikon:
   //    goldcoin Poin, ClashingSwords Winrate, users0 Member. 4 kolom dalam
   //    1 baris supaya tinggi kartu tidak berubah. ──
-  const tileY = 482;
-  const tileH = 132;
+  const tileY = 552;
+  const tileH = 128;
   const tiles = [
     // LEVEL = bintang (permintaan pemilik 2026-10-07) - digambar VEKTOR
     // (gambarBintang), bukan glyph unicode - lebih rapi & tajam.
@@ -463,22 +472,24 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   }
 
   // ── Judul daftar anggota + total poin member (transparansi) ──
+  // Posisi digeser turun (2026-10-08) karena header + teks judul naik - agar
+  // tile statistik (552..680) tidak menabrak judul ANGGOTA.
   ctx.fillStyle = '#6E6157';
   ctx.font = `700 26px ${FONT}`;
-  ctx.fillText(`ANGGOTA (${anggota.length})`, 64, 664);
+  ctx.fillText(`ANGGOTA (${anggota.length})`, 64, 700);
   const totalMember = anggota.reduce((a, m) => a + (m.points || 0), 0);
   ctx.textAlign = 'right';
   ctx.fillStyle = '#A99C8E';
   ctx.font = `600 24px ${FONT}`;
-  ctx.fillText(`Total poin member: ${fmtRingkas(totalMember)}`, W - 64, 664);
+  ctx.fillText(`Total poin member: ${fmtRingkas(totalMember)}`, W - 64, 700);
   ctx.textAlign = 'left';
 
   // ── Daftar anggota 2 kolom (maks 10 - kapasitas guild bot) ──
   const rowH = 72;
   const rowGap = 12;
   const stride = rowH + rowGap;
-  const zoneTop = 686;
-  const zoneH = 408; // sampai 1094 (di atas strip CTA)
+  const zoneTop = 722;
+  const zoneH = 378; // sampai 1100 (di atas strip CTA di 1126)
   const rows = Math.ceil(anggota.length / 2);
   const rowsH = rows > 0 ? rows * stride - rowGap : 0;
   const startY = zoneTop + Math.max(0, (zoneH - rowsH) / 2);
