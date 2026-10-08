@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { emojiSrc, emojiSrcStatis } from '../lib/emojisClient';
+import { emojiSrc } from '../lib/emojisClient';
 import { stripEmojiToken } from '../lib/textUtil';
 import GuildEmoji from '../components/GuildEmoji';
 import GuildDetailCard from '../components/GuildDetailCard';
 import ShareGuildCardButton from '../components/ShareGuildCardButton';
 import MedalIcon from '../components/MedalIcon';
+import PartyIcon from '../components/PartyIcon';
 
 // ==========================================
 // SEKSI GUILD TERKUAT (permintaan pemilik 2026-10-07)
@@ -67,11 +68,12 @@ export default function GuildSection({ guilds, loggedIn, myGuildCode = null }) {
               <tr key={g.code || g.rank + g.name} className={`border-b border-border-soft/60 last:border-0 ${isMyGuild(g.code) ? rowMe : 'hover:bg-card-cream/60'}`}>
                 <td className="px-4 py-3 font-display text-ink">
                   {/* Emoji podium SAMA dengan tabel pemain (permintaan pemilik
-                      2026-10-07): #1 = emoji GIF party (1516446871785046149,
-                      pengganti mahkota), medali #2/#3. */}
-                  {Number(g.rank) === 1 && emojiSrc('party') && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={emojiSrc('party')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('party', 64); } }} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
+                      2026-10-07): #1 = party GIF (1516446871785046149),
+                      #2/#3 = medali GIF (1516381655089283203). Dipanggil
+                      LEWAT ID supaya tidak tertukar dengan nama katalog
+                      dinamis yang bentrok. */}
+                  {Number(g.rank) === 1 && (
+                    <PartyIcon size={18} className="mr-1 inline h-4 w-4 align-middle" />
                   )}
                   {Number(g.rank) > 1 && Number(g.rank) <= 3 && (
                     <MedalIcon size={16} className="mr-1 inline h-4 w-4 align-middle" />

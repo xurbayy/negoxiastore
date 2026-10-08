@@ -5,7 +5,7 @@ import { emojiSrcStatis } from '../lib/emojisClient';
 import { SITE_URL } from '../lib/site';
 import { fmtRingkas } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
-import { loadImg, loadEmojiCanvas } from '../lib/emojiCanvas';
+import { loadImg, loadEmojiCanvasById } from '../lib/emojiCanvas';
 
 // ==========================================
 // KARTU BAGIKAN GUILD (permintaan pemilik 2026-10-07)
@@ -77,8 +77,8 @@ export default function ShareGuildCardButton({ guild, detail = null, loggedIn, v
         loadImg(emojiSrcStatis('castle', 128)),    // cadangan kalau emoji guild kosong
         loadImg('/nexo-logo-256.png'),
         loadImg(tokenEmojiUrl(d.emoji)),
-        loadEmojiCanvas('party', 128),             // podium #1 (fallback PNG->GIF)
-        loadEmojiCanvas('medal', 128),             // podium #2/#3 (fallback PNG->GIF)
+        loadEmojiCanvasById('1516446871785046149', 128), // podium #1 party (by ID)
+        loadEmojiCanvasById('1516381655089283203', 128), // podium #2/#3 medal (by ID)
         ...anggota.map((m) => loadImg(avatarUser(m.userId, m.avatarUrl, 96))),
       ]);
       const avatarImgs = {};

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { SITE_URL } from '../lib/site';
 import { fmtRingkas } from '../lib/formatClient';
-import { loadImg, loadEmojiCanvas } from '../lib/emojiCanvas';
+import { loadImg, loadEmojiCanvas, loadEmojiCanvasById } from '../lib/emojiCanvas';
 
 // Kartu "Sharing" - dipakai DUA konteks dengan desain yang SAMA (konsisten):
 //   1. Leaderboard : peringkat pemain (#N) + poin + level
@@ -525,11 +525,12 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
       // profil memakai ikon yang sama.
       const [coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg] = await Promise.all([
         loadEmojiCanvas('goldcoin', 128),
-        // #1 podium: emoji GIF party (permintaan pemilik 2026-10-07)
-        loadEmojiCanvas('party', 128),
-        // #2/#3 podium: emoji medali (1516381655089283203) - WAJIB punya
-        // fallback karena SVG/gambar gagal muat = ornamen hilang senyap.
-        loadEmojiCanvas('medal', 128),
+        // #1 podium: party GIF - WAJIB lewat ID (nama katalog dinamis
+        // "30348trophyfixed", bukan "party").
+        loadEmojiCanvasById('1516446871785046149', 128),
+        // #2/#3 podium: medali GIF - WAJIB lewat ID (nama asli "1st";
+        // nama "medal" dipegang emoji trophy lama).
+        loadEmojiCanvasById('1516381655089283203', 128),
         loadImg('/nexo-logo-256.png'),
         // download3 = merek NEXO Pass resmi (badge status di header)
         loadEmojiCanvas('download3', 128),

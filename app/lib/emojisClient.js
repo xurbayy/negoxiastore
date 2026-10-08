@@ -48,11 +48,39 @@ export function getEmoji(name) {
   return byName[name] || byAlias[name] || null;
 }
 
+// Ambil entri berdasarkan ID Discord.
+//
+// KENAPA PENTING: katalog emoji dinamis (di-push bot) memakai NAMA ASLI dari
+// Discord, dan nama itu bisa BENTROK dengan nama ramah kita. Contoh nyata
+// (2026-10-08): emoji medali podium (#2/#3) id 1516381655089283203 bernama
+// asli "1st", sedangkan nama "medal" dipegang emoji trophy lama
+// (1516381982961959072). Akibatnya emojiSrc('medal') resolve ke id SALAH dan
+// tabel menampilkan emoji lama. Untuk ikon yang maknanya DIPAKU, selalu
+// panggil lewat ID - bukan nama.
+export function getEmojiById(id) {
+  return id ? (byId[String(id)] || null) : null;
+}
+
 export function emojiSrc(name, size = 64) {
   const e = getEmoji(name);
   if (!e) return null;
   const base = e.url.split('?')[0];
   return `${base}?size=${size}&quality=lossless`;
+}
+
+// URL emoji (HTML, animasi hidup) berdasarkan ID. Selalu ada di CDN Discord
+// walau katalog DB belum ter-hydrate - tidak bergantung resolusi nama.
+export function emojiSrcById(id, size = 64) {
+  const e = getEmojiById(id);
+  const base = e ? e.url.split('?')[0] : `https://cdn.discordapp.com/emojis/${id}.gif`;
+  return `${base}?size=${size}&quality=lossless`;
+}
+
+// Versi PNG statis (canvas) berdasarkan ID - lihat catatan emojiSrcStatis.
+export function emojiSrcStatisById(id, size = 64) {
+  const e = getEmojiById(id);
+  const base = e ? e.url.split('?')[0] : `https://cdn.discordapp.com/emojis/${id}.gif`;
+  return `${base.replace(/\.gif$/i, '.png')}?size=${size}&quality=lossless`;
 }
 
 /**

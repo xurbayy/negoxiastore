@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { emojiSrc, emojiSrcStatis } from '../lib/emojisClient';
+import { emojiSrc } from '../lib/emojisClient';
 import { fmtRingkas, fmtPenuh } from '../lib/formatClient';
 import { avatarUser } from '../lib/avatarClient';
 import PlayerProfileCard from '../components/PlayerProfileCard';
 import ShareCardButton from '../components/ShareCardButton';
 import MedalIcon from '../components/MedalIcon';
+import PartyIcon from '../components/PartyIcon';
 
 // Klien leaderboard: baris pemain jadi TOMBOL yang membuka kartu profil mini
 // (dengan avatar fresh). Data dari snapshot bot - avatarUrl dikirim tiap push
@@ -57,11 +58,12 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                   className={`border-b border-border-soft/60 last:border-0 ${isMe(p.userId) ? rowMe : 'hover:bg-card-cream/60'}`}
                 >
                   <td className="px-4 py-3 font-display text-ink">
-                    {/* #1 = emoji GIF party (1516446871785046149) -
-                        permintaan pemilik 2026-10-07 (pengganti mahkota). */}
-                    {Number(p.rank) === 1 && emojiSrc('party') && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={emojiSrc('party')} onError={(e) => { const el = e.currentTarget; if (!el.dataset.fb) { el.dataset.fb = '1'; el.src = emojiSrcStatis('party', 64); } }} alt="" width={18} height={18} className="mr-1 inline h-4 w-4 align-middle" />
+                    {/* #1 = party GIF (1516446871785046149), #2/#3 = medali GIF
+                        (1516381655089283203). Keduanya dipanggil LEWAT ID
+                        (PartyIcon/MedalIcon) supaya tidak tertukar dengan nama
+                        katalog dinamis yang bentrok. */}
+                    {Number(p.rank) === 1 && (
+                      <PartyIcon size={18} className="mr-1 inline h-4 w-4 align-middle" />
                     )}
                     {Number(p.rank) > 1 && Number(p.rank) <= 3 && (
                       <MedalIcon size={16} className="mr-1 inline h-4 w-4 align-middle" />
