@@ -63,7 +63,9 @@ const STAT_ICONS = {
 // 'Game beta baru.' - sama persis dengan yang tampil di menu nxtest bot.
 // Deskripsi panjang per game DIHAPUS supaya tidak beda-beda.
 const BETA_FALLBACK = [
-  { key: 'language', mode: 'solo', name: 'NEXO Language (BETA)', desc: 'Game beta baru.' },
+  // "(BETA)" DIHAPUS dari nama language (permintaan pemilik 2026-10-08) -
+  // tampil polos seperti Sum Duel & Heal Squad.
+  { key: 'language', mode: 'solo', name: 'NEXO Language', desc: 'Game beta baru.' },
   { key: 'sum', mode: 'mp', name: 'Sum Duel', desc: 'Game beta baru.' },
   { key: 'heal', mode: 'coop', name: 'Heal Squad', desc: 'Game beta baru.' },
 ];
