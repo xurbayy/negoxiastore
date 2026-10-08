@@ -429,7 +429,7 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   //    goldcoin Poin, ClashingSwords Winrate, users0 Member. 4 kolom dalam
   //    1 baris supaya tinggi kartu tidak berubah. ──
   const tileY = 552;
-  const tileH = 128;
+  const tileH = 116;
   const tiles = [
     // LEVEL = bintang (permintaan pemilik 2026-10-07) - digambar VEKTOR
     // (gambarBintang), bukan glyph unicode - lebih rapi & tajam.
@@ -451,9 +451,11 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
     ctx.stroke();
     const tcx = tx + tileW / 2;
     // Ikon tile: gambar registry (icon) ATAU bintang vektor (Level).
+    // Posisi dirapatkan (2026-10-08) karena tileH dikecilkan 128->116 agar
+    // judul ANGGOTA di bawahnya punya jarak - ikon/nilai/label tetap muat.
     const adaIkon = Boolean(tiles[i].icon || tiles[i].bintang);
-    if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 20, tileY + 24, 40, 40);
-    else if (tiles[i].bintang) gambarBintang(ctx, tcx, tileY + 44, 20, ACCENT); // vektor - rapi di semua ukuran
+    if (tiles[i].icon) ctx.drawImage(tiles[i].icon, tcx - 18, tileY + 16, 36, 36);
+    else if (tiles[i].bintang) gambarBintang(ctx, tcx, tileY + 34, 18, ACCENT); // vektor - rapi di semua ukuran
     ctx.textAlign = 'center';
     ctx.fillStyle = '#2B2118';
     // Auto-shrink: nilai panjang ("46,4 jt") bisa lebih lebar dari tile -
@@ -464,10 +466,10 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
       uk -= 2;
       ctx.font = `800 ${uk}px ${FONT}`;
     }
-    ctx.fillText(tiles[i].value, tcx, tileY + (adaIkon ? 96 : 78));
+    ctx.fillText(tiles[i].value, tcx, tileY + (adaIkon ? 86 : 70));
     ctx.fillStyle = '#A99C8E';
     ctx.font = `700 18px ${FONT}`;
-    ctx.fillText(tiles[i].label.toUpperCase(), tcx, tileY + (adaIkon ? 122 : 108));
+    ctx.fillText(tiles[i].label.toUpperCase(), tcx, tileY + (adaIkon ? 108 : 96));
     ctx.textAlign = 'left';
   }
 
@@ -476,20 +478,20 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   // tile statistik (552..680) tidak menabrak judul ANGGOTA.
   ctx.fillStyle = '#6E6157';
   ctx.font = `700 26px ${FONT}`;
-  ctx.fillText(`ANGGOTA (${anggota.length})`, 64, 700);
+  ctx.fillText(`ANGGOTA (${anggota.length})`, 64, 706);
   const totalMember = anggota.reduce((a, m) => a + (m.points || 0), 0);
   ctx.textAlign = 'right';
   ctx.fillStyle = '#A99C8E';
   ctx.font = `600 24px ${FONT}`;
-  ctx.fillText(`Total poin member: ${fmtRingkas(totalMember)}`, W - 64, 700);
+  ctx.fillText(`Total poin member: ${fmtRingkas(totalMember)}`, W - 64, 706);
   ctx.textAlign = 'left';
 
   // ── Daftar anggota 2 kolom (maks 10 - kapasitas guild bot) ──
   const rowH = 72;
   const rowGap = 12;
   const stride = rowH + rowGap;
-  const zoneTop = 722;
-  const zoneH = 378; // sampai 1100 (di atas strip CTA di 1126)
+  const zoneTop = 726;
+  const zoneH = 374; // sampai 1100 (di atas strip CTA di 1126)
   const rows = Math.ceil(anggota.length / 2);
   const rowsH = rows > 0 ? rows * stride - rowGap : 0;
   const startY = zoneTop + Math.max(0, (zoneH - rowsH) / 2);
