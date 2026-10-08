@@ -397,14 +397,23 @@ async function renderCard({ detail, anggota, coinImg, swordsImg, groupImg, crown
   // 2026-10-07: nama panjang tetap kebaca semua).
   ctx.fillStyle = '#2B2118';
   tulisNamaAuto(ctx, detail.name, W / 2, ecy + er + 70, W - 220, 60, 28, `800 %dpx ${FONT}`);
+  // Baris peringkat (permintaan pemilik 2026-10-08): MENIRU kartu share top
+  // pemain - "Peringkat N Top Guild" + penanda podium untuk #1-#3.
+  const isPodiumGuild = rankOrn >= 1 && rankOrn <= 3;
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#6E6157';
-  ctx.font = `600 26px ${FONT}`;
+  ctx.font = `600 30px ${FONT}`;
+  ctx.fillText(
+    potongByLebar(ctx, `Peringkat ${rankOrn} Top Guild${isPodiumGuild ? '  ·  masuk podium' : ''}`, W - 128),
+    W / 2,
+    ecy + er + 116
+  );
   // Sub-judul: kode + member + winrate (W/L) - winrate penting untuk dilihat
   // sebelum masuk daftar anggota. "Belum war" kalau tidak ada war.
   const wrTxt = detail.warWins > 0 || detail.warLosses > 0
     ? `${detail.warWins}W / ${detail.warLosses}L`
     : 'Belum war';
-  ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member  ·  ${wrTxt}`, W - 220), W / 2, ecy + er + 116);
+  ctx.fillText(potongByLebar(ctx, `Kode ${detail.code}  ·  ${detail.membersCount} Member  ·  ${wrTxt}`, W - 220), W / 2, ecy + er + 154);
 
   // ── 4 tile statistik. PERMINTAAN PEMILIK 2026-10-07: LEVEL TANPA emoji
   //    tambahan (hanya angka), label "Total Poin" -> "Poin". Tile ber-ikon:

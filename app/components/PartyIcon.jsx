@@ -12,13 +12,21 @@ import { emojiSrcById, emojiSrcStatisById } from '../lib/emojisClient';
 // (permintaan pemilik, emoji GIF baru untuk juara #1 leaderboard).
 export const PARTY_ID = '1557655292739854396';
 
+// UKURAN SUMBER DIPAKU 64 (bukan prop `size`): CDN Discord menolak sebagian
+// varian ukuran kecil untuk GIF tertentu - emoji 1557655292739854396 gagal
+// dimuat pada `size=18` (HTTP error, naturalWidth=0) sehingga ikon #1 tidak
+// tampil. Ambil ukuran 64 yang selalu ada di CDN, lalu biarkan CSS (h-4 w-4 /
+// h-[18px]) yang mengecilkannya. Prop `size` tetap dipakai untuk atribut
+// width/height + ukuran fallback PNG.
+const SUMBER = 64;
+
 export default function PartyIcon({ size = 18, className = '' }) {
-  const src = emojiSrcById(PARTY_ID, size);
+  const src = emojiSrcById(PARTY_ID, SUMBER);
   const gantiKeStatis = (e) => {
     const el = e.currentTarget;
     if (el.dataset.fb === '1') return;
     el.dataset.fb = '1';
-    el.src = emojiSrcStatisById(PARTY_ID, size) || el.src;
+    el.src = emojiSrcStatisById(PARTY_ID, SUMBER) || el.src;
   };
   return (
     // eslint-disable-next-line @next/next/no-img-element

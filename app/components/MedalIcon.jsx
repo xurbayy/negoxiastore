@@ -19,13 +19,19 @@ import { emojiSrcById, emojiSrcStatisById } from '../lib/emojisClient';
 // - decoding="async" + draggable={false}: mengurangi kerja render di HP.
 export const MEDAL_ID = '1516381655089283203';
 
+// UKURAN SUMBER DIPAKU 64 (bukan prop `size`): CDN Discord menolak sebagian
+// varian ukuran kecil untuk GIF tertentu (kasus emoji #1 gagal di size=18).
+// Ambil 64 yang selalu ada, biarkan CSS (h-4 w-4) mengecilkannya; prop `size`
+// tetap untuk atribut width/height + ukuran fallback PNG.
+const SUMBER = 64;
+
 export default function MedalIcon({ size = 16, className = '' }) {
-  const src = emojiSrcById(MEDAL_ID, size);
+  const src = emojiSrcById(MEDAL_ID, SUMBER);
   const gantiKeStatis = (e) => {
     const el = e.currentTarget;
     if (el.dataset.fb === '1') return; // sudah pernah fallback -> jangan ulang
     el.dataset.fb = '1';
-    el.src = emojiSrcStatisById(MEDAL_ID, size) || el.src;
+    el.src = emojiSrcStatisById(MEDAL_ID, SUMBER) || el.src;
   };
   return (
     // eslint-disable-next-line @next/next/no-img-element
