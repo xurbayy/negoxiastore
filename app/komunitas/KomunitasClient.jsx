@@ -16,8 +16,6 @@
 // ==========================================
 
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { emojiSrc } from '../lib/emojisClient';
-import MedalIcon from '../components/MedalIcon';
 
 // ==========================================
 // STATE PENCARIAN & HALAMAN
@@ -44,26 +42,18 @@ function fmtRingkas(n) {
   return String(v);
 }
 
-// Peringkat - gaya PERSIS halaman Leaderboard: angka polos berfont-display,
-// 3 teratas diberi ikon mahkota/medal. TANPA chip berwarna semi transparan
-// seperti sebelumnya (permintaan pemilik 2026-09-30).
+// Peringkat - TANPA ikon mahkota/medali (permintaan pemilik 2026-10-08:
+// "kalo komunitas 1 2 3 itu ga perlu pake emoji seperti leaderboard") -
+// cukup angka polos berfont-display untuk semua peringkat.
 //
 // Lebar dikunci (w-9) supaya logo server semua baris tetap sejajar walau
 // panjang angkanya beda (1 vs 100).
 function Peringkat({ rank }) {
-  const crown = rank === 1 ? emojiSrc('crown') : null;
   return (
     <span
-      className="flex w-9 shrink-0 items-center justify-center gap-1 font-display text-lg font-bold leading-none text-ink"
+      className="flex w-9 shrink-0 items-center justify-center font-display text-lg font-bold leading-none text-ink"
       aria-label={`Peringkat ${rank}`}
     >
-      {crown && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={crown} alt="" width={18} height={18} className="h-[18px] w-[18px]" />
-      )}
-      {rank > 1 && rank <= 3 && (
-        <MedalIcon size={16} className="h-4 w-[16px]" />
-      )}
       {rank}
     </span>
   );
