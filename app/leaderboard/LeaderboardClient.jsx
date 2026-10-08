@@ -58,10 +58,10 @@ export default function LeaderboardClient({ players, myId, loggedIn, premiumIds 
                   className={`border-b border-border-soft/60 last:border-0 ${isMe(p.userId) ? rowMe : 'hover:bg-card-cream/60'}`}
                 >
                   <td className="px-4 py-3 font-display text-ink">
-                    {/* #1 = party GIF (1516446871785046149), #2/#3 = medali GIF
-                        (1516381655089283203). Keduanya dipanggil LEWAT ID
-                        (PartyIcon/MedalIcon) supaya tidak tertukar dengan nama
-                        katalog dinamis yang bentrok. */}
+                    {/* #1 = party GIF (1557655292739854396, diperbarui
+                        2026-10-08), #2/#3 = medali GIF (1516381655089283203).
+                        Keduanya dipanggil LEWAT ID (PartyIcon/MedalIcon)
+                        supaya tidak tertukar dengan nama katalog dinamis. */}
                     {Number(p.rank) === 1 && (
                       <PartyIcon size={18} className="mr-1 inline h-4 w-4 align-middle" />
                     )}

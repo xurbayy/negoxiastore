@@ -525,9 +525,8 @@ export default function ShareCardButton({ player, loggedIn, variant = 'icon' }) 
       // profil memakai ikon yang sama.
       const [coinImg, partyImg, medalImg, logoImg, nexopassImg, trophyImg, streakImg] = await Promise.all([
         loadEmojiCanvas('goldcoin', 128),
-        // #1 podium: party GIF - WAJIB lewat ID (nama katalog dinamis
-        // "30348trophyfixed", bukan "party").
-        loadEmojiCanvasById('1516446871785046149', 128),
+        // #1 podium: party GIF terbaru (1557655292739854396) - lewat ID.
+        loadEmojiCanvasById('1557655292739854396', 128),
         // #2/#3 podium: medali GIF - WAJIB lewat ID (nama asli "1st";
         // nama "medal" dipegang emoji trophy lama).
         loadEmojiCanvasById('1516381655089283203', 128),

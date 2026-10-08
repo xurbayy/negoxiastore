@@ -5,11 +5,12 @@ import { emojiSrcById, emojiSrcStatisById } from '../lib/emojisClient';
 // ==========================================
 // PartyIcon - emoji GIF party untuk peringkat #1
 // ==========================================
-// Sama seperti MedalIcon: SELALU panggil lewat ID, bukan nama.
-// Katalog emoji dinamis menamai id 1516446871785046149 sebagai
-// "30348trophyfixed" (nama asli Discord), sehingga men cari lewat nama
-// "party" tidak bisa diandalkan. Lihat catatan di MedalIcon.
-export const PARTY_ID = '1516446871785046149';
+// Sama seperti MedalIcon: SELALU panggil lewat ID, bukan nama (nama katalog
+// dinamis bisa bentrok / berubah - lihat catatan di MedalIcon).
+//
+// ID DIGANTI 2026-10-08: 1516446871785046149 -> 1557655292739854396
+// (permintaan pemilik, emoji GIF baru untuk juara #1 leaderboard).
+export const PARTY_ID = '1557655292739854396';
 
 export default function PartyIcon({ size = 18, className = '' }) {
   const src = emojiSrcById(PARTY_ID, size);
