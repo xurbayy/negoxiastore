@@ -15,8 +15,46 @@
 /** Durasi default satu pembelian NEXO Pass (hari). */
 export const PLAN_DAYS = 30;
 
-/** Harga NEXO Pass dalam Rupiah. */
+/** Harga NEXO Pass dalam Rupiah (per bulan). */
 export const PLAN_PRICE = 20000;
+
+/** Batas maksimal pembelian dalam BULAN (permintaan pemilik 2026-10-08:
+ *  "bisa atur bulannya, maksimal setahun"). */
+export const MAX_MONTHS = 12;
+
+/** Hari per bulan yang dihitung untuk grant premium. */
+export const DAYS_PER_MONTH = 30;
+
+/**
+ * Konversi durasi BULAN -> hari (dipakai grant premium & teks masa aktif).
+ * @param {number} bulan - 1..12
+ * @returns {number} hari
+ */
+export function bulanKeHari(bulan) {
+  const b = Math.min(MAX_MONTHS, Math.max(1, Math.floor(Number(bulan) || 1)));
+  return b * DAYS_PER_MONTH;
+}
+
+/**
+ * Harga total untuk durasi bulan tertentu.
+ * @param {number} bulan - 1..12
+ * @returns {number} rupiah
+ */
+export function hargaBulan(bulan) {
+  const b = Math.min(MAX_MONTHS, Math.max(1, Math.floor(Number(bulan) || 1)));
+  return b * PLAN_PRICE;
+}
+
+/**
+ * Validasi pilihan bulan dari input user (clamp ke 1..12).
+ * @param {unknown} v
+ * @returns {number} bulan valid
+ */
+export function normalBulan(v) {
+  const n = Math.floor(Number(v));
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(MAX_MONTHS, Math.max(1, n));
+}
 
 /** Ambang "lifetime" - sisa waktu di atas ini dianggap seumur hidup. */
 export const LIFETIME_THRESHOLD_DAYS = 50 * 365;

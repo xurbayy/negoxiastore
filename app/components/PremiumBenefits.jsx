@@ -1,7 +1,7 @@
 'use client';
 
 import { emojiSrc } from '../lib/emojisClient';
-import { labelMasaAktif, PLAN_DAYS, PLAN_PRICE } from '../lib/premiumPlan';
+import { labelMasaAktif, PLAN_PRICE } from '../lib/premiumPlan';
 
 // ==========================================
 // KARTU KEUNGGULAN NEXO Pass
@@ -109,7 +109,7 @@ export default function PremiumBenefits({ premium = null, compact = false }) {
       <p className="mt-1 text-xs text-ink-faint">
         {aktif
           ? 'Semua perk di bawah ini sedang aktif di akunmu.'
-          : `Aktif selama ${PLAN_DAYS} hari sejak pembayaran disetujui. Rp ${PLAN_PRICE.toLocaleString('id-ID')} sekali bayar.`}
+          : `Pilih durasi 1 sampai 12 bulan (maksimal setahun) saat checkout - bayar sekali sesuai totalnya. Rp ${PLAN_PRICE.toLocaleString('id-ID')}/bulan.`}
       </p>
 
       <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">

@@ -5,9 +5,9 @@ import { getBotHeartbeat, userHasPremium } from '../../../lib/snapshot';
 import { touchActivity } from '../../../lib/activity';
 import { rateLimitGlobal } from '../../../lib/rate-limit';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';
+import { normalBulan, hargaBulan, bulanKeHari } from '../../../lib/premiumPlan';
 
 export const dynamic = 'force-dynamic';
-const PRICE = 20000;
 
 // POST /api/payment/manual - Submit bukti transfer manual
 export async function POST(request) {
@@ -30,13 +30,20 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const { senderName, receiptBase64, receiptName } = body;
+  const { senderName, receiptBase64, receiptName, months } = body;
   if (!senderName || senderName.length < 3 || senderName.length > 50) {
     return NextResponse.json({ ok: false, error: 'Nama pengirim harus diisi (3-50 karakter).' }, { status: 400 });
   }
   if (!receiptBase64 || !receiptBase64.startsWith('data:image/')) {
     return NextResponse.json({ ok: false, error: 'Bukti transfer (gambar) harus dilampirkan.' }, { status: 400 });
   }
+
+  // DURASI LANGGANAN (permintaan pemilik 2026-10-08): pembeli memilih 1-12
+  // bulan; nominal order = harga per bulan x bulan. Selalu di-clamp server-side
+  // supaya input liar tidak bisa memesan 999 bulan.
+  const bulan = normalBulan(months);
+  const amount = hargaBulan(bulan);
+  const hari = bulanKeHari(bulan);
 
   // Maksimal ~1MB base64
   if (receiptBase64.length > 1.5 * 1024 * 1024) {
@@ -66,19 +73,22 @@ export async function POST(request) {
   }
 
   const created = Date.now();
-  // Simpan JSON ke gateway_ref
+  // Simpan JSON ke gateway_ref - termasuk DURASI (bulan/hari) supaya approve
+  // admin memberi masa aktif sesuai yang dibeli & nominal yang ditransfer.
   const safeReceiptName = String(receiptName || 'bukti-transfer.png').replace(/[^\w.\-]+/g, '_').slice(0, 60);
-  const gatewayRef = JSON.stringify({ senderName, receiptBase64, receiptName: safeReceiptName });
+  const gatewayRef = JSON.stringify({ senderName, receiptBase64, receiptName: safeReceiptName, months: bulan, days: hari });
 
   const res = await db.execute({
-    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, 'NEXO Pass', ?, 'manual', 'pending', ?, ?)",
-    args: [session.discordId, PRICE, gatewayRef, created],
+    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, ?, ?, 'manual', 'pending', ?, ?)",
+    args: [session.discordId, `NEXO Pass ${bulan} Bulan`, amount, gatewayRef, created],
   });
 
   const orderId = Number(res.lastInsertRowid);
 
-  // Kirim command ke bot untuk DM admin (termasuk lampiran bukti transfer)
-  const dmMsg = `Ada pembayaran NEXO Pass baru! (Order #${orderId})\nUser: <@${session.discordId}> (ID: ${session.discordId})\nPengirim: **${senderName}**\n\nSegera cek dan setujui di Admin Panel Web!`;
+  // Kirim command ke bot untuk DM admin (termasuk lampiran bukti transfer).
+  // DM WAJIB menyebut durasi & nominal supaya admin memverifikasi jumlah
+  // transfer yang benar (bukan lagi asumsi 30 hari).
+  const dmMsg = `Ada pembayaran NEXO Pass baru! (Order #${orderId})\nUser: <@${session.discordId}> (ID: ${session.discordId})\nPengirim: **${senderName}**\nDurasi: **${bulan} bulan** (${hari} hari)\nNominal: **Rp ${amount.toLocaleString('id-ID')}**\n\nSegera cek dan setujui di Admin Panel Web!`;
   await db.execute({
     sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('dm_admin', ?, 'web', 'pending', ?)",
     args: [JSON.stringify({ adminId: '836383639439671366', message: dmMsg, fileName: safeReceiptName, fileBase64: receiptBase64 }), created],

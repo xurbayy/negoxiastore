@@ -2,22 +2,26 @@
 
 import { useState } from 'react';
 import ConfirmModal from './ConfirmModal';
-import { PLAN_DAYS } from '../../lib/premiumPlan';
+import { bulanKeHari } from '../../lib/premiumPlan';
 
 // Terima DUA bentuk (fix 2026-10-04):
-//  - OBJEK  : { senderName, adaBukti, ringkas } - bentuk BARU dari /api/admin/data
-//             (metadata ringkas; gambar diambil on-demand)
+//  - OBJEK  : { senderName, adaBukti, ringkas, months, days } - bentuk BARU dari
+//             /api/admin/data (metadata ringkas; gambar diambil on-demand)
 //  - STRING : JSON lama { senderName, receiptBase64 } - masih mungkin dari
 //             endpoint lain / cache lama
 // Dulu hanya menangani string -> saat API mengirim objek, JSON.parse gagal dan
 // SEMUA pengirim tampil "Unknown" (bug yang dilaporkan pemilik).
+// DURASI (2026-10-08): order baru membawa `months`/`days`; order lama tidak
+// punya -> dianggap 1 bulan (PLAN_DAYS) supaya tampilan tetap benar.
 function parseRef(ref) {
-  if (!ref) return { senderName: 'Unknown', receiptBase64: null, adaBukti: false };
+  if (!ref) return { senderName: 'Unknown', receiptBase64: null, adaBukti: false, months: null, days: null };
   if (typeof ref === 'object') {
     return {
       senderName: ref.senderName || 'Unknown',
       receiptBase64: ref.receiptBase64 || null,
       adaBukti: Boolean(ref.adaBukti || ref.receiptBase64),
+      months: Number.isFinite(Number(ref.months)) ? Number(ref.months) : null,
+      days: Number.isFinite(Number(ref.days)) ? Number(ref.days) : null,
     };
   }
   try {
@@ -26,10 +30,19 @@ function parseRef(ref) {
       senderName: p?.senderName || 'Unknown',
       receiptBase64: p?.receiptBase64 || null,
       adaBukti: Boolean(p?.receiptBase64),
+      months: Number.isFinite(Number(p?.months)) ? Number(p.months) : null,
+      days: Number.isFinite(Number(p?.days)) ? Number(p.days) : null,
     };
   } catch {
-    return { senderName: 'Unknown', receiptBase64: null, adaBukti: false };
+    return { senderName: 'Unknown', receiptBase64: null, adaBukti: false, months: null, days: null };
   }
+}
+
+/** Label durasi order: "3 bulan (90 hari)" atau default "1 bulan (30 hari)". */
+function labelDurasi(ref) {
+  const bulan = ref.months && ref.months > 0 ? ref.months : 1;
+  const hari = ref.days && ref.days > 0 ? ref.days : bulanKeHari(bulan);
+  return `${bulan} bulan (${hari} hari)`;
 }
 
 // ==========================================
@@ -185,6 +198,9 @@ export default function ManualOrders({ orders, reload }) {
                     <h3 className="font-bold">Order #{order.id}</h3>
                     <p className="text-xs text-ink-muted">Discord ID: {order.discordId}</p>
                     <p className="text-sm font-medium mt-1">Pengirim: <span className="text-primary">{data.senderName}</span></p>
+                    <p className="text-xs text-ink-muted mt-1">
+                      Durasi: <strong>{labelDurasi(data)}</strong> • Nominal: <strong>Rp {(order.amount || 0).toLocaleString('id-ID')}</strong>
+                    </p>
                     <p className="text-xs text-ink-muted mt-1">{new Date(order.createdAt).toLocaleString('id-ID')}</p>
                   </div>
                 </div>
@@ -242,6 +258,7 @@ export default function ManualOrders({ orders, reload }) {
                 <th className="px-4 py-3">Order</th>
                 <th className="px-4 py-3">Pembeli</th>
                 <th className="px-4 py-3">Pengirim</th>
+                <th className="px-4 py-3">Durasi</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Waktu</th>
                 <th className="px-4 py-3 text-right">Aksi</th>
@@ -255,6 +272,7 @@ export default function ManualOrders({ orders, reload }) {
                     <td className="px-4 py-3 font-mono text-xs">#{order.id}</td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-muted">{order.discordId}</td>
                     <td className="px-4 py-3">{data.senderName}</td>
+                    <td className="px-4 py-3 text-xs">{labelDurasi(data)}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${STATUS_BADGE[order.status] || 'bg-surface-raised text-ink-muted'}`}>
                         {order.status === 'expired' ? 'Ditolak / Expired' : order.status}
@@ -291,7 +309,7 @@ export default function ManualOrders({ orders, reload }) {
             : 'Hapus SEMUA riwayat pesanan?'
           }
           body={
-            confirm.kind === 'approve' ? `NEXO Pass ${PLAN_DAYS} hari akan diaktifkan ke pembeli dan notifikasi dikirim. Pastikan nominal di bukti transfer cocok dengan mutasi E-Wallet kamu.`
+            confirm.kind === 'approve' ? `NEXO Pass ${labelDurasi(parseRef(confirm.order.gatewayRef))} akan diaktifkan ke pembeli dan notifikasi dikirim. Pastikan nominal di bukti transfer cocok (Rp ${(confirm.order.amount || 0).toLocaleString('id-ID')}) dengan mutasi E-Wallet kamu.`
             : confirm.kind === 'reject' ? 'Pesanan ditandai ditolak dan pembeli dapat notifikasi. Mereka bisa submit ulang dengan bukti yang benar.'
             : confirm.kind === 'delete' ? 'Riwayat order ini (termasuk gambar bukti transfernya) dihapus permanen dari panel. Tidak memengaruhi status premium pemain.'
             : 'Semua riwayat pesanan QRIS yang sudah selesai (disetujui, ditolak, atau expired) akan dihapus permanen. Pesanan yang masih pending TIDAK ikut terhapus.'

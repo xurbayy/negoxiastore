@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import PremiumBenefits from './PremiumBenefits';
-import { sisaHari, isLifetime } from '../lib/premiumPlan';
+import { sisaHari, isLifetime, MAX_MONTHS, PLAN_PRICE, hargaBulan, bulanKeHari } from '../lib/premiumPlan';
 import { emojiSrc } from '../lib/emojisClient';
 
 function nowMs() {
@@ -27,6 +27,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   const [receiptName, setReceiptName] = useState('');
   const [fileError, setFileError] = useState(null);
   const fileInputRef = useRef(null);
+  // DURASI LANGGANAN (permintaan pemilik 2026-10-08): pembeli bisa memilih
+  // berapa bulan (1-12). Harga & nominal yang ditampilkan mengikuti pilihan.
+  const [bulan, setBulan] = useState(1);
+  const totalHarga = hargaBulan(bulan);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -107,7 +111,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
     fetch('/api/payment/manual', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ senderName, receiptBase64, receiptName })
+      body: JSON.stringify({ senderName, receiptBase64, receiptName, months: bulan })
     })
       .then(async (res) => {
         const d = await res.json().catch(() => ({}));
@@ -209,8 +213,39 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           </button>
           
           <h3 className="text-xl font-bold mb-4">Bayar via QRIS</h3>
+
+          {/* PILIH DURASI (permintaan pemilik 2026-10-08): pembeli memilih
+              berapa bulan (maks 12 / setahun). Harga & nominal QRIS mengikuti. */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
+              Durasi Langganan
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: MAX_MONTHS }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setBulan(n)}
+                  disabled={buying}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
+                    bulan === n
+                      ? 'border-accent bg-accent text-white'
+                      : 'border-border-soft bg-white text-ink hover:border-accent'
+                  }`}
+                >
+                  {n} bln
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-ink-muted">
+              Pilihan: <strong>{bulan} bulan</strong> ({bulanKeHari(bulan)} hari) •{' '}
+              <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong>
+              {bulan > 1 ? ` (Rp ${PLAN_PRICE.toLocaleString('id-ID')}/bulan)` : ''}
+            </p>
+          </div>
+
           <p className="text-sm text-ink-muted mb-4">
-            Scan QRIS di bawah ini dengan aplikasi e-wallet atau m-banking kamu seperti GoPay, OVO, DANA, atau BCA sebesar <strong>Rp 20.000</strong>.
+            Scan QRIS di bawah ini dengan aplikasi e-wallet atau m-banking kamu seperti GoPay, OVO, DANA, atau BCA sebesar <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong>.
           </p>
           
           {/* QRIS POTRET (600x846). Jangan pakai width/height kotak 200x200 -

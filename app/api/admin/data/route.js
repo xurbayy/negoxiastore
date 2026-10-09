@@ -165,6 +165,10 @@ export async function GET() {
             ref = {
               senderName: p.senderName || null,
               adaBukti: Boolean(p.receiptBase64),
+              // DURASI order (permintaan pemilik 2026-10-08) - panel memakai
+              // ini untuk menampilkan "3 bulan (90 hari)" & nominal yang benar.
+              months: Number.isFinite(Number(p.months)) ? Number(p.months) : null,
+              days: Number.isFinite(Number(p.days)) ? Number(p.days) : null,
               // Penanda versi agar UI tahu ini metadata, bukan data lama.
               ringkas: true,
             };

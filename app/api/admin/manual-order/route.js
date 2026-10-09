@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminSession, getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
 import { touchActivity } from '../../../lib/activity';
-import { PLAN_DAYS } from '../../../lib/premiumPlan';
+import { PLAN_DAYS, bulanKeHari, normalBulan } from '../../../lib/premiumPlan';
 import { notifyQueue } from '../../../lib/pgNotifyWeb';
 import { sisipNotif } from '../../../lib/notif';
 // Invalidasi ON-WRITE + catat ke Activity Log (permintaan pemilik 2026-10-04:
@@ -90,7 +90,7 @@ export async function POST(request) {
   const db = getDb();
   
   const orderRes = await db.execute({
-    sql: "SELECT discord_id, status FROM orders WHERE id = ? AND gateway = 'manual'",
+    sql: "SELECT discord_id, status, gateway_ref FROM orders WHERE id = ? AND gateway = 'manual'",
     args: [Number(orderId)],
   });
 
@@ -103,6 +103,25 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'Order sudah diproses sebelumnya.' }, { status: 400 });
   }
 
+  // DURASI dari order (permintaan pemilik 2026-10-08): pembeli memilih 1-12
+  // bulan saat checkout; approve memberi masa aktif sesuai pilihan itu.
+  // Order lama (sebelum fitur durasi) tidak punya field months -> default
+  // PLAN_DAYS (30 hari) supaya perilaku lama tetap sama.
+  let durasiHari = PLAN_DAYS;
+  let durasiBulan = 1;
+  try {
+    const ref = JSON.parse(order.gateway_ref || 'null');
+    if (ref && typeof ref === 'object') {
+      if (Number.isFinite(Number(ref.days)) && Number(ref.days) > 0) {
+        durasiHari = Math.floor(Number(ref.days));
+        durasiBulan = Math.max(1, Math.round(durasiHari / 30));
+      } else if (ref.months != null) {
+        durasiBulan = normalBulan(ref.months);
+        durasiHari = bulanKeHari(durasiBulan);
+      }
+    }
+  } catch { /* pakai default */ }
+
   const now = Date.now();
   if (action === 'approve') {
     const flip = await db.execute({
@@ -113,7 +132,7 @@ export async function POST(request) {
     if (flip.rowsAffected > 0 && order.discord_id) {
       await db.execute({
         sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'admin_manual', 'pending', ?)",
-        args: [JSON.stringify({ userId: order.discord_id, tier: 'pro', days: PLAN_DAYS }), now],
+        args: [JSON.stringify({ userId: order.discord_id, tier: 'pro', days: durasiHari }), now],
       });
       // Ping instan ke bot (LISTEN/NOTIFY).
       notifyQueue(['grant_premium']).catch(() => {});
@@ -121,8 +140,8 @@ export async function POST(request) {
         sql: "INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, 'pending', ?)",
         args: [order.discord_id, now],
       });
-      // Notifikasi web untuk user: pembayaran diterima
-      await sisipNotif({ userId: order.discord_id, type: 'event', title: `Pembayaran Order #${orderId} Diterima`, body: `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${PLAN_DAYS} hari kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, db }).catch(() => {});
+      // Notifikasi web untuk user: pembayaran diterima (durasi sesuai order).
+      await sisipNotif({ userId: order.discord_id, type: 'event', title: `Pembayaran Order #${orderId} Diterima`, body: `Bukti transfer kamu sudah kami verifikasi. NEXO Pass ${durasiBulan} bulan (${durasiHari} hari) kini AKTIF di akun Discord-mu. Terima kasih sudah mendukung NEXO Games!`, db }).catch(() => {});
       // NOTIF ADMIN (permintaan pemilik 2026-10-06): pembelian NEXO Pass masuk
       // ke notif panel + push perangkat admin.
       try {
@@ -130,7 +149,7 @@ export async function POST(request) {
         await sisipNotifAdmin({
           tipe: 'premium',
           judul: '💎 Pembelian NEXO Pass (Manual)',
-          isi: `Order #${orderId} disetujui. NEXO Pass ${PLAN_DAYS} hari aktif untuk ${order.discord_id}.`,
+          isi: `Order #${orderId} disetujui. NEXO Pass ${durasiBulan} bulan (${durasiHari} hari) aktif untuk ${order.discord_id}.`,
           url: '/admin#dashboard',
           db,
         });

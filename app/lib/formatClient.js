@@ -139,7 +139,12 @@ export function gameName(key) {
 export function planName(plan) {
   const p = String(plan || '').trim();
   if (!p) return '-';
-  if (/^nexo[ _]?pass/i.test(p)) return 'NEXO Pass';
+  // Durasi ikut disebut (mis. "NEXO Pass 3 Bulan" dari order baru) supaya
+  // panel admin & riwayat pembeli kelihatan berapa bulan yang dibeli.
+  if (/^nexo[ _]?pass/i.test(p)) {
+    const m = p.match(/(\d+)\s*bulan/i);
+    return m ? `NEXO Pass ${m[1]} Bulan` : 'NEXO Pass';
+  }
   return p;
 }
 
