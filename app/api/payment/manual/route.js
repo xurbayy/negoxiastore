@@ -79,7 +79,10 @@ export async function POST(request) {
   const gatewayRef = JSON.stringify({ senderName, receiptBase64, receiptName: safeReceiptName, months: bulan, days: hari });
 
   const res = await db.execute({
-    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, ?, ?, 'manual', 'pending', ?, ?)",
+    // RETURNING id WAJIB: adapter Postgres mengisi lastInsertRowid HANYA dari
+    // rows[0].id. Tanpa RETURNING, orderId = NaN dan DM admin tampil
+    // "Order #NaN" (bug nyata 2026-10-08).
+    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, ?, ?, 'manual', 'pending', ?, ?) RETURNING id",
     args: [session.discordId, `NEXO Pass ${bulan} Bulan`, amount, gatewayRef, created],
   });
 
