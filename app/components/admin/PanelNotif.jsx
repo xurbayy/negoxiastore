@@ -100,15 +100,45 @@ export default function PanelNotif() {
     } catch { /* diamkan */ } finally { setPushSibuk(false); }
   }, [pushAktif, pushSibuk]);
 
+  // TANDAI DIBACA (fix 2026-10-09): dulu PATCH-nya "fire and forget" - kalau
+  // request GAGAL (proxy bot mati / jaringan putus), state lokal sudah berubah
+  // tapi server tidak; 20 dtk kemudian poll menimpa balik -> tombol terlihat
+  // "tidak bisa tandai dibaca". Sekarang: cek respons, kalau gagal ->
+  // kembalikan state + muat ulang dari server + kabari user.
+  const [errorBaca, setErrorBaca] = useState(null);
   async function baca(id) {
+    const sebelum = notif;
+    setErrorBaca(null);
     setNotif((a) => a.map((x) => (x.id === id ? { ...x, read: true } : x)));
     setBelum((n) => Math.max(0, n - 1));
-    await fetch('/api/admin/notif?id=' + id, { method: 'PATCH' }).catch(() => {});
+    try {
+      const res = await fetch('/api/admin/notif?id=' + id, { method: 'PATCH' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.ok !== true) throw new Error(d.error || `HTTP ${res.status}`);
+      muat(); // sinkronkan dengan server (sumber kebenaran)
+    } catch {
+      setNotif(sebelum); // gulung balik - jangan biarkan state bohong
+      setBelum(sebelum.filter((x) => !x.read).length);
+      setErrorBaca('Gagal menandai dibaca. Coba lagi.');
+      setTimeout(() => setErrorBaca(null), 4000);
+    }
   }
   async function bacaSemua() {
+    const sebelum = notif;
+    setErrorBaca(null);
     setNotif((a) => a.map((x) => ({ ...x, read: true })));
     setBelum(0);
-    await fetch('/api/admin/notif?all=1', { method: 'PATCH' }).catch(() => {});
+    try {
+      const res = await fetch('/api/admin/notif?all=1', { method: 'PATCH' });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.ok !== true) throw new Error(d.error || `HTTP ${res.status}`);
+      muat();
+    } catch {
+      setNotif(sebelum);
+      setBelum(sebelum.filter((x) => !x.read).length);
+      setErrorBaca('Gagal menandai semua dibaca. Coba lagi.');
+      setTimeout(() => setErrorBaca(null), 4000);
+    }
   }
 
   return (
@@ -118,7 +148,6 @@ export default function PanelNotif() {
           belum > 0 ? 'border-accent bg-accent text-white hover:bg-accent/90' : 'border-border-soft text-ink-muted hover:border-accent/50 hover:text-ink'
         }`}
         title={belum > 0 ? `${belum} notifikasi baru` : 'Tidak ada notifikasi baru'}
-        onClick={() => { if (belum > 0) setTimeout(bacaSemua, 400); }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -132,12 +161,19 @@ export default function PanelNotif() {
       <div className="invisible absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
         <div className="flex items-center justify-between px-2 py-1.5">
           <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">Notifikasi Panel</p>
-          {notif.length > 0 && (
+          {belum > 0 && (
             <button type="button" onClick={bacaSemua} className="text-[0.65rem] font-semibold text-accent-hover hover:underline cursor-pointer">
               Tandai dibaca
             </button>
           )}
         </div>
+
+        {/* Pesan gagal (jarang, tapi harus kelihatan - bukan gagal senyap). */}
+        {errorBaca && (
+          <p role="alert" className="mx-1 mb-1.5 rounded-lg border border-danger/40 bg-danger/10 px-3 py-1.5 text-[0.65rem] font-semibold text-danger">
+            {errorBaca}
+          </p>
+        )}
 
         {/* TOGGLE notif perangkat (pola user) */}
         <div className="mx-1 mb-1.5 flex items-center justify-between rounded-xl border border-border-soft bg-bg-soft/50 px-3 py-2">
