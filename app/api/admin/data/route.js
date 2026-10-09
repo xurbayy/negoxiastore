@@ -17,6 +17,12 @@ export const dynamic = 'force-dynamic';
 const _cache = { data: null, at: 0 };
 const DATA_TTL_MS = 8_000;
 
+// Awal bulan berjalan (ms) untuk pecahan "pemasukan bulan ini" di panel QRIS.
+function awalBulanMs() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+
 // Invalidasi on-write (fix 2026-10-04): dipanggil route tulis (command/shop)
 // SETELAH menulis DB supaya Activity Log & data panel langsung segar.
 export function invalidateDataCache() {
@@ -116,6 +122,19 @@ export async function GET() {
     db.execute(`SELECT game_type, COUNT(*) AS plays, COALESCE(SUM(points),0) AS points
                   FROM public.game_scores GROUP BY game_type ORDER BY plays DESC LIMIT 10`)
       .catch(() => ({ rows: [] })),
+    // TOTAL PEMASUKAN QRIS (permintaan pemilik 2026-10-09): hitung dari
+    // SELURUH order manual berstatus 'paid' (bukan cuma 50 terakhir yang
+    // tampil) + pecahan bulan ini untuk konteks. Agregat di DB supaya angka
+    // tidak terpengaruh LIMIT daftar.
+    db.execute(
+      `SELECT
+         COALESCE(SUM(amount), 0) AS total_all,
+         COUNT(*) AS count_all,
+         COALESCE(SUM(CASE WHEN paid_at >= ? THEN amount ELSE 0 END), 0) AS total_bulan,
+         COUNT(CASE WHEN paid_at >= ? THEN 1 END) AS count_bulan
+       FROM orders WHERE gateway = 'manual' AND status = 'paid'`,
+      [awalBulanMs(), awalBulanMs()]
+    ).catch(() => ({ rows: [{ total_all: 0, count_all: 0, total_bulan: 0, count_bulan: 0 }] })),
   ]);
   // Simpan ke cache 8 dtk - poll berikutnya tidak query 14 tabel lagi.
   _cache.data = _hasil;
@@ -124,6 +143,7 @@ export async function GET() {
   const [
     snap, series, heartbeat, liveStats, orders, log, promoCache, bankLoans,
     feedback, promoCodes, premiumMembers, bannedUsers, adminTitleHolders, topGamesAll,
+    incomeAgg,
   ] = _hasil;
 
     return json({
@@ -223,6 +243,17 @@ export async function GET() {
         plays: Number(r.plays || 0),
         points: Number(r.points || 0),
       })),
+      // TOTAL PEMASUKAN QRIS (permintaan pemilik 2026-10-09) - agregat DB
+      // dari SELURUH order 'paid' (bukan hanya 50 yang tampil di daftar).
+      income: (() => {
+        const r = incomeAgg?.rows?.[0] || {};
+        return {
+          totalAll: Number(r.total_all || 0),
+          countAll: Number(r.count_all || 0),
+          totalBulan: Number(r.total_bulan || 0),
+          countBulan: Number(r.count_bulan || 0),
+        };
+      })(),
       log: log.rows.map((r) => {
         const p = safeParse(r.payload);
         // BUANG base64 dari log (permintaan pemilik 2026-10-04: "optimalkan

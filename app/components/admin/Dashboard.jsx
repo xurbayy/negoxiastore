@@ -286,6 +286,16 @@ export default function Dashboard({ data }) {
     { label: 'Player Terdaftar', value: fmt(m.totalUsers), pick: (s) => s.totalUsers },
     { label: 'Hutang Aktif', value: fmt(m.loans?.count), pick: null },
     { label: 'Hutang Telat', value: fmt(m.loans?.overdue), pick: null },
+    // PEMASUKAN QRIS (permintaan pemilik 2026-10-09): total uang masuk dari
+    // order manual berstatus 'paid'. Agregat dihitung server-side dari SELURUH
+    // order (bukan cuma 50 yang tampil di daftar). Sub = bulan berjalan.
+    {
+      label: 'Pemasukan QRIS',
+      value: `Rp ${fmt(data.income?.totalAll || 0)}`,
+      sub: `${fmt(data.income?.countAll || 0)} lunas · bulan ini Rp ${fmt(data.income?.totalBulan || 0)}`,
+      pick: null,
+      color: '#2E7D32',
+    },
   ];
 
   const maxPlays = Math.max(...(m.topGamesToday || []).map((g) => g.plays), 1);
@@ -326,7 +336,7 @@ export default function Dashboard({ data }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={c.icon} alt="" width={c.wide ? 28 : 22} height={c.wide ? 28 : 22} className={`${c.wide ? 'h-7 w-7' : 'h-[22px] w-[22px]'} shrink-0`} />
                 )}
-                <div className={`truncate font-display leading-tight text-ink ${c.wide ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl'}`}>{c.value}</div>
+                <div className={`truncate font-display leading-tight ${c.color && !c.pick ? '' : 'text-ink'} ${c.wide ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl'}`} style={c.color && !c.pick ? { color: c.color } : undefined}>{c.value}</div>
               </div>
               <div className={`mt-0.5 truncate text-ink-muted ${c.wide ? 'text-sm' : 'text-xs'}`}>{c.label}</div>
               {c.sub && (
