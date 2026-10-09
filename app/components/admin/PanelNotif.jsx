@@ -100,43 +100,44 @@ export default function PanelNotif() {
     } catch { /* diamkan */ } finally { setPushSibuk(false); }
   }, [pushAktif, pushSibuk]);
 
-  // TANDAI DIBACA (fix 2026-10-09): dulu PATCH-nya "fire and forget" - kalau
-  // request GAGAL (proxy bot mati / jaringan putus), state lokal sudah berubah
-  // tapi server tidak; 20 dtk kemudian poll menimpa balik -> tombol terlihat
-  // "tidak bisa tandai dibaca". Sekarang: cek respons, kalau gagal ->
-  // kembalikan state + muat ulang dari server + kabari user.
+  // TANDAI DIBACA = HAPUS (permintaan pemilik 2026-10-09: "gw mau kalo tandai
+  // sudah di baca semua notif nya kehapus"). Klik tombol -> notif benar-benar
+  // DIHAPUS dari server (bukan cuma read_at) sehingga daftar bersih.
+  // Fix 2026-10-09 sebelumnya tetap berlaku: cek respons, gagal -> gulung balik
+  // + tampilkan error (tidak gagal senyap).
   const [errorBaca, setErrorBaca] = useState(null);
   async function baca(id) {
     const sebelum = notif;
     setErrorBaca(null);
-    setNotif((a) => a.map((x) => (x.id === id ? { ...x, read: true } : x)));
+    // Optimistis: buang dari daftar lokal dulu (UI langsung responsif).
+    setNotif((a) => a.filter((x) => x.id !== id));
     setBelum((n) => Math.max(0, n - 1));
     try {
-      const res = await fetch('/api/admin/notif?id=' + id, { method: 'PATCH' });
+      const res = await fetch('/api/admin/notif?id=' + id, { method: 'DELETE' });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || d.ok !== true) throw new Error(d.error || `HTTP ${res.status}`);
       muat(); // sinkronkan dengan server (sumber kebenaran)
     } catch {
       setNotif(sebelum); // gulung balik - jangan biarkan state bohong
       setBelum(sebelum.filter((x) => !x.read).length);
-      setErrorBaca('Gagal menandai dibaca. Coba lagi.');
+      setErrorBaca('Gagal menghapus notifikasi. Coba lagi.');
       setTimeout(() => setErrorBaca(null), 4000);
     }
   }
   async function bacaSemua() {
     const sebelum = notif;
     setErrorBaca(null);
-    setNotif((a) => a.map((x) => ({ ...x, read: true })));
+    setNotif([]);
     setBelum(0);
     try {
-      const res = await fetch('/api/admin/notif?all=1', { method: 'PATCH' });
+      const res = await fetch('/api/admin/notif?all=1', { method: 'DELETE' });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || d.ok !== true) throw new Error(d.error || `HTTP ${res.status}`);
       muat();
     } catch {
       setNotif(sebelum);
       setBelum(sebelum.filter((x) => !x.read).length);
-      setErrorBaca('Gagal menandai semua dibaca. Coba lagi.');
+      setErrorBaca('Gagal menghapus semua notifikasi. Coba lagi.');
       setTimeout(() => setErrorBaca(null), 4000);
     }
   }
@@ -161,9 +162,9 @@ export default function PanelNotif() {
       <div className="invisible absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
         <div className="flex items-center justify-between px-2 py-1.5">
           <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">Notifikasi Panel</p>
-          {belum > 0 && (
+          {notif.length > 0 && (
             <button type="button" onClick={bacaSemua} className="text-[0.65rem] font-semibold text-accent-hover hover:underline cursor-pointer">
-              Tandai dibaca
+              Tandai dibaca semua
             </button>
           )}
         </div>
@@ -206,9 +207,9 @@ export default function PanelNotif() {
                 {n.isi && <p className="mt-0.5 text-[0.65rem] leading-snug text-ink-muted">{n.isi}</p>}
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <span className="text-[0.58rem] text-ink-faint">{waktu(n.createdAt)}</span>
-                  {!n.read && (
-                    <button type="button" onClick={() => baca(n.id)} className="text-[0.62rem] font-semibold text-accent-hover hover:underline cursor-pointer">Tandai dibaca</button>
-                  )}
+                  {/* Tombol tampil di SEMUA notif (permintaan pemilik 2026-10-09:
+                      "tandai sudah dibaca" = notif DIHAPUS dari daftar). */}
+                  <button type="button" onClick={() => baca(n.id)} className="text-[0.62rem] font-semibold text-accent-hover hover:underline cursor-pointer">Tandai dibaca</button>
                 </div>
               </li>
             ))}

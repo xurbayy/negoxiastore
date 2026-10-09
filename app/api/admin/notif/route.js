@@ -78,6 +78,9 @@ export async function DELETE(request) {
   await schemaReady();
   const db = getDb();
   const sp = new URL(request.url).searchParams;
+  // PENTING (2026-10-09): jangan gagal senyap. Dulu `catch {}` menelan error
+  // tapi tetap balas ok:true - kalau DELETE benar-benar gagal, klien mengira
+  // sukses (UI optimistis sudah menghapus) padahal data masih ada.
   try {
     if (sp.get('all') === '1') {
       await db.execute('DELETE FROM web.admin_notifications');
@@ -86,6 +89,8 @@ export async function DELETE(request) {
       if (!id) return json({ ok: false, error: 'id wajib' }, 400);
       await db.execute({ sql: 'DELETE FROM web.admin_notifications WHERE id = ?', args: [id] });
     }
-  } catch { /* tabel belum ada -> abaikan */ }
+  } catch (e) {
+    return json({ ok: false, error: String(e?.message || e) }, 500);
+  }
   return json({ ok: true });
 }
