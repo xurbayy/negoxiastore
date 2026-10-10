@@ -60,6 +60,11 @@ export default async function LeaderboardPage() {
               <AdUnit
                 slot={
                   process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD ||
+                  // FALLBACK slot komunitas (permintaan pemilik 2026-10-09):
+                  // unit komunitas (9343062538) sudah aktif & tampil - dipakai
+                  // bersama supaya leaderboard langsung terisi tanpa perlu
+                  // membuat unit baru di dashboard AdSense.
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT_KOMUNITAS ||
                   process.env.NEXT_PUBLIC_ADSENSE_SLOT
                 }
                 format="auto"
