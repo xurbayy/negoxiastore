@@ -14,7 +14,10 @@ const NAV_GUEST = [
   { href: '/#cara-main', label: 'Cara Main' },
   { href: '/panduan', label: 'Panduan' },
   { href: '/tentang', label: 'Tentang' },
-  { href: '/#premium', label: 'NEXO Pass' },
+  // LINK DIPERBAIKI (2026-10-10): dulu '/#premium' - anchor itu TIDAK ADA di
+  // homepage (komponen Premium.jsx tidak dirender), jadi klik NEXO Pass tidak
+  // membawa ke mana-mana. Sekarang langsung ke halaman /premium yang lengkap.
+  { href: '/premium', label: 'NEXO Pass' },
   { href: '/#faq', label: 'FAQ' },
 ];
 const NAV_MEMBER = [
