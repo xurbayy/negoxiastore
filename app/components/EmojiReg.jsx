@@ -9,7 +9,7 @@ import { emojiSrc } from '../lib/emojisClient';
 // tampil di Discord (bukan unicode). `nama` = nama/alias dari web-emojis.json.
 // Kalau nama tidak ketemu, fallback ke `fallback` (unicode) atau tidak render.
 export default function EmojiReg({ nama, fallback = '', size = 24, className = '' }) {
-  const src = nama ? emojiSrc(nama, 64) : null;
+  const src = nama ? emojiSrc(nama, 48) : null;
   if (!src) {
     if (!fallback) return null;
     return <span className={className} aria-hidden="true">{fallback}</span>;

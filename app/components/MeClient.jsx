@@ -981,7 +981,7 @@ export default function MeClient({ betaGames = null }) {
                     // Ikon mode = emoji resmi (sama dgn header grup di halaman Game):
                     // game=solo, mp=multiplayer, coop=co-op. Emoji-only sesuai
                     // permintaan; label teks tetap ada sbg tooltip/alt.
-                    const modeIcon = (MODE_EMOJI[g.mode] || []).map((n) => emojiSrc(n, 64)).find(Boolean) || null;
+                    const modeIcon = (MODE_EMOJI[g.mode] || []).map((n) => emojiSrc(n, 48)).find(Boolean) || null;
                     return (
                       <li key={g.key} className="flex items-center gap-3 rounded-xl border border-border-soft bg-card-cream/70 px-4 py-3 text-sm">
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -70,7 +70,7 @@ export default function GuildEmoji({ token, fallbackToken, size = 18, className 
 
   // Kosong / gagal: pakai ikon castle (identik dengan judul tabel guild)
   // supaya baris tanpa emoji tetap punya ikon rapi.
-  const src = emojiSrc('castle', 64);
+  const src = emojiSrc('castle', 48);
   if (!src) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element

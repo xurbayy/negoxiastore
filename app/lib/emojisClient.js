@@ -61,7 +61,12 @@ export function getEmojiById(id) {
   return id ? (byId[String(id)] || null) : null;
 }
 
-export function emojiSrc(name, size = 64) {
+// DEFAULT SIZE 48 (bukan 64): ikon di UI tampil 16-40px, jadi size=48 sudah
+// cukup tajam bahkan di layar retina (2x dari 24px). Menurunkan default
+// 64->48 memangkas berat emoji GIF hingga ~40% (homepage memuat ~39 emoji,
+// GIF size=64 bisa 56 KB per emoji). Khusus KARTU GAMBAR/canvas, pemanggil
+// tetap meminta size besar (128) lewat emojiSrcStatis(name, 128).
+export function emojiSrc(name, size = 48) {
   const e = getEmoji(name);
   if (!e) return null;
   const base = e.url.split('?')[0];
@@ -70,7 +75,7 @@ export function emojiSrc(name, size = 64) {
 
 // URL emoji (HTML, animasi hidup) berdasarkan ID. Selalu ada di CDN Discord
 // walau katalog DB belum ter-hydrate - tidak bergantung resolusi nama.
-export function emojiSrcById(id, size = 64) {
+export function emojiSrcById(id, size = 48) {
   const e = getEmojiById(id);
   const base = e ? e.url.split('?')[0] : `https://cdn.discordapp.com/emojis/${id}.gif`;
   return `${base}?size=${size}&quality=lossless`;
