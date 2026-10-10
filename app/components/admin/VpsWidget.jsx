@@ -132,6 +132,16 @@ export default function VpsWidget() {
         <div className="vps-widget-body">
           <Baris label="CPU" nilai={`${cpu ?? '-'}%`} persen={cpu} />
           <Baris label="RAM" nilai={`${ram ?? '-'}%`} persen={ram} />
+          {/* TAMBAHAN 2026-10-10 (keluhan "kok RAM 77% mulu"): jelaskan angka
+              RAM memakai MemAvailable - nilai persen memakai RAM terpakai,
+              tapi baris kecil ini menegaskan berapa yang MASIH BISA dipakai.
+              Tanpa konteks ini, angka 77% terlihat mengkhawatirkan padahal
+              VPS masih punya banyak RAM available (cache disk dihitung). */}
+          {v?.ram?.availableMb != null && (
+            <p className="-mt-0.5 text-[0.65rem] text-slate-500">
+              {v.ram.usedMb} / {v.ram.totalMb} MB terpakai · <span className="text-[#7BA05B]">{v.ram.availableMb} MB masih tersedia</span>
+            </p>
+          )}
           <Baris label="Disk" nilai={`${disk ?? '-'}%`} persen={disk} />
           <div className="mt-0.5 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-white/10 pt-2">
             <span className="text-slate-400">Uptime</span>
