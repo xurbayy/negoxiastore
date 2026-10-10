@@ -48,8 +48,8 @@ const SECTIONS = [
   {
     title: 'Di mana data disimpan, dan seberapa aman?',
     body: [
-      'Data disimpan dalam database SQLite yang terenkripsi standar AES-256 di server pribadi kami. File backup juga dienkripsi password sebelum dikirim ke Google Drive milik kami.',
-      'Kami tidak memakai layanan analitik pihak ketiga, tidak memasang iklan, dan tidak membagikan data ke siapa pun.',
+      'Data game disimpan di database PostgreSQL yang kami kelola, dengan akses terbatas dan koneksi terenkripsi. Backup otomatis dibuat berkala dalam bentuk terenkripsi (file .enc yang dienkripsi password), disimpan di server kami dan sebagian dikirim ke Google Drive pribadi kami sebagai cadangan.',
+      'Kami tidak memakai layanan analitik pelacak. Halaman publik website menampilkan iklan dari Google AdSense - Google dapat memasang cookie dan memproses data teknis (seperti alamat IP dan jenis perangkat) sesuai kebijakannya sendiri untuk menayangkan iklan. Data GAME kamu (poin, item, profil) tidak pernah dibagikan ke pengiklan.',
     ],
   },
   {
@@ -67,7 +67,7 @@ const SECTIONS = [
     list: [
       'Data progres disimpan selama bot aktif di server kamu dan kamu masih memainkannya, supaya poin, level, dan item tidak hilang saat bot restart.',
       'Pemilik server bisa mengeluarkan bot dari servernya kapan saja.',
-      'Kalau kamu ingin berhenti main dan menghapus semua data game kamu dari sistem kami, tinggal kirim pesan lewat tombol Laporan dan Saran di pojok kanan atas website. Cantumkan Discord ID dan alasan singkatnya, data kamu akan kami reset total secepat mungkin.',
+      'Kalau kamu ingin berhenti main dan menghapus semua data game kamu dari sistem kami, tinggal kirim pesan lewat tombol Feedback & Laporan di pojok kanan atas website (pilih jenis Laporan). Cantumkan Discord ID dan alasan singkatnya, data kamu akan kami reset total secepat mungkin.',
     ],
   },
   {

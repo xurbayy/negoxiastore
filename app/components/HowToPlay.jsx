@@ -10,7 +10,7 @@ const STEPS = [
   {
     num: '02',
     title: 'Daftar & Klaim Daily',
-    desc: 'Ketik nxme untuk membuat profil, lalu nxdaily tiap hari untuk poin gratis. Streak harian bikin bonus makin besar.',
+    desc: 'Ketik perintah apa saja (contoh nxdaily) di Discord - bot akan menampilkan kartu pendaftaran. Tekan tombol "Daftar & Main" sekali, akunmu langsung jadi. Setelah itu klaim nxdaily tiap hari untuk poin gratis - streak bikin bonus makin besar.',
     code: 'nxdaily',
   },
   {
@@ -65,25 +65,27 @@ export default function HowToPlay() {
               <thead>
                 <tr className="border-b border-border-soft bg-card-cream text-xs uppercase tracking-wider text-ink-muted">
                   <th scope="col" className="px-5 py-3">Prefix</th>
-                  <th scope="col" className="px-5 py-3">Fungsi</th>
+                  <th scope="col" className="px-5 py-3">Artinya</th>
+                  <th scope="col" className="px-5 py-3">Dipakai untuk</th>
                   <th scope="col" className="hidden px-5 py-3 sm:table-cell">Contoh</th>
                 </tr>
               </thead>
               <tbody className="text-ink-muted">
                 {[
-                  ['nx', 'Ekonomi, profil, shop, guild, leaderboard', 'nxdaily · nxshop · nxlb'],
-                  ['np', 'Main game solo', 'np slot · np riddle'],
-                  ['nb', 'Main game multiplayer / betting', 'nb autochess · nb rps'],
-                  ['nc', 'Main game co-op bareng tim', 'nc bossraid · nc heist'],
+                  ['nx', 'NEXO (menu utama)', 'Semua menu & fitur: ekonomi, profil, shop, guild, leaderboard, bank, premium', 'nxdaily · nxshop · nxlb'],
+                  ['np', 'NEXO Play (solo)', 'Main game solo sendirian - tanpa lawan, tanpa taruhan', 'np slot · np riddle'],
+                  ['nb', 'NEXO Bet (multiplayer)', 'Game multiplayer dengan taruhan poin antar pemain', 'nb autochess · nb rps'],
+                  ['nc', 'NEXO Co-op (tim)', 'Game kerja sama tim melawan bos/misi', 'nc bossraid · nc heist'],
                   // CATATAN: prefix `nxadmin` SENGAJA TIDAK didaftarkan di sini.
                   // Itu perintah admin - aturan project: perintah admin tidak
                   // dipublikasikan ke user (nxhelp di bot juga menyembunyikannya).
                   // Halaman ini publik, jadi JANGAN menambah baris admin ke tabel.
-                ].map(([p, f, e]) => (
+                ].map(([p, arti, f, e]) => (
                   <tr key={p} className="border-b border-border-soft/60 last:border-0 hover:bg-card-cream/60">
                     <td className="px-5 py-3.5">
                       <code className="rounded bg-accent/15 px-2 py-1 font-mono text-ink">{p}</code>
                     </td>
+                    <td className="px-5 py-3.5 font-semibold text-ink">{arti}</td>
                     <td className="px-5 py-3.5">{f}</td>
                     <td className="hidden px-5 py-3.5 font-mono text-xs sm:table-cell">{e}</td>
                   </tr>
@@ -91,6 +93,10 @@ export default function HowToPlay() {
               </tbody>
             </table>
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-ink-faint">
+            Cara pakai: tulis prefix + perintah, misalnya <code className="font-mono text-ink-muted">nxdaily</code> (klaim poin harian).
+            Ketik <code className="font-mono text-ink-muted">nxhelp</code> di Discord untuk daftar lengkap semua perintah & game.
+          </p>
         </Reveal>
       </div>
     </section>

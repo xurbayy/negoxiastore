@@ -18,9 +18,11 @@ import Link from 'next/link';
 //      halaman tetap bisa dibaca & dipakai tanpa menutupnya lebih dulu.
 //   4. Sekali seumur perangkat (localStorage), tidak ada cookie tambahan.
 //
-// CATATAN JUJUR: NEXO hanya memakai cookie ESENSIAL (sesi login + 2FA admin).
-// Tidak ada analitik, tidak ada pelacak, tidak ada iklan. Karena itu
-// pemberitahuan ini murni informasi - bukan permintaan izin.
+// CATATAN JUJUR: NEXO memakai cookie ESENSIAL (sesi login + 2FA admin) yang
+// kami pasang sendiri, TANPA analitik pelacak. Halaman publik menampilkan
+// iklan Google AdSense - Google dapat memasang cookie-nya sendiri untuk
+// penayangan iklan (diatur kebijakan Google, bukan kami). Pemberitahuan ini
+// murni informasi - bukan permintaan izin.
 const KUNCI = 'nexo_cookie_ok';
 
 export default function CookieConsent() {
@@ -79,8 +81,9 @@ export default function CookieConsent() {
 
         <p className="font-display text-sm font-bold text-ink">Soal cookie</p>
         <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
-          NEXO cuma pakai cookie fungsional: biar kamu tetap login dan notifikasi
-          terbawa. Tidak ada pelacak, iklan, atau pihak ketiga.{' '}
+          NEXO cuma pakai cookie fungsional sendiri: biar kamu tetap login dan
+          notifikasi terbawa. Halaman publik menampilkan iklan Google, yang
+          bisa memakai cookie-nya sendiri.{' '}
           <Link href="/privacy-policy" className="font-semibold text-accent-hover underline-offset-2 hover:underline cursor-pointer">
             Detail
           </Link>

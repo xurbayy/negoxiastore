@@ -11,12 +11,12 @@ const FEATURES = [
   {
     emoji: 'goldcoin',
     title: 'Ekonomi Poin Lengkap',
-    desc: 'Daily claim, transfer, betting, sampai pinjaman bank dengan bunga. Poin tersimpan aman di database terenkripsi AES-256.',
+    desc: 'Daily claim, transfer, betting, sampai pinjaman bank dengan bunga. Poin tersimpan aman di database server pribadi kami.',
   },
   {
     emoji: 'bank',
-    title: 'Bank & Bunga',
-    desc: 'Nabung dapat bunga dan pinjam saat bokek. Hati-hati: telat bayar masuk daftar Bank Watch.',
+    title: 'Bank & Pinjaman',
+    desc: 'Pinjam poin saat bokek dengan bunga terjangkau. Hati-hati: telat bayar, penghasilanmu dipotong otomatis sampai lunas.',
   },
   {
     emoji: 'castle',
