@@ -16,7 +16,12 @@ export function getEmoji(name) {
 }
 
 // URL CDN Discord siap pakai untuk <img src>. Fallback null kalau nama tidak ada.
-export function emojiSrc(name, size = 64) {
+//
+// DEFAULT SIZE 48 (samakan dengan emojisClient.js, 2026-10-10): ikon UI tampil
+// 16-40px, jadi 48 sudah tajam di retina 2x. Dulu 64 -> homepage memuat ~39
+// emoji GIF @56KB = 466KB. Khusus canvas/kartu gambar pemanggil tetap minta
+// size eksplisit besar.
+export function emojiSrc(name, size = 48) {
   const e = getEmoji(name);
   if (!e) return null;
   const base = e.url.split('?')[0];
