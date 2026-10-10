@@ -49,7 +49,7 @@ export const PANDUAN = [
       {
         title: 'Game pertama yang cocok buat pemula',
         body: [
-          'Kalau kamu baru mulai, coba np math dulu. Game ini paling sederhana: soal matematika dengan 4 pilihan jawaban, ada waktu 30 detik per soal. Menang atau kalah tetap dapat poin kecil, jadi nggak ada risiko.',
+          'Kalau kamu baru mulai, coba np math dulu. Game ini paling sederhana: soal matematika yang kamu jawab dengan mengetik lewat tombol "Jawab Soal", waktunya 20-40 detik per soal tergantung tingkat kesulitan yang kamu pilih (ada tombol Bantuan kalau mentok). Menang atau kalah tetap dapat poin kecil, jadi nggak ada risiko.',
           'Setelah terbiasa, naik ke np trivia (pengetahuan umum), np hangman (tebak kata), atau np guess (tebak angka). Semua game solo ini gratis dimainkan dan nggak memotong poinmu kalau kalah.',
           'Kalau pengin tantangan sosial, coba game multipemain seperti nb blackjack atau nb monopoly. Di sini poin dipotong sebagai taruhan, tapi hadiahnya juga jauh lebih besar.',
         ],
@@ -81,12 +81,11 @@ export const PANDUAN = [
         title: 'Semua sumber poin di NEXO',
         list: [
           'Klaim harian (nxdaily): poin gratis setiap 24 jam, jumlahnya naik mengikuti streak. Bonus +10% untuk pemegang NEXO Pass.',
-          'Misi harian: daftar misi yang berganti tiap hari (main game tertentu, capai target, dsb). Selesai semua misi dapat hadiah item random.',
+          'Misi harian: 3 misi yang berganti tiap hari (main game tertentu, capai target, dsb). Selesai semua misi dapat hadiah item random. Pemegang NEXO Pass dapat 1 slot misi ekstra.',
           'Game solo (np): poin kecil tapi tanpa risiko. Cocok untuk mengisi kuota dengan santai.',
           'Game multipemain (nb): hadiah besar dari pot taruhan. Menang = dapat poin lawan, kalah = poinmu hilang.',
-          'Game co-op (nc): hadiah dibagi rata ke seluruh tim. Menang bersama-sama, dapat bersama-sama.',
+          'Game co-op (nc): menang bersama-sama, dapat bersama-sama. Setiap anggota tim dapat reward penuh sendiri-sendiri (tidak dipotong), dengan bonus ekstra dari sisa HP.',
           'Guild War: bonus persentase untuk SEMUA anggota guild yang berpartisipasi, menang atau kalah.',
-          'Bank: bunga harian dari tabungan, plus bunga lebih tinggi untuk pemegang NEXO Pass.',
           'Event dan giveaway: kode promo yang ditukar lewat menu Redeem di web.',
         ],
       },
@@ -103,9 +102,9 @@ export const PANDUAN = [
         list: [
           'Jangan lewatkan klaim harian. Streak 15 hari berturut-turut memberi bonus yang jauh lebih besar daripada main game ekstra. Putus streak = rugi besar.',
           'Selesaikan misi harian setiap hari. Hadiahnya (item random) sering lebih bernilai daripada poinnya sendiri.',
-          'Simpan poin di bank, bukan di dompet. Bunga hariannya gratis, dan poin yang ditabung tidak bisa kalah di game.',
-          'Bermain di jam yang konsisten. Karena kuota bergulir, main di jam yang sama setiap hari membuatkuota selalu segar saat kamu main.',
-          'Game co-op lebih aman daripada multipemain kalau kamu belum berpengalaman - hadiah dibagi tapi modal tidak hilang.',
+          'Bermain di jam yang konsisten. Karena kuota bergulir, main di jam yang sama setiap hari membuat kuota selalu segar saat kamu main.',
+          'Game co-op lebih aman daripada multipemain kalau kamu belum berpengalaman - kalah pun tetap dapat poin hiburan, dan modal tidak hilang.',
+          'Pakai item toko dengan tepat. Item seperti Daily Boost dan Coin Magnet memberi efek yang nilainya melebihi harganya kalau dipakai saat sesi panjang.',
         ],
       },
       {
@@ -114,12 +113,13 @@ export const PANDUAN = [
           'Taruhan terlalu besar di awal. Poin multipemain dipotong sebagai taruhan - kalau kamu taruh 90% poinmu dan kalah, kamu bangkrut. Aturan praktis: jangan taruh lebih dari 10% total poinmu dalam satu game.',
           'Mengabaikan item toko. Beberapa item (misalnya Daily Boost dan Coin Magnet) memberi efek yang nilainya jauh melebihi harganya kalau dipakai dengan benar.',
           'Grinding lewat batas kuota. Setelah kuota habis, game tetap bisa dimainkan tapi poinnya nol. Lebih baik berhenti dan kembali setelah kuota pulih.',
+          'Pinjam di bank tanpa rencana bayar. Bank NEXO memberi pinjaman dengan bunga - ada tenggat waktu dan penagih otomatis. Pinjam hanya kalau kamu yakin bisa melunasi.',
         ],
       },
       {
         title: 'Peran NEXO Pass',
         body: [
-          'NEXO Pass (Rp 20.000 per bulan) menambah kuota harian 5.000 poin, memberi inventori unlimited, bunga bank lebih tinggi, dan akses game beta. Pass TIDAK menjual kemenangan - hasil game tetap soal keberuntungan dan strategi.',
+          'NEXO Pass (Rp 20.000 per bulan) menambah kuota harian 5.000 poin, memberi inventori unlimited, bunga pinjaman bank -10%, 1 slot misi ekstra, dan akses game beta. Pass TIDAK menjual kemenangan - hasil game tetap soal keberuntungan dan strategi.',
           'Kalau kamu main NEXO setiap hari, pass ini menghemat waktu karena kuotamu bertahan lebih lama. Kalau kamu main santai sesekali, main gratis sudah cukup menyenangkan.',
         ],
       },
@@ -150,8 +150,8 @@ export const PANDUAN = [
       {
         title: 'Alur Guild War dari awal sampai akhir',
         body: [
-          'War berjalan dalam tiga fase: Matchmaking, Lobby (Join & Ready), lalu Pertandingan. Di fase matchmaking, guild kamu antre mencari lawan. Begitu lawan ditemukan, bot membuat thread privat untuk masing-masing guild - anggota masuk lewat thread itu, tekan Join lalu Ready.',
-          'Pertandingan dimulai 60 detik setelah kedua tim siap. Setiap pemain tampil dengan HP (nyawa) dan Mana. Permainan berjalan bergiliran: A, B, A, B, sampai satu tim kehabisan pemain.',
+          'War berjalan dalam tiga fase: Matchmaking, Lobby (Join & Ready), lalu Pertandingan. Di fase matchmaking, guild kamu antre mencari lawan (maksimal 60 detik menunggu lawan). Begitu lawan ditemukan, bot membuat thread publik untuk masing-masing guild - anggota masuk lewat thread itu, tekan Join lalu Ready.',
+          'Pertandingan dimulai 10 detik setelah kedua tim menekan Ready. Setiap pemain tampil dengan HP (nyawa) dan Mana. Permainan berjalan bergiliran: A, B, A, B, sampai satu tim kehabisan pemain.',
           'Kalau kamu AFK 45 detik saat giliranmu, kamu otomatis tereliminasi (KO) supaya permainan tidak macet. Jadi pastikan kamu siap ketika giliranmu tiba.',
         ],
       },

@@ -18,7 +18,7 @@ import { SUPPORT_INVITE } from '../lib/site';
 export const metadata = {
   title: 'Tentang NEXO Games',
   description:
-    'NEXO Games adalah bot Discord game Indonesia dengan 25+ mini-game, ekonomi poin, guild war, dan papan peringkat. Kenali siapa di baliknya dan bagaimana cara kerjanya.',
+    'NEXO Games adalah bot Discord game Indonesia dengan 28 mini-game, ekonomi poin, guild war, dan papan peringkat. Kenali siapa di baliknya dan bagaimana cara kerjanya.',
   alternates: { canonical: '/tentang' },
 };
 
@@ -26,8 +26,8 @@ const SECTIONS = [
   {
     title: 'NEXO itu apa?',
     body: [
-      'NEXO Games adalah bot Discord yang mengubah server biasa jadi tempat nongkrong yang rame. Di dalamnya ada 25 lebih mini-game yang bisa dimainkan langsung dari chat: kuis matematika, trivia, hangman, tebak angka, slot, blackjack, sampai game multipemain seperti Monopoly dan Snake & Ladder.',
-      'Semua game terhubung ke satu ekonomi poin. Poin yang kamu kumpulkan bisa dipakai untuk belanja item, ditabung di bank dengan bunga, atau dipertaruhkan di game multipemain. Ada juga sistem guild: kumpulkan teman, naikkan level guild, dan adu kekuatan di Guild War.',
+      'NEXO Games adalah bot Discord yang mengubah server biasa jadi tempat nongkrong yang rame. Di dalamnya ada 28 mini-game yang bisa dimainkan langsung dari chat: kuis matematika, trivia, hangman, tebak angka, slot, blackjack, sampai game multipemain seperti Monopoly dan Snake & Ladder.',
+      'Semua game terhubung ke satu ekonomi poin. Poin yang kamu kumpulkan bisa dipakai untuk belanja item di toko, dipertaruhkan di game multipemain, atau dipinjamkan lewat Bank NEXO. Ada juga sistem guild: kumpulkan teman, naikkan level guild, dan adu kekuatan di Guild War.',
     ],
   },
   {
@@ -84,7 +84,7 @@ export default async function TentangPage() {
           </h1>
           <div className="accent-bar mt-4" aria-hidden="true" />
           <p className="mt-6 leading-relaxed text-ink-muted">
-            Bot Discord game buatan xurbaybase: 25+ mini-game, ekonomi poin,
+            Bot Discord game buatan xurbaybase: 28 mini-game, ekonomi poin,
             guild war, dan papan peringkat - semua langsung dari chat Discord.
           </p>
         </Reveal>
