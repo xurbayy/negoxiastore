@@ -82,7 +82,7 @@ export default async function Footer() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="flex flex-col items-start justify-between gap-10 md:flex-row">
           <div className="max-w-sm">
-            <Link href="/" className="flex w-fit items-center gap-2.5 cursor-pointer" aria-label="NEXO Games - Beranda">
+            <Link href="/" prefetch={false} className="flex w-fit items-center gap-2.5 cursor-pointer" aria-label="NEXO Games - Beranda">
               <NexoLogo size={32} />
               <span className="font-display text-lg text-ink">
                 NEXO<span className="text-ink"> Games</span>
@@ -119,7 +119,10 @@ export default async function Footer() {
                       <PanahKeluar />
                     </a>
                   ) : (
-                    <Link href={l.href} className={GAYA_LINK}>
+                    // prefetch={false}: Next 16 auto-prefetch semua <Link> ->
+                    // footer punya ~9 link, semuanya memicu fetch RSC halaman
+                    // di background saat halaman dibuka (penyebab lag 2026-10-10).
+                    <Link href={l.href} prefetch={false} className={GAYA_LINK}>
                       {l.label}
                     </Link>
                   )}

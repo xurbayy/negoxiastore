@@ -40,9 +40,12 @@ export default async function WelcomeBack({ username }) {
           )}
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link href="/me" className="btn-primary px-5! py-2.5! text-sm cursor-pointer">Profil Saya</Link>
-          <Link href="/redeem" className="btn-ghost px-5! py-2.5! text-sm cursor-pointer">Redeem Kode</Link>
-          <Link href="/shop" className="btn-ghost px-5! py-2.5! text-sm cursor-pointer">Shop</Link>
+          {/* prefetch={false}: komponen ini tampil di viewport pertama saat
+              login -> semua link di sini akan langsung di-prefetch Next 16
+              (penyebab lag). */}
+          <Link href="/me" prefetch={false} className="btn-primary px-5! py-2.5! text-sm cursor-pointer">Profil Saya</Link>
+          <Link href="/redeem" prefetch={false} className="btn-ghost px-5! py-2.5! text-sm cursor-pointer">Redeem Kode</Link>
+          <Link href="/shop" prefetch={false} className="btn-ghost px-5! py-2.5! text-sm cursor-pointer">Shop</Link>
         </div>
       </div>
     </div>

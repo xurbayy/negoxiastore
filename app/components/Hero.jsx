@@ -45,8 +45,11 @@ export default function Hero({ loggedIn = false }) {
           <div className="anim-in delay-4 mt-8 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
             {loggedIn ? (
               <>
-                <Link href="/me" className="btn-primary cursor-pointer">Buka Profil</Link>
-                <Link href="/leaderboard" className="btn-ghost cursor-pointer">
+                {/* prefetch={false}: hero ada di viewport pertama -> Next 16
+                    akan langsung prefetch halaman ini saat load (penyebab
+                    lag 2026-10-10). Navigasi biasa tetap instan saat diklik. */}
+                <Link href="/me" prefetch={false} className="btn-primary cursor-pointer">Buka Profil</Link>
+                <Link href="/leaderboard" prefetch={false} className="btn-ghost cursor-pointer">
                   {emojiSrc('trophy') ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('trophy')} alt="" width={18} height={18} className="h-4.5 w-4.5" />
@@ -57,7 +60,7 @@ export default function Hero({ loggedIn = false }) {
             ) : (
               <>
                 <InviteButton />
-                <Link href="/#games" className="btn-primary bg-card-dark! px-[1.6rem]! py-[0.7rem]! text-[16px]! text-card-cream transition hover:bg-card-dark-2 cursor-pointer">
+                <Link href="/#games" prefetch={false} className="btn-primary bg-card-dark! px-[1.6rem]! py-[0.7rem]! text-[16px]! text-card-cream transition hover:bg-card-dark-2 cursor-pointer">
                   <GamepadIcon className="h-5 w-5" />
                   Lihat Semua Game
                 </Link>

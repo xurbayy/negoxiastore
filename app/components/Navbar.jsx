@@ -108,7 +108,7 @@ export default function Navbar({ session, premiumActive = false }) {
         className="mx-auto flex max-w-6xl items-center justify-between px-5"
         aria-label="Navigasi utama"
       >
-        <Link href="/" className="flex items-center gap-2.5 leading-none cursor-pointer" aria-label="NEXO Games - Beranda">
+        <Link href="/" prefetch={false} className="flex items-center gap-2.5 leading-none cursor-pointer" aria-label="NEXO Games - Beranda">
           <span className="flex shrink-0 items-center"><NexoLogo size={36} /></span>
           <span className="hidden font-display text-lg font-bold tracking-tight text-ink lg:inline">
             NEXO Games
@@ -118,8 +118,15 @@ export default function Navbar({ session, premiumActive = false }) {
         <ul className="hidden items-center gap-5 md:flex lg:gap-7">
           {LINKS.map((l) => (
             <li key={l.href}>
+              {/* prefetch={false} (2026-10-10): Next 16 otomatis prefetch
+                  SELURUH halaman untuk tiap <Link> yang masuk viewport ->
+                  homepage memicu ~900KB RSC di background (leaderboard 557ms,
+                  panduan 517ms, dll) sehingga terasa LAG saat buka web &
+                  logout. Link navigasi tidak perlu instan; yang penting
+                  halaman pertama cepat. */}
               <Link
                 href={l.href}
+                prefetch={false}
                 className="text-sm font-medium text-ink-muted transition-colors duration-200 hover:text-ink cursor-pointer"
               >
                 {l.label}
@@ -133,7 +140,7 @@ export default function Navbar({ session, premiumActive = false }) {
               </summary>
               <div className="invisible absolute right-0 top-full z-50 w-48 rounded-xl border border-border-soft bg-card-cream p-1.5 opacity-0 shadow-[0_12px_32px_rgba(43,33,24,0.14)] transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
                 {LEGAL.map((l) => (
-                  <Link key={l.href} href={l.href} className="block rounded-lg px-3 py-2 text-sm text-ink-muted transition hover:bg-bg-soft hover:text-ink cursor-pointer">
+                  <Link key={l.href} href={l.href} prefetch={false} className="block rounded-lg px-3 py-2 text-sm text-ink-muted transition hover:bg-bg-soft hover:text-ink cursor-pointer">
                     {l.label}
                   </Link>
                 ))}
@@ -144,6 +151,7 @@ export default function Navbar({ session, premiumActive = false }) {
             <li>
               <Link
                 href="/premium"
+                prefetch={false}
                 className={showPremium
                   ? 'inline-flex items-center gap-1.5 rounded-lg border border-success/50 bg-white px-3.5 py-1.5 text-sm font-semibold text-success shadow-sm transition hover:-translate-y-px hover:bg-success hover:text-white active:translate-y-0 active:shadow-none cursor-pointer'
                   : 'inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer'}
@@ -170,7 +178,7 @@ export default function Navbar({ session, premiumActive = false }) {
             <>
               <Notifications />
               <FeedbackButton />
-              <Link href="/me" className="hidden items-center gap-2 md:flex cursor-pointer">
+              <Link href="/me" prefetch={false} className="hidden items-center gap-2 md:flex cursor-pointer">
                 {session.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={session.avatar} alt="" width={32} height={32} className="h-8 w-8 rounded-full border border-border-soft" />
@@ -190,6 +198,7 @@ export default function Navbar({ session, premiumActive = false }) {
             <>
               <Link
                 href="/premium"
+                prefetch={false}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-accent/60 bg-white px-3.5 py-1.5 text-sm font-semibold text-accent-hover shadow-sm transition hover:-translate-y-px hover:bg-accent hover:text-ink active:translate-y-0 active:shadow-none cursor-pointer"
               >
                 {/* Emoji resmi NEXO Pass - juga untuk pengunjung yang BELUM
@@ -200,7 +209,7 @@ export default function Navbar({ session, premiumActive = false }) {
                 )}
                 <span className="whitespace-nowrap">NEXO Pass</span>
               </Link>
-              <Link href="/login" className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
+              <Link href="/login" prefetch={false} className="btn-primary hidden px-5! py-2! text-sm md:inline-flex cursor-pointer">
                 <DiscordIcon className="h-4 w-4" />
                 Login
               </Link>
@@ -227,6 +236,7 @@ export default function Navbar({ session, premiumActive = false }) {
               <li key={l.href}>
                 <Link
                   href={l.href}
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted transition-colors hover:bg-bg-soft hover:text-ink cursor-pointer"
                 >
@@ -238,6 +248,7 @@ export default function Navbar({ session, premiumActive = false }) {
               <li key={l.href}>
                 <Link
                   href={l.href}
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted transition-colors hover:bg-bg-soft hover:text-ink cursor-pointer"
                 >
@@ -247,7 +258,7 @@ export default function Navbar({ session, premiumActive = false }) {
             ))}
             {!session && (
               <li>
-                <Link href="/premium" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
+                <Link href="/premium" prefetch={false} onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-lg border border-accent/60 bg-white px-3 py-2.5 text-sm font-semibold text-accent-hover shadow-sm cursor-pointer">
                   {emojiSrc('download3') && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={emojiSrc('download3')} alt="" width={18} height={18} className="h-[18px] w-[18px] shrink-0" />
