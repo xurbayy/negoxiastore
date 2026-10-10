@@ -26,7 +26,12 @@ for (const e of emojiData.emojis) daftar(e);
 export function hydrateEmojiCatalog(ringkas) {
   if (!Array.isArray(ringkas)) return;
   for (const r of ringkas) {
-    const e = { name: r.n, aliases: r.a || [], id: String(r.i), url: r.u, animated: Number(r.an) === 1 };
+    // URL dari DB sering membawa query bawaan bot (?size=64&quality=lossless).
+    // STRIP query-nya (2026-10-10): kalau tidak, url ini menimpa entri statis
+    // dengan size=64 hardcode -> default 48 di emojiSrc() tidak berpengaruh
+    // dan homepage tetap berat. emojiSrc() sendiri yang menempelkan ?size=N.
+    const urlBersih = r.u ? String(r.u).split('?')[0] : '';
+    const e = { name: r.n, aliases: r.a || [], id: String(r.i), url: urlBersih, animated: Number(r.an) === 1 };
     if (!e.id || !e.url || !e.name) continue;
     const lama = byId[e.id];
     if (lama) {
