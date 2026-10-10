@@ -4,6 +4,7 @@ import { userHasPremium } from '../lib/snapshot';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AutoRefresh from '../components/AutoRefresh';
+import AdUnit from '../components/AdUnit';
 import LeaderboardClient from '../leaderboard/LeaderboardClient';
 import GuildSection from '../leaderboard/GuildSection';
 
@@ -50,6 +51,21 @@ export default async function LeaderboardPage() {
       <main className="relative mx-auto max-w-4xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative">
+          {/* Iklan AdSense di atas judul (permintaan pemilik 2026-10-09:
+              pindah dari /redeem ke sini). Halaman ini PUBLIK - Googlebot
+              bisa melihat unitnya, dan isinya (papan peringkat live) adalah
+              konten bernilai. Lebar dibatasi max-w-xl supaya rapi. */}
+          <div className="mb-1 flex justify-center">
+            <div className="w-full max-w-xl">
+              <AdUnit
+                slot={
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT_LEADERBOARD ||
+                  process.env.NEXT_PUBLIC_ADSENSE_SLOT
+                }
+                format="auto"
+              />
+            </div>
+          </div>
           <h1 className="mt-3 font-display text-3xl text-ink md:text-4xl">
             Leaderboard <span className="font-display text-ink">NEXO</span>
           </h1>

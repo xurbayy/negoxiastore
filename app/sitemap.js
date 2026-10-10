@@ -1,4 +1,5 @@
 import { SITE_URL, absoluteUrl } from './lib/site';
+import { PANDUAN } from './lib/panduan-content';
 
 // Sitemap: daftar halaman yang boleh di-index Google.
 //
@@ -55,6 +56,26 @@ export default function sitemap() {
       changeFrequency: 'weekly',
       priority: 0.7,
     },
+    // HALAMAN EDITORIAL (2026-10-09, kualitas AdSense): /tentang + /panduan +
+    // tiap panduan - konten bernilai yang bisa dibaca Googlebot tanpa login.
+    {
+      url: absoluteUrl('/tentang'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: absoluteUrl('/panduan'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    ...PANDUAN.map((p) => ({
+      url: absoluteUrl(`/panduan/${p.slug}`),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    })),
     {
       url: absoluteUrl('/redeem'),
       lastModified: now,

@@ -12,6 +12,8 @@ const NAV_GUEST = [
   { href: '/komunitas', label: 'Komunitas' },
   { href: '/#fitur', label: 'Fitur' },
   { href: '/#cara-main', label: 'Cara Main' },
+  { href: '/panduan', label: 'Panduan' },
+  { href: '/tentang', label: 'Tentang' },
   { href: '/#premium', label: 'NEXO Pass' },
   { href: '/#faq', label: 'FAQ' },
 ];
@@ -21,6 +23,8 @@ const NAV_MEMBER = [
   { href: '/shop', label: 'Shop' },
   { href: '/redeem', label: 'Redeem' },
   { href: '/premium', label: 'NEXO Pass' },
+  { href: '/panduan', label: 'Panduan' },
+  { href: '/tentang', label: 'Tentang' },
 ];
 const NAV_LEGAL = [
   { href: '/privacy-policy', label: 'Kebijakan Privasi' },

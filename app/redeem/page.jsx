@@ -3,7 +3,6 @@ import { userHasPremium } from '../lib/snapshot';
 import { redirect } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import AdUnit from '../components/AdUnit';
 import RedeemClient from '../components/RedeemClient';
 
 export const metadata = {
@@ -25,21 +24,11 @@ export default async function RedeemPage({ searchParams }) {
       <main className="relative mx-auto max-w-2xl px-5 pb-24 pt-32">
         <div className="bg-grid absolute inset-x-0 top-0 h-72" aria-hidden="true" />
         <div className="relative text-center">
-          {/* Iklan AdSense di atas judul (permintaan pemilik 2026-10-01).
-              Slot PER-HALAMAN dari env - lihat catatan di /komunitas.
-              LEBAR DIBATASI (2026-10-04): bungkus max-w-xl supaya tidak
-              terlalu lebar. */}
-          <div className="mb-1 flex justify-center">
-            <div className="w-full max-w-xl">
-              <AdUnit
-                slot={
-                  process.env.NEXT_PUBLIC_ADSENSE_SLOT_REDEEM ||
-                  process.env.NEXT_PUBLIC_ADSENSE_SLOT
-                }
-                format="auto"
-              />
-            </div>
-          </div>
+          {/* UNIT IKLAN DI SINI DIHAPUS (permintaan pemilik 2026-10-09):
+              halaman ini butuh LOGIN (redirect ke /login kalau belum) sehingga
+              Googlebot tidak pernah melihat unitnya - tidak ada manfaat +
+              halaman login-gate adalah sinyal buruk untuk AdSense.
+              Iklan dipindah ke /leaderboard & /komunitas (publik). */}
           <h1 className="mt-4 font-display text-3xl text-ink md:text-4xl">
             Redeem <span className="font-display text-ink">Hadiah</span>
           </h1>

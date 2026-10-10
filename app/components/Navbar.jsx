@@ -12,6 +12,10 @@ const LINKS_GUEST = [
   { href: '/leaderboard', label: 'Leaderboard' },
   { href: '/komunitas', label: 'Komunitas' },
   { href: '/#cara-main', label: 'Cara Main' },
+  // Panduan = halaman editorial baru (2026-10-09). Guest only, konsisten
+  // dengan aturan "navbar member tanpa link onboarding" - member bisa lewat
+  // footer kalau butuh.
+  { href: '/panduan', label: 'Panduan' },
 ];
 const LINKS_MEMBER = [
   { href: '/#games', label: 'Game' },
