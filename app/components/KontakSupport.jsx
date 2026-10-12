@@ -48,17 +48,16 @@ export default function KontakSupport() {
 
         <Reveal delay={80}>
           <div className="nx-card mx-auto mt-10 max-w-3xl px-6 py-6 md:px-8 md:py-8">
-            {/* Kontak = TOMBOL (permintaan pemilik 2026-10-13): email & WA
-                jadi tombol yang bisa langsung diklik. Nilainya tetap
-                tercantum (syarat verifikasi Duitku: email & telepon wajib
-                terlihat di halaman utama). */}
+            {/* Kontak = TOMBOL polos (permintaan pemilik 2026-10-13):
+                cuma bentuk tombol + label singkat, TANPA menampilkan
+                email/nomor sebagai teks. Alamat usaha juga tidak ditampilkan. */}
             <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
               <a
                 href={`mailto:${KONTAK.email}`}
                 className="btn-solid btn-solid-accent justify-center px-5! py-3!"
               >
                 <Ikon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6" />
-                <span>{KONTAK.email}</span>
+                <span>Email</span>
               </a>
 
               <a
@@ -68,17 +67,8 @@ export default function KontakSupport() {
                 className="btn-solid btn-solid-success justify-center px-5! py-3!"
               >
                 <IkonWA />
-                <span>WhatsApp: {KONTAK.telepon}</span>
+                <span>WhatsApp</span>
               </a>
-            </div>
-
-            {/* Alamat usaha - tetap teks biasa (bukan tombol). */}
-            <div className="mt-5 flex items-start gap-3 rounded-xl border border-border-soft bg-bg-soft/60 px-4 py-3.5">
-              <Ikon d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
-              <span>
-                <span className="block text-xs font-bold uppercase tracking-wider text-ink-muted">Alamat Usaha</span>
-                <span className="mt-0.5 block text-sm font-semibold leading-relaxed text-ink">{KONTAK.alamat}</span>
-              </span>
             </div>
           </div>
         </Reveal>
