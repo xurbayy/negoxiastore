@@ -1,5 +1,4 @@
 import Reveal from './Reveal';
-import CustomerServiceButton from './CustomerServiceButton';
 
 // ==========================================
 // KontakSupport — kontak resmi + alamat usaha
@@ -48,9 +47,10 @@ export default function KontakSupport() {
         </Reveal>
 
         <Reveal delay={80}>
-          {/* Tiga tombol kontak seimbang (revisi 2026-10-13): Email, WhatsApp,
-              dan Customer Service (logo CS -> dropdown WA + Discord owner). */}
-          <div className="mx-auto mt-10 grid max-w-3xl gap-3 sm:grid-cols-3">
+          {/* Dua tombol BESAR seimbang: Email + WhatsApp.
+              (Tombol Customer Service sempat dicoba 2026-10-13, lalu DICABUT
+              atas permintaan pemilik - cukup 2 tombol ini.) */}
+          <div className="mx-auto mt-10 grid max-w-xl gap-3 sm:grid-cols-2">
             <a
               href={`mailto:${KONTAK.email}`}
               className="btn-solid btn-solid-accent h-full justify-center gap-2.5! px-6! py-4! text-base!"
@@ -68,9 +68,6 @@ export default function KontakSupport() {
               <IkonWA />
               <span>WhatsApp</span>
             </a>
-
-            {/* Tombol CS = dropdown WA + Discord (permintaan pemilik). */}
-            <CustomerServiceButton className="h-full [&>button]:h-full [&>button]:w-full [&>button]:gap-2.5! [&>button]:px-6! [&>button]:py-4! [&>button]:text-base!" />
           </div>
         </Reveal>
       </div>
