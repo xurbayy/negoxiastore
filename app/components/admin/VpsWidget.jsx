@@ -59,13 +59,29 @@ export default function VpsWidget() {
   // detik berjalan dihitung di browser supaya angka uptime terasa hidup
   // (tidak "beku" di menit yang sama selama polling).
   const [tick, setTick] = useState(0);
+  // BELUM PERNAH DAPAT DATA (fix 2026-10-11: "buka admin setelah idle = beku"):
+  // saat request pertama masih jalan / gagal (timeout Vercel cold + agent
+  // cold), `st` masih null. Dulu UI langsung memvonis "Offline"/dot merah -
+  // padahal bot SEHAT, cuma datanya belum datang. Sekarang dibedakan:
+  //   memuat  = belum pernah sukses & sedang mencoba  -> "Menghubungkan..."
+  //   gagal   = request terakhir error                 -> "Tidak terhubung" (netral)
+  // Vonis Offline/BEKU HANYA dari data yang benar-benar diterima dari server.
+  const [memuat, setMemuat] = useState(true);
+  const [gagal, setGagal] = useState(false);
 
   const muat = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/vps', { cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
-      if (d.ok) { setSt(d); setTick((t) => t + 1); }
-    } catch { /* diamkan - widget tidak boleh mengganggu */ }
+      if (d.ok) { setSt(d); setTick((t) => t + 1); setGagal(false); }
+      else setGagal(true);
+    } catch {
+      // Jaringan/timeout: jangan hapus data lama (kalau ada) - cukup tandai
+      // gagal supaya UI tidak memvonis status dari data yang tak ada.
+      setGagal(true);
+    } finally {
+      setMemuat(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -98,6 +114,10 @@ export default function VpsWidget() {
   const uptimeMuda = Number.isFinite(uptimeDetik) && uptimeDetik < 90;
   const sedangMulai = Boolean(b?.aktif && b?.responsif === false && (b?.sedangMulai || uptimeMuda));
   const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda);
+  // BELUM ADA DATA (fix 2026-10-11): jangan vonis apa pun sebelum data nyata
+  // datang. `belumAda` = belum pernah sukses menerima status.
+  const belumAda = !st;
+  const menghubungkan = belumAda && memuat && !gagal;
   // Uptime BERJALAN: uptime saat data diambil + umur data (dari timestamp
   // server `sekarang`). `tick` cuma memaksa re-render tiap 10 dtk supaya
   // angkanya ikut naik walau fetch belum datang.
@@ -116,11 +136,11 @@ export default function VpsWidget() {
         aria-expanded={open}
         aria-label={open ? 'Tutup info VPS' : 'Buka info VPS'}
       >
-        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (b?.aktif ? (sedangMulai ? 'vps-dot-warn' : 'vps-dot-ok') : 'vps-dot-bad')}`} aria-hidden="true" />
+        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (b?.aktif ? (sedangMulai ? 'vps-dot-warn' : 'vps-dot-ok') : (belumAda ? 'vps-dot-warn' : 'vps-dot-bad'))}`} aria-hidden="true" />
         <span className="flex-1 font-bold tracking-wide text-white">VPS</span>
         {!open && (
           <span className="font-mono text-[0.7rem] text-slate-300">
-            CPU {cpu ?? '-'}% · RAM {ram ?? '-'}%
+            {belumAda ? (menghubungkan ? 'Menghubungkan…' : 'Tidak terhubung') : `CPU ${cpu ?? '-'}% · RAM ${ram ?? '-'}%`}
           </span>
         )}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
@@ -147,8 +167,10 @@ export default function VpsWidget() {
             <span className="text-slate-400">Uptime</span>
             <span className="text-right font-semibold text-white">{fmtUptime(uptimeJalan)}</span>
             <span className="text-slate-400">Bot</span>
-            <span className={`text-right font-semibold ${beku ? 'text-[#F19A1A]' : (b?.aktif ? (sedangMulai ? 'text-[#F19A1A]' : 'text-[#7BA05B]') : 'text-[#C74B3C]')}`}>
-              {beku ? 'BEKU - pakai Restart Paksa' : (b?.aktif ? (sedangMulai ? 'Sedang mulai' : `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}`) : 'Offline')}
+            <span className={`text-right font-semibold ${belumAda ? 'text-slate-400' : (beku ? 'text-[#F19A1A]' : (b?.aktif ? (sedangMulai ? 'text-[#F19A1A]' : 'text-[#7BA05B]') : 'text-[#C74B3C]'))}`}>
+              {belumAda
+                ? (menghubungkan ? 'Menghubungkan…' : 'Tidak terhubung')
+                : (beku ? 'BEKU - pakai Restart Paksa' : (b?.aktif ? (sedangMulai ? 'Sedang mulai' : `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}`) : 'Offline'))}
             </span>
             {v?.load && (
               <>
