@@ -98,12 +98,17 @@ export async function POST(request) {
     // Durasi dari gateway_ref order (fallback 30 hari untuk order lama).
     let durasiHari = 30;
     let durasiBulan = 1;
+    let refMethod = null;
+    let refMethodCode = null;
     try {
       const ref = JSON.parse(orow?.gateway_ref || 'null');
       if (ref && Number.isFinite(Number(ref.days)) && Number(ref.days) > 0) {
         durasiHari = Math.floor(Number(ref.days));
         durasiBulan = Number.isFinite(Number(ref.months)) ? Number(ref.months) : Math.max(1, Math.round(durasiHari / 30));
       }
+      // Pertahankan jejak metode yang dipilih user (dropdown semua metode).
+      if (ref?.method) refMethod = String(ref.method);
+      if (ref?.methodCode) refMethodCode = String(ref.methodCode);
     } catch { /* pakai default */ }
     // Bandingkan NUMERIK - Duitku kadang kirim "20000.00"
     if (orow && Number(amount) === Number(orow.amount)) {
@@ -111,7 +116,7 @@ export async function POST(request) {
         // JANGAN timpa gateway_ref dengan reference - simpan durasi + reference
         // dalam JSON supaya grant tetap tahu masa aktif yang dibeli.
         sql: "UPDATE orders SET status = 'paid', paid_at = ?, gateway_ref = ? WHERE id = ? AND status IN ('pending', 'canceled', 'expired')",
-        args: [now, JSON.stringify({ months: durasiBulan, days: durasiHari, duitkuReference: String(reference || merchantOrderId) }), orderId],
+        args: [now, JSON.stringify({ months: durasiBulan, days: durasiHari, method: refMethod, methodCode: refMethodCode, duitkuReference: String(reference || merchantOrderId) }), orderId],
       });
       if (flip.rowsAffected > 0 && orow.discord_id) {
         await db.execute({

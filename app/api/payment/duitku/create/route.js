@@ -6,6 +6,7 @@ import { userHasPremium } from '../../../../lib/snapshot';
 import { touchActivity } from '../../../../lib/activity';
 import { rateLimitGlobal } from '../../../../lib/rate-limit';
 import { normalBulan, hargaBulan, bulanKeHari } from '../../../../lib/premiumPlan';
+import { DUITKU_METODE, DUITKU_DILARANG } from '../../../../lib/duitkuMethods';
 import { SITE_URL } from '../../../../lib/site';
 
 export const dynamic = 'force-dynamic';
@@ -51,14 +52,17 @@ export async function POST(request) {
   const amount = hargaBulan(bulan);
   const hari = bulanKeHari(bulan);
 
-  // METODE PEMBAYARAN (permintaan pemilik 2026-10-12: "gw mau pake QRIS"):
-  // Duitku inquiry WAJIB menyertakan satu kode channel (terverifikasi live).
-  //   - 'qris' -> 'NQ' = Nobu QRIS: satu QR bisa discan SEMUA aplikasi
-  //     (GoPay/OVO/DANA/m-banking) - netral, bukan milik e-wallet tertentu.
-  //     ('SP' ShopeePay QRIS juga jalan; LQ/GQ tidak aktif di akun ini.)
-  //   - 'va'   -> 'BC' = BCA Virtual Account.
-  const metodeKode = String(body?.method || 'qris').toLowerCase() === 'va' ? 'BC' : 'NQ';
-  const metodeLabel = metodeKode === 'NQ' ? 'QRIS' : 'BCA VA';
+  // METODE PEMBAYARAN (permintaan pemilik 2026-10-12: "semua pembayaran aja
+  // gw maunya dan pake dropdown"): user memilih dari dropdown yang berisi
+  // SEMUA channel aktif merchant (endpoint /api/payment/duitku/methods).
+  // Duitku inquiry WAJIB satu kode channel. Kode divalidasi terhadap daftar
+  // resmi lib/duitkuMethods (channel yang terbukti gagal dilarang).
+  const mintaKode = String(body?.method || 'NQ').toUpperCase();
+  if (DUITKU_DILARANG.has(mintaKode)) {
+    return NextResponse.json({ ok: false, error: 'Metode pembayaran itu sedang tidak tersedia. Pilih metode lain.' }, { status: 400 });
+  }
+  const metodeKode = DUITKU_METODE[mintaKode] ? mintaKode : 'NQ';
+  const metodeLabel = DUITKU_METODE[metodeKode];
 
   await schemaReady();
   const db = getDb();
@@ -92,10 +96,11 @@ export async function POST(request) {
     try { ref = JSON.parse(p.gateway_ref || 'null'); } catch { ref = null; }
     // Metode order lama harus SAMA dengan yang dipilih sekarang. Kalau beda
     // (misal order lama BCA VA, sekarang pilih QRIS), jangan resume paksa
-    // metode lama - kedaluwarsakan lalu buat order baru. Order lama tanpa
-    // field method = era BCA VA (satu-satunya metode waktu itu).
-    const refMethod = ref?.method || 'BCA VA';
-    if (umurMs < BATAS_MS && ref?.paymentUrl && refMethod === metodeLabel) {
+    // metode lama - kedaluwarsakan lalu buat order baru.
+    // Bandingkan KODE (methodCode), bukan label - label bisa berubah teks.
+    // Order lama tanpa methodCode = era sebelum dropdown (QRIS/BVA saja).
+    const refCode = ref?.methodCode || (ref?.method === 'BCA VA' ? 'BC' : ref?.method ? 'NQ' : 'BC');
+    if (umurMs < BATAS_MS && ref?.paymentUrl && refCode === metodeKode) {
       // Lanjutkan pembayaran yang sama - tidak perlu bikin order baru.
       return NextResponse.json({ ok: true, orderId: Number(p.id), paymentUrl: ref.paymentUrl, resumed: true });
     }
@@ -109,7 +114,7 @@ export async function POST(request) {
   const created = Date.now();
   // gateway_ref menyimpan DURASI (dipakai webhook untuk grant premium sesuai
   // bulan yang dibeli - dulu webhook hardcode 30 hari).
-  const gatewayRef = JSON.stringify({ months: bulan, days: hari, method: metodeLabel });
+  const gatewayRef = JSON.stringify({ months: bulan, days: hari, method: metodeLabel, methodCode: metodeKode });
 
   const res = await db.execute({
     // RETURNING id WAJIB (adapter Postgres isi lastInsertRowid dari rows[0].id).
@@ -185,7 +190,7 @@ export async function POST(request) {
   try {
     await db.execute({
       sql: 'UPDATE orders SET gateway_ref = ? WHERE id = ?',
-      args: [JSON.stringify({ months: bulan, days: hari, method: metodeLabel, duitkuReference: duitkuRes.reference, paymentUrl: duitkuRes.paymentUrl }), orderId],
+      args: [JSON.stringify({ months: bulan, days: hari, method: metodeLabel, methodCode: metodeKode, duitkuReference: duitkuRes.reference, paymentUrl: duitkuRes.paymentUrl }), orderId],
     });
   } catch { /* jejak opsional - order tetap valid */ }
 

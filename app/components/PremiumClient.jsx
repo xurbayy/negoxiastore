@@ -25,11 +25,38 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   // DURASI LANGGANAN (permintaan pemilik 2026-10-08): pembeli bisa memilih
   // berapa bulan (1-12). Harga & nominal yang ditampilkan mengikuti pilihan.
   const [bulan, setBulan] = useState(1);
-  // METODE PEMBAYARAN (permintaan pemilik 2026-10-12): QRIS (default) atau
-  // Virtual Account BCA. Duitku inquiry butuh satu kode channel; 'qris' -> NQ
-  // (Nobu QRIS - satu QR untuk semua aplikasi), 'va' -> BC (BCA VA).
-  const [metode, setMetode] = useState('qris');
+  // METODE PEMBAYARAN (revisi 2026-10-12): dropdown berisi SEMUA channel aktif
+  // merchant (QRIS, e-wallet, VA semua bank, retail, kartu kredit). Daftar
+  // diambil live dari /api/payment/duitku/methods; nilai = KODE channel Duitku.
+  const [metode, setMetode] = useState('NQ');
+  const [methods, setMethods] = useState([]);
   const totalHarga = hargaBulan(bulan);
+
+  // Muat daftar metode sekali saat form pertama dibuka (endpoint cache 1 jam).
+  useEffect(() => {
+    if (!showForm || methods.length) return;
+    fetch('/api/payment/duitku/methods', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok && Array.isArray(d.methods) && d.methods.length) {
+          setMethods(d.methods);
+          // Kalau metode terpilih tidak ada di daftar live, pindah ke yang pertama.
+          setMetode((m) => (d.methods.some((x) => x.code === m) ? m : d.methods[0].code));
+        }
+      })
+      .catch(() => {});
+  }, [showForm, methods.length]);
+
+  // Kelompokkan metode per kategori untuk <optgroup> dropdown.
+  const metodeGroups = (() => {
+    const g = {};
+    for (const m of methods) {
+      const k = m.kategori || 'Lainnya';
+      (g[k] = g[k] || []).push(m);
+    }
+    return g;
+  })();
+  const metodeDipilih = methods.find((m) => m.code === metode) || null;
 
   const loadStatus = useCallback(async () => {
     try {
@@ -185,29 +212,25 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
 
           <h3 className="text-xl font-bold mb-4">Bayar NEXO Pass</h3>
 
-          {/* PILIH DURASI (permintaan pemilik 2026-10-08): pembeli memilih
-              berapa bulan (maks 12 / setahun). Harga & nominal mengikuti. */}
+          {/* DURASI (revisi 2026-10-12: tombol 1-12 bln diganti dropdown -
+              permintaan pemilik "gw mau di geser jadi dropdown"). */}
           <div className="mb-4">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
+            <label htmlFor="p-durasi" className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
               Durasi Langganan
             </label>
-            <div className="flex flex-wrap gap-2">
+            <select
+              id="p-durasi"
+              value={bulan}
+              onChange={(e) => setBulan(parseInt(e.target.value, 10))}
+              disabled={buying}
+              className="w-full rounded-lg border border-border-soft bg-white px-3 py-2.5 text-sm font-semibold text-ink focus:border-accent focus:outline-none cursor-pointer disabled:opacity-50"
+            >
               {Array.from({ length: MAX_MONTHS }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setBulan(n)}
-                  disabled={buying}
-                  className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
-                    bulan === n
-                      ? 'border-accent bg-accent text-white'
-                      : 'border-border-soft bg-white text-ink hover:border-accent'
-                  }`}
-                >
-                  {n} bln
-                </button>
+                <option key={n} value={n}>
+                  {n} bulan ({bulanKeHari(n)} hari) - Rp {hargaBulan(n).toLocaleString('id-ID')}
+                </option>
               ))}
-            </div>
+            </select>
             <p className="mt-2 text-xs text-ink-muted">
               Pilihan: <strong>{bulan} bulan</strong> ({bulanKeHari(bulan)} hari) •{' '}
               <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong>
@@ -215,50 +238,47 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
             </p>
           </div>
 
-          {/* PILIH METODE PEMBAYARAN (permintaan pemilik 2026-10-12):
-              QRIS (scan pakai aplikasi apa pun) atau VA BCA. */}
+          {/* METODE PEMBAYARAN (revisi 2026-10-12): dropdown SEMUA channel
+              aktif merchant - QRIS, e-wallet, VA semua bank, retail, kartu
+              kredit. Daftar dari /api/payment/duitku/methods (live + cache). */}
           <div className="mb-4">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
+            <label htmlFor="p-metode" className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
               Metode Pembayaran
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setMetode('qris')}
-                disabled={buying}
-                className={`rounded-lg border px-3 py-2.5 text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
-                  metode === 'qris'
-                    ? 'border-accent bg-accent text-white'
-                    : 'border-border-soft bg-white text-ink hover:border-accent'
-                }`}
-              >
-                QRIS
-                <span className={`mt-0.5 block text-[10px] font-medium ${metode === 'qris' ? 'text-white/80' : 'text-ink-muted'}`}>
-                  Scan pakai aplikasi apa pun
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMetode('va')}
-                disabled={buying}
-                className={`rounded-lg border px-3 py-2.5 text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
-                  metode === 'va'
-                    ? 'border-accent bg-accent text-white'
-                    : 'border-border-soft bg-white text-ink hover:border-accent'
-                }`}
-              >
-                Virtual Account
-                <span className={`mt-0.5 block text-[10px] font-medium ${metode === 'va' ? 'text-white/80' : 'text-ink-muted'}`}>
-                  Transfer bank BCA
-                </span>
-              </button>
-            </div>
+            <select
+              id="p-metode"
+              value={metode}
+              onChange={(e) => setMetode(e.target.value)}
+              disabled={buying}
+              className="w-full rounded-lg border border-border-soft bg-white px-3 py-2.5 text-sm font-semibold text-ink focus:border-accent focus:outline-none cursor-pointer disabled:opacity-50"
+            >
+              {methods.length === 0 && <option value="NQ">Memuat metode...</option>}
+              {Object.entries(metodeGroups).map(([kategori, list]) => (
+                <optgroup key={kategori} label={kategori}>
+                  {list.map((m) => (
+                    <option key={m.code} value={m.code}>
+                      {m.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            {metodeDipilih && (
+              <p className="mt-2 text-xs text-ink-muted">
+                {String(metodeDipilih.kategori || '').includes('QRIS')
+                  ? 'Satu QR bisa discan aplikasi apa pun (GoPay, OVO, DANA, m-banking).'
+                  : String(metodeDipilih.kategori || '').includes('Virtual Account')
+                    ? 'Kamu akan mendapat nomor Virtual Account untuk transfer.'
+                    : String(metodeDipilih.kategori || '').includes('E-Wallet')
+                      ? 'Pembayaran lewat aplikasi e-wallet pilihanmu.'
+                      : 'Ikuti petunjuk di halaman pembayaran Duitku.'}
+              </p>
+            )}
           </div>
 
           <p className="text-sm text-ink-muted mb-4">
             Kamu akan diarahkan ke halaman pembayaran aman <strong>Duitku</strong> sebesar{' '}
-            <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong>
-            {metode === 'qris' ? ' - siapkan aplikasi e-wallet atau m-banking untuk scan QRIS.' : ' - transfer ke nomor Virtual Account BCA yang muncul.'}
+            <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong> via <strong>{metodeDipilih?.name || 'QRIS'}</strong>.
           </p>
 
           <div className="mb-4 rounded-lg border border-border-soft bg-card-cream p-3 text-center">
