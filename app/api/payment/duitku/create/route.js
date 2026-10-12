@@ -51,6 +51,15 @@ export async function POST(request) {
   const amount = hargaBulan(bulan);
   const hari = bulanKeHari(bulan);
 
+  // METODE PEMBAYARAN (permintaan pemilik 2026-10-12: "gw mau pake QRIS"):
+  // Duitku inquiry WAJIB menyertakan satu kode channel (terverifikasi live).
+  //   - 'qris' -> 'NQ' = Nobu QRIS: satu QR bisa discan SEMUA aplikasi
+  //     (GoPay/OVO/DANA/m-banking) - netral, bukan milik e-wallet tertentu.
+  //     ('SP' ShopeePay QRIS juga jalan; LQ/GQ tidak aktif di akun ini.)
+  //   - 'va'   -> 'BC' = BCA Virtual Account.
+  const metodeKode = String(body?.method || 'qris').toLowerCase() === 'va' ? 'BC' : 'NQ';
+  const metodeLabel = metodeKode === 'NQ' ? 'QRIS' : 'BCA VA';
+
   await schemaReady();
   const db = getDb();
 
@@ -81,11 +90,16 @@ export async function POST(request) {
     const BATAS_MS = 60 * 60 * 1000; // 60 menit - sama dengan expiryPeriod Duitku
     let ref = null;
     try { ref = JSON.parse(p.gateway_ref || 'null'); } catch { ref = null; }
-    if (umurMs < BATAS_MS && ref?.paymentUrl) {
+    // Metode order lama harus SAMA dengan yang dipilih sekarang. Kalau beda
+    // (misal order lama BCA VA, sekarang pilih QRIS), jangan resume paksa
+    // metode lama - kedaluwarsakan lalu buat order baru. Order lama tanpa
+    // field method = era BCA VA (satu-satunya metode waktu itu).
+    const refMethod = ref?.method || 'BCA VA';
+    if (umurMs < BATAS_MS && ref?.paymentUrl && refMethod === metodeLabel) {
       // Lanjutkan pembayaran yang sama - tidak perlu bikin order baru.
       return NextResponse.json({ ok: true, orderId: Number(p.id), paymentUrl: ref.paymentUrl, resumed: true });
     }
-    // Kedaluwarsa (atau tidak ada URL tersimpan) -> tandai expired, lanjut buat baru.
+    // Kedaluwarsa / ganti metode / tidak ada URL tersimpan -> tandai expired, lanjut buat baru.
     await db.execute({
       sql: "UPDATE orders SET status = 'expired' WHERE id = ? AND status = 'pending'",
       args: [Number(p.id)],
@@ -95,7 +109,7 @@ export async function POST(request) {
   const created = Date.now();
   // gateway_ref menyimpan DURASI (dipakai webhook untuk grant premium sesuai
   // bulan yang dibeli - dulu webhook hardcode 30 hari).
-  const gatewayRef = JSON.stringify({ months: bulan, days: hari });
+  const gatewayRef = JSON.stringify({ months: bulan, days: hari, method: metodeLabel });
 
   const res = await db.execute({
     // RETURNING id WAJIB (adapter Postgres isi lastInsertRowid dari rows[0].id).
@@ -117,11 +131,9 @@ export async function POST(request) {
   const payload = {
     merchantCode,
     paymentAmount: amount,
-    // paymentMethod WAJIB di sandbox (terverifikasi 2026-10-12: tanpa field ini
-    // Duitku menolak "paymentMethod is mandatory"). SP = ShopeePay QRIS -
-    // channel QRIS paling universal (scan pakai e-wallet/m-banking apa pun).
-    // Di halaman pembayaran Duitku user tetap bisa melihat detail QR/VA.
-    paymentMethod: 'BC',
+    // paymentMethod WAJIB (terverifikasi 2026-10-12). Kode channel dipilih
+    // user di form (QRIS default / BCA VA). Lihat komentar metodeKode di atas.
+    paymentMethod: metodeKode,
     merchantOrderId,
     productDetails: `NEXO Pass ${bulan} Bulan`,
     email: 'akzandoank8@gmail.com',
@@ -173,7 +185,7 @@ export async function POST(request) {
   try {
     await db.execute({
       sql: 'UPDATE orders SET gateway_ref = ? WHERE id = ?',
-      args: [JSON.stringify({ months: bulan, days: hari, duitkuReference: duitkuRes.reference, paymentUrl: duitkuRes.paymentUrl }), orderId],
+      args: [JSON.stringify({ months: bulan, days: hari, method: metodeLabel, duitkuReference: duitkuRes.reference, paymentUrl: duitkuRes.paymentUrl }), orderId],
     });
   } catch { /* jejak opsional - order tetap valid */ }
 

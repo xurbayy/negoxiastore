@@ -25,6 +25,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   // DURASI LANGGANAN (permintaan pemilik 2026-10-08): pembeli bisa memilih
   // berapa bulan (1-12). Harga & nominal yang ditampilkan mengikuti pilihan.
   const [bulan, setBulan] = useState(1);
+  // METODE PEMBAYARAN (permintaan pemilik 2026-10-12): QRIS (default) atau
+  // Virtual Account BCA. Duitku inquiry butuh satu kode channel; 'qris' -> NQ
+  // (Nobu QRIS - satu QR untuk semua aplikasi), 'va' -> BC (BCA VA).
+  const [metode, setMetode] = useState('qris');
   const totalHarga = hargaBulan(bulan);
 
   const loadStatus = useCallback(async () => {
@@ -87,7 +91,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       const res = await fetch('/api/payment/duitku/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ months: bulan }),
+        body: JSON.stringify({ months: bulan, method: metode }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || !d.ok) {
@@ -211,10 +215,50 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
             </p>
           </div>
 
+          {/* PILIH METODE PEMBAYARAN (permintaan pemilik 2026-10-12):
+              QRIS (scan pakai aplikasi apa pun) atau VA BCA. */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">
+              Metode Pembayaran
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMetode('qris')}
+                disabled={buying}
+                className={`rounded-lg border px-3 py-2.5 text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
+                  metode === 'qris'
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-border-soft bg-white text-ink hover:border-accent'
+                }`}
+              >
+                QRIS
+                <span className={`mt-0.5 block text-[10px] font-medium ${metode === 'qris' ? 'text-white/80' : 'text-ink-muted'}`}>
+                  Scan pakai aplikasi apa pun
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMetode('va')}
+                disabled={buying}
+                className={`rounded-lg border px-3 py-2.5 text-xs font-bold transition cursor-pointer disabled:opacity-50 ${
+                  metode === 'va'
+                    ? 'border-accent bg-accent text-white'
+                    : 'border-border-soft bg-white text-ink hover:border-accent'
+                }`}
+              >
+                Virtual Account
+                <span className={`mt-0.5 block text-[10px] font-medium ${metode === 'va' ? 'text-white/80' : 'text-ink-muted'}`}>
+                  Transfer bank BCA
+                </span>
+              </button>
+            </div>
+          </div>
+
           <p className="text-sm text-ink-muted mb-4">
             Kamu akan diarahkan ke halaman pembayaran aman <strong>Duitku</strong> sebesar{' '}
-            <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong>. Pilih metode favoritmu:
-            QRIS, e-wallet (GoPay, OVO, DANA, ShopeePay), atau Virtual Account bank.
+            <strong>Rp {totalHarga.toLocaleString('id-ID')}</strong>
+            {metode === 'qris' ? ' - siapkan aplikasi e-wallet atau m-banking untuk scan QRIS.' : ' - transfer ke nomor Virtual Account BCA yang muncul.'}
           </p>
 
           <div className="mb-4 rounded-lg border border-border-soft bg-card-cream p-3 text-center">
