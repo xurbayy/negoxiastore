@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import Reveal from './Reveal';
 import { emojiSrc } from '../lib/emojis';
 
@@ -31,23 +32,21 @@ export default function Premium() {
                 <h2 className="mt-5 font-display text-3xl leading-snug text-ink md:text-4xl">
                   Level Up dengan Premium.
                 </h2>
+                {/* HARGA JELAS (syarat verifikasi payment gateway): produk
+                    NEXO Pass + harga Rupiah + periode harus tampil di homepage. */}
                 <div className="mt-5 flex items-end gap-2">
                   <span className="font-display text-4xl text-ink md:text-5xl">Rp 20.000</span>
                   <span className="pb-1.5 text-ink-muted">/bulan</span>
                 </div>
                 <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-muted">
-                  Satu Pass, semua perk. Bayar via QRIS atau e-wallet, aktif otomatis
-                  dalam hitungan detik setelah pembayaran terkonfirmasi.
+                  Satu Pass, semua perk di bawah. Pilih durasi 1 sampai 12 bulan,
+                  bayar via QRIS, e-wallet, atau Virtual Account bank - pass aktif
+                  otomatis begitu pembayaran terkonfirmasi.
                 </p>
                 <div className="mt-7 flex flex-wrap gap-4">
-                  <a
-                    href="https://discord.com/oauth2/authorize?client_id=1497924277301936300&scope=bot+applications.commands&permissions=277025508352"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary"
-                  >
-                    Dapatkan NEXO Pass
-                  </a>
+                  <Link href="/premium" prefetch={false} className="btn-primary cursor-pointer">
+                    Beli NEXO Pass
+                  </Link>
                   <code className="inline-flex items-center rounded-lg border border-border-soft bg-bg-soft px-4 py-2.5 font-mono text-sm text-ink">
                     nxpremium
                   </code>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getSession } from '../lib/session';
 import { NexoLogo } from './ui';
 import { SUPPORT_INVITE } from '../lib/site';
+import { KONTAK } from './KontakSupport';
 
 // Jelajahi (belum login) vs Akun (sudah login) - footer menyesuaikan status.
 // Komunitas ada di KEDUA daftar: halaman itu berguna untuk tamu maupun member,
@@ -138,6 +139,22 @@ export default async function Footer() {
               <li><code className="text-ink">nxdaily</code>: klaim poin harian</li>
               <li><code className="text-ink">np slot</code>: main slot</li>
               <li><code className="text-ink">nxlb</code>: leaderboard</li>
+            </ul>
+          </div>
+
+          {/* KONTAK SUPPORT (syarat verifikasi payment gateway 2026-10-12):
+              email, telepon, alamat usaha wajib tercantum. Di footer supaya
+              bisa diakses dari halaman mana pun, bukan cuma homepage. */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">Kontak</h3>
+            <ul className="mt-4 space-y-2.5 text-sm text-ink-muted">
+              <li>
+                <a href={`mailto:${KONTAK.email}`} className={GAYA_LINK}>{KONTAK.email}</a>
+              </li>
+              <li>
+                <a href={`tel:${KONTAK.telepon}`} className={GAYA_LINK}>{KONTAK.telepon}</a>
+              </li>
+              <li className="max-w-[220px] text-xs leading-relaxed">{KONTAK.alamat}</li>
             </ul>
           </div>
         </div>

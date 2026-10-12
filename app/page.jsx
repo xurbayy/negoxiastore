@@ -6,6 +6,8 @@ import Hero from './components/Hero';
 import LiveSnapshot from './components/LiveSnapshot';
 import Games from './components/Games';
 import Features from './components/Features';
+import Premium from './components/Premium';
+import KontakSupport from './components/KontakSupport';
 import HowToPlay from './components/HowToPlay';
 import Faq from './components/Faq';
 import Footer from './components/Footer';
@@ -33,6 +35,10 @@ export default async function Page() {
         <LiveSnapshot />
         <Games />
         <Features />
+        {/* PRODUK + HARGA di homepage (syarat verifikasi payment gateway
+            2026-10-12): NEXO Pass Rp 20.000/bulan dengan deskripsi lengkap.
+            Komponen ini dulu dead code - sekarang dihidupkan. */}
+        <Premium />
         {/* "Cara Main" dan "FAQ" dulu HANYA dirender untuk tamu. Akibatnya
             link navbar /#cara-main gagal untuk member: section-nya tidak ada,
             jadi browser cuma pindah halaman lalu berhenti di atas - terlihat
@@ -44,6 +50,9 @@ export default async function Page() {
             yang tidak ada. */}
         <HowToPlay />
         <Faq />
+        {/* KONTAK SUPPORT (syarat verifikasi payment gateway): email, telepon,
+            alamat usaha wajib tampil di halaman utama. */}
+        <KontakSupport />
       </main>
       <Footer />
     </>

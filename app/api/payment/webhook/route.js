@@ -87,21 +87,36 @@ export async function POST(request) {
     const now = Date.now();
     // TRANSISI ATOMIK: hanya pemenang UPDATE yang enqueue grant (poll 2 dtk
     // & webhook tidak dobel antrean). Amount harus = harga order.
+    // gateway_ref IKUT dibaca (2026-10-12): berisi {months, days} dari order
+    // creator - dipakai untuk grant durasi SESUAI yang dibeli (dulu webhook
+    // hardcode 30 hari, salah untuk pembelian 2-12 bulan).
     const order = await db.execute({
-      sql: 'SELECT discord_id, amount FROM orders WHERE id = ?',
+      sql: 'SELECT discord_id, amount, gateway_ref FROM orders WHERE id = ?',
       args: [orderId],
     });
     const orow = order.rows[0];
+    // Durasi dari gateway_ref order (fallback 30 hari untuk order lama).
+    let durasiHari = 30;
+    let durasiBulan = 1;
+    try {
+      const ref = JSON.parse(orow?.gateway_ref || 'null');
+      if (ref && Number.isFinite(Number(ref.days)) && Number(ref.days) > 0) {
+        durasiHari = Math.floor(Number(ref.days));
+        durasiBulan = Number.isFinite(Number(ref.months)) ? Number(ref.months) : Math.max(1, Math.round(durasiHari / 30));
+      }
+    } catch { /* pakai default */ }
     // Bandingkan NUMERIK - Duitku kadang kirim "20000.00"
     if (orow && Number(amount) === Number(orow.amount)) {
       const flip = await db.execute({
+        // JANGAN timpa gateway_ref dengan reference - simpan durasi + reference
+        // dalam JSON supaya grant tetap tahu masa aktif yang dibeli.
         sql: "UPDATE orders SET status = 'paid', paid_at = ?, gateway_ref = ? WHERE id = ? AND status IN ('pending', 'canceled', 'expired')",
-        args: [now, String(reference || merchantOrderId), orderId],
+        args: [now, JSON.stringify({ months: durasiBulan, days: durasiHari, duitkuReference: String(reference || merchantOrderId) }), orderId],
       });
       if (flip.rowsAffected > 0 && orow.discord_id) {
         await db.execute({
           sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('grant_premium', ?, 'duitku', 'pending', ?)",
-          args: [JSON.stringify({ userId: orow.discord_id, tier: 'pro', days: 30 }), now],
+          args: [JSON.stringify({ userId: orow.discord_id, tier: 'pro', days: durasiHari }), now],
         });
         await db.execute({
           sql: "INSERT INTO data_requests (discord_id, status, created_at) VALUES (?, 'pending', ?)",

@@ -1,108 +1,26 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '../../../lib/session';
 import { getDb, schemaReady } from '../../../lib/db';
-import { getBotHeartbeat, userHasPremium } from '../../../lib/snapshot';
-import { touchActivity } from '../../../lib/activity';
-import { rateLimitGlobal } from '../../../lib/rate-limit';
-import { notifyQueue } from '../../../lib/pgNotifyWeb';
-import { normalBulan, hargaBulan, bulanKeHari } from '../../../lib/premiumPlan';
+import { getBotHeartbeat } from '../../../lib/snapshot';
 
 export const dynamic = 'force-dynamic';
 
-// POST /api/payment/manual - Submit bukti transfer manual
-export async function POST(request) {
-  // Jaring anti-DDoS: endpoint ini menerima upload gambar base64 (sampai ~1MB),
-  // jadi paling berat. Batasi total request lintas IP (kiriman sah sangat jarang,
-  // satu user hanya sekali bayar). Ini TIDAK mengganggu pemakaian normal.
-  if (!rateLimitGlobal('payment-manual', 60, 60_000)) {
-    return NextResponse.json({ ok: false, error: 'Terlalu banyak permintaan. Coba lagi sebentar.' }, { status: 429 });
-  }
-
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 });
-  }
-
-  const { senderName, receiptBase64, receiptName, months } = body;
-  if (!senderName || senderName.length < 3 || senderName.length > 50) {
-    return NextResponse.json({ ok: false, error: 'Nama pengirim harus diisi (3-50 karakter).' }, { status: 400 });
-  }
-  if (!receiptBase64 || !receiptBase64.startsWith('data:image/')) {
-    return NextResponse.json({ ok: false, error: 'Bukti transfer (gambar) harus dilampirkan.' }, { status: 400 });
-  }
-
-  // DURASI LANGGANAN (permintaan pemilik 2026-10-08): pembeli memilih 1-12
-  // bulan; nominal order = harga per bulan x bulan. Selalu di-clamp server-side
-  // supaya input liar tidak bisa memesan 999 bulan.
-  const bulan = normalBulan(months);
-  const amount = hargaBulan(bulan);
-  const hari = bulanKeHari(bulan);
-
-  // Maksimal ~1MB base64
-  if (receiptBase64.length > 1.5 * 1024 * 1024) {
-    return NextResponse.json({ ok: false, error: 'Ukuran gambar terlalu besar. Maksimal 1MB.' }, { status: 400 });
-  }
-
-  await schemaReady();
-  const db = getDb();
-
-  // Bot status check removed so users can still submit manual orders
-  // The commands will queue up in bot_commands and be processed when the bot is back online
-
-  const isPremium = await userHasPremium(session.discordId);
-  // Satu pembelian per bulan: yang masih premium tidak bisa beli lagi
-  // (tombol bayar baru muncul setelah pass dilepas admin / jatuh tempo).
-  if (isPremium) {
-    return NextResponse.json({ ok: false, error: 'premium_active' }, { status: 409 });
-  }
-
-  // Cek antrean: tidak boleh numpuk pesanan pending
-  const pendingRow = await db.execute({
-    sql: "SELECT id FROM orders WHERE discord_id = ? AND status = 'pending' LIMIT 1",
-    args: [session.discordId],
-  });
-  if (pendingRow.rows.length) {
-    return NextResponse.json({ ok: false, error: 'Kamu masih punya pesanan yang sedang diproses admin. Harap tunggu.' }, { status: 429 });
-  }
-
-  const created = Date.now();
-  // Simpan JSON ke gateway_ref - termasuk DURASI (bulan/hari) supaya approve
-  // admin memberi masa aktif sesuai yang dibeli & nominal yang ditransfer.
-  const safeReceiptName = String(receiptName || 'bukti-transfer.png').replace(/[^\w.\-]+/g, '_').slice(0, 60);
-  const gatewayRef = JSON.stringify({ senderName, receiptBase64, receiptName: safeReceiptName, months: bulan, days: hari });
-
-  const res = await db.execute({
-    // RETURNING id WAJIB: adapter Postgres mengisi lastInsertRowid HANYA dari
-    // rows[0].id. Tanpa RETURNING, orderId = NaN dan DM admin tampil
-    // "Order #NaN" (bug nyata 2026-10-08).
-    sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, ?, ?, 'manual', 'pending', ?, ?) RETURNING id",
-    args: [session.discordId, `NEXO Pass ${bulan} Bulan`, amount, gatewayRef, created],
-  });
-
-  const orderId = Number(res.lastInsertRowid);
-
-  // Kirim command ke bot untuk DM admin (termasuk lampiran bukti transfer).
-  // DM WAJIB menyebut durasi & nominal supaya admin memverifikasi jumlah
-  // transfer yang benar (bukan lagi asumsi 30 hari).
-  const dmMsg = `Ada pembayaran NEXO Pass baru! (Order #${orderId})\nUser: <@${session.discordId}> (ID: ${session.discordId})\nPengirim: **${senderName}**\nDurasi: **${bulan} bulan** (${hari} hari)\nNominal: **Rp ${amount.toLocaleString('id-ID')}**\n\nSegera cek dan setujui di Admin Panel Web!`;
-  await db.execute({
-    sql: "INSERT INTO bot_commands (action, payload, actor_id, status, created_at) VALUES ('dm_admin', ?, 'web', 'pending', ?)",
-    args: [JSON.stringify({ adminId: '836383639439671366', message: dmMsg, fileName: safeReceiptName, fileBase64: receiptBase64 }), created],
-  });
-  // Ping instan ke bot (LISTEN/NOTIFY) - DM admin terkirim segera.
-  notifyQueue(['dm_admin']).catch(() => {});
-
-  await touchActivity();
-  return NextResponse.json({ ok: true });
+// POST /api/payment/manual - FLOW LAMA (QRIS manual + upload bukti) DIMATIKAN
+// ============================================================================
+// Sejak 2026-10-12 pembelian NEXO Pass memakai payment gateway Duitku
+// (/api/payment/duitku/create) - pembayaran otomatis, aktif instan via
+// webhook, tanpa approve admin. Endpoint ini ditutup supaya tidak ada dua
+// jalur pembayaran yang membingungkan.
+//
+// GET (di bawah) TETAP AKTIF: dipakai PremiumClient untuk cek status order
+// terakhir (berlaku untuk order Duitku juga - query by discord_id, bukan
+// gateway). Riwayat order manual lama juga masih tampil di panel admin.
+export async function POST() {
+  return NextResponse.json({
+    ok: false,
+    error: 'Pembelian via QRIS manual sudah tidak tersedia. Silakan beli lewat halaman Premium (pembayaran otomatis Duitku).',
+  }, { status: 410 });
 }
-
 // GET /api/payment/manual - Cek status order
 export async function GET() {
   const session = await getSession();
