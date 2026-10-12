@@ -29,7 +29,7 @@ export async function GET() {
   await schemaReady();
   const db = getDb();
   const res = await db.execute({
-    sql: 'SELECT id, discord_id, plan, amount, status, gateway_ref, created_at, paid_at FROM orders WHERE discord_id = ? ORDER BY created_at DESC LIMIT 1',
+    sql: 'SELECT id, discord_id, plan, amount, status, gateway, gateway_ref, created_at, paid_at FROM orders WHERE discord_id = ? ORDER BY created_at DESC LIMIT 1',
     args: [session.discordId],
   });
   

@@ -147,13 +147,23 @@ export async function POST(request) {
     clearTimeout(t);
     duitkuRes = await r.json().catch(() => null);
   } catch (e) {
-    // Order tetap pending (belum dibayar) - user bisa coba lagi.
+    // FIX 2026-10-12 (order nyangkut "Penyedia pembayaran menolak transaksi"):
+    // order yang inquiry-nya GAGAL tidak boleh dibiarkan 'pending' - tanpa
+    // paymentUrl ia memblokir pembelian baru dan bikin loop "Lanjutkan".
+    // Tandai 'failed' supaya bersih; user tinggal klik bayar lagi.
     console.error('[duitku-create] inquiry gagal:', e?.message || e);
+    try {
+      await db.execute({ sql: "UPDATE orders SET status = 'failed' WHERE id = ? AND status = 'pending'", args: [orderId] });
+    } catch { /* pembersihan best-effort */ }
     return NextResponse.json({ ok: false, error: 'Gagal menghubungi penyedia pembayaran. Coba lagi sebentar.' }, { status: 502 });
   }
 
   if (!duitkuRes || duitkuRes.statusCode !== '00' || !duitkuRes.paymentUrl) {
+    // Sama seperti di atas: order gagal jangan nyangkut pending.
     console.error('[duitku-create] respons tidak sukses:', JSON.stringify(duitkuRes || {}).slice(0, 300));
+    try {
+      await db.execute({ sql: "UPDATE orders SET status = 'failed' WHERE id = ? AND status = 'pending'", args: [orderId] });
+    } catch { /* pembersihan best-effort */ }
     return NextResponse.json({ ok: false, error: duitkuRes?.statusMessage || 'Penyedia pembayaran menolak transaksi. Coba lagi.' }, { status: 502 });
   }
 
