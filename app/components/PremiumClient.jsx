@@ -247,15 +247,28 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
             Menunggu Pembayaran
           </span>
           <h3 className="font-bold text-lg mb-2">Selesaikan pembayaranmu</h3>
+          {/* Info pesanan yang sedang menunggu - biar user tahu nominal &
+              durasi yang akan dibayar (dari GET /api/payment/manual). */}
+          {order?.plan && (
+            <p className="mb-2 text-sm font-semibold">
+              {order.plan}{order?.amount ? ` • Rp ${Number(order.amount).toLocaleString('id-ID')}` : ''}
+            </p>
+          )}
           <p className="text-sm opacity-90">
             Kalau kamu sudah membayar di halaman Duitku, pass akan aktif otomatis dalam hitungan detik - halaman ini memperbarui sendiri.
-            Belum bayar? Buka lagi halaman pembayaran dari tombol di bawah.
+            Belum bayar? Lanjutkan pembayaranmu dari tombol di bawah.
           </p>
+          {/* FIX 2026-10-12: dulu tombol ini membuka form lalu submit ditolak
+              "masih punya pesanan pending" - user terjebak. Sekarang server
+              me-RESUME order pending yang masih berlaku (<60 menit) dan
+              mengembalikan paymentUrl yang sama. Kalau sudah kedaluwarsa,
+              server otomatis menandai expired lalu membuat order baru. */}
           <button
-            onClick={() => { setShowForm(true); setError(null); }}
-            className="mt-4 rounded-lg border border-warning/50 bg-white px-4 py-2 text-xs font-semibold text-warning transition hover:bg-warning hover:text-white cursor-pointer"
+            onClick={submitPayment}
+            disabled={buying}
+            className="mt-4 rounded-lg border border-warning/50 bg-white px-4 py-2 text-xs font-semibold text-warning transition hover:bg-warning hover:text-white cursor-pointer disabled:opacity-50"
           >
-            Buat Pembayaran Baru
+            {buying ? 'Menyiapkan...' : 'Lanjutkan Pembayaran'}
           </button>
         </div>
       ) : (

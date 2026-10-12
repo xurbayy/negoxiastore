@@ -59,13 +59,37 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'premium_active' }, { status: 409 });
   }
 
-  // Tidak boleh numpuk pesanan pending (pola sama dengan flow manual lama).
+  // Cek pesanan pending yang belum selesai.
+  //
+  // FIX 2026-10-12 (keluhan pemilik: "kenapa masih punya pesanan pending,
+  // padahal cuma belum sempat bayar"): sebelumnya SEMUA pending memblokir
+  // pembelian baru sampai 24 jam - padahal expiry Duitku cuma 60 MENIT.
+  // Pemain yang menutup halaman pembayaran terjebak: tidak bisa buat order
+  // baru, order lama juga sudah mati di sisi Duitku.
+  //
+  // Sekarang:
+  //   - Pending MASIH BERLAKU (<60 menit, ada paymentUrl tersimpan) -> LANJUTKAN
+  //     pembayaran yang sama (kembalikan paymentUrl lama, resumed:true).
+  //   - Pending sudah lewat 60 menit -> tandai 'expired' otomatis, buat baru.
   const pendingRow = await db.execute({
-    sql: "SELECT id FROM orders WHERE discord_id = ? AND status = 'pending' LIMIT 1",
+    sql: "SELECT id, created_at, gateway_ref FROM orders WHERE discord_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
     args: [session.discordId],
   });
   if (pendingRow.rows.length) {
-    return NextResponse.json({ ok: false, error: 'Kamu masih punya pesanan yang sedang diproses. Selesaikan atau tunggu kedaluwarsa dulu.' }, { status: 429 });
+    const p = pendingRow.rows[0];
+    const umurMs = Date.now() - Number(p.created_at);
+    const BATAS_MS = 60 * 60 * 1000; // 60 menit - sama dengan expiryPeriod Duitku
+    let ref = null;
+    try { ref = JSON.parse(p.gateway_ref || 'null'); } catch { ref = null; }
+    if (umurMs < BATAS_MS && ref?.paymentUrl) {
+      // Lanjutkan pembayaran yang sama - tidak perlu bikin order baru.
+      return NextResponse.json({ ok: true, orderId: Number(p.id), paymentUrl: ref.paymentUrl, resumed: true });
+    }
+    // Kedaluwarsa (atau tidak ada URL tersimpan) -> tandai expired, lanjut buat baru.
+    await db.execute({
+      sql: "UPDATE orders SET status = 'expired' WHERE id = ? AND status = 'pending'",
+      args: [Number(p.id)],
+    });
   }
 
   const created = Date.now();
@@ -133,11 +157,13 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: duitkuRes?.statusMessage || 'Penyedia pembayaran menolak transaksi. Coba lagi.' }, { status: 502 });
   }
 
-  // Simpan reference Duitku untuk jejak (webhook akan menimpanya dgn reference final).
+  // Simpan reference + paymentUrl Duitku. paymentUrl WAJIB disimpan supaya
+  // kalau user menutup halaman lalu balik lagi (<60 menit), dia bisa
+  // MELANJUTKAN pembayaran yang sama tanpa bikin order baru (fix 2026-10-12).
   try {
     await db.execute({
       sql: 'UPDATE orders SET gateway_ref = ? WHERE id = ?',
-      args: [JSON.stringify({ months: bulan, days: hari, duitkuReference: duitkuRes.reference }), orderId],
+      args: [JSON.stringify({ months: bulan, days: hari, duitkuReference: duitkuRes.reference, paymentUrl: duitkuRes.paymentUrl }), orderId],
     });
   } catch { /* jejak opsional - order tetap valid */ }
 

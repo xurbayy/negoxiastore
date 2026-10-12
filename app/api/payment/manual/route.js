@@ -42,9 +42,13 @@ export async function GET() {
 
   let row = res.rows[0];
 
-  // Auto-expire order manual yang nyangkut > 24 jam belum diapprove admin
+  // Auto-expire order pending yang kedaluwarsa.
+  //   - Order Duitku: 60 MENIT (sama dengan expiryPeriod di halaman pembayaran
+  //     Duitku - setelah itu link mati, jadi order harus ditandai expired juga).
+  //   - Order manual lama: 24 jam (pola lama, biar riwayat admin tidak berubah).
   const age = Date.now() - Number(row.created_at);
-  if (row.status === 'pending' && age > 24 * 60 * 60 * 1000) {
+  const batasMs = row.gateway === 'duitku' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  if (row.status === 'pending' && age > batasMs) {
     await db.execute({
       sql: "UPDATE orders SET status = 'expired' WHERE id = ?",
       args: [Number(row.id)],
