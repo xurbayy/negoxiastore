@@ -106,10 +106,13 @@ export default function PremiumBenefits({ premium = null, compact = false }) {
         )}
       </div>
 
+      {/* Sub-teks dinamis (revisi 2026-10-13): versi non-aktif dulu berisi
+          instruksi checkout panjang ("Pilih durasi 1 sampai 12 bulan...")
+          - pemilik: "kebanyakan info". Sekarang cukup satu baris. */}
       <p className="mt-1 text-xs text-ink-faint">
         {aktif
           ? 'Semua perk di bawah ini sedang aktif di akunmu.'
-          : `Pilih durasi 1 sampai 12 bulan (maksimal setahun) saat checkout - bayar sekali sesuai totalnya. Rp ${PLAN_PRICE.toLocaleString('id-ID')}/bulan.`}
+          : `Rp ${PLAN_PRICE.toLocaleString('id-ID')}/bulan, pilih durasi 1 sampai 12 bulan saat checkout.`}
       </p>
 
       <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">

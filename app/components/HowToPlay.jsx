@@ -91,9 +91,6 @@ export default function HowToPlay() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-ink-faint">
-            Ketik <code className="font-mono text-ink-muted">nxhelp</code> di Discord untuk daftar lengkap semua perintah.
-          </p>
         </Reveal>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Reveal from './Reveal';
+import CustomerServiceButton from './CustomerServiceButton';
 import { emojiSrc } from '../lib/emojis';
 
 const PERKS = [
@@ -43,10 +44,14 @@ export default function Premium() {
                   bayar via QRIS, e-wallet, atau Virtual Account bank - pass aktif
                   otomatis begitu pembayaran terkonfirmasi.
                 </p>
-                <div className="mt-7 flex flex-wrap gap-4">
+                <div className="mt-7 flex flex-wrap items-center gap-4">
                   <Link href="/premium" prefetch={false} className="btn-primary cursor-pointer">
                     Beli NEXO Pass
                   </Link>
+                  {/* Tombol Customer Service di samping tombol beli
+                      (permintaan pemilik 2026-10-13): klik -> muncul
+                      WhatsApp + Discord owner untuk tanya-tanya dulu. */}
+                  <CustomerServiceButton />
                   <code className="inline-flex items-center rounded-lg border border-border-soft bg-bg-soft px-4 py-2.5 font-mono text-sm text-ink">
                     nxpremium
                   </code>
