@@ -69,6 +69,25 @@ export default function KontakSupport() {
               <span>WhatsApp</span>
             </a>
           </div>
+
+          {/* ALAMAT USAHA di halaman utama = SYARAT WAJIB verifikasi payment
+              gateway Duitku (2026-10-13). Sempat dihapus dari footer atas
+              permintaan pemilik, tapi Duitku menolak kalau alamat tidak
+              tercantum di halaman utama - jadi dikembalikan DI SINI
+              (seksi Kontak Support), bukan di footer.
+              Konteks "rumah" ditulis jujur: usaha dijalankan dari rumah
+              (tanpa kantor fisik) supaya reviewer tidak bingung. */}
+          <div className="mx-auto mt-5 flex max-w-xl items-start gap-3 rounded-xl border border-border-soft bg-bg-soft/60 px-4 py-3.5">
+            <Ikon d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
+            <span>
+              <span className="block text-xs font-bold uppercase tracking-wider text-ink-muted">Alamat Usaha</span>
+              <span className="mt-0.5 block text-sm font-semibold leading-relaxed text-ink">{KONTAK.alamat}</span>
+              <span className="mt-1 block text-xs leading-relaxed text-ink-muted">
+                Usaha dijalankan dari rumah (tanpa kantor fisik). Semua layanan
+                bersifat digital dan dikirim online lewat Discord &amp; website.
+              </span>
+            </span>
+          </div>
         </Reveal>
       </div>
     </section>
