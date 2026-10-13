@@ -142,12 +142,12 @@ export default async function Footer() {
             </ul>
           </div>
 
-          {/* KONTAK SUPPORT (syarat verifikasi payment gateway 2026-10-12):
-              email, telepon, alamat usaha wajib tercantum. Di footer supaya
-              bisa diakses dari halaman mana pun, bukan cuma homepage.
-              REVISI 2026-10-13 (permintaan pemilik): alamat TIDAK ditampilkan
-              di footer - hanya email + telepon. Alamat tetap ada di KONTAK
-              (dipakai di sistem internal + halaman kontak). */}
+          {/* KONTAK SUPPORT (syarat verifikasi payment gateway Duitku):
+              email, telepon, DAN alamat usaha wajib tercantum. Di footer
+              supaya bisa diakses dari halaman mana pun, bukan cuma homepage.
+              REVISI 2026-10-13 (permintaan pemilik terbaru): alamat
+              DITAMPILKAN KEMBALI di footer - syarat verifikasi Duitku
+              menuntut alamat terlihat di halaman utama. */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">Kontak</h3>
             <ul className="mt-4 space-y-2.5 text-sm text-ink-muted">
@@ -157,6 +157,7 @@ export default async function Footer() {
               <li>
                 <a href={`tel:${KONTAK.telepon}`} className={GAYA_LINK}>{KONTAK.telepon}</a>
               </li>
+              <li className="max-w-[220px] text-xs leading-relaxed">{KONTAK.alamat}</li>
             </ul>
           </div>
         </div>
