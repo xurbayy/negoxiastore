@@ -37,9 +37,11 @@ export async function POST(request) {
     return NextResponse.json({ ok: false, error: 'Terlalu banyak permintaan. Coba lagi sebentar.' }, { status: 429 });
   }
 
+  // GUEST CHECKOUT (permintaan pemilik 2026-10-13: "buat dulu agar belum
+  // login juga udah tetep bisa bayar... sampe di acc payment gateway nya"):
+  // pembeli TANPA login boleh checkout - wajib isi Discord ID manual supaya
+  // pass tetap bisa diaktifkan ke akun yang benar saat webhook masuk.
   const session = await getSession();
-  if (!session) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
-
   const merchantCode = process.env.DUITKU_MERCHANT_CODE;
   const apiKey = process.env.DUITKU_API_KEY;
   if (!merchantCode || !apiKey) {
@@ -51,6 +53,20 @@ export async function POST(request) {
   const bulan = normalBulan(body?.months);
   const amount = hargaBulan(bulan);
   const hari = bulanKeHari(bulan);
+
+  // Discord ID pembeli: dari session kalau login, atau input manual (guest).
+  // Validasi ketat: 17-20 digit angka (format snowflake Discord).
+  let pembeliId = session?.discordId || null;
+  if (!pembeliId) {
+    const manual = String(body?.discordId || '').trim();
+    if (!/^\d{17,20}$/.test(manual)) {
+      return NextResponse.json({
+        ok: false,
+        error: 'Isi Discord ID kamu dulu (17-20 digit angka). Cara lihat: Discord > Pengaturan > Lanjutan > Mode Developer > klik profilmu > Copy ID.',
+      }, { status: 400 });
+    }
+    pembeliId = manual;
+  }
 
   // METODE PEMBAYARAN (permintaan pemilik 2026-10-12: "semua pembayaran aja
   // gw maunya dan pake dropdown"): user memilih dari dropdown yang berisi
@@ -68,7 +84,7 @@ export async function POST(request) {
   const db = getDb();
 
   // Satu pembelian per periode: yang masih premium tidak bisa beli lagi.
-  if (await userHasPremium(session.discordId)) {
+  if (await userHasPremium(pembeliId)) {
     return NextResponse.json({ ok: false, error: 'premium_active' }, { status: 409 });
   }
 
@@ -86,7 +102,7 @@ export async function POST(request) {
   //   - Pending sudah lewat 60 menit -> tandai 'expired' otomatis, buat baru.
   const pendingRow = await db.execute({
     sql: "SELECT id, created_at, gateway_ref FROM orders WHERE discord_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
-    args: [session.discordId],
+    args: [pembeliId],
   });
   if (pendingRow.rows.length) {
     const p = pendingRow.rows[0];
@@ -119,7 +135,7 @@ export async function POST(request) {
   const res = await db.execute({
     // RETURNING id WAJIB (adapter Postgres isi lastInsertRowid dari rows[0].id).
     sql: "INSERT INTO orders (discord_id, plan, amount, gateway, status, gateway_ref, created_at) VALUES (?, ?, ?, 'duitku', 'pending', ?, ?) RETURNING id",
-    args: [session.discordId, `NEXO Pass ${bulan} Bulan`, amount, gatewayRef, created],
+    args: [pembeliId, `NEXO Pass ${bulan} Bulan`, amount, gatewayRef, created],
   });
   const orderId = Number(res.lastInsertRowid);
   if (!Number.isFinite(orderId) || orderId <= 0) {
@@ -143,7 +159,8 @@ export async function POST(request) {
     productDetails: `NEXO Pass ${bulan} Bulan`,
     email: 'akzandoank8@gmail.com',
     phoneNumber: '085872320635',
-    customerVaName: session.username || 'NEXO Player',
+    // Guest tidak punya username -> pakai ID sebagai nama VA (tetap valid).
+    customerVaName: session?.username || `Player ${pembeliId.slice(-4)}`,
     callbackUrl: `${SITE_URL}/api/payment/webhook`,
     returnUrl: `${SITE_URL}/premium?selesai=1`,
     expiryPeriod: 60, // menit

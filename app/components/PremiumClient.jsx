@@ -30,6 +30,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   // diambil live dari /api/payment/duitku/methods; nilai = KODE channel Duitku.
   const [metode, setMetode] = useState('NQ');
   const [methods, setMethods] = useState([]);
+  // GUEST CHECKOUT (permintaan pemilik 2026-10-13): pembeli TANPA login tetap
+  // bisa bayar - Discord ID diisi manual di form (target grant pass).
+  const [guestId, setGuestId] = useState('');
+  const guestIdValid = /^\d{17,20}$/.test(guestId.trim());
   const totalHarga = hargaBulan(bulan);
 
   // Muat daftar metode sekali saat form pertama dibuka (endpoint cache 1 jam).
@@ -94,12 +98,9 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   }, [loggedIn, order?.status, loadStatus]);
 
   async function startBuy() {
-    if (!loggedIn) {
-      window.location.href = '/login?returnTo=%2Fpremium';
-      return;
-    }
-
-    // Instantly show form, no need to check /api/me here which could hang
+    // GUEST CHECKOUT (2026-10-13): dulu guest DIPAKSA login dulu. Sekarang
+    // form langsung terbuka - Discord ID diisi manual di dalam form. Ini juga
+    // memudahkan tim verifikasi Duitku yang mau mencoba pembayaran.
     setShowForm(true);
     setError(null);
   }
@@ -118,7 +119,9 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
       const res = await fetch('/api/payment/duitku/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ months: bulan, method: metode }),
+        // Guest kirim discordId manual; user login tidak perlu (server ambil
+        // dari session).
+        body: JSON.stringify({ months: bulan, method: metode, ...(loggedIn ? {} : { discordId: guestId.trim() }) }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok || !d.ok) {
@@ -282,8 +285,32 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           </p>
 
           <div className="mb-4 rounded-lg border border-border-soft bg-card-cream p-3 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">NEXO Pass akan diaktifkan ke Discord ID kamu</p>
-            <p className="mt-0.5 font-mono text-sm font-bold text-ink select-all">{discordId}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">NEXO Pass akan diaktifkan ke Discord ID</p>
+            {loggedIn ? (
+              <p className="mt-0.5 font-mono text-sm font-bold text-ink select-all">{discordId}</p>
+            ) : (
+              // GUEST: isi Discord ID manual. Panduan cara menyalin ID
+              // ditulis singkat di bawah input.
+              <div className="mt-1.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={guestId}
+                  onChange={(e) => setGuestId(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Contoh: 836383639439671366"
+                  disabled={buying}
+                  className="w-full rounded-lg border border-border-soft bg-white px-3 py-2 text-center font-mono text-sm font-bold text-ink focus:border-accent focus:outline-none disabled:opacity-50"
+                />
+                <p className="mt-1.5 text-[10px] leading-relaxed text-ink-muted">
+                  Belum login? Tidak masalah, tetap bisa bayar. Cara lihat ID:
+                  Discord &gt; Pengaturan &gt; Lanjutan &gt; aktifkan Mode Developer
+                  &gt; klik profilmu &gt; Copy ID.
+                </p>
+                {guestId.length > 0 && !guestIdValid && (
+                  <p className="mt-1 text-[10px] font-semibold text-danger">Discord ID harus 17-20 digit angka.</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mb-4 rounded-lg bg-card-cream p-3 text-xs text-ink-muted">
@@ -293,7 +320,7 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
           <div className="mt-6 flex gap-3">
             <button
               onClick={submitPayment}
-              disabled={buying}
+              disabled={buying || (!loggedIn && !guestIdValid)}
               className="btn-primary flex-1 justify-center px-5! py-3! font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {buying ? 'Menyiapkan pembayaran...' : `Bayar Rp ${totalHarga.toLocaleString('id-ID')}`}
