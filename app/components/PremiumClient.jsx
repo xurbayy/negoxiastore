@@ -192,7 +192,10 @@ export default function PremiumClient({ loggedIn, botOnline, initialPremiumActiv
   return (
     <div className="mt-8 flex flex-col items-center gap-3">
       {!loggedIn && (
-        <p className="text-xs text-ink-muted">Login untuk melihat status langgananmu.</p>
+        // GUEST CHECKOUT (2026-10-13): teks lama "Login untuk melihat status
+        // langgananmu" terkesan memblokir. Sekarang jelas: guest tetap bisa
+        // beli, cukup isi Discord ID saat checkout.
+        <p className="text-xs text-ink-muted">Belum login? Tetap bisa beli - cukup isi Discord ID saat checkout.</p>
       )}
 
       {error && (
