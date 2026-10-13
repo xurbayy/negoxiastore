@@ -16,6 +16,9 @@ const LINKS_GUEST = [
   // dengan aturan "navbar member tanpa link onboarding" - member bisa lewat
   // footer kalau butuh.
   { href: '/panduan', label: 'Panduan' },
+  // Kontak (permintaan pemilik 2026-10-13): pintu ke seksi Kontak Support
+  // (email + WhatsApp) di homepage. Tampil untuk SEMUA pengunjung.
+  { href: '/#kontak', label: 'Kontak' },
 ];
 const LINKS_MEMBER = [
   { href: '/#games', label: 'Game' },
@@ -23,6 +26,8 @@ const LINKS_MEMBER = [
   { href: '/komunitas', label: 'Komunitas' },
   { href: '/shop', label: 'Shop' },
   { href: '/redeem', label: 'Redeem' },
+  // Kontak untuk member juga (support pembelian/pass tetap relevan).
+  { href: '/#kontak', label: 'Kontak' },
 ];
 // Legal digabung ke dropdown "Info" (desktop) / daftar biasa (mobile).
 const LEGAL = [

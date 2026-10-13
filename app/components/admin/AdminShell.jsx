@@ -488,8 +488,13 @@ export default function AdminShell({ username, avatar = null }) {
                 MOBILE (permintaan pemilik 2026-10-04: "notif admin panel mobile
                 terlalu besar"): lebar dikunci ke lebar layar minus margin, bukan
                 w-80 (320px) yang terasa kegedean di HP. Teks & tombol ikut
-                diperkecil. Desktop tetap w-80 normal. */}
-            <div className="invisible absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100 sm:w-80">
+                diperkecil. Desktop tetap w-80 normal.
+                FIX 2026-10-13 (mobile kecil masih belum responsif): dulu
+                `absolute right-0` - ter-anchor ke tombol yang masih ada profil
+                di kanannya, sehingga dropdown melebar ke kiri sampai keluar
+                layar di HP sempit. Sekarang di mobile `fixed right-3` (menempel
+                tepi kanan VIEWPORT - selalu muat), kembali `absolute` di sm+. */}
+            <div className="invisible fixed right-3 top-[4.75rem] z-50 w-[min(18rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:w-80">
               <p className="px-2 py-1.5 text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">
                 Pengingat {jumlahPengingat > 0 ? `(${jumlahPengingat})` : ''}
               </p>

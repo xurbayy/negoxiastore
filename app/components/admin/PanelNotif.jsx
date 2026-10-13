@@ -159,7 +159,14 @@ export default function PanelNotif() {
         )}
       </summary>
 
-      <div className="invisible absolute right-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100">
+      {/* Dropdown notif PANEL.
+          MOBILE KECIL (fix 2026-10-13): dulu `absolute right-0` - ter-anchor
+          ke tombol bell yang masih ada bell Pengingat + profil di kanannya,
+          sehingga dropdown 320px MELEBAR KE KIRI sampai keluar layar di HP
+          kecil. Sekarang di mobile: `fixed right-3` (menempel tepi kanan
+          VIEWPORT - selalu muat di layar sempit), kembali `absolute right-0`
+          di sm+ supaya desktop tidak berubah. */}
+      <div className="invisible fixed right-3 top-[4.75rem] z-50 w-[min(20rem,calc(100vw-1.5rem))] rounded-2xl border border-border-soft bg-card-cream/95 p-2 opacity-0 shadow-[0_16px_40px_rgba(43,33,24,0.16)] backdrop-blur-xl transition-all duration-150 group-focus-within:visible group-hover:visible group-hover:opacity-100 group-focus-within:opacity-100 sm:absolute sm:right-0 sm:top-full sm:mt-2">
         <div className="flex items-center justify-between px-2 py-1.5">
           <p className="text-[0.65rem] font-bold uppercase tracking-widest text-ink-muted">Notifikasi Panel</p>
           {notif.length > 0 && (
