@@ -87,6 +87,8 @@ export default function AdminShell({ username, avatar = null }) {
   // Info perangkat notifikasi (push) - ditampilkan di dropdown Pengingat.
   const [pushPerangkat, setPushPerangkat] = useState(null);
   const lastSig = useRef('');
+  // Throttle load(): lihat komentar di load() - maks 1x / 5 dtk.
+  const lastLoadAt = useRef(0);
   // Area konten (dipakai untuk melompat ke atas saat tab berganti).
   const kontenRef = useRef(null);
   // Penanda supaya lompatan hanya terjadi saat tab DIGANTI admin, bukan saat
@@ -114,6 +116,14 @@ export default function AdminShell({ username, avatar = null }) {
   const jumlahJatuhTempo = pengingatAktif.filter((p) => p.jatuhTempo).length;
 
   const load = useCallback(async () => {
+    // THROTTLE (fix 2026-10-14, keluhan "buka panel admin bot beku"):
+    // /api/admin/data = ~14 query ke DB bot yang SERBA-SERIAL. Saat data
+    // berubah cepat (bot poll, redeem, dll), versi realtime naik terus ->
+    // load() dipanggil beruntun -> bot kebanjiran query -> probe status
+    // timeout -> vonis BEKU palsu. Sekarang maksimal 1x per 5 detik.
+    const sekarang = Date.now();
+    if (sekarang - lastLoadAt.current < 5000) return;
+    lastLoadAt.current = sekarang;
     try {
       const res = await fetch('/api/admin/data', { cache: 'no-store' });
       if (!res.ok) return;

@@ -67,6 +67,10 @@ export default function TerminalVps({ send }) {
   const [konfirm, setKonfirm] = useState(null);
   const [riwayat, setRiwayat] = useState([]); // garis dari console log bot
   const [pantau, setPantau] = useState(null); // status pemantauan setelah restart/stop
+  // GRACE 2x (fix 2026-10-14): hitung berapa kali BERTURUT-TURUT probe bilang
+  // tidak responsif. Vonis "Beku" hanya dari streak >= 2 - 1x timeout bisa
+  // cuma bot sedang sibuk melayani query panel.
+  const [bekuStreak, setBekuStreak] = useState(0);
   const hidup = useRef(true);
 
   // Riwayat metrik untuk diagram (maks 40 titik).
@@ -84,6 +88,14 @@ export default function TerminalVps({ send }) {
       if (d.ok) {
         setSt(d);
         setErr(null);
+        // Hitung streak "tidak responsif" berturut-turut (grace 2x).
+        const bb = d.bot || {};
+        const muda = Number.isFinite(bb?.uptime?.detik) && bb.uptime.detik < 90;
+        if (bb?.aktif && bb?.responsif === false && !bb?.sedangMulai && !muda) {
+          setBekuStreak((n) => n + 1);
+        } else {
+          setBekuStreak(0);
+        }
         const v = d.vps || {};
         setHistCpu((a) => [...a, v.cpuPersen || 0].slice(-40));
         setHistRam((a) => [...a, (v.ram && v.ram.persen) || 0].slice(-40));
@@ -144,8 +156,13 @@ export default function TerminalVps({ send }) {
     hidup.current = true;
     muat();
     muatLog();
-    const iv = setInterval(() => { if (!document.hidden) muat(); }, 5000);
-    const ivLog = setInterval(() => { if (!document.hidden) muatLog(); }, 4000);
+    // DIPERLAMBAT (2026-10-14, keluhan "bot nyala, buka panel admin langsung
+    // beku"): dulu status tiap 5 dtk + log tiap 4 dtk = ~27 request/menit
+    // HANYA dari tab ini; tiap request menyentuh bot yang serba-serial.
+    // Digabung widget + realtime + data -> 300+ req/menit -> bot sibuk ->
+    // probe timeout -> vonis BEKU palsu. Sekarang 15 dtk / 15 dtk.
+    const iv = setInterval(() => { if (!document.hidden) muat(); }, 15000);
+    const ivLog = setInterval(() => { if (!document.hidden) muatLog(); }, 15000);
     function onVis() { if (!document.hidden) { muat(); muatLog(); } }
     document.addEventListener('visibilitychange', onVis);
     return () => { hidup.current = false; clearInterval(iv); clearInterval(ivLog); document.removeEventListener('visibilitychange', onVis); };
@@ -154,9 +171,11 @@ export default function TerminalVps({ send }) {
   const mintaKonfirmasi = useCallback((aksi) => {
     // "Beku" sejati = aktif tapi tidak responsif DAN bukan masa startup
     // (samakan dengan logika `beku` di bawah - termasuk fallback uptime muda).
+    // GRACE 2x (2026-10-14): butuh streak >= 2 supaya dialog tidak menakut-
+    // nakuti user dengan "Terdeteksi Beku" saat bot cuma sibuk sesaat.
     const um = st?.bot?.uptime?.detik;
     const muda = Number.isFinite(um) && um < 90;
-    const beku = st?.bot?.aktif && st?.bot?.responsif === false && !st?.bot?.sedangMulai && !muda;
+    const beku = st?.bot?.aktif && st?.bot?.responsif === false && !st?.bot?.sedangMulai && !muda && bekuStreak >= 2;
     const meta = {
       restart: {
         judul: beku ? 'Restart Bot (Bot Terdeteksi Beku)' : 'Restart Bot',
@@ -257,7 +276,12 @@ export default function TerminalVps({ send }) {
   const uptimeDetik = b?.uptime?.detik;
   const uptimeMuda = Number.isFinite(uptimeDetik) && uptimeDetik < 90;
   const sedangMulai = Boolean(b?.aktif && b?.responsif === false && (b?.sedangMulai || uptimeMuda));
-  const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda);
+  // GRACE 2x (fix 2026-10-14, keluhan "buka panel admin langsung beku"):
+  // panel yang terbuka menghantam DB bot yang serba-serial -> probe bisa
+  // timeout sesaat walau bot SEHAT. Vonis "Beku" + tombol paksa hanya kalau
+  // 2 pemeriksaan berturut-turut tidak responsif. 1x = "Sibuk, memeriksa".
+  const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda && bekuStreak >= 2);
+  const sibuk = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda && bekuStreak === 1);
 
   return (
     <div className="space-y-4">
@@ -298,9 +322,9 @@ export default function TerminalVps({ send }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         <MiniKartu
           label="Status Bot"
-          nilai={online ? (beku ? 'Beku' : (sedangMulai ? 'Sedang mulai' : 'Online')) : 'Offline'}
-          warna={online ? (beku ? 'text-danger' : (sedangMulai ? 'text-accent' : 'text-success')) : 'text-danger'}
-          sub={beku ? 'Tidak merespons - restart paksa' : (sedangMulai ? 'Bot baru dinyalakan - menunggu siap' : (st?.lewat === 'agent' ? 'via agent' : undefined))}
+          nilai={online ? (beku ? 'Beku' : (sibuk ? 'Sibuk' : (sedangMulai ? 'Sedang mulai' : 'Online'))) : 'Offline'}
+          warna={online ? (beku ? 'text-danger' : (sibuk ? 'text-accent' : (sedangMulai ? 'text-accent' : 'text-success'))) : 'text-danger'}
+          sub={beku ? 'Tidak merespons - restart paksa' : (sibuk ? 'Memeriksa ulang…' : (sedangMulai ? 'Bot baru dinyalakan - menunggu siap' : (st?.lewat === 'agent' ? 'via agent' : undefined)))}
         />
         <MiniKartu label="RAM Bot" nilai={b?.memMb != null ? `${b.memMb} MB` : '-'} />
         <MiniKartu label="Uptime Bot" nilai={b?.uptime?.teks || '-'} />

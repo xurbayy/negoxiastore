@@ -68,12 +68,32 @@ export default function VpsWidget() {
   // Vonis Offline/BEKU HANYA dari data yang benar-benar diterima dari server.
   const [memuat, setMemuat] = useState(true);
   const [gagal, setGagal] = useState(false);
+  // GRACE 2x TIMEOUT (fix 2026-10-14, keluhan "bot nyala, buka panel admin
+  // langsung beku"): saat panel terbuka, BANYAK query panel menghantam DB bot
+  // yang serba-serial -> probe status bisa timeout sesaat walau bot SEHAT.
+  // Dulu 1x timeout langsung vonis "BEKU - pakai Restart Paksa" -> user
+  // menekan restart padahal tidak perlu (bot sehat, cuma sibuk melayani
+  // panel). Sekarang vonis BEKU hanya kalau 2 pemeriksaan BERTURUT-TURUT
+  // melaporkan tidak responsif (>=10 detik), dan data tidak dihapus di
+  // antaranya supaya UI tidak berkedip.
+  const [bekuStreak, setBekuStreak] = useState(0);
 
   const muat = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/vps', { cache: 'no-store' });
       const d = await res.json().catch(() => ({}));
-      if (d.ok) { setSt(d); setTick((t) => t + 1); setGagal(false); }
+      if (d.ok) {
+        setSt(d); setTick((t) => t + 1); setGagal(false);
+        // Hitung streak "tidak responsif" berturut-turut (hanya bila bot
+        // aktif tapi probe gagal - bukan saat sedang mulai).
+        const bb = d.bot || {};
+        const muda = Number.isFinite(bb?.uptime?.detik) && bb.uptime.detik < 90;
+        if (bb?.aktif && bb?.responsif === false && !bb?.sedangMulai && !muda) {
+          setBekuStreak((n) => n + 1);
+        } else {
+          setBekuStreak(0);
+        }
+      }
       else setGagal(true);
     } catch {
       // Jaringan/timeout: jangan hapus data lama (kalau ada) - cukup tandai
@@ -86,9 +106,11 @@ export default function VpsWidget() {
 
   useEffect(() => {
     muat();
-    // Poll adaptif: saat TERBUKA 5 dtk (user sedang melihat - harus real-time),
-    // saat tertutup 10 dtk (hemat). Hanya saat tab terlihat.
-    const iv = setInterval(() => { if (!document.hidden) muat(); }, open ? 5000 : 10000);
+    // Poll adaptif (DIPERLAMBAT 2026-10-14): dulu 5 dtk saat terbuka / 10 dtk
+    // tertutup -> ikut menyumbang ratusan request ke bot yang serba-serial.
+    // Sekarang 15 dtk saat terbuka (masih terasa hidup), 30 dtk saat tertutup.
+    // Hanya saat tab terlihat.
+    const iv = setInterval(() => { if (!document.hidden) muat(); }, open ? 15000 : 30000);
     const onVis = () => { if (!document.hidden) muat(); };
     document.addEventListener('visibilitychange', onVis);
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis); };
@@ -113,7 +135,12 @@ export default function VpsWidget() {
   const uptimeDetik = b?.uptime?.detik;
   const uptimeMuda = Number.isFinite(uptimeDetik) && uptimeDetik < 90;
   const sedangMulai = Boolean(b?.aktif && b?.responsif === false && (b?.sedangMulai || uptimeMuda));
-  const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda);
+  // VONIS BEKU: butuh 2x pemeriksaan BERTURUT-TURUT tidak responsif
+  // (>=10 detik) - 1x timeout bisa cuma bot sedang sibuk melayani panel.
+  const beku = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda && bekuStreak >= 2);
+  // "Sibuk" = tidak responsif 1x tapi belum 2x: tampilkan status netral,
+  // jangan vonis beku, jangan tawarkan restart paksa.
+  const sibuk = Boolean(b?.aktif && b?.responsif === false && !b?.sedangMulai && !uptimeMuda && bekuStreak === 1);
   // BELUM ADA DATA (fix 2026-10-11): jangan vonis apa pun sebelum data nyata
   // datang. `belumAda` = belum pernah sukses menerima status.
   const belumAda = !st;
@@ -136,7 +163,7 @@ export default function VpsWidget() {
         aria-expanded={open}
         aria-label={open ? 'Tutup info VPS' : 'Buka info VPS'}
       >
-        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (b?.aktif ? (sedangMulai ? 'vps-dot-warn' : 'vps-dot-ok') : (belumAda ? 'vps-dot-warn' : 'vps-dot-bad'))}`} aria-hidden="true" />
+        <span className={`vps-dot ${beku ? 'vps-dot-bad' : (sibuk ? 'vps-dot-warn' : (b?.aktif ? (sedangMulai ? 'vps-dot-warn' : 'vps-dot-ok') : (belumAda ? 'vps-dot-warn' : 'vps-dot-bad')))}`} aria-hidden="true" />
         <span className="flex-1 font-bold tracking-wide text-white">VPS</span>
         {!open && (
           <span className="font-mono text-[0.7rem] text-slate-300">
@@ -167,10 +194,10 @@ export default function VpsWidget() {
             <span className="text-slate-400">Uptime</span>
             <span className="text-right font-semibold text-white">{fmtUptime(uptimeJalan)}</span>
             <span className="text-slate-400">Bot</span>
-            <span className={`text-right font-semibold ${belumAda ? 'text-slate-400' : (beku ? 'text-[#F19A1A]' : (b?.aktif ? (sedangMulai ? 'text-[#F19A1A]' : 'text-[#7BA05B]') : 'text-[#C74B3C]'))}`}>
+            <span className={`text-right font-semibold ${belumAda ? 'text-slate-400' : (beku ? 'text-[#F19A1A]' : (sibuk ? 'text-[#F19A1A]' : (b?.aktif ? (sedangMulai ? 'text-[#F19A1A]' : 'text-[#7BA05B]') : 'text-[#C74B3C]')))}`}>
               {belumAda
                 ? (menghubungkan ? 'Menghubungkan…' : 'Tidak terhubung')
-                : (beku ? 'BEKU - pakai Restart Paksa' : (b?.aktif ? (sedangMulai ? 'Sedang mulai' : `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}`) : 'Offline'))}
+                : (beku ? 'BEKU - pakai Restart Paksa' : (sibuk ? 'Sibuk - memeriksa ulang…' : (b?.aktif ? (sedangMulai ? 'Sedang mulai' : `Online${b?.memMb != null ? ` · ${b.memMb} MB` : ''}`) : 'Offline')))}
             </span>
             {v?.load && (
               <>
@@ -182,7 +209,7 @@ export default function VpsWidget() {
           {v?.disk && (
             <p className="text-[0.65rem] text-slate-500">{v.disk.usedGb} / {v.disk.totalGb} GB disk terpakai</p>
           )}
-          <p className="text-[0.6rem] text-slate-600">Live · diperbarui tiap 5 dtk saat dibuka</p>
+          <p className="text-[0.6rem] text-slate-600">Live · diperbarui tiap 15 dtk saat dibuka</p>
         </div>
       )}
     </div>
