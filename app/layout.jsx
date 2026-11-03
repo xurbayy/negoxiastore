@@ -1,28 +1,6 @@
 import './globals.css';
-import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, SITE_KEYWORDS, absoluteUrl } from './lib/site';
 import { FAQS } from './lib/faq-content';
-
-const display = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-display',
-  display: 'swap',
-});
-
-const body = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-body',
-  display: 'swap',
-});
-
-const mono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-mono',
-  display: 'swap',
-});
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
@@ -102,9 +80,12 @@ export const metadata = {
     ],
     shortcut: '/favicon.ico',
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    // CATATAN 3 Nov 2026: rel=manifest SENGAJA DIHAPUS (sinkron dgn NOXA).
+    // Prompt "Pasang Aplikasi" terdeteksi heuristik Safe Browsing sebagai pola
+    // instalasi agresif. Web push TETAP ADA (butuh service worker + permission,
+    // bukan PWA) - manifest tidak diperlukan untuk push.
     other: [
       { rel: 'mask-icon', url: '/nexo-logo-512.png', color: '#F4EEE1' },
-      { rel: 'manifest', url: '/site.webmanifest' },
     ],
   },
 };
@@ -187,7 +168,19 @@ export default async function RootLayout({ children }) {
   }
 
   return (
-    <html lang="id" data-scroll-behavior="smooth" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    <html lang="id" data-scroll-behavior="smooth">
+      <head>
+        {/* Font dimuat lewat <link>, bukan next/font/google. Build di VPS
+            (Node 22) gagal fetch Google Fonts saat build, dan kegagalan itu
+            menjatuhkan seluruh proses deploy. Runtime link tidak menyentuh
+            build; CSP sudah mengizinkan fonts.googleapis.com/fonts.gstatic.com. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        />
+      </head>
       <body>
         <AdSense />
         <EmojiHydrator />
